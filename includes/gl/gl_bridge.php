@@ -168,7 +168,14 @@ if (!function_exists('gl_bridge_sync_openings')) {
     function gl_bridge_sync_openings(PDO $pdo, array &$stats): void
     {
         $obe = gl_system_account($pdo, 'opening_balance_equity');
-        foreach (gl_bridge_fa_rows($pdo) as $faId => $fa) {
+        $faRows = gl_bridge_fa_rows($pdo);
+        $orphans = $pdo->query("SELECT source_id, entry_id FROM gl_source_links WHERE source_table = 'financial_accounts_opening' AND active = 1")->fetchAll(PDO::FETCH_ASSOC);
+        foreach ($orphans as $o) {
+            if (!isset($faRows[(int) $o['source_id']])) {
+                gl_bridge_reverse_and_unlink($pdo, (int) $o['entry_id'], "account #{$o['source_id']} was deleted", $stats);
+            }
+        }
+        foreach ($faRows as $faId => $fa) {
             $opening = round((float) ($fa['opening_balance'] ?? 0), 2);
             $fp = gl_bridge_opening_fingerprint($fa);
             $link = gl_bridge_active_link($pdo, 'financial_accounts_opening', $faId);

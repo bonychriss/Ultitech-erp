@@ -301,7 +301,14 @@ $selectedCurrencyMeta = $currencyCatalog[$currency];
 $currencyFlagUrl = static function (string $flagCode): string {
     return 'https://flagcdn.com/w40/' . strtolower($flagCode) . '.png';
 };
+$openingEditable = $existingPaymentType !== '';
 $openingBalanceDisplay = number_format($existingOpening, 2, '.', '');
+$openingBalanceNew = $existingOpening;
+if ($openingEditable && isset($_POST['opening_balance'])) {
+    $openingBalanceDisplay = trim((string) $_POST['opening_balance']);
+    $openingRaw = str_replace([',', ' '], '', $openingBalanceDisplay);
+    $openingBalanceNew = $openingRaw === '' ? 0.0 : (is_numeric($openingRaw) ? round((float) $openingRaw, 2) : null);
+}
 $openingDate = trim((string) ($_POST['opening_date'] ?? $existingOpeningDate));
 if ($openingDate !== '' && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $openingDate)) {
     $openingDate = $existingOpeningDate;
@@ -315,6 +322,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $_SESSION['error'] = 'Account name is required.';
     } elseif (!isset($categoryOptions[$selectedCategory])) {
         $_SESSION['error'] = 'Please select an account category.';
+    } elseif ($openingBalanceNew === null) {
+        $_SESSION['error'] = 'Opening balance must be a number.';
     } else {
         try {
             $meta = $categoryOptions[$selectedCategory];
@@ -357,6 +366,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'name' => $nameToSave,
                 'type' => $normalizedType,
                 'currency' => $currency,
+                'opening_balance' => $openingBalanceNew,
                 'opening_date' => $openingDate !== '' ? $openingDate : null,
                 'status' => $existingStatus === 'inactive' ? 'inactive' : 'active',
                 'account_image' => $accountImageToSave !== '' ? $accountImageToSave : null,
@@ -383,6 +393,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (function_exists('recalculateBalance')) {
                 recalculateBalance($accountId);
             }
+            balancesScheduleLedgerSync($pdo);
 
             $_SESSION['success'] = 'Account updated successfully.';
             redirect($accountsBackUrl);
@@ -980,14 +991,24 @@ try {
                     </div>
                     <div class="coa-field">
                         <label for="opening_balance">Opening balance</label>
-                        <input type="text"
-                               class="coa-input coa-input-readonly"
-                               id="opening_balance"
-                               value="<?= $esc($openingBalanceDisplay) ?>"
-                               readonly
-                               tabindex="-1"
-                               aria-readonly="true"
-                               title="Opening balance cannot be changed after the account is created">
+                        <?php if ($openingEditable): ?>
+                            <input type="text"
+                                   class="coa-input"
+                                   id="opening_balance"
+                                   name="opening_balance"
+                                   inputmode="decimal"
+                                   value="<?= $esc($openingBalanceDisplay) ?>"
+                                   title="Balance on the statement or wallet at the opening date">
+                        <?php else: ?>
+                            <input type="text"
+                                   class="coa-input coa-input-readonly"
+                                   id="opening_balance"
+                                   value="<?= $esc($openingBalanceDisplay) ?>"
+                                   readonly
+                                   tabindex="-1"
+                                   aria-readonly="true"
+                                   title="Only Bank, Mobile money and Cash accounts have an opening balance">
+                        <?php endif; ?>
                     </div>
                     <div class="coa-field">
                         <label for="opening_date">Opening date</label>
@@ -998,6 +1019,9 @@ try {
                                value="<?= $esc($openingDate) ?>">
                     </div>
                 </div>
+                <?php if ($openingEditable): ?>
+                    <div class="coa-image-hint" style="margin-top:-6px;">Enter the balance shown on the bank statement or wallet on the opening date. Changing it later posts a correction in the ledger; the original entry is kept.</div>
+                <?php endif; ?>
 
                 <div class="coa-actions">
                     <a href="<?= $esc($accountsBackUrl) ?>" class="coa-btn coa-btn-cancel">Cancel</a>

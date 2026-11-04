@@ -137,12 +137,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!function_exists('balances_create_sub_account')) {
             $_SESSION['error'] = 'Sub-account creation is not available.';
         } else {
-            $result = balances_create_sub_account(
-                $pdo,
-                $parentId,
-                $accountName,
-                $paymentWalletType !== '' ? $paymentWalletType : null
-            );
+            $openingRaw = str_replace([',', ' '], '', (string) ($_POST['opening_balance'] ?? ''));
+            $openingDateRaw = trim((string) ($_POST['opening_date'] ?? ''));
+            $result = $openingRaw !== '' && !is_numeric($openingRaw)
+                ? ['success' => false, 'message' => 'Opening balance must be a number.']
+                : balances_create_sub_account(
+                    $pdo,
+                    $parentId,
+                    $accountName,
+                    $paymentWalletType !== '' ? $paymentWalletType : null,
+                    $openingRaw === '' ? 0.0 : (float) $openingRaw,
+                    $openingDateRaw !== '' ? $openingDateRaw : null
+                );
             if (!empty($result['success'])) {
                 $_SESSION['bal_lottie_success'] = (string) ($result['message'] ?? 'Sub-account created successfully.');
             } else {
@@ -1066,6 +1072,7 @@ include __DIR__ . '/includes/header.php';
     .sub-modal-input:focus {
         outline: none; border-color: #0f766e; box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.12);
     }
+    .sub-modal-opening-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
     .sub-modal-select {
         width: 100%;
         padding: 0.8rem 2.25rem 0.8rem 0.9rem;
@@ -2128,6 +2135,23 @@ include __DIR__ . '/includes/header.php';
                 </select>
                 <p class="sub-modal-hint">Bank, Mobile money and Cash accounts can receive and pay money and are listed in their own section. Use Regular asset account for anything else.</p>
             </div>
+            <div id="subOpeningWrap" hidden>
+                <div class="sub-modal-opening-row">
+                    <div>
+                        <div class="sub-modal-label-row" style="margin-top:14px;">
+                            <label for="subOpeningBalance">Opening balance</label>
+                        </div>
+                        <input type="text" class="sub-modal-input" id="subOpeningBalance" name="opening_balance" inputmode="decimal" placeholder="0.00" autocomplete="off">
+                    </div>
+                    <div>
+                        <div class="sub-modal-label-row" style="margin-top:14px;">
+                            <label for="subOpeningDate">As of date</label>
+                        </div>
+                        <input type="date" class="sub-modal-input" id="subOpeningDate" name="opening_date" value="<?= date('Y-m-d') ?>">
+                    </div>
+                </div>
+                <p class="sub-modal-hint">The balance on the bank statement or wallet on that date. Money that came in or went out after that date should be recorded as transactions.</p>
+            </div>
             <div class="sub-modal-actions">
                 <button type="button" class="sub-modal-btn sub-modal-btn-cancel" id="cancelSubAccountModal">Cancel</button>
                 <button type="submit" class="sub-modal-btn sub-modal-btn-save">Save</button>
@@ -2304,6 +2328,19 @@ function rayToggleParentAccordion(row) {
     }
 }
 
+function raySyncOpeningField() {
+    var payWrap = document.getElementById('subPaymentTypeWrap');
+    var paySelect = document.getElementById('subPaymentWalletType');
+    var openingWrap = document.getElementById('subOpeningWrap');
+    if (!openingWrap) return;
+    openingWrap.hidden = !payWrap || payWrap.hidden || !paySelect || ['bank', 'mobile', 'cash'].indexOf(paySelect.value) === -1;
+}
+document.addEventListener('DOMContentLoaded', function () {
+    var paySelect = document.getElementById('subPaymentWalletType');
+    if (paySelect) paySelect.addEventListener('change', raySyncOpeningField);
+    raySyncOpeningField();
+});
+
 function openSubForParent(parentId) {
     var meta = mobileParentMeta[String(parentId)] || mobileParentMeta[parentId] || {};
     var modal = document.getElementById('subAccountModal');
@@ -2330,6 +2367,9 @@ function openSubForParent(parentId) {
         }
         paySelect.value = mode === 'required' ? (meta.default_payment_type || 'cash') : '';
     }
+    var openingInput = document.getElementById('subOpeningBalance');
+    if (openingInput) openingInput.value = '';
+    raySyncOpeningField();
     modal.classList.add('is-open');
     document.body.style.overflow = 'hidden';
     var nameInput = document.getElementById('subAccountName');

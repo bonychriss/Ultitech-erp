@@ -1055,7 +1055,7 @@ function balances_resolve_sub_account_wallet_type(array $parent, ?string $reques
  *
  * @return array{success:bool,id?:int,message:string}
  */
-function balances_create_sub_account(PDO $pdo, int $parentId, string $accountName, ?string $paymentWalletType = null): array
+function balances_create_sub_account(PDO $pdo, int $parentId, string $accountName, ?string $paymentWalletType = null, float $openingBalance = 0.0, ?string $openingDate = null): array
 {
     $accountName = trim($accountName);
     if ($parentId <= 0) {
@@ -1118,12 +1118,21 @@ function balances_create_sub_account(PDO $pdo, int $parentId, string $accountNam
 
     $nameToSave = $accountCode . ' - ' . $accountName;
 
+    $openingBalance = round($openingBalance, 2);
+    if (abs($openingBalance) >= 0.005 && balances_normalize_payment_wallet_type($storedType) === null) {
+        return ['success' => false, 'message' => 'Opening balances can only be set on Bank, Mobile money or Cash accounts.'];
+    }
+    if ($openingDate !== null && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $openingDate)) {
+        $openingDate = null;
+    }
+
     $insertRow = [
         'name' => $nameToSave,
         'type' => $storedType,
         'currency' => $currency,
-        'opening_balance' => 0,
-        'current_balance' => 0,
+        'opening_balance' => $openingBalance,
+        'current_balance' => $openingBalance,
+        'opening_date' => abs($openingBalance) >= 0.005 ? ($openingDate ?? date('Y-m-d')) : null,
         'status' => 'active',
         'parent_id' => $parentId,
     ];
@@ -1179,6 +1188,9 @@ function balances_create_sub_account(PDO $pdo, int $parentId, string $accountNam
     }
 
     balances_link_account_to_gl($pdo, $newId);
+    if (abs($openingBalance) >= 0.005) {
+        balancesScheduleLedgerSync($pdo);
+    }
 
     return [
         'success' => true,

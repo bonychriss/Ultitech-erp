@@ -1086,6 +1086,33 @@ include __DIR__ . '/includes/header.php';
         outline: none; border-color: #0f766e; box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.12);
     }
     .sub-modal-opening-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .sub-cur-picker { position: relative; }
+    .sub-cur-native { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); border: 0; }
+    .sub-cur-trigger {
+        width: 100%; display: flex; align-items: center; gap: 10px; padding: 10px 36px 10px 12px;
+        border: 1px solid #d1d5db; border-radius: 8px; font-size: 0.875rem; color: #111827; text-align: left; cursor: pointer;
+        background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' fill='none' stroke='%239ca3af' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M5 8l5 5 5-5'/%3E%3C/svg%3E") no-repeat right 10px center;
+    }
+    .sub-cur-trigger:focus { outline: none; border-color: #0f766e; box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.12); }
+    .sub-cur-flag { width: 24px; height: 17px; object-fit: cover; border-radius: 2px; box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.08); flex-shrink: 0; }
+    .sub-cur-code { font-weight: 600; color: #111827; min-width: 38px; }
+    .sub-cur-name { color: #6b7280; font-size: 0.8125rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .sub-cur-menu {
+        position: absolute; z-index: 30; top: calc(100% + 4px); left: 0; right: 0; max-height: 240px; overflow-y: auto;
+        background: #fff; border: 1px solid #d1d5db; border-radius: 8px; box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12); padding: 4px;
+    }
+    .sub-cur-menu[hidden] { display: none; }
+    .sub-cur-option {
+        width: 100%; display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: 0;
+        background: transparent; border-radius: 6px; cursor: pointer; text-align: left; font-size: 0.875rem;
+    }
+    .sub-cur-option:hover, .sub-cur-option.is-selected { background: #f3f4f6; }
+    html[data-theme="dark"] body.page-balances-accounts .sub-cur-trigger,
+    html[data-theme="dark"] body.page-balances-accounts .sub-cur-menu { background-color: #0b141a; border-color: #2a3942; color: #e9edef; }
+    html[data-theme="dark"] body.page-balances-accounts .sub-cur-code { color: #e9edef; }
+    html[data-theme="dark"] body.page-balances-accounts .sub-cur-name { color: #8696a0; }
+    html[data-theme="dark"] body.page-balances-accounts .sub-cur-option:hover,
+    html[data-theme="dark"] body.page-balances-accounts .sub-cur-option.is-selected { background: #202c33; }
     .sub-modal-identity { display: flex; align-items: center; gap: 10px; }
     .sub-modal-identity .sub-modal-input { flex: 1; min-width: 0; }
     .sub-modal-image {
@@ -2156,14 +2183,43 @@ include __DIR__ . '/includes/header.php';
             </div>
             <p class="sub-modal-hint">Optional image (for example the bank or wallet logo) &middot; JPG, PNG, WEBP, GIF &middot; max 2MB</p>
             <div class="sub-modal-label-row" style="margin-top:14px;">
-                <label for="subCurrency">Currency</label>
+                <label for="subCurrencyTrigger">Currency</label>
             </div>
-            <select class="sub-modal-select" id="subCurrency" name="currency">
-                <?php $subDefaultCurrency = strtoupper((string) ($selectedParent['currency'] ?? 'TZS')); ?>
-                <?php foreach (balances_currency_catalog() as $curCode => $curMeta): ?>
-                    <option value="<?= htmlspecialchars($curCode, ENT_QUOTES, 'UTF-8') ?>"<?= $curCode === $subDefaultCurrency ? ' selected' : '' ?>><?= htmlspecialchars($curCode . ' - ' . $curMeta['name'], ENT_QUOTES, 'UTF-8') ?></option>
-                <?php endforeach; ?>
-            </select>
+            <?php
+            $subCurrencies = balances_currency_catalog();
+            $subDefaultCurrency = strtoupper((string) ($selectedParent['currency'] ?? 'TZS'));
+            if (!isset($subCurrencies[$subDefaultCurrency])) {
+                $subDefaultCurrency = 'TZS';
+            }
+            $subFlagUrl = static fn (string $flag): string => 'https://flagcdn.com/w40/' . strtolower($flag) . '.png';
+            ?>
+            <div class="sub-cur-picker" id="subCurrencyPicker">
+                <select id="subCurrency" name="currency" class="sub-cur-native" tabindex="-1" aria-hidden="true">
+                    <?php foreach ($subCurrencies as $curCode => $curMeta): ?>
+                        <option value="<?= htmlspecialchars($curCode, ENT_QUOTES, 'UTF-8') ?>"<?= $curCode === $subDefaultCurrency ? ' selected' : '' ?>><?= htmlspecialchars($curCode . ' - ' . $curMeta['name'], ENT_QUOTES, 'UTF-8') ?></option>
+                    <?php endforeach; ?>
+                </select>
+                <button type="button" class="sub-cur-trigger" id="subCurrencyTrigger" aria-haspopup="listbox" aria-expanded="false">
+                    <img src="<?= htmlspecialchars($subFlagUrl($subCurrencies[$subDefaultCurrency]['flag']), ENT_QUOTES, 'UTF-8') ?>" alt="" class="sub-cur-flag" id="subCurrencyFlag" width="24" height="17">
+                    <span class="sub-cur-code" id="subCurrencyCode"><?= htmlspecialchars($subDefaultCurrency, ENT_QUOTES, 'UTF-8') ?></span>
+                    <span class="sub-cur-name" id="subCurrencyName"><?= htmlspecialchars($subCurrencies[$subDefaultCurrency]['name'], ENT_QUOTES, 'UTF-8') ?></span>
+                </button>
+                <div class="sub-cur-menu" id="subCurrencyMenu" role="listbox" hidden>
+                    <?php foreach ($subCurrencies as $curCode => $curMeta): ?>
+                        <button type="button"
+                                class="sub-cur-option<?= $curCode === $subDefaultCurrency ? ' is-selected' : '' ?>"
+                                role="option"
+                                data-value="<?= htmlspecialchars($curCode, ENT_QUOTES, 'UTF-8') ?>"
+                                data-flag="<?= htmlspecialchars($subFlagUrl($curMeta['flag']), ENT_QUOTES, 'UTF-8') ?>"
+                                data-name="<?= htmlspecialchars($curMeta['name'], ENT_QUOTES, 'UTF-8') ?>"
+                                aria-selected="<?= $curCode === $subDefaultCurrency ? 'true' : 'false' ?>">
+                            <img src="<?= htmlspecialchars($subFlagUrl($curMeta['flag']), ENT_QUOTES, 'UTF-8') ?>" alt="" class="sub-cur-flag" width="24" height="17" loading="lazy">
+                            <span class="sub-cur-code"><?= htmlspecialchars($curCode, ENT_QUOTES, 'UTF-8') ?></span>
+                            <span class="sub-cur-name"><?= htmlspecialchars($curMeta['name'], ENT_QUOTES, 'UTF-8') ?></span>
+                        </button>
+                    <?php endforeach; ?>
+                </div>
+            </div>
             <div id="subPaymentTypeWrap"<?= $selectedParentPaymentMode !== 'none' ? '' : ' hidden' ?>>
                 <div class="sub-modal-label-row" style="margin-top:14px;">
                     <label for="subPaymentWalletType">Account type</label>
@@ -2378,6 +2434,42 @@ function raySyncOpeningField() {
     if (!openingWrap) return;
     openingWrap.hidden = !payWrap || payWrap.hidden || !paySelect || ['bank', 'mobile', 'cash'].indexOf(paySelect.value) === -1;
 }
+function raySetSubCurrency(code) {
+    var menu = document.getElementById('subCurrencyMenu');
+    var select = document.getElementById('subCurrency');
+    var opt = menu ? menu.querySelector('.sub-cur-option[data-value="' + code + '"]') : null;
+    if (!select || !opt) return;
+    select.value = code;
+    document.getElementById('subCurrencyFlag').src = opt.getAttribute('data-flag');
+    document.getElementById('subCurrencyCode').textContent = code;
+    document.getElementById('subCurrencyName').textContent = opt.getAttribute('data-name');
+    menu.querySelectorAll('.sub-cur-option').forEach(function (o) {
+        var on = o === opt;
+        o.classList.toggle('is-selected', on);
+        o.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+}
+document.addEventListener('DOMContentLoaded', function () {
+    var picker = document.getElementById('subCurrencyPicker');
+    var trigger = document.getElementById('subCurrencyTrigger');
+    var menu = document.getElementById('subCurrencyMenu');
+    if (!picker || !trigger || !menu) return;
+    function setOpen(open) {
+        menu.hidden = !open;
+        trigger.setAttribute('aria-expanded', open ? 'true' : 'false');
+    }
+    trigger.addEventListener('click', function () { setOpen(menu.hidden); });
+    menu.querySelectorAll('.sub-cur-option').forEach(function (opt) {
+        opt.addEventListener('click', function () {
+            raySetSubCurrency(opt.getAttribute('data-value'));
+            setOpen(false);
+        });
+    });
+    document.addEventListener('click', function (e) {
+        if (!picker.contains(e.target)) setOpen(false);
+    });
+});
+
 function rayResetSubImage() {
     var input = document.getElementById('subAccountImage');
     var preview = document.getElementById('subAccountImagePreview');
@@ -2440,10 +2532,7 @@ function openSubForParent(parentId) {
     var openingInput = document.getElementById('subOpeningBalance');
     if (openingInput) openingInput.value = '';
     raySyncOpeningField();
-    var currencySelect = document.getElementById('subCurrency');
-    if (currencySelect && meta.currency && currencySelect.querySelector('option[value="' + meta.currency + '"]')) {
-        currencySelect.value = meta.currency;
-    }
+    raySetSubCurrency(meta.currency || 'TZS');
     rayResetSubImage();
     modal.classList.add('is-open');
     document.body.style.overflow = 'hidden';

@@ -994,6 +994,54 @@ function balances_infer_payment_wallet_type(array $parent): string
     return 'cash';
 }
 
+/** @return array<string, array{name:string,flag:string}> */
+function balances_currency_catalog(): array
+{
+    return [
+        'TZS' => ['name' => 'Tanzanian Shilling', 'flag' => 'tz'],
+        'USD' => ['name' => 'US Dollar', 'flag' => 'us'],
+        'EUR' => ['name' => 'Euro', 'flag' => 'eu'],
+        'GBP' => ['name' => 'British Pound', 'flag' => 'gb'],
+        'KES' => ['name' => 'Kenyan Shilling', 'flag' => 'ke'],
+        'UGX' => ['name' => 'Ugandan Shilling', 'flag' => 'ug'],
+        'RWF' => ['name' => 'Rwandan Franc', 'flag' => 'rw'],
+        'ZAR' => ['name' => 'South African Rand', 'flag' => 'za'],
+    ];
+}
+
+/**
+ * Save an uploaded account image from $_FILES[$field]; returns the relative path, or '' when no file was sent.
+ *
+ * @throws RuntimeException on an invalid or failed upload
+ */
+function balances_store_uploaded_account_image(string $field = 'account_image'): string
+{
+    $file = $_FILES[$field] ?? null;
+    if (!is_array($file) || (int) ($file['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) {
+        return '';
+    }
+    if ((int) $file['error'] !== UPLOAD_ERR_OK) {
+        throw new RuntimeException('Account image upload failed. Please try again.');
+    }
+    if ((int) $file['size'] > 2 * 1024 * 1024) {
+        throw new RuntimeException('Account image must be 2MB or smaller.');
+    }
+    $ext = strtolower(pathinfo((string) $file['name'], PATHINFO_EXTENSION));
+    if (!in_array($ext, ['jpg', 'jpeg', 'png', 'webp', 'gif'], true) || @getimagesize((string) $file['tmp_name']) === false) {
+        throw new RuntimeException('Account image must be a JPG, PNG, WEBP, or GIF picture.');
+    }
+    $targetDir = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'balances' . DIRECTORY_SEPARATOR . 'accounts' . DIRECTORY_SEPARATOR;
+    if (!is_dir($targetDir) && !mkdir($targetDir, 0755, true) && !is_dir($targetDir)) {
+        throw new RuntimeException('Could not create upload folder for account image.');
+    }
+    $fileName = 'ACC_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
+    if (!move_uploaded_file((string) $file['tmp_name'], $targetDir . $fileName)) {
+        throw new RuntimeException('Could not save account image.');
+    }
+
+    return 'uploads/balances/accounts/' . $fileName;
+}
+
 /**
  * Split sub-account rows into Bank / Mobile money / Cash / Other sections by payment type.
  * Returns one unlabelled group when none of the rows is a payment wallet.
@@ -1055,7 +1103,10 @@ function balances_resolve_sub_account_wallet_type(array $parent, ?string $reques
  *
  * @return array{success:bool,id?:int,message:string}
  */
-function balances_create_sub_account(PDO $pdo, int $parentId, string $accountName, ?string $paymentWalletType = null, float $openingBalance = 0.0, ?string $openingDate = null): array
+/**
+ * @param array{currency?:string, account_image?:string} $extra
+ */
+function balances_create_sub_account(PDO $pdo, int $parentId, string $accountName, ?string $paymentWalletType = null, float $openingBalance = 0.0, ?string $openingDate = null, array $extra = []): array
 {
     $accountName = trim($accountName);
     if ($parentId <= 0) {
@@ -1109,7 +1160,14 @@ function balances_create_sub_account(PDO $pdo, int $parentId, string $accountNam
     }
 
     $accountCode = coa_compute_next_account_code($pdo, $accountType);
-    $currency = strtoupper(trim((string) ($parent['currency'] ?? 'TZS')));
+    $currency = strtoupper(trim((string) ($extra['currency'] ?? '')));
+    if (!isset(balances_currency_catalog()[$currency])) {
+        $currency = strtoupper(trim((string) ($parent['currency'] ?? 'TZS'))) ?: 'TZS';
+    }
+    $accountImage = trim((string) ($extra['account_image'] ?? ''));
+    if ($accountImage !== '' && function_exists('columnExists') && !columnExists('financial_accounts', 'account_image', $pdo)) {
+        $pdo->exec('ALTER TABLE financial_accounts ADD COLUMN account_image VARCHAR(500) NULL DEFAULT NULL AFTER status');
+    }
 
     $balanceSide = coa_normal_balance_side_for_account_type($accountType);
     if (coa_find_account_by_name_and_balance_side($pdo, $accountName, $balanceSide) !== null) {
@@ -1135,6 +1193,7 @@ function balances_create_sub_account(PDO $pdo, int $parentId, string $accountNam
         'opening_date' => abs($openingBalance) >= 0.005 ? ($openingDate ?? date('Y-m-d')) : null,
         'status' => 'active',
         'parent_id' => $parentId,
+        'account_image' => $accountImage !== '' ? $accountImage : null,
     ];
 
     if (function_exists('balancesUseCompanyScope') && balancesUseCompanyScope()) {

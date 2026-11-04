@@ -139,16 +139,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             $openingRaw = str_replace([',', ' '], '', (string) ($_POST['opening_balance'] ?? ''));
             $openingDateRaw = trim((string) ($_POST['opening_date'] ?? ''));
-            $result = $openingRaw !== '' && !is_numeric($openingRaw)
-                ? ['success' => false, 'message' => 'Opening balance must be a number.']
-                : balances_create_sub_account(
-                    $pdo,
-                    $parentId,
-                    $accountName,
-                    $paymentWalletType !== '' ? $paymentWalletType : null,
-                    $openingRaw === '' ? 0.0 : (float) $openingRaw,
-                    $openingDateRaw !== '' ? $openingDateRaw : null
-                );
+            $imagePath = '';
+            if ($openingRaw !== '' && !is_numeric($openingRaw)) {
+                $result = ['success' => false, 'message' => 'Opening balance must be a number.'];
+            } else {
+                try {
+                    $imagePath = balances_store_uploaded_account_image();
+                    $result = balances_create_sub_account(
+                        $pdo,
+                        $parentId,
+                        $accountName,
+                        $paymentWalletType !== '' ? $paymentWalletType : null,
+                        $openingRaw === '' ? 0.0 : (float) $openingRaw,
+                        $openingDateRaw !== '' ? $openingDateRaw : null,
+                        ['currency' => (string) ($_POST['currency'] ?? ''), 'account_image' => $imagePath]
+                    );
+                } catch (RuntimeException $e) {
+                    $result = ['success' => false, 'message' => $e->getMessage()];
+                }
+                if (empty($result['success']) && $imagePath !== '') {
+                    @unlink(dirname(__DIR__, 2) . '/' . $imagePath);
+                }
+            }
             if (!empty($result['success'])) {
                 $_SESSION['bal_lottie_success'] = (string) ($result['message'] ?? 'Sub-account created successfully.');
             } else {
@@ -649,6 +661,7 @@ foreach ($parentAccounts as $parentRow) {
         'id' => $pid,
         'name' => (string) ($parentRow['name'] ?? ''),
         'payment_type_mode' => $paymentMode,
+        'currency' => strtoupper((string) ($parentRow['currency'] ?? 'TZS')),
         'default_payment_type' => $showsPayment ? balances_infer_payment_wallet_type($parentRaw) : '',
         'assignable' => $assignOptions,
     ];
@@ -1073,6 +1086,19 @@ include __DIR__ . '/includes/header.php';
         outline: none; border-color: #0f766e; box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.12);
     }
     .sub-modal-opening-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .sub-modal-identity { display: flex; align-items: center; gap: 10px; }
+    .sub-modal-identity .sub-modal-input { flex: 1; min-width: 0; }
+    .sub-modal-image {
+        position: relative; flex: 0 0 44px; width: 44px; height: 44px; border-radius: 10px;
+        border: 1px dashed #cbd5e1; background: #f8fafc; color: #64748b;
+        display: inline-flex; align-items: center; justify-content: center; cursor: pointer; overflow: hidden;
+    }
+    .sub-modal-image:hover { border-color: #0f766e; color: #0f766e; }
+    .sub-modal-image input[type="file"] { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+    .sub-modal-image img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+    .sub-modal-image.has-image { border-style: solid; }
+    .sub-modal-image.has-image i { display: none; }
+    html[data-theme="dark"] body.page-balances-accounts .sub-modal-image { background: #0b141a; border-color: #2a3942; color: #8696a0; }
     .sub-modal-select {
         width: 100%;
         padding: 0.8rem 2.25rem 0.8rem 0.9rem;
@@ -2100,7 +2126,7 @@ include __DIR__ . '/includes/header.php';
 <?php if ($canManage): ?>
 <div class="sub-modal-backdrop" id="subAccountModal" role="presentation">
     <div class="sub-modal" role="dialog" aria-modal="true" aria-labelledby="subAccountModalTitle">
-        <form method="POST" action="" id="subAccountForm">
+        <form method="POST" action="" id="subAccountForm" enctype="multipart/form-data">
             <input type="hidden" name="action" value="create_sub_account">
             <input type="hidden" name="parent_id" id="subParentId" value="<?= (int) ($selectedParent['id'] ?? 0) ?>">
             <input type="hidden" name="module" value="<?= htmlspecialchars($moduleParam, ENT_QUOTES, 'UTF-8') ?>">
@@ -2113,14 +2139,31 @@ include __DIR__ . '/includes/header.php';
                 <label for="subAccountName">Name</label>
                 <span class="sub-modal-count"><span id="subNameCount">0</span>/100</span>
             </div>
-            <input type="text"
-                   class="sub-modal-input"
-                   id="subAccountName"
-                   name="account_name"
-                   maxlength="100"
-                   required
-                   placeholder="Enter sub-account name"
-                   autocomplete="off">
+            <div class="sub-modal-identity">
+                <label class="sub-modal-image" for="subAccountImage" title="Upload account image (optional)">
+                    <input type="file" id="subAccountImage" name="account_image" accept=".jpg,.jpeg,.png,.webp,.gif,image/*">
+                    <img id="subAccountImagePreview" alt="" hidden>
+                    <i class="fas fa-camera" aria-hidden="true"></i>
+                </label>
+                <input type="text"
+                       class="sub-modal-input"
+                       id="subAccountName"
+                       name="account_name"
+                       maxlength="100"
+                       required
+                       placeholder="Enter sub-account name"
+                       autocomplete="off">
+            </div>
+            <p class="sub-modal-hint">Optional image (for example the bank or wallet logo) &middot; JPG, PNG, WEBP, GIF &middot; max 2MB</p>
+            <div class="sub-modal-label-row" style="margin-top:14px;">
+                <label for="subCurrency">Currency</label>
+            </div>
+            <select class="sub-modal-select" id="subCurrency" name="currency">
+                <?php $subDefaultCurrency = strtoupper((string) ($selectedParent['currency'] ?? 'TZS')); ?>
+                <?php foreach (balances_currency_catalog() as $curCode => $curMeta): ?>
+                    <option value="<?= htmlspecialchars($curCode, ENT_QUOTES, 'UTF-8') ?>"<?= $curCode === $subDefaultCurrency ? ' selected' : '' ?>><?= htmlspecialchars($curCode . ' - ' . $curMeta['name'], ENT_QUOTES, 'UTF-8') ?></option>
+                <?php endforeach; ?>
+            </select>
             <div id="subPaymentTypeWrap"<?= $selectedParentPaymentMode !== 'none' ? '' : ' hidden' ?>>
                 <div class="sub-modal-label-row" style="margin-top:14px;">
                     <label for="subPaymentWalletType">Account type</label>
@@ -2335,10 +2378,37 @@ function raySyncOpeningField() {
     if (!openingWrap) return;
     openingWrap.hidden = !payWrap || payWrap.hidden || !paySelect || ['bank', 'mobile', 'cash'].indexOf(paySelect.value) === -1;
 }
+function rayResetSubImage() {
+    var input = document.getElementById('subAccountImage');
+    var preview = document.getElementById('subAccountImagePreview');
+    if (input) input.value = '';
+    if (preview) { preview.hidden = true; preview.removeAttribute('src'); }
+    if (input && input.parentElement) input.parentElement.classList.remove('has-image');
+}
 document.addEventListener('DOMContentLoaded', function () {
     var paySelect = document.getElementById('subPaymentWalletType');
     if (paySelect) paySelect.addEventListener('change', raySyncOpeningField);
     raySyncOpeningField();
+
+    var imageInput = document.getElementById('subAccountImage');
+    var imagePreview = document.getElementById('subAccountImagePreview');
+    if (imageInput && imagePreview) {
+        imageInput.addEventListener('change', function () {
+            var file = imageInput.files && imageInput.files[0];
+            if (!file || !file.type || file.type.indexOf('image/') !== 0) {
+                rayResetSubImage();
+                return;
+            }
+            if (file.size > 2 * 1024 * 1024) {
+                alert('Account image must be 2MB or smaller.');
+                rayResetSubImage();
+                return;
+            }
+            imagePreview.src = URL.createObjectURL(file);
+            imagePreview.hidden = false;
+            imageInput.parentElement.classList.add('has-image');
+        });
+    }
 });
 
 function openSubForParent(parentId) {
@@ -2370,6 +2440,11 @@ function openSubForParent(parentId) {
     var openingInput = document.getElementById('subOpeningBalance');
     if (openingInput) openingInput.value = '';
     raySyncOpeningField();
+    var currencySelect = document.getElementById('subCurrency');
+    if (currencySelect && meta.currency && currencySelect.querySelector('option[value="' + meta.currency + '"]')) {
+        currencySelect.value = meta.currency;
+    }
+    rayResetSubImage();
     modal.classList.add('is-open');
     document.body.style.overflow = 'hidden';
     var nameInput = document.getElementById('subAccountName');

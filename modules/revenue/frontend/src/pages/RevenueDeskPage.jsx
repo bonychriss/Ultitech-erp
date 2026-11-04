@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
   AlertTriangle,
+  ArrowRight,
   Clock,
   Coins,
   Eye,
@@ -18,7 +19,7 @@ import {
   Wallet,
   X,
 } from 'lucide-react';
-import { deleteRevenueEntry, deskPageUrl, fetchDeskEntries, fetchDeskInit } from '../api/revenueDesk';
+import { deleteRevenueEntry, deskPageUrl, fetchDeskEntries, fetchDeskInit, sendRevenueEntryToReceivables } from '../api/revenueDesk';
 import RevenueAnalyticsPanel from '../components/RevenueAnalyticsPanel';
 import RevenueDeleteModal from '../components/RevenueDeleteModal';
 import RevenueExportMenu from '../components/RevenueExportMenu';
@@ -235,7 +236,7 @@ function isRowActionTarget(target) {
   );
 }
 
-function RevenueRowActionsMenu({ menu, onClose, onPay, onRemember, onView, onDelete }) {
+function RevenueRowActionsMenu({ menu, onClose, onPay, onRemember, onView, onDelete, onSendToReceivables }) {
   if (!menu || typeof document === 'undefined') return null;
 
   const style = {
@@ -245,6 +246,11 @@ function RevenueRowActionsMenu({ menu, onClose, onPay, onRemember, onView, onDel
     zIndex: 14000,
   };
   const deleteBlocked = Boolean(menu.deleteBlockReason);
+  const sendBlockReason = Number(menu.row?.balance_due ?? 0) <= 0.009
+    ? 'No unpaid balance remains to send.'
+    : menu.row?.approval_status === 'Pending' && !menu.row?.source_invoice_id
+      ? 'This entry must be approved before it can be sent.'
+      : '';
 
   return createPortal(
     <div className="rev-desk-row-menu rev-desk-row-menu--portal" role="menu" style={style} data-rev-row-menu>
@@ -290,6 +296,24 @@ function RevenueRowActionsMenu({ menu, onClose, onPay, onRemember, onView, onDel
           Pay
         </button>
       ) : null}
+      <button
+        type="button"
+        role="menuitem"
+        className="rev-desk-row-menu-item"
+        disabled={Boolean(sendBlockReason)}
+        aria-disabled={Boolean(sendBlockReason)}
+        title={sendBlockReason || undefined}
+        onClick={(event) => {
+          event.stopPropagation();
+          if (sendBlockReason) return;
+          onClose();
+          onSendToReceivables(menu.row);
+        }}
+      >
+        <ArrowRight size={15} aria-hidden="true" />
+        Send to Receivables
+      </button>
+      {sendBlockReason ? <div className="rev-desk-row-menu-note">{sendBlockReason}</div> : null}
       <div className="rev-desk-row-menu-divider" role="separator" />
       <button
         type="button"
@@ -401,6 +425,7 @@ export default function RevenueDeskPage() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [deleteError, setDeleteError] = useState('');
+  const [sendReceivableBusy, setSendReceivableBusy] = useState(false);
   const pendingPreviewRef = useRef(null);
   if (pendingPreviewRef.current === null) {
     pendingPreviewRef.current = typeof window === 'undefined'
@@ -449,6 +474,20 @@ export default function RevenueDeskPage() {
       setDeleteError(err instanceof Error ? err.message : 'The entry could not be deleted.');
     } finally {
       setDeleteBusy(false);
+    }
+  }
+
+  async function sendEntryToReceivables(row) {
+    if (!row || sendReceivableBusy) return;
+    setSendReceivableBusy(true);
+    setError('');
+    try {
+      const result = await sendRevenueEntryToReceivables(row.id, init?.csrf_token);
+      if (!result.redirect_url) throw new Error('Receivables destination was not provided.');
+      window.location.href = result.redirect_url;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'The entry could not be sent to Receivables.');
+      setSendReceivableBusy(false);
     }
   }
 
@@ -1638,6 +1677,7 @@ export default function RevenueDeskPage() {
             setPreviewEntry(row);
           }}
           onDelete={askDeleteEntry}
+          onSendToReceivables={sendEntryToReceivables}
         />
       ) : null}
 

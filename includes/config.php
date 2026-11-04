@@ -215,6 +215,57 @@ if (!defined('APP_BASE_PATH')) {
     define('APP_BASE_PATH', $APP_BASE_PATH);
 }
 
+if (!function_exists('ultitechDeployBuildToken')) {
+    function ultitechDeployBuildToken(): string
+    {
+        static $token = null;
+        if ($token !== null) {
+            return $token;
+        }
+
+        $root = dirname(__DIR__);
+        $targets = [
+            $root . '/index.php',
+            $root . '/includes/config.php',
+            $root . '/includes/functions.php',
+            $root . '/customer_statement/index.php',
+            $root . '/customer_statement/api/init.php',
+            $root . '/customer_statement/includes/statement-lib.php',
+            $root . '/ultimate/customer_statement/index.php',
+        ];
+
+        $hash = hash_init('sha256');
+        foreach ($targets as $file) {
+            if (!is_file($file)) {
+                continue;
+            }
+            $mtime = (int) filemtime($file);
+            $size = (int) filesize($file);
+            hash_update($hash, basename($file) . ':' . $mtime . ':' . $size . PHP_EOL);
+        }
+
+        $token = substr(hash_final($hash), 0, 24);
+        return $token;
+    }
+}
+
+if (!function_exists('ultitechClearAuthCookies')) {
+    function ultitechClearAuthCookies(): void
+    {
+        $secure = !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off';
+        $cookieNames = [session_name(), 'PHPSESSID', 'PVSSESSID', 'ultitech_app_build'];
+        foreach ($cookieNames as $cookieName) {
+            if ($cookieName === '') {
+                continue;
+            }
+            setcookie($cookieName, '', time() - 3600, '/', '', $secure, true);
+        }
+        if (isset($_COOKIE['ultitech_app_build'])) {
+            unset($_COOKIE['ultitech_app_build']);
+        }
+    }
+}
+
 /**
  * Strip APP_BASE_PATH from a request path, tolerant of case and _/- aliases
  * (local XAMPP often has both /ultitech_erp and /Ultitech-erp → same folder).
@@ -417,6 +468,20 @@ if (session_status() == PHP_SESSION_NONE) {
             $cookie .= '; Secure';
         }
         header('Set-Cookie: ' . $cookie, false);
+    }
+
+    $buildToken = ultitechDeployBuildToken();
+    $storedBuildToken = isset($_COOKIE['ultitech_app_build']) ? trim((string) $_COOKIE['ultitech_app_build']) : '';
+    if ($storedBuildToken !== '' && $storedBuildToken !== $buildToken) {
+        $_SESSION = [];
+        if (function_exists('session_regenerate_id')) {
+            @session_regenerate_id(true);
+        }
+        ultitechClearAuthCookies();
+    }
+    if (!headers_sent()) {
+        $secure = !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off';
+        setcookie('ultitech_app_build', $buildToken, time() + (60 * 60 * 24 * 30), '/', '', $secure, true);
     }
 }
 /**

@@ -239,6 +239,15 @@ function RowActionsMenu({
     disabled: togglingRef === r.id,
     onClick: () => { onToggleReference(r); onClose() },
   }]
+  const voucherStatus = String(r.status || r.derived_status || '').toLowerCase()
+  const voucherCurrency = String(r.currency || 'TZS').trim().toUpperCase()
+  const canSendToPayables = Boolean(String(r.payee_name || '').trim())
+    && Number(r.total_amount) > 0
+    && !r.is_paid
+    && !r.is_posted
+    && !r.looks_draft
+    && !['rejected', 'draft', 'paid', 'posted'].includes(voucherStatus)
+    && voucherCurrency === 'TZS'
   if (IS_ADMIN && r.can_approve) {
     items.push({
       key: 'approve',
@@ -264,6 +273,22 @@ function RowActionsMenu({
       icon: <CreditCard size={14} aria-hidden="true" />,
       className: 'ed-menu-pay',
       onClick: () => { onMarkPaid(r); onClose() },
+    })
+  }
+  if (IS_ADMIN && canSendToPayables) {
+    items.push({
+      key: 'send-to-payables',
+      label: 'Send to Payables',
+      icon: <CreditCard size={14} aria-hidden="true" />,
+      className: 'ed-menu-pay',
+      onClick: () => {
+        submitForm(URLS.approve, {
+          voucher_id: r.id,
+          action: 'send_to_payables',
+          csrf_token: String(CFG.csrfToken || ''),
+        })
+        onClose()
+      },
     })
   }
   if (r.can_edit) {

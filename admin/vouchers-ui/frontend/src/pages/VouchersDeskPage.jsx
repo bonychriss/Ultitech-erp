@@ -340,6 +340,15 @@ function RowActionsMenu({
   }, [open, onClose])
 
   const items = []
+  const voucherStatus = String(v.status || v.derived_status || '').toLowerCase()
+  const voucherCurrency = String(v.currency || 'TZS').trim().toUpperCase()
+  const canSendToPayables = Boolean(String(v.payee_name || '').trim())
+    && Number(v.total_amount) > 0
+    && !v.is_paid
+    && !v.is_posted
+    && !v.looks_draft
+    && !['rejected', 'draft', 'paid', 'posted'].includes(voucherStatus)
+    && voucherCurrency === 'TZS'
   items.push({
     key: 'view',
     label: 'View',
@@ -425,6 +434,22 @@ function RowActionsMenu({
       icon: <Upload size={14} aria-hidden="true" />,
       className: 'pv-menu-post',
       onClick: () => { onMarkPosted(v.id); onClose() },
+    })
+  }
+  if (canSendToPayables) {
+    items.push({
+      key: 'send-to-payables',
+      label: 'Send to Payables',
+      icon: <CreditCard size={14} aria-hidden="true" />,
+      className: 'pv-menu-pay',
+      onClick: () => {
+        submitForm(ACT.approveUrl, {
+          voucher_id: v.id,
+          action: 'send_to_payables',
+          csrf_token: String(CFG.csrfToken || ''),
+        })
+        onClose()
+      },
     })
   }
   if (canDelete) {

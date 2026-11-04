@@ -101,12 +101,105 @@ foreach ($invoices as $inv) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Outstanding Invoices - <?= COMPANY_NAME ?></title>
-    <link rel="stylesheet" href="../../assets/css/style.css?v=<?= time() ?>">
+    <link rel="stylesheet" href="../assets/css/style.css?v=<?= time() ?>">
     <style>
         body { background: #f3f4f6; }
-        .main-content { max-width: 1200px; margin: 0 auto; padding: 20px; }
-        .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        .page-title { font-size: 1.5rem; font-weight: bold; color: #111; }
+        .main-content { max-width: 1200px; margin: 0 auto; padding: 12px 20px 20px; }
+        .outstanding-invoice-header-actions {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+        }
+        .new-invoice-btn {
+            background: #2563eb;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            padding: 10px 16px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.2);
+        }
+        .new-invoice-btn:hover { background: #1d4ed8; }
+        .oi-invoice-picker {
+            position: absolute;
+            top: calc(100% + 10px);
+            right: 0;
+            width: min(560px, 72vw);
+            margin: 0;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            box-shadow: 0 18px 36px rgba(15, 23, 42, 0.12);
+            padding: 18px;
+            z-index: 20;
+            animation: oi-panel-pop 0.18s ease-out;
+        }
+        .oi-invoice-picker[hidden] { display: none; }
+        .oi-invoice-picker-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 16px;
+        }
+        @keyframes oi-panel-pop {
+            from {
+                opacity: 0;
+                transform: translateY(-8px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .oi-invoice-picker-card {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 14px;
+            padding: 18px;
+            text-decoration: none;
+            color: #0f172a;
+            transition: 0.2s ease;
+        }
+        .oi-invoice-picker-card.active {
+            border-color: #93c5fd;
+            background: #eff6ff;
+            box-shadow: 0 8px 18px rgba(37, 99, 235, 0.08);
+        }
+        .oi-invoice-picker-card:hover {
+            transform: translateY(-1px);
+            border-color: #cbd5e1;
+        }
+        .oi-picker-icon {
+            width: 42px;
+            height: 42px;
+            border-radius: 12px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.15rem;
+            font-weight: 800;
+            flex-shrink: 0;
+        }
+        .oi-picker-icon--in { background: #dcfce7; color: #15803d; }
+        .oi-picker-icon--out { background: #fee2e2; color: #b91c1c; }
+        .oi-invoice-picker-card strong {
+            display: block;
+            font-size: 1rem;
+            margin-bottom: 4px;
+        }
+        .oi-invoice-picker-card small {
+            color: #475569;
+            line-height: 1.4;
+            display: block;
+        }
         
         .tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid #e5e7eb; }
         .tab-link { padding: 10px 20px; text-decoration: none; color: #6b7280; border-bottom: 2px solid transparent; font-weight: 500; }
@@ -139,18 +232,33 @@ foreach ($invoices as $inv) {
     </style>
 </head>
 <body>
-    <?php include '../../includes/header_employee.php'; // Using employee header for simplified nav, check role if needed ?>
-    
-    <div class="main-content">
-        <div class="page-header">
-            <div>
-                <a href="../../select-module.php" style="text-decoration:none; color:#6b7280; font-size:0.9rem;">&larr; Back</a>
-                <div class="page-title">Outstanding Invoices</div>
-            </div>
-            <div>
-                 <a href="../../select-module.php" class="btn" style="background:#fff; border:1px solid #ccc; color:#333; padding:8px 12px; border-radius:4px; text-decoration:none;">Home</a>
-            </div>
+    <?php
+    $employeeHeaderTitle = 'Outstanding Invoices';
+    $employeeHeaderRightHtml = '
+        <div class="outstanding-invoice-header-actions">
+            <button type="button" class="new-invoice-btn" data-toggle-target="new-outstanding-invoice-panel" aria-expanded="false">New Outstanding Invoice</button>
+            <section class="oi-invoice-picker" id="new-outstanding-invoice-panel" hidden>
+                <div class="oi-invoice-picker-grid">
+                    <a href="' . oi_h(oi_url(['tab' => 'receivables', 'q' => null, 'p' => null, 'sort' => null, 'dir' => null])) . '" class="oi-invoice-picker-card ' . ($activeTab === 'receivables' ? 'active' : '') . '">
+                        <span class="oi-picker-icon oi-picker-icon--in">↗</span>
+                        <div>
+                            <strong>Receivables</strong>
+                            <small>Track customer invoices still waiting to be collected.</small>
+                        </div>
+                    </a>
+                    <a href="' . oi_h(oi_url(['tab' => 'payables', 'q' => null, 'p' => null, 'sort' => null, 'dir' => null])) . '" class="oi-invoice-picker-card ' . ($activeTab === 'payables' ? 'active' : '') . '">
+                        <span class="oi-picker-icon oi-picker-icon--out">↘</span>
+                        <div>
+                            <strong>Payables</strong>
+                            <small>Track supplier invoices still waiting to be paid.</small>
+                        </div>
+                    </a>
+                </div>
+            </section>
         </div>
+    ';
+    include '../../includes/header_employee.php';
+    ?>
 
         <?php if ($success): ?><div style="background:#dcfce7; color:#166534; padding:10px; border-radius:6px; margin-bottom:15px;"><?= htmlspecialchars($success) ?></div><?php endif; ?>
         <?php if ($error): ?><div style="background:#fee2e2; color:#991b1b; padding:10px; border-radius:6px; margin-bottom:15px;"><?= htmlspecialchars($error) ?></div><?php endif; ?>
@@ -161,7 +269,7 @@ foreach ($invoices as $inv) {
         </div>
 
         <!-- Add New Form -->
-        <div class="card">
+        <div class="card" id="new-outstanding-invoice-form">
             <h3 style="font-size:1rem; margin-bottom:15px; color:#374151;">Add <?= $activeTab === 'receivables' ? 'Receivable' : 'Payable' ?></h3>
             <form method="POST" enctype="multipart/form-data">
                 <input type="hidden" name="create_invoice" value="1">
@@ -379,5 +487,22 @@ foreach ($invoices as $inv) {
             if (e.key === 'Escape') closeDeleteModal();
         });
     </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const trigger = document.querySelector('.new-invoice-btn');
+            const panel = document.getElementById('new-outstanding-invoice-panel');
+
+            if (!trigger || !panel) {
+                return;
+            }
+
+            trigger.addEventListener('click', function () {
+                const isHidden = panel.hidden;
+                panel.hidden = !isHidden;
+                trigger.setAttribute('aria-expanded', String(!isHidden));
+            });
+        });
+    </script>
+
 </body>
 </html>

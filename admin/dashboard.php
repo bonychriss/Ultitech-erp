@@ -222,7 +222,84 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['voucher_id'])) {
     $action = $_POST['action'];
     $comments = trim($_POST['comments'] ?? '');
 
-    if (!in_array($action, ['approved', 'rejected', 'delete'], true)) {
+        if ($action === 'send_to_payables') {
+            if (!verify_csrf($_POST['csrf_token'] ?? '')) {
+                $error = 'Your session has expired. Refresh the page and try again.';
+            } else {
+                try {
+                    if (function_exists('ensureOutstandingInvoicesSchema')) {
+                        ensureOutstandingInvoicesSchema();
+                    }
+
+                    $invoiceColumns = $pdo->query('SHOW COLUMNS FROM erp_outstanding_invoices')->fetchAll(PDO::FETCH_COLUMN) ?: [];
+                    if (!in_array('source_payment_voucher_id', $invoiceColumns, true)) {
+                        $pdo->exec('ALTER TABLE erp_outstanding_invoices ADD COLUMN source_payment_voucher_id INT NULL DEFAULT NULL');
+                    }
+                    $sourceIndex = $pdo->query("SHOW INDEX FROM erp_outstanding_invoices WHERE Key_name = 'uniq_source_payment_voucher'")->fetchAll(PDO::FETCH_ASSOC) ?: [];
+                    if ($sourceIndex === []) {
+                        $pdo->exec('ALTER TABLE erp_outstanding_invoices ADD UNIQUE KEY uniq_source_payment_voucher (source_payment_voucher_id)');
+                    }
+
+                    $voucherStmt = $pdo->prepare("SELECT voucher_no, payee_name, total_amount, date_created, description, currency, status,
+                            IFNULL(is_paid, 0) AS is_paid, IFNULL(is_posted, 0) AS is_posted, IFNULL(is_draft, 0) AS is_draft
+                            FROM payment_vouchers WHERE id = ? LIMIT 1");
+                    $voucherStmt->execute([$voucher_id]);
+                    $voucher = $voucherStmt->fetch(PDO::FETCH_ASSOC);
+                    if (!$voucher) {
+                        throw new RuntimeException('Voucher not found.');
+                    }
+
+                    $payeeName = trim((string) ($voucher['payee_name'] ?? ''));
+                    $voucherNo = trim((string) ($voucher['voucher_no'] ?? ''));
+                    $amount = (float) ($voucher['total_amount'] ?? 0);
+                    $currency = strtoupper(trim((string) ($voucher['currency'] ?? 'TZS')));
+                    $voucherStatus = strtolower(trim((string) ($voucher['status'] ?? '')));
+                    if ($currency === '') $currency = 'TZS';
+                    if ($payeeName === '' || $amount <= 0 || $voucherNo === '') {
+                        throw new RuntimeException('Complete the voucher payee, number, and amount before sending it to Payables.');
+                    }
+                    if ($currency !== 'TZS') {
+                        throw new RuntimeException('Only TZS vouchers can be sent to Outstanding Payables.');
+                    }
+                    if (!empty($voucher['is_paid']) || !empty($voucher['is_posted']) || !empty($voucher['is_draft'])
+                            || in_array($voucherStatus, ['rejected', 'draft', 'paid', 'posted'], true)) {
+                        throw new RuntimeException('Only unpaid, unposted vouchers can be sent to Outstanding Payables.');
+                    }
+
+                    $existingStmt = $pdo->prepare('SELECT id FROM erp_outstanding_invoices WHERE source_payment_voucher_id = ? LIMIT 1');
+                    $existingStmt->execute([$voucher_id]);
+                    $alreadySent = (int) ($existingStmt->fetchColumn() ?: 0) > 0;
+                    if (!$alreadySent) {
+                        $dateValue = substr(trim((string) ($voucher['date_created'] ?? '')), 0, 10);
+                        $dateObj = DateTime::createFromFormat('!Y-m-d', $dateValue);
+                        if (!$dateObj || $dateObj->format('Y-m-d') !== $dateValue) {
+                            $dateValue = date('Y-m-d');
+                        }
+                        $description = trim((string) ($voucher['description'] ?? ''));
+                        if ($description === '') $description = 'Payment voucher ' . $voucherNo;
+
+                        try {
+                            $insert = $pdo->prepare("INSERT INTO erp_outstanding_invoices
+                                    (type, invoice_date, entity_name, invoice_number, narration, amount, source_payment_voucher_id)
+                                    VALUES ('payable', ?, ?, ?, ?, ?, ?)");
+                            $insert->execute([$dateValue, $payeeName, $voucherNo, $description, $amount, $voucher_id]);
+                        } catch (PDOException $insertError) {
+                            if ((string) $insertError->getCode() !== '23000') throw $insertError;
+                            $alreadySent = true;
+                        }
+                    }
+
+                    $_SESSION['outstanding_invoice_success'] = $alreadySent
+                            ? 'This voucher is already in Outstanding Payables.'
+                            : 'Voucher sent to Outstanding Payables.';
+                    header('Location: ' . company_url('erp/outstanding-invoices/index.php?module=outstanding&tab=payables'));
+                    exit;
+                } catch (Throwable $transferError) {
+                    error_log('voucher send-to-payables: ' . $transferError->getMessage());
+                    $error = $transferError->getMessage();
+                }
+            }
+        } elseif (!in_array($action, ['approved', 'rejected', 'delete'], true)) {
       $error = 'Invalid action.';
     } else if ($action === 'delete') {
       // Admin-only hard delete
@@ -422,6 +499,7 @@ $dashboardConfig = [
     'deleteUrl' => $adminBase . '/dashboard.php',
     'deleteMode' => 'action',
     'approveUrl' => $adminBase . '/dashboard.php',
+    'csrfToken' => function_exists('csrf_token') ? csrf_token() : '',
     'markPaidUrl' => $adminBase . '/dashboard.php',
     'stockPayUrl' => function_exists('company_url')
         ? (string) company_url('modules/finance/api/mark-stock-purchase-voucher-paid.php')

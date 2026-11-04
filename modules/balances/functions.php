@@ -975,6 +975,45 @@ function balances_infer_payment_wallet_type(array $parent): string
 }
 
 /**
+ * Split sub-account rows into Bank / Mobile money / Cash / Other sections by payment type.
+ * Returns one unlabelled group when none of the rows is a payment wallet.
+ *
+ * @param list<array<string, mixed>> $rows
+ * @return list<array{key:string,label:?string,rows:list<array<string, mixed>>,total:float,currency:string}>
+ */
+function balances_group_sub_accounts_by_payment_type(array $rows): array
+{
+    $labels = ['bank' => 'Bank accounts', 'mobile' => 'Mobile money', 'cash' => 'Cash', 'other' => 'Other assets'];
+    $groups = array_fill_keys(array_keys($labels), []);
+    $hasWallet = false;
+    foreach ($rows as $row) {
+        $type = balances_normalize_payment_wallet_type((string) ($row['raw']['type'] ?? ''));
+        $hasWallet = $hasWallet || $type !== null;
+        $groups[$type ?? 'other'][] = $row;
+    }
+    if (!$hasWallet) {
+        return $rows === [] ? [] : [['key' => 'all', 'label' => null, 'rows' => $rows, 'total' => 0.0, 'currency' => '']];
+    }
+
+    $out = [];
+    foreach ($groups as $key => $groupRows) {
+        if ($groupRows === []) {
+            continue;
+        }
+        $currencies = array_unique(array_map(static fn ($r) => (string) ($r['currency'] ?? 'TZS'), $groupRows));
+        $out[] = [
+            'key' => $key,
+            'label' => $labels[$key],
+            'rows' => $groupRows,
+            'total' => array_sum(array_map(static fn ($r) => (float) ($r['balance'] ?? 0), $groupRows)),
+            'currency' => count($currencies) === 1 ? (string) reset($currencies) : '',
+        ];
+    }
+
+    return $out;
+}
+
+/**
  * Resolve financial_accounts.type for a wallet sub-account.
  */
 function balances_resolve_sub_account_wallet_type(array $parent, ?string $requestedType): ?string

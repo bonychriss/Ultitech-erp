@@ -289,6 +289,10 @@ $selectedCategory = trim((string) ($_POST['category'] ?? coa_type_to_category_la
 if (!isset($categoryOptions[$selectedCategory])) {
     $selectedCategory = coa_type_to_category_label($existingUiType);
 }
+$existingPaymentType = balances_normalize_payment_wallet_type($existingDbType) ?? '';
+$paymentType = array_key_exists('payment_wallet_type', $_POST)
+    ? (balances_normalize_payment_wallet_type((string) $_POST['payment_wallet_type']) ?? '')
+    : $existingPaymentType;
 $currency = strtoupper(trim((string) ($_POST['currency'] ?? $existingCurrency)));
 if (!isset($currencyCatalog[$currency])) {
     $currency = isset($currencyCatalog[$existingCurrency]) ? $existingCurrency : 'TZS';
@@ -328,7 +332,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 coa_ensure_account_category($pdo, $accountCategory, $accountType, $reportingGroup, $financialStatement);
             }
 
-            $normalizedType = $accountType;
+            $normalizedType = $accountType === 'asset' && $paymentType !== '' ? $paymentType : $accountType;
             $nameToSave = ($accountCode !== '' ? $accountCode . ' - ' : '') . $accountName;
 
             coa_ensure_account_image_column($pdo);
@@ -929,6 +933,16 @@ try {
                     </select>
                 </div>
 
+                <div class="coa-field" id="paymentTypeField"<?= ($categoryOptions[$selectedCategory]['account_type'] ?? '') === 'asset' ? '' : ' hidden' ?>>
+                    <label for="payment_wallet_type">Payment type</label>
+                    <select class="coa-select" id="payment_wallet_type" name="payment_wallet_type">
+                        <option value="">Regular asset account</option>
+                        <?php foreach (balances_payment_wallet_types() as $walletSlug => $walletLabel): ?>
+                            <option value="<?= $esc($walletSlug) ?>"<?= $paymentType === $walletSlug ? ' selected' : '' ?>><?= $esc($walletLabel) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+
                 <div class="coa-field-row">
                     <div class="coa-field">
                         <label for="currency">Currency</label>
@@ -1004,6 +1018,15 @@ try {
         }
         nameInput.addEventListener('input', syncCount);
         syncCount();
+    }
+
+    var categorySelect = document.getElementById('category');
+    var paymentTypeField = document.getElementById('paymentTypeField');
+    var assetCategories = <?= json_encode(array_keys(array_filter($categoryOptions, static fn ($m) => $m['account_type'] === 'asset'))) ?>;
+    if (categorySelect && paymentTypeField) {
+        categorySelect.addEventListener('change', function () {
+            paymentTypeField.hidden = assetCategories.indexOf(categorySelect.value) === -1;
+        });
     }
 
     var imageInput = document.getElementById('account_image');

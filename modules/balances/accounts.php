@@ -925,6 +925,17 @@ include __DIR__ . '/includes/header.php';
     .ray-parent-row.is-selected { background: #eff6ff; }
     .ray-account-name { font-weight: 600; color: #111827; display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
     .ray-account-desc { font-size: 0.75rem; color: #6b7280; margin-top: 4px; line-height: 1.45; max-width: 360px; }
+    .ray-table tr.ray-sub-group-row td { background: #f8fafc; padding: 0.55rem 1rem; border-bottom: 1px solid #eef2f7; }
+    .ray-sub-group-row td, .ray-m-sub-group { font-size: 0.75rem; }
+    .ray-m-sub-group { display: flex; align-items: center; gap: 0.4rem; padding: 0.6rem 0.25rem 0.2rem; }
+    .ray-sub-group-name { font-weight: 600; color: #334155; text-transform: uppercase; letter-spacing: 0.03em; }
+    .ray-sub-group-count { display: inline-flex; min-width: 20px; justify-content: center; padding: 1px 6px; border-radius: 999px; background: #e2e8f0; color: #475569; font-weight: 600; margin-left: 6px; }
+    .ray-sub-group-total { float: right; font-weight: 600; color: #0f172a; font-variant-numeric: tabular-nums; }
+    .ray-m-sub-group .ray-sub-group-total { float: none; margin-left: auto; }
+    html[data-theme="dark"] body.page-balances-accounts .ray-table tr.ray-sub-group-row td { background: #0b141a !important; }
+    html[data-theme="dark"] body.page-balances-accounts .ray-sub-group-name { color: #8696a0; }
+    html[data-theme="dark"] body.page-balances-accounts .ray-sub-group-count { background: #2a3942; color: #e9edef; }
+    html[data-theme="dark"] body.page-balances-accounts .ray-sub-group-total { color: #e9edef; }
     .ray-badge {
         display: inline-flex;
         align-items: center;
@@ -1821,7 +1832,17 @@ include __DIR__ . '/includes/header.php';
                                             <div class="ray-m-sub-empty">No sub-accounts yet</div>
                                         <?php else: ?>
                                             <div class="ray-m-sub-list">
-                                                <?php foreach ($rowChildren as $childRow):
+                                                <?php foreach (balances_group_sub_accounts_by_payment_type($rowChildren) as $subGroup): ?>
+                                                <?php if ($subGroup['label'] !== null): ?>
+                                                <div class="ray-m-sub-group">
+                                                    <span class="ray-sub-group-name"><?= htmlspecialchars($subGroup['label'], ENT_QUOTES, 'UTF-8') ?></span>
+                                                    <span class="ray-sub-group-count"><?= count($subGroup['rows']) ?></span>
+                                                    <?php if ($subGroup['currency'] !== ''): ?>
+                                                        <span class="ray-sub-group-total"><?= htmlspecialchars($subGroup['currency'], ENT_QUOTES, 'UTF-8') ?> <?= number_format($subGroup['total'], 2) ?></span>
+                                                    <?php endif; ?>
+                                                </div>
+                                                <?php endif; ?>
+                                                <?php foreach ($subGroup['rows'] as $childRow):
                                                     $childViewUrl = 'view_account.php?' . http_build_query(['module' => $moduleParam, 'id' => (int) $childRow['id']]);
                                                     $childEditUrl = 'coa_edit.php?id=' . (int) $childRow['id'] . ($moduleParam !== '' ? '&module=' . rawurlencode($moduleParam) : '');
                                                 ?>
@@ -1857,6 +1878,7 @@ include __DIR__ . '/includes/header.php';
                                                         <?php endif; ?>
                                                     </div>
                                                 </div>
+                                                <?php endforeach; ?>
                                                 <?php endforeach; ?>
                                             </div>
                                         <?php endif; ?>
@@ -1954,7 +1976,19 @@ include __DIR__ . '/includes/header.php';
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <?php foreach ($selectedChildren as $childRow):
+                                    <?php foreach (balances_group_sub_accounts_by_payment_type($selectedChildren) as $subGroup): ?>
+                                    <?php if ($subGroup['label'] !== null): ?>
+                                    <tr class="ray-sub-group-row">
+                                        <td colspan="<?= isAdmin() && $deletableSubCount > 0 ? 3 : 2 ?>">
+                                            <span class="ray-sub-group-name"><?= htmlspecialchars($subGroup['label'], ENT_QUOTES, 'UTF-8') ?></span>
+                                            <span class="ray-sub-group-count"><?= count($subGroup['rows']) ?></span>
+                                            <?php if ($subGroup['currency'] !== ''): ?>
+                                                <span class="ray-sub-group-total"><?= htmlspecialchars($subGroup['currency'], ENT_QUOTES, 'UTF-8') ?> <?= number_format($subGroup['total'], 2) ?></span>
+                                            <?php endif; ?>
+                                        </td>
+                                    </tr>
+                                    <?php endif; ?>
+                                    <?php foreach ($subGroup['rows'] as $childRow):
                                         $childViewUrl = 'view_account.php?' . http_build_query(['module' => $moduleParam, 'id' => (int) $childRow['id']]);
                                         $childEditUrl = 'coa_edit.php?id=' . (int) $childRow['id'] . ($moduleParam !== '' ? '&module=' . rawurlencode($moduleParam) : '');
                                         $childIsSystem = !empty($childRow['is_system']);
@@ -2012,6 +2046,7 @@ include __DIR__ . '/includes/header.php';
                                             <?php endif; ?>
                                         </td>
                                     </tr>
+                                    <?php endforeach; ?>
                                     <?php endforeach; ?>
                                 </tbody>
                             </table>

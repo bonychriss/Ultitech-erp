@@ -1,8 +1,7 @@
 import { useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { FileText, Paperclip, Pencil, Wallet, X } from 'lucide-react';
+import { ChevronRight, CircleCheck, CreditCard, FileText, Layers, Paperclip, Percent, Scale, User, Wallet, X, AlignLeft, CalendarDays } from 'lucide-react';
 import RevenueStatusBadge from './RevenueStatusBadge';
-import { deskPageUrl } from '../api/revenueDesk';
 import { formatDateDigits, formatVoucherRef } from '../utils/formatDisplay';
 import { revenueInvoiceHref } from '../utils/revenueNav';
 
@@ -28,11 +27,11 @@ function withInvoiceLink(text, invoiceNumber, link) {
   );
 }
 
-function detailRow(label, value, { amount = false } = {}) {
+function detailRow(label, value, { amount = false, icon: Icon = null } = {}) {
   if (value === null || value === undefined || value === '' || value === '-') return null;
   return (
     <div className="rev-desk-quick-row">
-      <dt>{label}</dt>
+      <dt>{Icon ? <Icon size={16} strokeWidth={1.75} aria-hidden="true" /> : null}<span>{label}</span></dt>
       <dd className={amount ? 'rev-desk-quick-amt' : undefined}>{value}</dd>
     </div>
   );
@@ -85,6 +84,7 @@ function DocumentsBlock({ documents }) {
                   >
                     <Icon size={14} aria-hidden="true" />
                     <span>{name}</span>
+                    <ChevronRight size={16} className="rev-desk-quick-doc-chevron" aria-hidden="true" />
                   </a>
                 </li>
               );
@@ -104,7 +104,7 @@ export default function RevenueQuickViewModal({
 }) {
   const vatAmount = Number(entry.vat_amount) || 0;
   const balanceDue = Number(entry.balance_due) || 0;
-  const showActions = entry.can_edit || entry.can_pay;
+  const showActions = entry.can_pay;
   const invoiceNumber = String(entry.linked_invoice_number || '');
   const invoiceUrl = invoiceNumber ? revenueInvoiceHref(entry) : '';
   const invoiceLink = invoiceUrl ? (
@@ -156,7 +156,7 @@ export default function RevenueQuickViewModal({
             <div className="rev-desk-quick-meta">
               <RevenueStatusBadge entry={entry} />
               <span className={`rev-type rev-type--${entry.type_class || 'other'}`}>{entry.type_label}</span>
-              <span className="rev-desk-quick-date">{formatDate(entry.entry_date)}</span>
+              <span className="rev-desk-quick-date"><CalendarDays size={14} aria-hidden="true" />{formatDate(entry.entry_date)}</span>
             </div>
           </div>
           <button type="button" className="rev-desk-quick-close" onClick={onClose} aria-label="Close">
@@ -166,31 +166,21 @@ export default function RevenueQuickViewModal({
 
         <div className="rev-desk-quick-body">
           <dl className="rev-desk-quick-details">
-            {detailRow('Total', formatCurrency(entry.amount_total), { amount: true })}
-            {detailRow('Paid', formatCurrency(entry.amount_paid), { amount: true })}
-            {balanceDue > 0.009 && detailRow('Balance', formatCurrency(balanceDue), { amount: true })}
-            {invoiceNumber && detailRow('Invoice', invoiceLink || invoiceNumber)}
+            {detailRow('Total', formatCurrency(entry.amount_total), { amount: true, icon: Layers })}
+            {detailRow('Paid', formatCurrency(entry.amount_paid), { amount: true, icon: CircleCheck })}
+            {balanceDue > 0.009 && detailRow('Balance', formatCurrency(balanceDue), { amount: true, icon: Scale })}
+            {invoiceNumber && detailRow('Invoice', invoiceLink || invoiceNumber, { icon: FileText })}
             {entry.customer_code_display && entry.customer_code_display !== '-'
-              && detailRow('Customer code', entry.customer_code_display)}
-            {entry.payment_mode && detailRow('Payment method', entry.payment_mode)}
-            {vatAmount > 0 && detailRow('VAT', formatCurrency(vatAmount), { amount: true })}
-            {detailRow('Description', withInvoiceLink(entry.description || entry.narration, invoiceNumber, invoiceLink))}
+              && detailRow('Customer code', entry.customer_code_display, { icon: User })}
+            {entry.payment_mode && detailRow('Payment method', entry.payment_mode, { icon: CreditCard })}
+            {vatAmount > 0 && detailRow('VAT', formatCurrency(vatAmount), { amount: true, icon: Percent })}
+            {detailRow('Description', withInvoiceLink(entry.description || entry.narration, invoiceNumber, invoiceLink), { icon: AlignLeft })}
           </dl>
           <DocumentsBlock documents={entry.documents} />
         </div>
 
         {showActions ? (
           <div className="rev-desk-quick-actions">
-            {entry.can_edit ? (
-              <a
-                href={deskPageUrl('revenue_edit.php', { id: entry.id })}
-                className="rev-desk-btn rev-desk-btn-ghost rev-desk-quick-action-btn"
-                onClick={() => onRemember?.(entry.id)}
-              >
-                <Pencil size={16} aria-hidden="true" />
-                Edit
-              </a>
-            ) : null}
             {entry.can_pay ? (
               <button
                 type="button"

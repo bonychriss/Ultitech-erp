@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
   AlertTriangle,
+  CalendarDays,
   Clock,
   Coins,
   Eye,
@@ -25,7 +26,7 @@ import RevenueExportMenu from '../components/RevenueExportMenu';
 import RevenueExportModal from '../components/RevenueExportModal';
 import RevenuePayModal from '../components/RevenuePayModal';
 import RevenueQuickViewModal from '../components/RevenueQuickViewModal';
-import RevenueKpiTraceModal from '../components/RevenueKpiTraceModal';
+import RevenueKpiTracePage from '../components/RevenueKpiTracePage';
 import { buildRevenueStatusBreakdown, buildRevenueTrendStats } from '../utils/analyticsStats';
 import { resolveKpiTrace } from '../utils/kpiTrace';
 import { formatDateDigits, formatVoucherRef } from '../utils/formatDisplay';
@@ -383,7 +384,7 @@ export default function RevenueDeskPage() {
   const skipFilterFetch = useRef(true);
   const urlSyncReady = useRef(false);
   const appliedSearchRef = useRef('');
-  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(true);
   const searchInputRef = useRef(null);
   const mobileSearchInputRef = useRef(null);
   const searchExpandRef = useRef(null);
@@ -396,17 +397,60 @@ export default function RevenueDeskPage() {
   const [successMessage, setSuccessMessage] = useState('');
   const [activeKpiTrace, setActiveKpiTrace] = useState(null);
   const [exportOpen, setExportOpen] = useState(false);
-  const [showAnalytics, setShowAnalytics] = useState(false);
+  const [showAnalytics, setShowAnalyticsState] = useState(() => {
+    try {
+      return window.localStorage.getItem('rev_desk_analytics') !== 'hidden';
+    } catch {
+      return true;
+    }
+  });
+  const setShowAnalytics = (next) => {
+    setShowAnalyticsState((prev) => {
+      const value = typeof next === 'function' ? next(prev) : next;
+      try {
+        window.localStorage.setItem('rev_desk_analytics', value ? 'shown' : 'hidden');
+      } catch {
+        /* ignore storage errors */
+      }
+      return value;
+    });
+  };
   const [exportFormat, setExportFormat] = useState('csv');
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [deleteError, setDeleteError] = useState('');
+  const [headerToolsEl, setHeaderToolsEl] = useState(null);
+  const [isDesktopHeader, setIsDesktopHeader] = useState(() => (
+    typeof window !== 'undefined' && window.matchMedia('(min-width: 768px)').matches
+  ));
+  const [monthNoticeVisible, setMonthNoticeVisible] = useState(true);
   const pendingPreviewRef = useRef(null);
   if (pendingPreviewRef.current === null) {
     pendingPreviewRef.current = typeof window === 'undefined'
       ? 0
       : Number(new URLSearchParams(window.location.search).get('preview') || 0) || 0;
   }
+
+  useEffect(() => {
+    setHeaderToolsEl(document.getElementById('rev-desk-header-tools'));
+    const media = window.matchMedia('(min-width: 768px)');
+    const syncHeaderMode = () => setIsDesktopHeader(media.matches);
+    syncHeaderMode();
+    media.addEventListener('change', syncHeaderMode);
+    return () => media.removeEventListener('change', syncHeaderMode);
+  }, []);
+
+  const isCurrentMonthRange = isThisMonthRange(filters);
+  useEffect(() => {
+    if (!isCurrentMonthRange) return undefined;
+    setMonthNoticeVisible(true);
+    const timer = window.setTimeout(() => setMonthNoticeVisible(false), 5000);
+    return () => window.clearTimeout(timer);
+  }, [isCurrentMonthRange]);
+  const currentMonthLabel = new Intl.DateTimeFormat('en-US', {
+    month: 'long',
+    year: 'numeric',
+  }).format(new Date());
 
   function closeRowMenu() {
     setRowMenu(null);
@@ -682,30 +726,15 @@ export default function RevenueDeskPage() {
   useEffect(() => {
     if (!searchOpen) return undefined;
 
-    function handlePointerDown(event) {
-      if (!searchExpandRef.current?.contains(event.target)) {
-        if (draftSearch.trim() === '' && filters.search.trim() === '') {
-          setSearchOpen(false);
-        }
-      }
-    }
-
     function handleKeyDown(event) {
       if (event.key === 'Escape') setSearchOpen(false);
     }
 
-    const focusTimer = window.setTimeout(() => {
-      mobileSearchInputRef.current?.focus();
-    }, 180);
-
-    document.addEventListener('mousedown', handlePointerDown);
     document.addEventListener('keydown', handleKeyDown);
     return () => {
-      window.clearTimeout(focusTimer);
-      document.removeEventListener('mousedown', handlePointerDown);
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [searchOpen, draftSearch, filters.search]);
+  }, [searchOpen]);
 
   useEffect(() => {
     // Avoid wiping date/filter query params before init hydrates filters from the URL.
@@ -781,7 +810,7 @@ export default function RevenueDeskPage() {
     setSearchOpen((open) => !open);
   }
 
-  function renderSearchField(inputRef, id = 'rev-desk-search') {
+  function renderSearchField(inputRef, id = 'rev-desk-search', placeholder = 'Search voucher, customer, narration') {
     return (
       <div className="rev-desk-search-field rev-desk-search-field--suggest">
         <Search className="rev-desk-search-icon" aria-hidden="true" />
@@ -791,7 +820,7 @@ export default function RevenueDeskPage() {
           type="text"
           role="searchbox"
           className="rev-desk-search-input"
-          placeholder="Search voucher, customer, narration"
+          placeholder={placeholder}
           value={draftSearch}
           onChange={(e) => onSearchChange(e.target.value)}
           onKeyDown={(e) => {
@@ -943,14 +972,15 @@ export default function RevenueDeskPage() {
   function buildActiveFilterChips(activeFilters) {
     const chips = [];
 
-    if (activeFilters.date_from || activeFilters.date_to) {
+    if (
+      (activeFilters.date_from || activeFilters.date_to)
+      && !isThisMonthRange(activeFilters)
+    ) {
       const fromLabel = activeFilters.date_from ? formatFilterDateLabel(activeFilters.date_from) : 'Any';
       const toLabel = activeFilters.date_to ? formatFilterDateLabel(activeFilters.date_to) : 'Any';
       chips.push({
         key: 'date_from',
-        label: isThisMonthRange(activeFilters)
-          ? 'Date: This month'
-          : `Date: ${fromLabel} - ${toLabel}`,
+        label: `Date: ${fromLabel} - ${toLabel}`,
       });
     }
 
@@ -1271,6 +1301,48 @@ export default function RevenueDeskPage() {
   const statusOptions = init?.status_options ?? [];
   const typeOptions = init?.type_options ?? [];
   const activeFilterChips = buildActiveFilterChips(filters);
+  const filterControl = (
+    <div
+      className={`rev-desk-filter-dropdown${filtersOpen ? ' is-open' : ''}`}
+      ref={filterDropdownRef}
+    >
+      <button
+        ref={filterBtnRef}
+        type="button"
+        className={`rev-desk-filter-btn${filtersOpen ? ' is-active' : ''}`}
+        onClick={toggleFilters}
+        aria-expanded={filtersOpen}
+        aria-haspopup="dialog"
+        title="Filters"
+      >
+        <SlidersHorizontal size={18} strokeWidth={2.25} aria-hidden="true" />
+        {hasAdvancedFilters(filters) && (
+          <span className="rev-desk-filter-dot" aria-hidden="true" />
+        )}
+      </button>
+    </div>
+  );
+  const createControl = (
+    <a
+      href={deskPageUrl('revenue_create.php')}
+      className="rev-desk-btn rev-desk-btn-primary rev-desk-btn-create"
+      aria-label="New revenue"
+      onClick={() => rememberList(highlightedId)}
+    >
+      <Plus size={16} aria-hidden="true" />
+      <span className="rev-desk-btn-label-desktop">New revenue</span>
+      <span className="rev-desk-btn-label-mobile">New</span>
+    </a>
+  );
+  const desktopHeaderControls = (
+    <div className="rev-desk-header-tools">
+      <div className="rev-desk-page-header-search">
+        {renderSearchField(searchInputRef, 'rev-desk-search-desktop')}
+      </div>
+      {filterControl}
+      {createControl}
+    </div>
+  );
 
   if (loading && !desk) {
     return (
@@ -1283,70 +1355,53 @@ export default function RevenueDeskPage() {
     );
   }
 
+  if (activeKpiTrace) {
+    return (
+      <div className="rev-desk-page">
+        <RevenueKpiTracePage
+          trace={activeKpiTrace.trace}
+          traceKey={activeKpiTrace.key}
+          onBack={() => setActiveKpiTrace(null)}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="rev-desk-page rev-desk-page--analytics-off">
-      {error && <div className="rev-desk-error">{error}</div>}
+      {error &&  <div className="rev-desk-error">{error}</div>}
 
-      <div className="rev-desk-page-header">
-        <div className="rev-desk-page-header-search rev-desk-page-header-search--desktop">
-          {renderSearchField(searchInputRef, 'rev-desk-search-desktop')}
-        </div>
-
-        <div className="rev-desk-page-header-actions">
-          <div className="rev-desk-toolbar-secondary">
-            <div
-              className={`rev-desk-search-expand${searchOpen ? ' is-open' : ''}`}
-              ref={searchExpandRef}
-            >
-              <button
-                type="button"
-                className={`rev-desk-search-toggle${searchOpen ? ' is-active' : ''}${hasSearchValue ? ' has-value' : ''}`}
-                onClick={toggleMobileSearch}
-                aria-expanded={searchOpen}
-                aria-controls="rev-desk-search-mobile-panel"
-                title="Search revenues"
-              >
-                <Search size={18} aria-hidden="true" />
-              </button>
+      {isDesktopHeader && headerToolsEl ? createPortal(desktopHeaderControls, headerToolsEl) : (
+        <div className="rev-desk-page-header rev-desk-page-header--mobile">
+          <div className="rev-desk-page-header-actions">
+            <div className="rev-desk-toolbar-secondary">
               <div
-                id="rev-desk-search-mobile-panel"
-                className={`rev-desk-search-panel${searchOpen ? ' is-open' : ''}`}
+                className={`rev-desk-search-expand${searchOpen ? ' is-open' : ''}`}
+                ref={searchExpandRef}
               >
-                {renderSearchField(mobileSearchInputRef, 'rev-desk-search-mobile')}
+                <button
+                  type="button"
+                  className={`rev-desk-search-toggle${searchOpen ? ' is-active' : ''}${hasSearchValue ? ' has-value' : ''}`}
+                  onClick={toggleMobileSearch}
+                  aria-expanded={searchOpen}
+                  aria-controls="rev-desk-search-mobile-panel"
+                  title="Search revenues"
+                >
+                  <Search size={18} aria-hidden="true" />
+                </button>
+                <div
+                  id="rev-desk-search-mobile-panel"
+                  className={`rev-desk-search-panel${searchOpen ? ' is-open' : ''}`}
+                >
+                  {renderSearchField(mobileSearchInputRef, 'rev-desk-search-mobile', 'Search revenue')}
+                </div>
               </div>
+              {filterControl}
+              {createControl}
             </div>
-            <div
-              className={`rev-desk-filter-dropdown${filtersOpen ? ' is-open' : ''}`}
-              ref={filterDropdownRef}
-            >
-              <button
-                ref={filterBtnRef}
-                type="button"
-                className={`rev-desk-filter-btn${filtersOpen ? ' is-active' : ''}`}
-                onClick={toggleFilters}
-                aria-expanded={filtersOpen}
-                aria-haspopup="dialog"
-                title="Filters"
-              >
-                <SlidersHorizontal size={18} strokeWidth={2.25} aria-hidden="true" />
-                {hasAdvancedFilters(filters) && (
-                  <span className="rev-desk-filter-dot" aria-hidden="true" />
-                )}
-              </button>
-            </div>
-            <a
-              href={deskPageUrl('revenue_create.php')}
-              className="rev-desk-btn rev-desk-btn-primary rev-desk-btn-create"
-              aria-label="New revenue"
-              onClick={() => rememberList(highlightedId)}
-            >
-              <Plus size={16} aria-hidden="true" />
-              <span className="rev-desk-btn-label-desktop">New revenue</span>
-              <span className="rev-desk-btn-label-mobile">New</span>
-            </a>
           </div>
         </div>
-      </div>
+      )}
 
       {successMessage ? (
         <div className="rev-desk-success" role="status">{successMessage}</div>
@@ -1357,7 +1412,7 @@ export default function RevenueDeskPage() {
       <div className="rev-desk-kpi-grid" aria-label="Revenue summary">
         <KpiCard
           icon={Coins}
-          iconTone="purple"
+          iconTone="violet"
           label="Total Exclusive"
           value={formatCurrency(kpi.sum_net)}
           foot="Before VAT"
@@ -1365,7 +1420,7 @@ export default function RevenueDeskPage() {
         />
         <KpiCard
           icon={Percent}
-          iconTone="teal"
+          iconTone="indigo"
           label="VAT"
           value={formatCurrency(kpi.sum_vat)}
           foot="Total VAT included"
@@ -1373,7 +1428,7 @@ export default function RevenueDeskPage() {
         />
         <KpiCard
           icon={Wallet}
-          iconTone="green"
+          iconTone="teal"
           label="Gross Total"
           value={formatCurrency(kpi.sum_total)}
           foot="After tax"
@@ -1389,7 +1444,7 @@ export default function RevenueDeskPage() {
         />
         <KpiCard
           icon={Clock}
-          iconTone="orange"
+          iconTone="amber"
           label="Outstanding"
           value={formatCurrency(invoiceKpi.outstanding)}
           foot={formatPctOfTotal(invoiceKpi.pct_outstanding)}
@@ -1397,7 +1452,7 @@ export default function RevenueDeskPage() {
         />
         <KpiCard
           icon={AlertTriangle}
-          iconTone="red"
+          iconTone="rose"
           label="Overdue"
           value={formatCurrency(invoiceKpi.overdue)}
           foot={formatPctOfTotal(invoiceKpi.pct_overdue)}
@@ -1417,9 +1472,17 @@ export default function RevenueDeskPage() {
 
       <section className="rev-desk-results" aria-label="Revenue entries">
         <div className="rev-desk-results-head">
-          <span className="rev-desk-results-count">
-            {visibleEntries.length} {visibleEntries.length === 1 ? 'entry' : 'entries'}
-          </span>
+          <div className="rev-desk-results-summary">
+            {isCurrentMonthRange && monthNoticeVisible ? (
+              <div className="rev-desk-month-insight" role="status">
+                <CalendarDays size={15} aria-hidden="true" />
+                <span>Displaying data for {currentMonthLabel}</span>
+              </div>
+            ) : null}
+            <span className="rev-desk-results-count">
+              {visibleEntries.length} {visibleEntries.length === 1 ? 'entry' : 'entries'}
+            </span>
+          </div>
           <div className="rev-desk-results-controls">
             <button
               type="button"
@@ -1462,6 +1525,103 @@ export default function RevenueDeskPage() {
             </button>
           </div>
         )}
+
+        <div className="rev-desk-mobile-cards" aria-label="Revenue entries">
+          {visibleEntries.length === 0 ? (
+            <div className="rev-desk-empty rev-desk-empty--mobile">No revenue entries match your filters.</div>
+          ) : visibleEntries.map((row) => (
+            <div
+              key={`m-${row.id}`}
+              role="button"
+              tabIndex={0}
+              data-rev-entry-id={row.id}
+              className={`rev-desk-mobile-card${sameId(highlightedId, row.id) ? ' is-selected' : ''}`}
+              onClick={(event) => handleEntryRowClick(event, row)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  markListSelection(row.id);
+                  setPreviewEntry(row);
+                }
+              }}
+            >
+              <div className="rev-desk-mobile-card-top">
+                <div className="rev-desk-mobile-card-main">
+                  <div className="rev-cust">
+                    <span
+                      className={`rev-cust-av rev-cust-av--tone-${Number(row.customer_avatar_tone ?? 0) % 10}`}
+                      aria-hidden="true"
+                    >
+                      {row.customer_initials || '?'}
+                    </span>
+                    <div className="rev-cust-body">
+                      <span className="rev-desk-voucher" title={row.voucher_number || `#${row.id}`}>
+                        {formatVoucherRef(row.voucher_number, `#${row.id}`)}
+                      </span>
+                      <span className="rev-cust-name" title={row.customer_display || undefined}>
+                        {row.customer_display || '-'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <div className="rev-desk-mobile-card-aside">
+                  <span className="rev-desk-amt rev-desk-mobile-card-amt">{formatCurrency(row.amount_total)}</span>
+                  <span className={`rev-status rev-status--${row.status_class || 'unpaid'}`}>{row.status_label}</span>
+                </div>
+              </div>
+              <div className="rev-desk-mobile-card-foot">
+                <div className="rev-desk-mobile-card-fact">
+                  <span className="rev-desk-mobile-card-fact-ico" aria-hidden="true">
+                    <CalendarDays size={14} strokeWidth={2} />
+                  </span>
+                  <span className="rev-desk-mobile-card-fact-body">
+                    <span className="rev-desk-mobile-card-fact-label">Date</span>
+                    <span className="rev-desk-mobile-card-fact-value">{formatDate(row.entry_date)}</span>
+                  </span>
+                </div>
+                <div className="rev-desk-mobile-card-fact">
+                  <span className="rev-desk-mobile-card-fact-ico" aria-hidden="true">
+                    <FileText size={14} strokeWidth={2} />
+                  </span>
+                  <span className="rev-desk-mobile-card-fact-body">
+                    <span className="rev-desk-mobile-card-fact-label">Type</span>
+                    <span className="rev-desk-mobile-card-fact-value">{row.type_label || '—'}</span>
+                    {row.linked_invoice_number ? (
+                      <span className="rev-desk-mobile-card-fact-sub">{formatVoucherRef(row.linked_invoice_number)}</span>
+                    ) : null}
+                  </span>
+                </div>
+                <div className="rev-desk-mobile-card-fact">
+                  <span className="rev-desk-mobile-card-fact-ico" aria-hidden="true">
+                    <Wallet size={14} strokeWidth={2} />
+                  </span>
+                  <span className="rev-desk-mobile-card-fact-body">
+                    <span className="rev-desk-mobile-card-fact-label">Balance</span>
+                    <span
+                      className={`rev-desk-mobile-card-fact-value ${Number(row.balance_due) > 0.009 ? 'rev-desk-amt--due' : 'rev-desk-amt--clear'}`}
+                    >
+                      {formatCurrency(row.balance_due)}
+                    </span>
+                  </span>
+                </div>
+                <div className="rev-desk-mobile-card-menu" data-rev-row-ignore data-rev-row-menu>
+                  <div className={`rev-desk-row-menu-wrap${rowMenu?.id === row.id ? ' is-open' : ''}`}>
+                    <button
+                      type="button"
+                      className="rev-desk-row-menu-btn"
+                      aria-label="Row actions"
+                      aria-haspopup="menu"
+                      aria-expanded={rowMenu?.id === row.id}
+                      onClick={(event) => openRowMenu(event, row)}
+                    >
+                      <MoreVertical size={16} strokeWidth={2} aria-hidden="true" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
 
         <div className="rev-desk-table-wrap">
         <table className="rev-desk-table">
@@ -1512,9 +1672,25 @@ export default function RevenueDeskPage() {
           </thead>
           <tbody>
             {visibleEntries.length === 0 ? (
-              <tr>
+              <tr className="rev-desk-empty-row">
                 <td colSpan={9}>
-                  <div className="rev-desk-empty">No revenue entries match your filters.</div>
+                  <div className="rev-desk-empty">
+                    <span>
+                      {isThisMonthRange(filters)
+                        && !filters.customer_id
+                        && !filters.type
+                        && !filters.status
+                        && !filters.payment
+                        && !draftSearch.trim()
+                        ? (
+                          <>
+                            <CalendarDays className="rev-desk-empty-icon" aria-hidden="true" />
+                            No revenues this month.
+                          </>
+                        )
+                        : 'No revenue entries match your filters.'}
+                    </span>
+                  </div>
                 </td>
               </tr>
             ) : visibleEntries.map((row) => (
@@ -1666,14 +1842,6 @@ export default function RevenueDeskPage() {
           tab: filters.tab || 'all',
         }}
       />
-
-      {activeKpiTrace ? (
-        <RevenueKpiTraceModal
-          trace={activeKpiTrace.trace}
-          traceKey={activeKpiTrace.key}
-          onClose={() => setActiveKpiTrace(null)}
-        />
-      ) : null}
 
       {previewEntry ? (
         <RevenueQuickViewModal

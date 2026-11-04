@@ -8,11 +8,6 @@ import {
   submitCreateEntry,
 } from '../api/revenueDesk';
 
-const SECTIONS = [
-  { id: 'rev-general', label: 'General' },
-  { id: 'rev-attachment', label: 'Attachment' },
-];
-
 const FLAG_BASE = 'https://flagcdn.com/w40/';
 const IMMEDIATE_PAYMENT = ['Cash', 'Bank', 'Mobile'];
 
@@ -57,7 +52,6 @@ export default function RevenueCreatePage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState([]);
-  const [activeSection, setActiveSection] = useState('rev-general');
   const [currencyOpen, setCurrencyOpen] = useState(false);
   const currencyRef = useRef(null);
   const rateFetchToken = useRef(0);
@@ -172,29 +166,6 @@ export default function RevenueCreatePage() {
     return () => document.removeEventListener('mousedown', handlePointerDown);
   }, [currencyOpen]);
 
-  useEffect(() => {
-    const sections = SECTIONS.map((s) => document.getElementById(s.id)).filter(Boolean);
-    if (!sections.length) return undefined;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const visible = entries
-          .filter((e) => e.isIntersecting)
-          .sort((a, b) => b.intersectionRatio - a.intersectionRatio);
-        if (visible[0]?.target?.id) {
-          setActiveSection(visible[0].target.id);
-        }
-      },
-      { rootMargin: '-120px 0px -55% 0px', threshold: [0.1, 0.35, 0.6] },
-    );
-    sections.forEach((el) => observer.observe(el));
-    return () => observer.disconnect();
-  }, [loading]);
-
-  function scrollToSection(id) {
-    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    setActiveSection(id);
-  }
-
   function buildFormData() {
     const formData = new FormData();
     formData.append('csrf_token', init.csrf_token);
@@ -267,7 +238,10 @@ export default function RevenueCreatePage() {
   return (
     <div className="rev-create-shell">
       <div className="rev-create-topbar">
-        <h1>create Revenue</h1>
+        <div>
+          <h1>Create Revenue</h1>
+          <p>Record a customer payment and its supporting details.</p>
+        </div>
         <a
           href={init.list_url || deskPageUrl('revenue_entries.php')}
           className="rev-create-back"
@@ -290,22 +264,6 @@ export default function RevenueCreatePage() {
 
       <form onSubmit={handleSubmit}>
         <div className="rev-create-layout">
-          <nav className="rev-create-nav" aria-label="Form sections">
-            <ul>
-              {SECTIONS.map((section) => (
-                <li key={section.id}>
-                  <button
-                    type="button"
-                    className={activeSection === section.id ? 'is-active' : ''}
-                    onClick={() => scrollToSection(section.id)}
-                  >
-                    {section.label}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </nav>
-
           <div className="rev-create-main">
             <section className="rev-create-section" id="rev-general">
               <div className="rev-create-section-header">
@@ -313,6 +271,7 @@ export default function RevenueCreatePage() {
                 <p>Core revenue details and payment setup.</p>
               </div>
 
+              <div className="rev-create-card rev-create-card--fields">
               <div className="rev-create-row">
                 <label className="rev-create-label" htmlFor="rev-entry-date">
                   Revenue Date<span className="req">*</span>
@@ -495,7 +454,7 @@ export default function RevenueCreatePage() {
               </div>
 
               {requiresDeposit && (
-                <div className="rev-create-row">
+                <div className="rev-create-row rev-create-row--wide">
                   <label className="rev-create-label" htmlFor="rev-deposit">
                     Deposit To<span className="req">*</span>
                   </label>
@@ -519,7 +478,7 @@ export default function RevenueCreatePage() {
                 </div>
               )}
 
-              <div className="rev-create-row">
+              <div className="rev-create-row rev-create-row--wide">
                 <label className="rev-create-label" htmlFor="rev-description">Description</label>
                 <textarea
                   id="rev-description"
@@ -530,14 +489,16 @@ export default function RevenueCreatePage() {
                   placeholder="What is this revenue for?"
                 />
               </div>
+              </div>
             </section>
 
-            <section className="rev-create-section" id="rev-attachment">
+            <section className="rev-create-section" id="rev-additional-details">
               <div className="rev-create-section-header">
                 <h2>Additional Details</h2>
                 <p>Supporting attachment for this entry.</p>
               </div>
 
+              <div className="rev-create-card">
               <div className="rev-create-row">
                 <label className="rev-create-label" htmlFor="rev-attachment">
                   Attachment<span className="req">*</span>
@@ -553,6 +514,7 @@ export default function RevenueCreatePage() {
                   />
                   <div className="rev-create-help">PDF, JPG, PNG � max 5MB (required for submission).</div>
                 </div>
+              </div>
               </div>
             </section>
 

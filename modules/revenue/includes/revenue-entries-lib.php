@@ -205,7 +205,10 @@ function ren_row_balance_due(array $row): float
 
 function ren_can_edit(array $row): bool
 {
-    // All revenue rows are editable from Revenue (including invoice-linked).
+    // Sales (invoice-linked) revenue is never editable here.
+    if ((int) ($row['source_invoice_id'] ?? 0) > 0 || trim((string) ($row['linked_invoice_number'] ?? '')) !== '') {
+        return false;
+    }
     // Ratified/approved entries stay admin-only; Pending is open to finance.
     $status = (string) ($row['approval_status'] ?? '');
     $isLocked = in_array($status, ['Ratified', 'Approved'], true);

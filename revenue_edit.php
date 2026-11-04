@@ -31,7 +31,12 @@ try {
     // Check Access: If Ratified, only Admin can edit. If Pending, both Finance and Admin.
     $isRatified = ($entry['approval_status'] === 'Ratified' || $entry['approval_status'] === 'Approved');
     $linkedInvoiceId = (int) ($entry['source_invoice_id'] ?? 0);
-    
+
+    if ($linkedInvoiceId > 0 || trim((string) ($entry['linked_invoice_number'] ?? '')) !== '') {
+        header("Location: " . $revenueListUrl . "&error=" . urlencode('Sales revenue cannot be edited. Change the invoice in Sales instead.'));
+        exit;
+    }
+
     if ($isRatified && !isAdmin()) {
         header("Location: " . $revenueListUrl . "&error=" . urlencode('This entry is locked and can only be edited by an Admin.'));
         exit;

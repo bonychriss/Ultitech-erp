@@ -62,16 +62,6 @@
   width: 100%; height: 100%; object-fit: contain; border-radius: 8px; background: #fff;
   box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.08);
 }
-.vv-pay-modal__grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; }
-.vv-pay-modal__label { color: #374151; font-size: 14px; font-weight: 500; }
-.vv-pay-modal__input {
-  width: 100%; min-height: 40px; box-sizing: border-box; padding: 7px 12px; border: 1px solid #d1d5db; border-radius: 9px;
-  background: #fff; color: #1f2937; font: inherit; font-size: 13px; outline: none;
-}
-.vv-pay-modal__input:focus { border-color: #08734d; box-shadow: 0 0 0 3px rgba(8, 115, 77, 0.12); }
-.vv-pay-modal__hint { margin: 0 0 8px; color: #6b7280; font-size: 12px; }
-.vv-pay-modal__field .vv-pay-modal__hint { margin: 2px 0 0; }
-.vv-pay-modal__hint.is-negative { color: #b42318; }
 .vv-pay-modal__account-icon.is-bank,
 .vv-pay-modal__account-option-icon.is-bank { color: #2563eb; }
 .vv-pay-modal__account-icon.is-mobile,
@@ -157,7 +147,6 @@
   .vv-pay-modal__heading h3 { font-size: 17px; }
   .vv-pay-modal__heading p { font-size: 12px; }
   .vv-pay-modal__button { min-height: 32px; padding: 0 10px; font-size: 12px; }
-  .vv-pay-modal__grid { grid-template-columns: 1fr; }
 }
 
 /* Dark theme */
@@ -211,8 +200,3 @@ html[data-theme="dark"] .vv-pay-modal__button--cancel { background: #2a3942; bor
 html[data-theme="dark"] .vv-pay-modal__button--submit { background: #16a34a; color: #fff; }
 html[data-theme="dark"] .vv-pay-modal__button--submit:hover { background: #15803d; }
 html[data-theme="dark"] .vv-pay-modal::before { background: #3b4a54; }
-html[data-theme="dark"] .vv-pay-modal__label { color: #e9edef; }
-html[data-theme="dark"] .vv-pay-modal__input { background: #0b141a; border-color: #2a3942; color: #e9edef; color-scheme: dark; }
-html[data-theme="dark"] .vv-pay-modal__input:focus { border-color: #4ade80; box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.18); }
-html[data-theme="dark"] .vv-pay-modal__hint { color: #8696a0; }
-html[data-theme="dark"] .vv-pay-modal__hint.is-negative { color: #f87171; }

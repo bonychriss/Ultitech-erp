@@ -50,6 +50,7 @@ const URLS = {
   approve: CFG.approveUrl || 'dashboard.php',
   markPaid: CFG.markPaidUrl || 'dashboard.php',
   stockPay: CFG.stockPayUrl || '',
+  voucherMarkPaid: CFG.voucherMarkPaidUrl || '',
   returnUrl: CFG.returnUrl || '',
   reports: CFG.reportsUrl || 'reports.php',
   userManual: CFG.userManualUrl || '../employee/user-manual.php',
@@ -356,29 +357,20 @@ function RowActionsMenu({
   )
 }
 
-function returnToPath() {
-  const raw = URLS.returnUrl || `${window.location.pathname}${window.location.search}`
-  try {
-    const u = new URL(raw, window.location.href)
-    return `${u.pathname}${u.search}`
-  } catch {
-    return `${window.location.pathname}${window.location.search}`
-  }
-}
-
 function AdminPayModal({ voucher, accounts, onClose }) {
   if (!voucher) return null
-  const stockPurchase = voucher.purpose === 'stock_purchase' && Boolean(URLS.stockPay)
+  // Stock purchase PVs go through mark-paid.php (same as the voucher page) so linked purchases are updated.
+  const stockPurchase = voucher.purpose === 'stock_purchase' && Boolean(URLS.voucherMarkPaid)
   return (
     <MarkPaidModal
       voucher={voucher}
       accounts={accounts}
-      actionUrl={stockPurchase ? URLS.stockPay : URLS.markPaid}
+      actionUrl={stockPurchase ? URLS.voucherMarkPaid : URLS.markPaid}
       module={MODULE}
       formatAmount={formatAmount}
       onClose={onClose}
-      stockPurchase={stockPurchase}
-      returnTo={stockPurchase ? returnToPath() : ''}
+      supplierLabel={voucher.purpose === 'stock_purchase'}
+      redirectEndpoint={stockPurchase}
     />
   )
 }

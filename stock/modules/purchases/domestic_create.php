@@ -14,6 +14,10 @@ if (is_file($botExchangeFile)) {
 }
 requireLogin();
 
+if (function_exists('ensureStocksSchema')) {
+    ensureStocksSchema();
+}
+
 // Ensure stocks_purchase_orders schema supports domestic/import split.
 try {
     $cols = $pdo->query("SHOW COLUMNS FROM stocks_purchase_orders")->fetchAll(PDO::FETCH_COLUMN);
@@ -439,8 +443,8 @@ $products = $pdo->query("
             (
                 SELECT p.product_code
                 FROM products p
-                WHERE LOWER(TRIM(p.name)) = LOWER(TRIM(si.name))
-                   OR (si.sku IS NOT NULL AND si.sku <> '' AND LOWER(TRIM(p.product_code)) = LOWER(TRIM(si.sku)))
+                WHERE CONVERT(LOWER(TRIM(p.name)) USING utf8mb4) COLLATE utf8mb4_unicode_ci = CONVERT(LOWER(TRIM(si.name)) USING utf8mb4) COLLATE utf8mb4_unicode_ci
+                   OR (si.sku IS NOT NULL AND si.sku <> '' AND CONVERT(LOWER(TRIM(p.product_code)) USING utf8mb4) COLLATE utf8mb4_unicode_ci = CONVERT(LOWER(TRIM(si.sku)) USING utf8mb4) COLLATE utf8mb4_unicode_ci)
                 LIMIT 1
             ),
             si.sku
@@ -449,8 +453,8 @@ $products = $pdo->query("
             (
                 SELECT p.id
                 FROM products p
-                WHERE LOWER(TRIM(p.name)) = LOWER(TRIM(si.name))
-                   OR (si.sku IS NOT NULL AND si.sku <> '' AND LOWER(TRIM(p.product_code)) = LOWER(TRIM(si.sku)))
+                WHERE CONVERT(LOWER(TRIM(p.name)) USING utf8mb4) COLLATE utf8mb4_unicode_ci = CONVERT(LOWER(TRIM(si.name)) USING utf8mb4) COLLATE utf8mb4_unicode_ci
+                   OR (si.sku IS NOT NULL AND si.sku <> '' AND CONVERT(LOWER(TRIM(p.product_code)) USING utf8mb4) COLLATE utf8mb4_unicode_ci = CONVERT(LOWER(TRIM(si.sku)) USING utf8mb4) COLLATE utf8mb4_unicode_ci)
                 LIMIT 1
             ),
             NULL
@@ -459,8 +463,8 @@ $products = $pdo->query("
             (
                 SELECT p.id
                 FROM products p
-                WHERE LOWER(TRIM(p.name)) = LOWER(TRIM(si.name))
-                   OR (si.sku IS NOT NULL AND si.sku <> '' AND LOWER(TRIM(p.product_code)) = LOWER(TRIM(si.sku)))
+                WHERE CONVERT(LOWER(TRIM(p.name)) USING utf8mb4) COLLATE utf8mb4_unicode_ci = CONVERT(LOWER(TRIM(si.name)) USING utf8mb4) COLLATE utf8mb4_unicode_ci
+                   OR (si.sku IS NOT NULL AND si.sku <> '' AND CONVERT(LOWER(TRIM(p.product_code)) USING utf8mb4) COLLATE utf8mb4_unicode_ci = CONVERT(LOWER(TRIM(si.sku)) USING utf8mb4) COLLATE utf8mb4_unicode_ci)
                 LIMIT 1
             ),
             NULL
@@ -469,8 +473,8 @@ $products = $pdo->query("
             (
                 SELECT $productBuyingPriceSelect
                 FROM products p
-                WHERE LOWER(TRIM(p.name)) = LOWER(TRIM(si.name))
-                   OR (si.sku IS NOT NULL AND si.sku <> '' AND LOWER(TRIM(p.product_code)) = LOWER(TRIM(si.sku)))
+                WHERE CONVERT(LOWER(TRIM(p.name)) USING utf8mb4) COLLATE utf8mb4_unicode_ci = CONVERT(LOWER(TRIM(si.name)) USING utf8mb4) COLLATE utf8mb4_unicode_ci
+                   OR (si.sku IS NOT NULL AND si.sku <> '' AND CONVERT(LOWER(TRIM(p.product_code)) USING utf8mb4) COLLATE utf8mb4_unicode_ci = CONVERT(LOWER(TRIM(si.sku)) USING utf8mb4) COLLATE utf8mb4_unicode_ci)
                 LIMIT 1
             ),
             $stockItemBuyingPriceSelect,
@@ -480,8 +484,8 @@ $products = $pdo->query("
             (
                 SELECT $productImageSelect
                 FROM products p
-                WHERE LOWER(TRIM(p.name)) = LOWER(TRIM(si.name))
-                   OR (si.sku IS NOT NULL AND si.sku <> '' AND LOWER(TRIM(p.product_code)) = LOWER(TRIM(si.sku)))
+                WHERE CONVERT(LOWER(TRIM(p.name)) USING utf8mb4) COLLATE utf8mb4_unicode_ci = CONVERT(LOWER(TRIM(si.name)) USING utf8mb4) COLLATE utf8mb4_unicode_ci
+                   OR (si.sku IS NOT NULL AND si.sku <> '' AND CONVERT(LOWER(TRIM(p.product_code)) USING utf8mb4) COLLATE utf8mb4_unicode_ci = CONVERT(LOWER(TRIM(si.sku)) USING utf8mb4) COLLATE utf8mb4_unicode_ci)
                 LIMIT 1
             ),
             NULL
@@ -490,8 +494,8 @@ $products = $pdo->query("
             (
                 SELECT $productSupplierSelect
                 FROM products p
-                WHERE LOWER(TRIM(p.name)) = LOWER(TRIM(si.name))
-                   OR (si.sku IS NOT NULL AND si.sku <> '' AND LOWER(TRIM(p.product_code)) = LOWER(TRIM(si.sku)))
+                WHERE CONVERT(LOWER(TRIM(p.name)) USING utf8mb4) COLLATE utf8mb4_unicode_ci = CONVERT(LOWER(TRIM(si.name)) USING utf8mb4) COLLATE utf8mb4_unicode_ci
+                   OR (si.sku IS NOT NULL AND si.sku <> '' AND CONVERT(LOWER(TRIM(p.product_code)) USING utf8mb4) COLLATE utf8mb4_unicode_ci = CONVERT(LOWER(TRIM(si.sku)) USING utf8mb4) COLLATE utf8mb4_unicode_ci)
                 LIMIT 1
             ),
             NULL

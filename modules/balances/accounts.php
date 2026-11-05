@@ -300,6 +300,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $pdo->prepare('DELETE FROM account_transactions WHERE account_id=?')->execute([$id]);
                 $pdo->prepare('DELETE FROM financial_accounts WHERE id=?')->execute([$id]);
                 $_SESSION['bal_lottie_success'] = 'Account deleted permanently.';
+                balancesScheduleLedgerSync($pdo);
             }
 
             if ($selectedAfter === $id) {
@@ -354,6 +355,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $skipped++;
                         continue;
                     }
+                    [$rowCode] = coa_parse_account_name_parts((string) ($row['name'] ?? ''));
+                    if (function_exists('coa_account_is_required_system_parent')
+                        && coa_account_is_required_system_parent([
+                            'code' => $rowCode,
+                            'name' => (string) ($row['name'] ?? ''),
+                            'is_system' => 0,
+                        ])
+                    ) {
+                        $skipped++;
+                        continue;
+                    }
 
                     if ($deleteMode === 'deactivate') {
                         $pdo->prepare("UPDATE financial_accounts SET status='inactive' WHERE id=?")->execute([$id]);
@@ -376,6 +388,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 if ($deleted > 0) {
                     if ($deleteMode === 'delete_permanent') {
+                        balancesScheduleLedgerSync($pdo);
                         $_SESSION['bal_lottie_success'] = $deleted === 1
                             ? 'Sub-account deleted permanently.'
                             : $deleted . ' sub-accounts deleted permanently.';
@@ -974,6 +987,19 @@ include __DIR__ . '/includes/header.php';
     .ray-acc-logo--initial { background: #ede9fe; color: #6d28d9; font-size: 0.75rem; font-weight: 700; box-shadow: none; }
     html[data-theme="dark"] body.page-balances-accounts .ray-acc-logo--initial { background: #2a3942; color: #e9edef; }
     .ray-account-name { font-weight: 600; color: #111827; display: flex; align-items: center; flex-wrap: nowrap; white-space: nowrap; gap: 6px; }
+    .ray-sub-check { display: none; width: 15px; height: 15px; margin: 0 2px 0 0; accent-color: #dc2626; cursor: pointer; flex-shrink: 0; }
+    .ray-panel--subaccounts.is-selecting .ray-sub-check { display: inline-block; }
+    .ray-panel--subaccounts.is-selecting tr[data-sub-id].is-checked td { background: #fef2f2; }
+    .ray-btn-select[aria-pressed="true"] { background: #fee2e2; color: #b91c1c; border-color: #fecaca; }
+    .ray-select-bar { display: flex; align-items: center; gap: 10px; margin: 0 1rem 8px; padding: 6px 10px; border: 1px solid #fecaca; background: #fff7f7; border-radius: 8px; font-size: 0.78rem; color: #7f1d1d; }
+    .ray-select-bar[hidden] { display: none; }
+    .ray-select-all { display: inline-flex; align-items: center; gap: 5px; margin: 0; font-weight: 600; cursor: pointer; }
+    .ray-select-all input { accent-color: #dc2626; }
+    .ray-select-delete { margin-left: auto; border: 0; border-radius: 6px; padding: 4px 10px; background: #dc2626; color: #fff; font-weight: 600; }
+    .ray-select-delete:disabled { opacity: 0.45; cursor: not-allowed; }
+    .ray-select-cancel { border: 1px solid #e5e7eb; border-radius: 6px; padding: 4px 10px; background: #fff; color: #374151; }
+    html[data-theme="dark"] body.page-balances-accounts .ray-select-bar { background: #2a1416; border-color: #7f1d1d; color: #fecaca; }
+    html[data-theme="dark"] body.page-balances-accounts .ray-panel--subaccounts.is-selecting tr[data-sub-id].is-checked td { background: #2a1416 !important; }
     .ray-account-desc { font-size: 0.75rem; color: #6b7280; margin-top: 4px; line-height: 1.45; max-width: 360px; }
     .ray-table tr.ray-sub-group-row td { background: #f8fafc; padding: 0.55rem 1rem; border-bottom: 1px solid #eef2f7; }
     .ray-sub-group-row td, .ray-m-sub-group { font-size: 0.75rem; }
@@ -2004,6 +2030,11 @@ include __DIR__ . '/includes/header.php';
                     </div>
                     <?php if ($canManage): ?>
                         <div class="ray-head-actions">
+                            <?php if (isAdmin() && !empty($selectedChildren)): ?>
+                                <button type="button" class="ray-btn-new ray-btn-select" id="toggleSubSelect" aria-pressed="false">
+                                    <i class="fas fa-check-square text-xs"></i> Select
+                                </button>
+                            <?php endif; ?>
                             <?php if (!empty($assignableAccounts)): ?>
                                 <button type="button" class="ray-btn-new ray-btn-new-account" id="openAssignAccountModal">
                                     <i class="fas fa-link text-xs"></i> Assign existing
@@ -2025,6 +2056,14 @@ include __DIR__ . '/includes/header.php';
                         <?php endif; ?>
                         <input type="text" name="sub_search" value="<?= htmlspecialchars($subSearchQ, ENT_QUOTES, 'UTF-8') ?>" placeholder="Search sub-accounts">
                     </form>
+                    <?php if (isAdmin() && !empty($selectedChildren)): ?>
+                        <div class="ray-select-bar" id="subSelectBar" hidden>
+                            <label class="ray-select-all"><input type="checkbox" id="subSelectAll"> All</label>
+                            <span id="subSelectCount">0 selected</span>
+                            <button type="button" class="ray-select-delete" id="subSelectDelete" disabled><i class="fas fa-trash-alt text-xs"></i> Delete selected</button>
+                            <button type="button" class="ray-select-cancel" id="subSelectCancel">Cancel</button>
+                        </div>
+                    <?php endif; ?>
                     <div class="ray-panel-body">
                         <?php if (empty($selectedChildren)): ?>
                             <div class="ray-empty">
@@ -2069,6 +2108,9 @@ include __DIR__ . '/includes/header.php';
                                     <tr data-sub-id="<?= (int) $childRow['id'] ?>"<?= $childIsSystem ? ' data-sub-system="1"' : '' ?><?= $subGroup['label'] !== null ? ' data-group-member="' . (int) $selectedId . '-' . htmlspecialchars($subGroup['key'], ENT_QUOTES, 'UTF-8') . '"' : '' ?>>
                                         <td>
                                             <div class="ray-account-name" title="<?= htmlspecialchars($childRow['description'], ENT_QUOTES, 'UTF-8') ?>">
+                                                <?php if (!$childIsSystem && isAdmin()): ?>
+                                                    <input type="checkbox" class="ray-sub-check" value="<?= (int) $childRow['id'] ?>" aria-label="Select <?= htmlspecialchars($childRow['name'], ENT_QUOTES, 'UTF-8') ?>">
+                                                <?php endif; ?>
                                                 <?= $rayAccountAvatar($childRow) ?>
                                                 <?= htmlspecialchars($childRow['name'], ENT_QUOTES, 'UTF-8') ?>
                                                 <?php if (!empty($childRow['is_system'])): ?>
@@ -2331,6 +2373,15 @@ include __DIR__ . '/includes/header.php';
     <input type="hidden" name="selected" value="<?= (int) $selectedId ?>">
 </form>
 
+<?php if (isAdmin() && !empty($selectedChildren)): ?>
+<form id="bulkDeleteForm" method="POST" class="d-none">
+    <input type="hidden" name="action" value="bulk_delete_sub_accounts">
+    <input type="hidden" name="delete_mode" id="bulkDeleteMode" value="deactivate">
+    <input type="hidden" name="parent_id" value="<?= (int) $selectedId ?>">
+    <input type="hidden" name="module" value="<?= htmlspecialchars($moduleParam, ENT_QUOTES, 'UTF-8') ?>">
+    <input type="hidden" name="selected" value="<?= (int) $selectedId ?>">
+</form>
+<?php endif; ?>
 
 <script>
 var moveParentTargets = <?= json_encode($moveParentTargets, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
@@ -2829,6 +2880,85 @@ function deleteAccount(id) {
         document.getElementById('deleteForm').submit();
     });
 }
+
+(function () {
+    var toggle = document.getElementById('toggleSubSelect');
+    var panel = document.querySelector('.ray-panel--subaccounts');
+    var bar = document.getElementById('subSelectBar');
+    var form = document.getElementById('bulkDeleteForm');
+    if (!toggle || !panel || !bar || !form) return;
+    var allBox = document.getElementById('subSelectAll');
+    var countEl = document.getElementById('subSelectCount');
+    var deleteBtn = document.getElementById('subSelectDelete');
+
+    function boxes() { return Array.prototype.slice.call(panel.querySelectorAll('.ray-sub-check')); }
+    function visibleBoxes() { return boxes().filter(function (b) { return b.offsetParent !== null; }); }
+    function checked() { return boxes().filter(function (b) { return b.checked; }); }
+
+    function refresh() {
+        var n = checked().length;
+        countEl.textContent = n + ' selected';
+        deleteBtn.disabled = n === 0;
+        var vis = visibleBoxes();
+        allBox.checked = vis.length > 0 && vis.every(function (b) { return b.checked; });
+        allBox.indeterminate = n > 0 && !allBox.checked;
+        boxes().forEach(function (b) {
+            var row = b.closest('tr');
+            if (row) row.classList.toggle('is-checked', b.checked);
+        });
+    }
+
+    function setMode(on) {
+        panel.classList.toggle('is-selecting', on);
+        toggle.setAttribute('aria-pressed', on ? 'true' : 'false');
+        bar.hidden = !on;
+        if (!on) boxes().forEach(function (b) { b.checked = false; });
+        refresh();
+    }
+
+    toggle.addEventListener('click', function () { setMode(!panel.classList.contains('is-selecting')); });
+    document.getElementById('subSelectCancel').addEventListener('click', function () { setMode(false); });
+    allBox.addEventListener('change', function () {
+        visibleBoxes().forEach(function (b) { b.checked = allBox.checked; });
+        refresh();
+    });
+    panel.addEventListener('change', function (e) {
+        if (e.target.classList && e.target.classList.contains('ray-sub-check')) refresh();
+    });
+    panel.addEventListener('click', function (e) {
+        if (e.target.classList && e.target.classList.contains('ray-sub-check')) e.stopPropagation();
+    }, true);
+
+    deleteBtn.addEventListener('click', function () {
+        var ids = checked().map(function (b) { return b.value; });
+        if (!ids.length) return;
+        var label = ids.length === 1 ? 'this sub-account' : ids.length + ' sub-accounts';
+        Swal.fire({
+            icon: 'warning',
+            title: 'Remove ' + label + '?',
+            text: 'Remove from list keeps transaction history (recommended). Delete permanently erases the accounts and their transactions.',
+            showCancelButton: true,
+            showDenyButton: true,
+            confirmButtonText: 'Remove from list',
+            denyButtonText: 'Delete permanently',
+            cancelButtonText: 'Cancel',
+            confirmButtonColor: '#2563eb',
+            denyButtonColor: '#dc2626'
+        }).then(function (result) {
+            if (!result.isConfirmed && !result.isDenied) return;
+            form.querySelectorAll('input[name="ids[]"]').forEach(function (el) { el.remove(); });
+            ids.forEach(function (id) {
+                var input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'ids[]';
+                input.value = id;
+                form.appendChild(input);
+            });
+            document.getElementById('bulkDeleteMode').value = result.isDenied ? 'delete_permanent' : 'deactivate';
+            form.submit();
+        });
+    });
+})();
 
 document.addEventListener('DOMContentLoaded', function () {
     var subModal = document.getElementById('subAccountModal');

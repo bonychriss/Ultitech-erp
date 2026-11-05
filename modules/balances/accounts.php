@@ -936,9 +936,9 @@ include __DIR__ . '/includes/header.php';
         background: #fafbfc;
     }
     .ray-table tbody td {
-        padding: 0.95rem 1rem;
+        padding: 0.55rem 1rem;
         border-bottom: 1px solid #f8fafc;
-        vertical-align: top;
+        vertical-align: middle;
         font-size: 0.875rem;
         color: #111827;
     }
@@ -1523,7 +1523,7 @@ include __DIR__ . '/includes/header.php';
             width: 100%;
             max-width: 100%;
             margin: 0;
-            padding: 1rem 1.05rem;
+            padding: 0.6rem 0.9rem;
             border: 1px solid #e8edf3;
             border-radius: 16px;
             background: #fff;
@@ -1539,19 +1539,19 @@ include __DIR__ . '/includes/header.php';
         }
         .ray-m-card-main {
             display: flex;
-            align-items: flex-start;
-            gap: 0.85rem;
+            align-items: center;
+            gap: 0.75rem;
             width: 100%;
             min-width: 0;
         }
         .ray-m-icon {
-            width: 2.6rem;
-            height: 2.6rem;
+            width: 2.2rem;
+            height: 2.2rem;
             border-radius: 12px;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            flex: 0 0 2.6rem;
+            flex: 0 0 2.2rem;
             font-size: 1rem;
         }
         .ray-m-icon--violet { background: #f3e8ff; color: #7c3aed; }
@@ -1665,7 +1665,7 @@ include __DIR__ . '/includes/header.php';
             align-items: center;
             justify-content: space-between;
             gap: 0.55rem;
-            padding: 0.85rem 0.85rem;
+            padding: 0.55rem 0.85rem;
             border: 1px solid #eef2f7;
             border-radius: 12px;
             background: #f8fafc;
@@ -1839,7 +1839,7 @@ include __DIR__ . '/includes/header.php';
                                     onclick="window.location.href=this.dataset.parentUrl">
                                     <td><?= $index + 1 ?></td>
                                     <td>
-                                        <div class="ray-account-name">
+                                        <div class="ray-account-name" title="<?= htmlspecialchars($parentRow['description'], ENT_QUOTES, 'UTF-8') ?>">
                                             <?= htmlspecialchars($parentRow['name'], ENT_QUOTES, 'UTF-8') ?>
                                             <?php if (!empty($parentRow['is_system'])): ?>
                                                 <i class="fas fa-lock text-gray-400 ms-1 text-xs" title="System Account"></i>
@@ -1847,7 +1847,6 @@ include __DIR__ . '/includes/header.php';
                                             <span class="ray-badge ray-badge-code"><?= htmlspecialchars($parentRow['code'], ENT_QUOTES, 'UTF-8') ?></span>
                                             <span class="ray-badge <?= $parentRow['normal_balance_short'] === 'Cr' ? 'ray-badge-cr' : 'ray-badge-dr' ?>"><?= htmlspecialchars($parentRow['normal_balance_short'], ENT_QUOTES, 'UTF-8') ?></span>
                                         </div>
-                                        <div class="ray-account-desc"><?= htmlspecialchars($parentRow['description'], ENT_QUOTES, 'UTF-8') ?></div>
                                     </td>
                                     <td><span class="ray-sub-count"><?= (int) $parentRow['child_count'] ?></span></td>
                                     <td onclick="event.stopPropagation();">
@@ -1894,7 +1893,6 @@ include __DIR__ . '/includes/header.php';
                                     : ($childrenByParent[$parentId] ?? []);
                                 $parentMeta = $mobileParentMeta[$parentId] ?? ['assignable' => []];
                                 $hasAssignable = !empty($parentMeta['assignable']);
-                                $descText = trim((string) ($parentRow['description'] ?? ''));
                             ?>
                             <div class="ray-m-item">
                                 <article class="ray-m-card<?= $isSelected ? ' is-selected' : '' ?>"
@@ -1913,9 +1911,6 @@ include __DIR__ . '/includes/header.php';
                                                 <span class="ray-badge ray-badge-code"><?= htmlspecialchars($parentRow['code'], ENT_QUOTES, 'UTF-8') ?></span>
                                                 <span class="ray-badge <?= $parentRow['normal_balance_short'] === 'Cr' ? 'ray-badge-cr' : 'ray-badge-dr' ?>"><?= htmlspecialchars($parentRow['normal_balance_short'], ENT_QUOTES, 'UTF-8') ?></span>
                                             </div>
-                                            <?php if ($descText !== ''): ?>
-                                                <p class="ray-m-desc"><?= htmlspecialchars($descText, ENT_QUOTES, 'UTF-8') ?></p>
-                                            <?php endif; ?>
                                         </div>
                                     </div>
                                 </article>
@@ -2110,7 +2105,7 @@ include __DIR__ . '/includes/header.php';
                                             </td>
                                         <?php endif; ?>
                                         <td>
-                                            <div class="ray-account-name">
+                                            <div class="ray-account-name" title="<?= htmlspecialchars($childRow['description'], ENT_QUOTES, 'UTF-8') ?>">
                                                 <?= htmlspecialchars($childRow['name'], ENT_QUOTES, 'UTF-8') ?>
                                                 <?php if (!empty($childRow['is_system'])): ?>
                                                     <i class="fas fa-lock text-gray-400 ms-1 text-xs" title="System Account"></i>
@@ -2118,7 +2113,6 @@ include __DIR__ . '/includes/header.php';
                                                 <span class="ray-badge ray-badge-code"><?= htmlspecialchars($childRow['code'], ENT_QUOTES, 'UTF-8') ?></span>
                                                 <span class="ray-badge <?= $childRow['normal_balance_short'] === 'Cr' ? 'ray-badge-cr' : 'ray-badge-dr' ?>"><?= htmlspecialchars($childRow['normal_balance_short'], ENT_QUOTES, 'UTF-8') ?></span>
                                             </div>
-                                            <div class="ray-account-desc"><?= htmlspecialchars($childRow['description'], ENT_QUOTES, 'UTF-8') ?></div>
                                         </td>
                                         <td>
                                             <?php if (!empty($childRow['is_system'])): ?>

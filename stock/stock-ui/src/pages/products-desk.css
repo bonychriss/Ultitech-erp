@@ -1651,3 +1651,7 @@ html[data-theme="dark"] .prod-desk-thumb.prod-desk-mcard-thumb { background: tra
   .prod-desk-mcard-code { font-size: 13px; font-weight: 600; color: #64748b; }
   .prod-desk-mcard-foot { padding-left: calc(52px + 0.75rem); }
 }
+
+@media (max-width: 767.98px) {
+  .prod-desk-thumb.prod-desk-mcard-thumb { margin-top: 12px; }
+}

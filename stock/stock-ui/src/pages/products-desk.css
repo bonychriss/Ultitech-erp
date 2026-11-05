@@ -1668,3 +1668,20 @@ html[data-theme="dark"] .prod-desk-thumb.prod-desk-mcard-thumb { background: tra
   .prod-desk-mcard-main { gap: 0; }
   .prod-desk-mcard-body { padding-left: calc(52px + 0.75rem); }
 }
+
+@media (max-width: 767.98px) {
+  .prod-desk-mcard-thumb-btn {
+    position: absolute;
+    left: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 2;
+    line-height: 0;
+  }
+  .prod-desk-thumb.prod-desk-mcard-thumb {
+    position: relative !important;
+    left: auto;
+    top: auto;
+    transform: none;
+  }
+}

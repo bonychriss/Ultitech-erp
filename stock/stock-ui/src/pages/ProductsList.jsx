@@ -21,6 +21,7 @@ import {
 } from 'react-icons/hi2';
 import ProductsDeskSkeleton from './ProductsDeskSkeleton';
 import ProductThumb from './ProductThumb';
+import ImageViewer from './ImageViewer';
 import './products-desk.css';
 
 function typeLabel(type) {
@@ -143,6 +144,8 @@ export default function ProductsList({ data }) {
   const [pageLoading, setPageLoading] = useState(false);
   const [missingImagesOpen, setMissingImagesOpen] = useState(false);
   const [cardMenuId, setCardMenuId] = useState(null);
+  const [viewerImage, setViewerImage] = useState(null);
+  const closeViewer = React.useCallback(() => setViewerImage(null), []);
 
   useEffect(() => {
     if (cardMenuId == null) return undefined;
@@ -394,6 +397,15 @@ export default function ProductsList({ data }) {
       return `${baseUrl}uploads/products/${product.id}/medium/${product.main_image}`;
     }
     return '';
+  };
+
+  const openImageViewer = (product) => {
+    const src = imageSrc(product);
+    if (!src) return;
+    const large = /[?&]size=(thumbnail|medium)\b/.test(src)
+      ? src.replace(/([?&]size=)(thumbnail|medium)\b/, '$1large')
+      : src.replace(/\/(thumbnail|medium)\//, '/large/');
+    setViewerImage({ src, large, title: product.name || '', code: product.product_code || '' });
   };
 
   const openSuggestion = (item) => {
@@ -814,7 +826,18 @@ export default function ProductsList({ data }) {
                       </td>
                       <td>
                         <div className="prod-desk-product">
-                          <ProductThumb src={img} className="prod-desk-thumb" size={14} />
+                          {img ? (
+                            <button
+                              type="button"
+                              className="prod-desk-thumb-btn"
+                              onClick={() => openImageViewer(product)}
+                              aria-label={`View image of ${product.name}`}
+                            >
+                              <ProductThumb src={img} alt={product.name} className="prod-desk-thumb" size={14} />
+                            </button>
+                          ) : (
+                            <ProductThumb src="" className="prod-desk-thumb" size={14} />
+                          )}
                           <div style={{ minWidth: 0 }}>
                             <a href={viewUrl(product.id)} className="prod-desk-name">
                               {product.name}
@@ -940,8 +963,21 @@ export default function ProductsList({ data }) {
               const menuOpen = cardMenuId === product.id;
               return (
                 <div className="prod-desk-mcard" key={product.id}>
+                  {imageSrc(product) ? (
+                    <button
+                      type="button"
+                      className="prod-desk-thumb-btn prod-desk-mcard-thumb-btn"
+                      onClick={() => openImageViewer(product)}
+                      aria-label={`View image of ${product.name}`}
+                    >
+                      <ProductThumb src={imageSrc(product)} alt={product.name} className="prod-desk-thumb prod-desk-mcard-thumb" size={16} />
+                    </button>
+                  ) : (
+                    <span className="prod-desk-mcard-thumb-btn">
+                      <ProductThumb src="" className="prod-desk-thumb prod-desk-mcard-thumb" size={16} />
+                    </span>
+                  )}
                   <a href={viewUrl(product.id)} className="prod-desk-mcard-main">
-                    <ProductThumb src={imageSrc(product)} className="prod-desk-thumb prod-desk-mcard-thumb" size={16} />
                     <span className="prod-desk-mcard-body">
                       <span className="prod-desk-mcard-top">
                         <span className="prod-desk-mcard-code">{product.product_code || '—'}</span>
@@ -1045,6 +1081,8 @@ export default function ProductsList({ data }) {
           </button>
         </div>
       )}
+
+      <ImageViewer image={viewerImage} onClose={closeViewer} />
 
       {missingImagesOpen && missingImagesCount > 0 ? (
         <div

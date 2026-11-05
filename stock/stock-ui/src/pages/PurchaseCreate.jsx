@@ -1245,6 +1245,7 @@ export default function PurchaseCreate({ data }) {
             </div>
           </section>
 
+          <div className="pe-section-pair">
           <section id="pe-totals" className="pe-section">
             <header className="pe-section-head">
               <h2>Discount &amp; Tax</h2>
@@ -1326,6 +1327,7 @@ export default function PurchaseCreate({ data }) {
             </div>
             </div>
           </section>
+          </div>
 
           <section id="pe-attachments" className="pe-section">
             <header className="pe-section-head">

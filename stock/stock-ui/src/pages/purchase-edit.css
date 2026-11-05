@@ -1681,3 +1681,14 @@
 .pe-items-foot-actions { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
 .pe-catalogue-link { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: #2563eb; text-decoration: none; }
 .pe-catalogue-link:hover { color: #1d4ed8; text-decoration: underline; }
+.pe-shell--voucher .pe-section-pair { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; align-items: stretch; margin-bottom: 0.75rem; }
+.pe-shell--voucher .pe-section-pair > .pe-section { display: flex; flex-direction: column; margin-bottom: 0; padding-bottom: 0; }
+.pe-shell--voucher .pe-section-pair > .pe-section > .pe-card { flex: 1; }
+.pe-shell--voucher .pe-section-pair .pe-notes-split { grid-template-columns: 1fr 1fr; margin-bottom: 0; }
+.pe-shell--voucher .pe-section-pair .pe-textarea { min-height: 150px; }
+@media (max-width: 900px) {
+  .pe-shell--voucher .pe-section-pair { grid-template-columns: 1fr; }
+}
+@media (max-width: 640px) {
+  .pe-shell--voucher .pe-section-pair .pe-notes-split { grid-template-columns: 1fr; }
+}

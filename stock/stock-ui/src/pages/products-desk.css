@@ -1631,3 +1631,16 @@ html[data-theme="dark"] .prod-desk-mcard-menu button:not(.is-danger) { color: #f
 html[data-theme="dark"] .prod-desk-mcard-price { color: #cbd5e1; }
 html[data-theme="dark"] .prod-desk-mcard-menu-btn { color: #e2e8f0; }
 html[data-theme="dark"] .prod-desk-mcard-thumb { background: #0f172a; border-color: #334155; }
+
+@media (max-width: 767.98px) {
+  .prod-desk-thumb.prod-desk-mcard-thumb,
+  .prod-desk-thumb.prod-desk-mcard-thumb.is-loaded,
+  .prod-desk-thumb.prod-desk-mcard-thumb.is-empty {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+  .prod-desk-thumb.prod-desk-mcard-thumb img { object-fit: contain; }
+  .prod-desk-thumb.prod-desk-mcard-thumb.is-empty { color: #cbd5e1; }
+}
+html[data-theme="dark"] .prod-desk-thumb.prod-desk-mcard-thumb { background: transparent !important; border: none !important; }

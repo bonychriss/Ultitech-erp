@@ -580,7 +580,7 @@ export default function PurchaseCreate({ data }) {
     purchaseTypeDefault === 'import' || cloned_po?.purchase_type === 'import' ? 'import' : 'domestic',
   );
   const [supplierId, setSupplierId] = useState(cloned_po?.supplier_id != null ? String(cloned_po.supplier_id) : '');
-  const [supplierInvoiceNo, setSupplierInvoiceNo] = useState(cloned_po?.supplier_invoice_no || '');
+  const [supplierInvoiceNo] = useState(cloned_po?.supplier_invoice_no || '');
   const [purchaseOrderDate, setPurchaseOrderDate] = useState(() => {
     if (cloned_po?.purchase_order_date) return String(cloned_po.purchase_order_date).slice(0, 10);
     if (cloned_po?.created_at) return String(cloned_po.created_at).slice(0, 10);
@@ -1062,20 +1062,8 @@ export default function PurchaseCreate({ data }) {
                 />
               </div>
             </div>
-            <div className="pe-split-col">
-              <label className="pe-label">Supplier Invoice #</label>
-              <div className="pe-field">
-                <input
-                  type="text"
-                  name="supplier_invoice_no"
-                  className="pe-input"
-                  value={supplierInvoiceNo}
-                  onChange={(e) => setSupplierInvoiceNo(e.target.value)}
-                  placeholder="Optional"
-                />
-              </div>
-            </div>
-            <div className="pe-split-col pe-span-2" id="pe-payment">
+            <input type="hidden" name="supplier_invoice_no" value={supplierInvoiceNo} />
+            <div className="pe-split-col pe-span-3" id="pe-payment">
               <label className="pe-label">Payment vouchers</label>
               <div className="pe-field">
                 <button

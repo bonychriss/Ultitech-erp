@@ -1613,6 +1613,10 @@
   grid-column: span 2;
 }
 
+.pe-shell--voucher .pe-grid3 .pe-span-3 {
+  grid-column: 1 / -1;
+}
+
 .pe-shell--voucher .pe-grid3 .pe-type-option {
   padding: 0.38rem 0.75rem;
 }

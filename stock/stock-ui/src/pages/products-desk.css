@@ -1644,3 +1644,10 @@ html[data-theme="dark"] .prod-desk-mcard-thumb { background: #0f172a; border-col
   .prod-desk-thumb.prod-desk-mcard-thumb.is-empty { color: #cbd5e1; }
 }
 html[data-theme="dark"] .prod-desk-thumb.prod-desk-mcard-thumb { background: transparent !important; border: none !important; }
+
+@media (max-width: 767.98px) {
+  .prod-desk-mcard-body { flex: 1 1 auto; }
+  .prod-desk-mcard-top { margin-bottom: 0.15rem; }
+  .prod-desk-mcard-code { font-size: 13px; font-weight: 600; color: #64748b; }
+  .prod-desk-mcard-foot { padding-left: calc(52px + 0.75rem); }
+}

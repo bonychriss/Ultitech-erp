@@ -940,13 +940,13 @@ export default function ProductsList({ data }) {
               const menuOpen = cardMenuId === product.id;
               return (
                 <div className="prod-desk-mcard" key={product.id}>
-                  <div className="prod-desk-mcard-top">
-                    <span className="prod-desk-mcard-code">{product.product_code || '—'}</span>
-                    <span className={`prod-desk-mcard-status ${status.cls}`}>{status.label}</span>
-                  </div>
                   <a href={viewUrl(product.id)} className="prod-desk-mcard-main">
                     <ProductThumb src={imageSrc(product)} className="prod-desk-thumb prod-desk-mcard-thumb" size={16} />
                     <span className="prod-desk-mcard-body">
+                      <span className="prod-desk-mcard-top">
+                        <span className="prod-desk-mcard-code">{product.product_code || '—'}</span>
+                        <span className={`prod-desk-mcard-status ${status.cls}`}>{status.label}</span>
+                      </span>
                       <span className="prod-desk-mcard-name">{product.name}</span>
                       <span className="prod-desk-mcard-price">
                         {product.currency || 'USD'} {formatMoney(product.unit_price)}

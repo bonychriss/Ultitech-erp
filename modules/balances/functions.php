@@ -4253,7 +4253,7 @@ function balances_ensure_system_locked_accounts(PDO $pdo): void
 }
 
 /**
- * The old "1008 - CRDB" default was seeded as a locked system account but has no system role.
+ * The old "1008 - CRDB" default was seeded (locked in some tenants) but has no system role.
  * Delete it when unused; otherwise unlock it so its transactions and balance are kept.
  */
 function balances_retire_legacy_crdb_system_account(PDO $pdo): void
@@ -4261,7 +4261,7 @@ function balances_retire_legacy_crdb_system_account(PDO $pdo): void
     try {
         $stmt = $pdo->prepare(
             "SELECT id, opening_balance, current_balance FROM financial_accounts
-             WHERE name = '1008 - CRDB' AND is_system = 1"
+             WHERE name = '1008 - CRDB'"
         );
         $stmt->execute();
         foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) ?: [] as $row) {

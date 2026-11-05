@@ -139,6 +139,9 @@ if (!function_exists('accounting_settings_discover_default_sales_revenue_gl_id')
      */
     function accounting_settings_discover_default_sales_revenue_gl_id(PDO $pdo): ?int
     {
+        if (!function_exists('tableExists') || !tableExists('erp_accounts', $pdo)) {
+            return null;
+        }
         if (!function_exists('invoice_gl_find_account_id')) {
             require_once __DIR__ . '/invoice_gl_posting.php';
         }

@@ -286,10 +286,11 @@ if (!function_exists('gl_report_money_accounts')) {
         $computed = [];
         $txCount = [];
         $mislabelled = [];
+        $supplierPaymentSql = gl_column_exists($pdo, 'account_transactions', 'supplier_payment_id') ? ' OR supplier_payment_id IS NOT NULL' : '';
         foreach ($pdo->query("SELECT account_id,
                                      SUM(IF(type = 'credit', amount, -amount)) AS net,
                                      COUNT(*) AS n,
-                                     SUM(IF(type = 'credit' AND (reference_type IN ('purchase_order','supplier_payment') OR supplier_payment_id IS NOT NULL), amount, 0)) AS mislabelled
+                                     SUM(IF(type = 'credit' AND (reference_type IN ('purchase_order','supplier_payment'){$supplierPaymentSql}), amount, 0)) AS mislabelled
                               FROM account_transactions GROUP BY account_id")->fetchAll(PDO::FETCH_ASSOC) as $r) {
             $computed[(int) $r['account_id']] = (float) $r['net'];
             $txCount[(int) $r['account_id']] = (int) $r['n'];

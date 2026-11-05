@@ -88,6 +88,11 @@ if (!function_exists('gl_ensure_schema')) {
         }
 
         try {
+            if (!gl_table_exists($pdo, 'erp_accounts')) {
+                require_once dirname(__DIR__) . '/general_ledger_setup.php';
+                general_ledger_ensure_accounts_table($pdo);
+            }
+
             $pdo->exec("CREATE TABLE IF NOT EXISTS gl_meta (
                 meta_key VARCHAR(64) NOT NULL PRIMARY KEY,
                 meta_value TEXT NULL

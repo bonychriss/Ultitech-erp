@@ -23,21 +23,21 @@ if (function_exists('getRequestedCompanySlug') && function_exists('applyWinningC
     }
 }
 
-try {
-    if (function_exists('coa_ensure_parent_id_column')) {
-        coa_ensure_parent_id_column($pdo);
+// Each step runs on its own so one tenant-specific failure does not skip the rest.
+foreach ([
+    'coa_ensure_parent_id_column',
+    'balances_ensure_default_accounts',
+    'coa_backfill_sub_account_company_ids',
+    'balances_ensure_system_locked_accounts',
+] as $seedStep) {
+    if (!function_exists($seedStep)) {
+        continue;
     }
-    if (function_exists('balances_ensure_default_accounts')) {
-        balances_ensure_default_accounts($pdo);
+    try {
+        $seedStep($pdo);
+    } catch (Throwable $e) {
+        error_log('accounts.php schema seed (' . $seedStep . '): ' . $e->getMessage());
     }
-    if (function_exists('coa_backfill_sub_account_company_ids')) {
-        coa_backfill_sub_account_company_ids($pdo);
-    }
-    if (function_exists('balances_ensure_system_locked_accounts')) {
-        balances_ensure_system_locked_accounts($pdo);
-    }
-} catch (Throwable $e) {
-    error_log('accounts.php schema seed: ' . $e->getMessage());
 }
 // Legacy pruning is disabled to prevent auto-deletion of user-created sub-accounts with codes in the legacy range.
 // if (function_exists('balances_prune_legacy_default_sub_accounts')) {

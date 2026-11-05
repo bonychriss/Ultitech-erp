@@ -280,7 +280,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             if ($action === 'deactivate') {
                 $pdo->prepare("UPDATE financial_accounts SET status='inactive' WHERE id=?")->execute([$id]);
-                $_SESSION['bal_lottie_success'] = 'Account removed from the list. History is kept and you can restore it later if needed.';
+                $_SESSION['bal_toast'] = 'Account removed from the list. History is kept and you can restore it later if needed.';
             } else {
                 $accStmt = $pdo->prepare('SELECT name FROM financial_accounts WHERE id = ? LIMIT 1');
                 $accStmt->execute([$id]);
@@ -299,7 +299,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $pdo->prepare('UPDATE financial_accounts SET parent_id = NULL WHERE parent_id = ?')->execute([$id]);
                 $pdo->prepare('DELETE FROM account_transactions WHERE account_id=?')->execute([$id]);
                 $pdo->prepare('DELETE FROM financial_accounts WHERE id=?')->execute([$id]);
-                $_SESSION['bal_lottie_success'] = 'Account deleted permanently.';
+                $_SESSION['bal_toast'] = 'Account deleted permanently.';
                 balancesScheduleLedgerSync($pdo);
             }
 
@@ -389,11 +389,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ($deleted > 0) {
                     if ($deleteMode === 'delete_permanent') {
                         balancesScheduleLedgerSync($pdo);
-                        $_SESSION['bal_lottie_success'] = $deleted === 1
+                        $_SESSION['bal_toast'] = $deleted === 1
                             ? 'Sub-account deleted permanently.'
                             : $deleted . ' sub-accounts deleted permanently.';
                     } else {
-                        $_SESSION['bal_lottie_success'] = $deleted === 1
+                        $_SESSION['bal_toast'] = $deleted === 1
                             ? 'Sub-account removed from the list. History is kept.'
                             : $deleted . ' sub-accounts removed from the list. History is kept.';
                     }
@@ -404,7 +404,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
 
                 if ($skipped > 0 && $deleted > 0) {
-                    $_SESSION['success'] = ($deleted . ' deleted, ' . $skipped . ' skipped (system or invalid).');
+                    $_SESSION['bal_toast'] = ($deleted . ' deleted, ' . $skipped . ' skipped (system or invalid).');
                 }
             }
         }

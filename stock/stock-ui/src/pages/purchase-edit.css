@@ -1692,3 +1692,6 @@
 @media (max-width: 640px) {
   .pe-shell--voucher .pe-section-pair .pe-notes-split { grid-template-columns: 1fr; }
 }
+@media (min-width: 901px) {
+  .pe-shell--voucher .pe-section-pair > #pe-totals { order: 2; }
+}

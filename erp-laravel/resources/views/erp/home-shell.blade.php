@@ -19,7 +19,7 @@
     <noscript>
         <div style="padding:2rem;font-family:sans-serif;">JavaScript is required to view this page.</div>
     </noscript>
-    <div id="root"></div>
+    <div id="root">{!! $seoBody ?? '' !!}</div>
     @if (!empty($footerScripts))
         {!! $footerScripts !!}
     @endif

@@ -935,7 +935,8 @@ export default function PurchaseCreate({ data }) {
               <p>Who you are buying from, in which currency, and when.</p>
             </header>
             <div className="pe-card">
-            <div className="pe-row">
+            <div className="pe-grid3">
+            <div className="pe-split-col pe-span-2">
               <label className="pe-label">
                 Supplier <span className="pe-req">*</span>
               </label>
@@ -954,8 +955,6 @@ export default function PurchaseCreate({ data }) {
                 </select>
               </div>
             </div>
-
-            <div className="pe-row pe-row--split">
             <div className="pe-split-col">
               <label className="pe-label">Purchase type</label>
               <div className="pe-field">
@@ -998,9 +997,6 @@ export default function PurchaseCreate({ data }) {
                 />
               </div>
             </div>
-            </div>
-
-            <div className="pe-row pe-row--split">
             <div className="pe-split-col">
               <label className="pe-label">Currency</label>
               <div className="pe-field">
@@ -1066,9 +1062,6 @@ export default function PurchaseCreate({ data }) {
                 />
               </div>
             </div>
-            </div>
-
-            <div className="pe-row pe-row--split">
             <div className="pe-split-col">
               <label className="pe-label">Supplier Invoice #</label>
               <div className="pe-field">
@@ -1082,10 +1075,7 @@ export default function PurchaseCreate({ data }) {
                 />
               </div>
             </div>
-            <div className="pe-split-col" aria-hidden="true" />
-            </div>
-
-            <div className="pe-row pe-row--top" id="pe-payment">
+            <div className="pe-split-col pe-span-2" id="pe-payment">
               <label className="pe-label">Payment vouchers</label>
               <div className="pe-field">
                 <button
@@ -1159,6 +1149,7 @@ export default function PurchaseCreate({ data }) {
                   </div>
                 ) : null}
               </div>
+            </div>
             </div>
             </div>
           </section>

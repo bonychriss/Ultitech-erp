@@ -510,6 +510,14 @@ foreach ($products as &$prodRow) {
     $prodRow['image_url'] = ($imgProductId > 0 && function_exists('stock_product_list_image_url'))
         ? stock_product_list_image_url($imgProductId, $imgFile, 'medium', (string) ($stockBasePath ?? ''))
         : '';
+    // Same fallback as the sales catalogue: stored filename missing/stale (e.g. "placeholder.jpg") but a real upload exists.
+    if ($prodRow['image_url'] === '' && $imgProductId > 0 && function_exists('stock_resolve_product_image_file') && function_exists('stock_image_company_context')) {
+        $imgCtx = stock_image_company_context();
+        $diskImg = stock_resolve_product_image_file($imgProductId, 'medium', '', (string) $imgCtx['slug'], (int) $imgCtx['company_id']);
+        if ($diskImg !== null && is_file($diskImg)) {
+            $prodRow['image_url'] = stock_product_list_image_url($imgProductId, basename($diskImg), 'medium', (string) ($stockBasePath ?? ''));
+        }
+    }
 }
 unset($prodRow);
 

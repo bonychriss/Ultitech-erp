@@ -18,6 +18,7 @@ import {
   HiOutlineShoppingCart,
   HiOutlineTag,
 } from 'react-icons/hi2';
+import ImageViewer from './ImageViewer.jsx';
 import './product-view.css';
 
 function formatMoney(n) {
@@ -95,7 +96,7 @@ function guessExt(name, url) {
   return '.jpg';
 }
 
-function MainImage({ src }) {
+function MainImage({ src, onOpen }) {
   const [loaded, setLoaded] = useState(false);
   const [failed, setFailed] = useState(false);
 
@@ -109,7 +110,13 @@ function MainImage({ src }) {
   }
 
   return (
-    <div className={`pv-main-image-wrap${loaded ? '' : ' is-loading'}`} aria-busy={!loaded}>
+    <button
+      type="button"
+      className={`pv-main-image-wrap${loaded ? '' : ' is-loading'}`}
+      aria-busy={!loaded}
+      onClick={onOpen}
+      title="View image"
+    >
       {!loaded && <span className="pv-img-skeleton" aria-hidden="true" />}
       <img
         src={src}
@@ -118,7 +125,7 @@ function MainImage({ src }) {
         onLoad={() => setLoaded(true)}
         onError={() => setFailed(true)}
       />
-    </div>
+    </button>
   );
 }
 
@@ -155,6 +162,7 @@ export default function ProductView({ data }) {
 
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [downloadState, setDownloadState] = useState('idle'); // idle | loading | done
+  const [viewerImage, setViewerImage] = useState(null);
 
   const activeImage = images[activeImageIndex] || images[0] || null;
   const mainSrc = activeImage?.large_url || activeImage?.medium_url || activeImage?.thumbnail_url || '';
@@ -235,7 +243,18 @@ export default function ProductView({ data }) {
           ) : (
             <>
               <div className={`pv-media-stage${downloadState !== 'idle' ? ` is-${downloadState}` : ''}`}>
-                <MainImage key={mainSrc} src={mainSrc} />
+                <MainImage
+                  key={mainSrc}
+                  src={mainSrc}
+                  onOpen={() =>
+                    setViewerImage({
+                      src: activeImage?.medium_url || mainSrc,
+                      large: mainSrc,
+                      title: product.name,
+                      code: product.product_code || '',
+                    })
+                  }
+                />
                 {downloadState === 'loading' ? (
                   <div className="pv-download-overlay" aria-hidden="true">
                     <span className="pv-download-ring" />
@@ -393,7 +412,36 @@ export default function ProductView({ data }) {
             </tbody>
           </table>
         </div>
+        <ul className="pv-mlist">
+          {movements.length === 0 ? (
+            <li className="pv-mlist-empty pv-muted">No movements recorded</li>
+          ) : (
+            movements.map((mov) => (
+              <li key={mov.id} className="pv-mlist-item">
+                <div className="pv-mlist-top">
+                  <MovementType type={mov.movement_type} />
+                  <span className="pv-mlist-qty">{mov.quantity}</span>
+                </div>
+                <div className="pv-mlist-meta">
+                  <span>{formatDate(mov.created_at)}</span>
+                  <span>
+                    {mov.qty_before == null ? '—' : mov.qty_before} → {mov.qty_after == null ? '—' : mov.qty_after}
+                  </span>
+                </div>
+                {mov.reference_type || mov.notes ? (
+                  <div className="pv-mlist-ref pv-muted">
+                    {mov.reference_type || ''}
+                    {mov.reference_id != null && mov.reference_id !== '' ? ` #${mov.reference_id}` : ''}
+                    {mov.reference_type && mov.notes ? ' · ' : ''}
+                    {mov.notes || ''}
+                  </div>
+                ) : null}
+              </li>
+            ))
+          )}
+        </ul>
       </section>
+      <ImageViewer image={viewerImage} onClose={() => setViewerImage(null)} />
     </div>
   );
 }

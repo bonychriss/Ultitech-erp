@@ -1010,36 +1010,137 @@ function balances_currency_catalog(): array
 }
 
 /**
- * Banks and mobile money networks with their bundled logo paths (see institutions_catalog.php).
+ * Banks and mobile money networks with their logo paths: the bundled catalogue (institutions_catalog.php)
+ * followed by the institutions users saved with their own logo (balances_custom_institutions).
  *
- * @return array<string, array{slug:string,name:string,type:string,aliases:list<string>,logo:string}>
+ * @return array<string, array{slug:string,name:string,type:string,aliases:list<string>,logo:string,custom:bool}>
  */
-function balances_institutions(): array
+function balances_institutions(?PDO $pdo = null): array
 {
-    static $list = null;
-    if ($list !== null) {
+    static $catalog = null;
+    $root = dirname(__DIR__, 2);
+    if ($catalog === null) {
+        $catalog = [];
+        foreach (require __DIR__ . '/institutions_catalog.php' as $inst) {
+            $logo = 'assets/balances/institutions/' . $inst['slug'] . '.png';
+            $catalog[$inst['slug']] = [
+                'slug' => $inst['slug'],
+                'name' => $inst['name'],
+                'type' => $inst['type'],
+                'aliases' => $inst['aliases'],
+                'logo' => is_file($root . '/' . $logo) ? $logo : '',
+                'custom' => false,
+            ];
+        }
+    }
+    $list = $catalog;
+    if ($pdo === null) {
         return $list;
     }
-    $list = [];
-    $root = dirname(__DIR__, 2);
-    foreach (require __DIR__ . '/institutions_catalog.php' as $inst) {
-        $logo = 'assets/balances/institutions/' . $inst['slug'] . '.png';
-        $list[$inst['slug']] = [
-            'slug' => $inst['slug'],
-            'name' => $inst['name'],
-            'type' => $inst['type'],
-            'aliases' => $inst['aliases'],
-            'logo' => is_file($root . '/' . $logo) ? $logo : '',
-        ];
+    try {
+        balances_ensure_custom_institutions_table($pdo);
+        $companyId = function_exists('currentCompanyId') ? (int) (currentCompanyId() ?? 0) : 0;
+        $stmt = $pdo->prepare(
+            'SELECT id, name, type, logo FROM balances_custom_institutions
+             WHERE company_id IS NULL OR company_id = 0 OR company_id = ? ORDER BY name'
+        );
+        $stmt->execute([$companyId]);
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            $logo = (string) $row['logo'];
+            $list['custom-' . $row['id']] = [
+                'slug' => 'custom-' . $row['id'],
+                'name' => (string) $row['name'],
+                'type' => (string) $row['type'],
+                'aliases' => [],
+                'logo' => $logo !== '' && is_file($root . '/' . $logo) ? $logo : '',
+                'custom' => true,
+            ];
+        }
+    } catch (Throwable $e) {
+        error_log('balances_institutions: ' . $e->getMessage());
     }
 
     return $list;
 }
 
-/** Copy a bundled institution logo into the account images folder; returns the new relative path or ''. */
-function balances_copy_institution_logo(string $slug): string
+function balances_ensure_custom_institutions_table(PDO $pdo): void
 {
-    $inst = balances_institutions()[$slug] ?? null;
+    static $done = false;
+    if ($done) {
+        return;
+    }
+    $pdo->exec(
+        'CREATE TABLE IF NOT EXISTS balances_custom_institutions (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            company_id INT NULL DEFAULT NULL,
+            name VARCHAR(100) NOT NULL,
+            type VARCHAR(20) NOT NULL,
+            logo VARCHAR(500) NOT NULL,
+            created_by INT NULL DEFAULT NULL,
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+            UNIQUE KEY uniq_bci_company_name (company_id, name)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci'
+    );
+    $done = true;
+}
+
+/**
+ * Remember an account name + uploaded logo so it is offered in the sub-account name dropdown next time.
+ * Names that match a bundled institution are skipped; an existing saved name gets its logo and type refreshed.
+ */
+function balances_save_custom_institution(PDO $pdo, string $name, string $type, string $imagePath): void
+{
+    $name = trim(preg_replace('/\s+/', ' ', $name));
+    if ($name === '' || $imagePath === '' || !in_array($type, ['bank', 'mobile', 'cash'], true)) {
+        return;
+    }
+    $needle = mb_strtolower($name);
+    foreach (balances_institutions() as $inst) {
+        if (mb_strtolower($inst['name']) === $needle || in_array($needle, $inst['aliases'], true)) {
+            return;
+        }
+    }
+    $root = dirname(__DIR__, 2);
+    $targetDir = $root . '/uploads/balances/institutions/';
+    if (!is_file($root . '/' . $imagePath) || (!is_dir($targetDir) && !mkdir($targetDir, 0755, true) && !is_dir($targetDir))) {
+        return;
+    }
+    $ext = strtolower(pathinfo($imagePath, PATHINFO_EXTENSION)) ?: 'png';
+    $fileName = 'INST_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
+    if (!copy($root . '/' . $imagePath, $targetDir . $fileName)) {
+        return;
+    }
+    $logo = 'uploads/balances/institutions/' . $fileName;
+    $companyId = function_exists('currentCompanyId') ? (int) (currentCompanyId() ?? 0) : 0;
+    $companyId = $companyId > 0 ? $companyId : null;
+
+    try {
+        balances_ensure_custom_institutions_table($pdo);
+        $find = $pdo->prepare('SELECT id, logo FROM balances_custom_institutions WHERE company_id <=> ? AND name = ? LIMIT 1');
+        $find->execute([$companyId, $name]);
+        $existing = $find->fetch(PDO::FETCH_ASSOC);
+        if ($existing) {
+            $pdo->prepare('UPDATE balances_custom_institutions SET type = ?, logo = ? WHERE id = ?')
+                ->execute([$type, $logo, (int) $existing['id']]);
+            $old = (string) $existing['logo'];
+            if (str_starts_with($old, 'uploads/balances/institutions/')) {
+                @unlink($root . '/' . $old);
+            }
+        } else {
+            $pdo->prepare('INSERT INTO balances_custom_institutions (company_id, name, type, logo, created_by) VALUES (?, ?, ?, ?, ?)')
+                ->execute([$companyId, $name, $type, $logo, isset($_SESSION['user_id']) ? (int) $_SESSION['user_id'] : null]);
+        }
+    } catch (Throwable $e) {
+        @unlink($targetDir . $fileName);
+        error_log('balances_save_custom_institution: ' . $e->getMessage());
+    }
+}
+
+/** Copy an institution logo into the account images folder; returns the new relative path or ''. */
+function balances_copy_institution_logo(string $slug, ?PDO $pdo = null): string
+{
+    $inst = balances_institutions($pdo)[$slug] ?? null;
     if (!$inst || $inst['logo'] === '') {
         return '';
     }
@@ -1048,7 +1149,8 @@ function balances_copy_institution_logo(string $slug): string
     if (!is_dir($targetDir) && !mkdir($targetDir, 0755, true) && !is_dir($targetDir)) {
         return '';
     }
-    $fileName = 'ACC_' . time() . '_' . bin2hex(random_bytes(4)) . '.png';
+    $ext = strtolower(pathinfo($inst['logo'], PATHINFO_EXTENSION)) ?: 'png';
+    $fileName = 'ACC_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
 
     return copy($root . '/' . $inst['logo'], $targetDir . $fileName) ? 'uploads/balances/accounts/' . $fileName : '';
 }

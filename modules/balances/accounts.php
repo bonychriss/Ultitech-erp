@@ -140,13 +140,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $openingRaw = str_replace([',', ' '], '', (string) ($_POST['opening_balance'] ?? ''));
             $openingDateRaw = trim((string) ($_POST['opening_date'] ?? ''));
             $imagePath = '';
+            $imageUploaded = false;
             if ($openingRaw !== '' && !is_numeric($openingRaw)) {
                 $result = ['success' => false, 'message' => 'Opening balance must be a number.'];
             } else {
                 try {
                     $imagePath = balances_store_uploaded_account_image();
+                    $imageUploaded = $imagePath !== '';
                     if ($imagePath === '' && !empty($_POST['institution'])) {
-                        $imagePath = balances_copy_institution_logo((string) $_POST['institution']);
+                        $imagePath = balances_copy_institution_logo((string) $_POST['institution'], $pdo);
                     }
                     $result = balances_create_sub_account(
                         $pdo,
@@ -163,6 +165,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (empty($result['success']) && $imagePath !== '') {
                     @unlink(dirname(__DIR__, 2) . '/' . $imagePath);
                 }
+            }
+            if (!empty($result['success']) && $imageUploaded) {
+                balances_save_custom_institution($pdo, $accountName, $paymentWalletType, $imagePath);
             }
             if (!empty($result['success'])) {
                 $_SESSION['bal_lottie_success'] = (string) ($result['message'] ?? 'Sub-account created successfully.');
@@ -1153,6 +1158,8 @@ include __DIR__ . '/includes/header.php';
     .sub-inst-type { font-size: 0.6875rem; font-weight: 600; padding: 2px 8px; border-radius: 999px; flex-shrink: 0; }
     .sub-inst-type--bank { background: #dbeafe; color: #1d4ed8; }
     .sub-inst-type--mobile { background: #fce7f3; color: #be185d; }
+    .sub-inst-type--cash { background: #dcfce7; color: #15803d; }
+    .sub-inst-type--saved { background: #f3f4f6; color: #4b5563; }
     html[data-theme="dark"] body.page-balances-accounts .sub-inst-list { background: #0b141a; border-color: #2a3942; }
     html[data-theme="dark"] body.page-balances-accounts .sub-inst-item { color: #e9edef; }
     html[data-theme="dark"] body.page-balances-accounts .sub-inst-item:hover,
@@ -2539,7 +2546,8 @@ var balancesInstitutions = <?= json_encode(array_values(array_map(static fn ($i)
     'type' => $i['type'],
     'aliases' => $i['aliases'],
     'logo' => $i['logo'] !== '' ? balancesAccountImageUrl($i['logo']) : '',
-], balances_institutions())), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+    'custom' => $i['custom'],
+], balances_institutions($pdo))), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
 
 document.addEventListener('DOMContentLoaded', function () {
     var nameInput = document.getElementById('subAccountName');
@@ -2552,7 +2560,7 @@ document.addEventListener('DOMContentLoaded', function () {
     if (!nameInput || !list || !hidden) return;
     var matches = [];
     var active = -1;
-    var typeLabels = { bank: 'Bank', mobile: 'Mobile money' };
+    var typeLabels = { bank: 'Bank', mobile: 'Mobile money', cash: 'Cash' };
 
     function close() {
         list.hidden = true;
@@ -2577,6 +2585,12 @@ document.addEventListener('DOMContentLoaded', function () {
             badge.textContent = typeLabels[inst.type] || inst.type;
             item.appendChild(img);
             item.appendChild(name);
+            if (inst.custom) {
+                var saved = document.createElement('span');
+                saved.className = 'sub-inst-type sub-inst-type--saved';
+                saved.textContent = 'Saved';
+                item.appendChild(saved);
+            }
             item.appendChild(badge);
             item.addEventListener('mousedown', function (e) { e.preventDefault(); choose(inst); });
             list.appendChild(item);

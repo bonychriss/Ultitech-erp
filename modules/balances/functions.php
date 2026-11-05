@@ -2069,12 +2069,6 @@ function coa_default_accounts_catalog(): array
                     'description' => 'Payments received but not yet deposited into a bank account',
                     'is_system' => 1,
                 ],
-                [
-                    'code' => '1008',
-                    'name' => 'CRDB',
-                    'description' => 'Things your business owns that have value',
-                    'is_system' => 1,
-                ],
             ],
         ],
         [
@@ -4233,13 +4227,9 @@ function balances_ensure_system_locked_accounts(PDO $pdo): void
                 'description' => 'Payments received but not yet deposited into a bank account',
                 'type' => 'asset',
             ],
-            [
-                'code' => '1008',
-                'name' => 'CRDB',
-                'description' => 'Things your business owns that have value',
-                'type' => 'asset',
-            ],
         ];
+
+        balances_retire_legacy_crdb_system_account($pdo);
 
         foreach ($systemSubs as $sub) {
             $fullName = $sub['code'] . ' - ' . $sub['name'];
@@ -4259,6 +4249,38 @@ function balances_ensure_system_locked_accounts(PDO $pdo): void
         }
     } catch (Throwable $e) {
         error_log('balances_ensure_system_locked_accounts: ' . $e->getMessage());
+    }
+}
+
+/**
+ * The old "1008 - CRDB" default was seeded as a locked system account but has no system role.
+ * Delete it when unused; otherwise unlock it so its transactions and balance are kept.
+ */
+function balances_retire_legacy_crdb_system_account(PDO $pdo): void
+{
+    try {
+        $stmt = $pdo->prepare(
+            "SELECT id, opening_balance, current_balance FROM financial_accounts
+             WHERE name = '1008 - CRDB' AND is_system = 1"
+        );
+        $stmt->execute();
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) ?: [] as $row) {
+            $id = (int) $row['id'];
+            $txStmt = $pdo->prepare('SELECT COUNT(*) FROM account_transactions WHERE account_id = ?');
+            $txStmt->execute([$id]);
+            $unused = (int) $txStmt->fetchColumn() === 0
+                && abs((float) $row['opening_balance']) < 0.005
+                && abs((float) $row['current_balance']) < 0.005;
+
+            if ($unused) {
+                $pdo->prepare('UPDATE financial_accounts SET parent_id = NULL WHERE parent_id = ?')->execute([$id]);
+                $pdo->prepare('DELETE FROM financial_accounts WHERE id = ?')->execute([$id]);
+            } else {
+                $pdo->prepare('UPDATE financial_accounts SET is_system = 0 WHERE id = ?')->execute([$id]);
+            }
+        }
+    } catch (Throwable $e) {
+        error_log('balances_retire_legacy_crdb_system_account: ' . $e->getMessage());
     }
 }
 ?>

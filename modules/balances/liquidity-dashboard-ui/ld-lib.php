@@ -404,8 +404,7 @@ function ldBuildInitPayload(PDO $pdo): array
     $companyDisplay = (string) ($_SESSION['company_name'] ?? (defined('COMPANY_NAME') ? COMPANY_NAME : 'Company'));
     $moduleParam = (string) ($_GET['module'] ?? 'balances');
     $coaCreateUrl = ldDeskPublicUrl('coa_create.php') . '?' . http_build_query(['module' => $moduleParam]);
-    $canManageAccount = (function_exists('isAdmin') && isAdmin())
-        || (function_exists('isFinance') && isFinance());
+    $canManageAccount = function_exists('isAdmin') && isAdmin();
 
     $balInsights = function_exists('balances_build_insights')
         ? balances_build_insights([

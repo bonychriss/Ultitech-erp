@@ -148,7 +148,9 @@ include __DIR__ . '/includes/header.php';
                 <div class="catv-actions">
                     <a class="catv-btn" href="category_edit.php?id=<?php echo (int) $categoryId; ?>"><i class="fas fa-pen"></i> Edit Category</a>
                     <a class="catv-btn" href="category_create.php"><i class="fas fa-ellipsis"></i> Actions</a>
+                    <?php if (isAdmin()): ?>
                     <a class="catv-btn primary" href="coa_create.php?module=balances"><i class="fas fa-circle-plus"></i> Create Account</a>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>

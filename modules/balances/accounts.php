@@ -1799,7 +1799,7 @@ include __DIR__ . '/includes/header.php';
             <section class="ray-panel" aria-label="My accounts">
                 <div class="ray-panel-head">
                     <h1 class="ray-panel-title">My Accounts</h1>
-                    <?php if ($canManage): ?>
+                    <?php if (isAdmin()): ?>
                         <a href="<?= htmlspecialchars($coaCreateUrl, ENT_QUOTES, 'UTF-8') ?>" class="ray-btn-new ray-btn-new-account">
                             <i class="fas fa-plus text-xs"></i> New Account
                         </a>

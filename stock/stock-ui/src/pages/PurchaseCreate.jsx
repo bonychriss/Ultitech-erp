@@ -151,7 +151,33 @@ function makeItemFromBase(productId, quantity, basePrice, rateNum) {
 
 const CATALOGUE_ITEMS_KEY = 'purchase_catalogue_items';
 const CATALOGUE_SELECTION_DRAFT_KEY = 'purchase_catalogue_items_draft';
-const FORM_DRAFT_KEY = 'purchase_create_form_draft';
+const formDraftKey = () =>
+  `purchase_create_form_draft:${typeof window !== 'undefined' ? window.location.pathname : ''}`;
+
+function readFormDraft() {
+  try {
+    const raw = localStorage.getItem(formDraftKey());
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeFormDraft(draft) {
+  try {
+    localStorage.setItem(formDraftKey(), JSON.stringify(draft));
+  } catch {
+    // ignore
+  }
+}
+
+function clearFormDraft() {
+  try {
+    localStorage.removeItem(formDraftKey());
+  } catch {
+    // ignore
+  }
+}
 
 function catalogueProductIdFor(products, stockItemId) {
   const p = products.find((x) => String(x.id) === String(stockItemId));
@@ -626,6 +652,16 @@ export default function PurchaseCreate({ data }) {
   const [currencyMenuOpen, setCurrencyMenuOpen] = useState(false);
   const [initialized, setInitialized] = useState(false);
   const currencyPickerRef = useRef(null);
+  const [hasSeedSource] = useState(() => {
+    const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : new URLSearchParams();
+    return !!(
+      cloned_po
+      || isClassificationEdit
+      || prefillProductId
+      || params.get('product_id')
+      || (initialSelectedVoucherIds || []).some((id) => Number(id) > 0)
+    );
+  });
 
   const currencyCodes = useMemo(() => Object.keys(poCurrencyOptions || {}), [poCurrencyOptions]);
   const selectedCurrencyMeta = poCurrencyOptions[currencyCode] || {
@@ -647,11 +683,11 @@ export default function PurchaseCreate({ data }) {
     let draftItems = [];
     let draftSupplier = '';
 
+    const fromCatalogue = !!localStorage.getItem(CATALOGUE_ITEMS_KEY)
+      || new URLSearchParams(window.location.search).has('catalogue_product_ids');
     try {
-      const rawDraft = sessionStorage.getItem(FORM_DRAFT_KEY);
-      if (rawDraft) {
-        sessionStorage.removeItem(FORM_DRAFT_KEY);
-        const d = JSON.parse(rawDraft) || {};
+      const d = (fromCatalogue || !hasSeedSource) ? readFormDraft() : null;
+      if (d) {
         if (d.supplierId) { draftSupplier = String(d.supplierId); setSupplierId(draftSupplier); }
         if (d.purchaseType) setPurchaseType(d.purchaseType);
         if (d.purchaseOrderDate) setPurchaseOrderDate(d.purchaseOrderDate);
@@ -662,7 +698,7 @@ export default function PurchaseCreate({ data }) {
         if (d.taxPercentage != null) setTaxPercentage(d.taxPercentage);
         if (d.discountPercentage != null) setDiscountPercentage(d.discountPercentage);
         draftItems = (Array.isArray(d.items) ? d.items : [])
-          .filter((it) => it && it.product_id)
+          .filter((it) => it && it.product_id && products.some((p) => String(p.id) === String(it.product_id)))
           .map((it) => ({ ...it, id: newRowId() }));
       }
     } catch (_) { /* ignore */ }
@@ -817,20 +853,28 @@ export default function PurchaseCreate({ data }) {
 
   const addRow = () => setItems((prev) => [...prev, emptyItem()]);
 
+  const currentDraft = () => ({
+    supplierId,
+    purchaseType,
+    purchaseOrderDate,
+    currencyCode,
+    exchangeRate,
+    notes,
+    termsConditions,
+    taxPercentage,
+    discountPercentage,
+    items: items.filter((row) => row.product_id),
+  });
+
+  useEffect(() => {
+    if (!initialized || hasSeedSource) return;
+    writeFormDraft(currentDraft());
+  }, [initialized, supplierId, purchaseType, purchaseOrderDate, currencyCode, exchangeRate, notes, // eslint-disable-line react-hooks/exhaustive-deps
+    termsConditions, taxPercentage, discountPercentage, items]);
+
   const openCatalogue = () => {
+    writeFormDraft(currentDraft());
     try {
-      sessionStorage.setItem(FORM_DRAFT_KEY, JSON.stringify({
-        supplierId,
-        purchaseType,
-        purchaseOrderDate,
-        currencyCode,
-        exchangeRate,
-        notes,
-        termsConditions,
-        taxPercentage,
-        discountPercentage,
-        items: items.filter((row) => row.product_id),
-      }));
       localStorage.setItem(
         CATALOGUE_SELECTION_DRAFT_KEY,
         JSON.stringify(catalogueSelectionFromItems(products, items)),
@@ -938,7 +982,10 @@ export default function PurchaseCreate({ data }) {
         method="POST"
         action={formAction}
         encType="multipart/form-data"
-        onSubmit={() => setIsSubmitting(true)}
+        onSubmit={() => {
+          setIsSubmitting(true);
+          clearFormDraft();
+        }}
         className="pe-layout pe-layout--flat"
       >
         <input type="hidden" name="procurement_journey" value="standard" />

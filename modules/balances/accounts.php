@@ -1089,6 +1089,25 @@ include __DIR__ . '/includes/header.php';
         outline: none; border-color: #0f766e; box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.12);
     }
     .sub-modal-opening-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .sub-modal-pair { display: flex; gap: 12px; }
+    .sub-modal-pair > * { flex: 1 1 0; min-width: 0; }
+    .sub-modal-pair > [hidden] { display: none; }
+    #subAccountModal .sub-modal { padding: 1.1rem 1.25rem 1rem; max-height: calc(100vh - 2rem); overflow-y: auto; }
+    #subAccountModal .sub-modal-head { margin-bottom: 0.75rem; }
+    #subAccountModal .sub-modal-label-row { margin-bottom: 5px; }
+    #subAccountModal .sub-modal-pair,
+    #subAccountModal .sub-modal-opening-row { margin-top: 12px; }
+    #subAccountModal .sub-modal-input { padding: 0.55rem 0.8rem; }
+    #subAccountModal .sub-modal-select { padding-top: 0.55rem; padding-bottom: 0.55rem; }
+    #subAccountModal .sub-cur-trigger { padding-top: 7px; padding-bottom: 7px; }
+    #subAccountModal .sub-modal-image { flex-basis: 38px; width: 38px; height: 38px; }
+    #subAccountModal .sub-modal-hint { margin: 5px 0 0; }
+    #subAccountModal .sub-modal-actions { margin-top: 1rem; }
+    #subAccountModal .sub-modal-btn { padding: 0.5rem 1.1rem; }
+    @media (max-width: 520px) {
+        .sub-modal-pair { flex-direction: column; gap: 0; }
+        .sub-modal-pair > * + * { margin-top: 12px; }
+    }
     .sub-cur-picker { position: relative; }
     .sub-cur-native { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); border: 0; }
     .sub-cur-trigger {
@@ -2212,8 +2231,10 @@ include __DIR__ . '/includes/header.php';
                 </div>
                 <input type="hidden" name="institution" id="subInstitution" value="">
             </div>
-            <p class="sub-modal-hint">Optional image (for example the bank or wallet logo) &middot; JPG, PNG, WEBP, GIF &middot; max 2MB</p>
-            <div class="sub-modal-label-row" style="margin-top:14px;">
+            <p class="sub-modal-hint">Optional logo &middot; JPG, PNG, WEBP, GIF &middot; max 2MB</p>
+            <div class="sub-modal-pair">
+            <div>
+            <div class="sub-modal-label-row">
                 <label for="subCurrencyTrigger">Currency</label>
             </div>
             <?php
@@ -2251,8 +2272,9 @@ include __DIR__ . '/includes/header.php';
                     <?php endforeach; ?>
                 </div>
             </div>
+            </div>
             <div id="subPaymentTypeWrap"<?= $selectedParentPaymentMode !== 'none' ? '' : ' hidden' ?>>
-                <div class="sub-modal-label-row" style="margin-top:14px;">
+                <div class="sub-modal-label-row">
                     <label for="subPaymentWalletType">Account type</label>
                 </div>
                 <select class="sub-modal-select" id="subPaymentWalletType" name="payment_wallet_type"<?= $selectedParentShowsPaymentType ? ' required' : '' ?>>
@@ -2263,24 +2285,24 @@ include __DIR__ . '/includes/header.php';
                         </option>
                     <?php endforeach; ?>
                 </select>
-                <p class="sub-modal-hint">Bank, Mobile money and Cash accounts can receive and pay money and are listed in their own section. Use Regular asset account for anything else.</p>
+            </div>
             </div>
             <div id="subOpeningWrap" hidden>
                 <div class="sub-modal-opening-row">
                     <div>
-                        <div class="sub-modal-label-row" style="margin-top:14px;">
+                        <div class="sub-modal-label-row">
                             <label for="subOpeningBalance">Opening balance</label>
                         </div>
                         <input type="text" class="sub-modal-input" id="subOpeningBalance" name="opening_balance" inputmode="decimal" placeholder="0.00" autocomplete="off">
                     </div>
                     <div>
-                        <div class="sub-modal-label-row" style="margin-top:14px;">
+                        <div class="sub-modal-label-row">
                             <label for="subOpeningDate">As of date</label>
                         </div>
                         <input type="date" class="sub-modal-input" id="subOpeningDate" name="opening_date" value="<?= date('Y-m-d') ?>">
                     </div>
                 </div>
-                <p class="sub-modal-hint">The balance on the bank statement or wallet on that date. Money that came in or went out after that date should be recorded as transactions.</p>
+                <p class="sub-modal-hint">Balance on the statement or wallet on that date; later money in or out is recorded as transactions.</p>
             </div>
             <div class="sub-modal-actions">
                 <button type="button" class="sub-modal-btn sub-modal-btn-cancel" id="cancelSubAccountModal">Cancel</button>

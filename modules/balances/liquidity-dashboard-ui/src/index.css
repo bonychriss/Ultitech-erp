@@ -1155,6 +1155,42 @@ button.ld-kpi-card {
 .ld-manual-swatch--tip { background: #64748b; }
 .ld-manual-swatch--ai { background: #7c3aed; }
 
+.ld-manual-table-wrap {
+  overflow-x: auto;
+  margin: 0.5rem 0 0.75rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+}
+
+.ld-manual-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+
+.ld-manual-table th,
+.ld-manual-table td {
+  padding: 0.45rem 0.65rem;
+  text-align: left;
+  border-bottom: 1px solid #eef2f7;
+  white-space: nowrap;
+}
+
+.ld-manual-table th {
+  background: #f8fafc;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.ld-manual-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+html[data-theme="dark"] .ld-manual-table-wrap { border-color: #334155; }
+html[data-theme="dark"] .ld-manual-table th { background: #1e293b; color: #e2e8f0; }
+html[data-theme="dark"] .ld-manual-table th,
+html[data-theme="dark"] .ld-manual-table td { border-bottom-color: #334155; }
+
 .ld-modal-f {
   padding: 0 1.5rem 1.25rem;
   display: flex;

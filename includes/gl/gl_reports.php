@@ -310,6 +310,7 @@ if (!function_exists('gl_report_money_accounts')) {
                 'id' => $id,
                 'name' => (string) $fa['name'],
                 'type' => (string) $fa['type'],
+                'currency' => gl_normalize_currency($fa['currency'] ?? '') ?: gl_base_currency($pdo),
                 'nature' => $fa['_nature'],
                 'status' => (string) ($fa['status'] ?? ''),
                 'is_heading' => !empty($fa['_has_children']),

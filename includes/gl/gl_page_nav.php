@@ -8,6 +8,7 @@ $glNavItems = [
     'cf' => ['cash-flow.php', 'Cash Flow'],
     'ledger' => ['ledger.php', 'General Ledger'],
     'categories' => ['gl-category-map.php', 'Voucher Categories'],
+    'fx' => ['gl-exchange-rates.php', 'Exchange Rates'],
     'recon' => ['gl-reconciliation.php', 'Reconciliation'],
 ];
 ?>

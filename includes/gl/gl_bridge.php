@@ -97,6 +97,15 @@ if (!function_exists('gl_bridge_fa_gl_account')) {
     }
 }
 
+if (!function_exists('gl_bridge_fa_currency')) {
+    /** Currency of a financial account ('' when it is the ledger base currency). */
+    function gl_bridge_fa_currency(PDO $pdo, int $faId): string
+    {
+        $cur = gl_normalize_currency(gl_bridge_fa_rows($pdo)[$faId]['currency'] ?? '');
+        return $cur === gl_base_currency($pdo) ? '' : $cur;
+    }
+}
+
 if (!function_exists('gl_bridge_active_link')) {
     /** @return array{entry_id:int, fingerprint:string}|null */
     function gl_bridge_active_link(PDO $pdo, string $table, int $id): ?array
@@ -158,9 +167,10 @@ if (!function_exists('gl_bridge_reverse_and_unlink')) {
 /* ------------------------------------------------------------------ */
 
 if (!function_exists('gl_bridge_opening_fingerprint')) {
-    function gl_bridge_opening_fingerprint(array $fa): string
+    function gl_bridge_opening_fingerprint(array $fa, string $currency = ''): string
     {
-        return md5(number_format((float) $fa['opening_balance'], 2, '.', '') . '|' . (string) ($fa['opening_date'] ?? ''));
+        return md5(number_format((float) $fa['opening_balance'], 2, '.', '') . '|' . (string) ($fa['opening_date'] ?? '')
+            . ($currency !== '' ? '|' . $currency : ''));
     }
 }
 
@@ -177,7 +187,8 @@ if (!function_exists('gl_bridge_sync_openings')) {
         }
         foreach ($faRows as $faId => $fa) {
             $opening = round((float) ($fa['opening_balance'] ?? 0), 2);
-            $fp = gl_bridge_opening_fingerprint($fa);
+            $faCurrency = gl_bridge_fa_currency($pdo, $faId);
+            $fp = gl_bridge_opening_fingerprint($fa, $faCurrency);
             $link = gl_bridge_active_link($pdo, 'financial_accounts_opening', $faId);
 
             if ($link && $link['fingerprint'] === $fp) {
@@ -205,8 +216,8 @@ if (!function_exists('gl_bridge_sync_openings')) {
             $faDebit = ($fa['_nature'] === 'asset') ? $opening > 0 : $opening < 0;
             $amt = abs($opening);
             $lines = [
-                ['account_id' => $glId, 'financial_account_id' => $faId, 'debit' => $faDebit ? $amt : 0, 'credit' => $faDebit ? 0 : $amt, 'memo' => 'Opening balance'],
-                ['account_id' => $obe, 'debit' => $faDebit ? 0 : $amt, 'credit' => $faDebit ? $amt : 0, 'memo' => 'Opening balance: ' . $fa['name']],
+                ['account_id' => $glId, 'financial_account_id' => $faId, 'debit' => $faDebit ? $amt : 0, 'credit' => $faDebit ? 0 : $amt, 'memo' => 'Opening balance', 'currency' => $faCurrency],
+                ['account_id' => $obe, 'debit' => $faDebit ? 0 : $amt, 'credit' => $faDebit ? $amt : 0, 'memo' => 'Opening balance: ' . $fa['name'], 'currency' => $faCurrency],
             ];
             $res = gl_post_entry($pdo, [
                 'date' => $date,
@@ -234,16 +245,20 @@ if (!function_exists('gl_bridge_sync_openings')) {
 /* ------------------------------------------------------------------ */
 
 if (!function_exists('gl_bridge_tx_fingerprint')) {
-    function gl_bridge_tx_fingerprint(array $tx): string
+    function gl_bridge_tx_fingerprint(array $tx, string $currency = ''): string
     {
-        return md5(implode('|', [
+        $parts = [
             (int) $tx['account_id'],
             (string) $tx['type'],
             number_format((float) $tx['amount'], 2, '.', ''),
             substr((string) $tx['transaction_date'], 0, 10),
             (string) ($tx['reference_type'] ?? ''),
             (string) ($tx['reference_id'] ?? ''),
-        ]));
+        ];
+        if ($currency !== '') {
+            $parts[] = $currency;
+        }
+        return md5(implode('|', $parts));
     }
 }
 
@@ -277,6 +292,7 @@ if (!function_exists('gl_bridge_tx_line')) {
             'debit' => $glDebit ? $amount : 0,
             'credit' => $glDebit ? 0 : $amount,
             'memo' => mb_substr((string) ($tx['description'] ?? ''), 0, 255),
+            'currency' => gl_bridge_fa_currency($pdo, $faId),
         ];
     }
 }
@@ -405,7 +421,7 @@ if (!function_exists('gl_bridge_sync_transactions')) {
         foreach ($links as $l) {
             if ($l['tx_id'] === null) {
                 $stale[(int) $l['entry_id']] = 'source transaction #' . $l['source_id'] . ' was deleted';
-            } elseif (gl_bridge_tx_fingerprint($l) !== $l['fingerprint']) {
+            } elseif (gl_bridge_tx_fingerprint($l, gl_bridge_fa_currency($pdo, (int) $l['account_id'])) !== $l['fingerprint']) {
                 $stale[(int) $l['entry_id']] = 'source transaction #' . $l['source_id'] . ' was changed';
             }
         }
@@ -433,13 +449,13 @@ if (!function_exists('gl_bridge_sync_transactions')) {
             $rt = (string) ($first['reference_type'] ?? '');
             $rid = (int) ($first['reference_id'] ?? 0);
             $lines = [];
-            $net = 0;
+            $currencies = [];
             foreach ($group as $tx) {
                 if (round((float) $tx['amount'], 2) <= 0) {
                     continue;
                 }
                 $line = gl_bridge_tx_line($pdo, $tx);
-                $net += gl_to_cents($line['debit']) - gl_to_cents($line['credit']);
+                $currencies[$line['currency']] = true;
                 $lines[] = $line;
             }
             $ids = array_map(static fn ($t) => (int) $t['id'], $group);
@@ -448,9 +464,32 @@ if (!function_exists('gl_bridge_sync_transactions')) {
                 continue;
             }
 
+            // Same currency: balance the group in that currency. Mixed currencies: balance in the base currency,
+            // and let a transfer between accounts of different currencies settle its difference as exchange gain/loss.
+            $day = substr((string) $first['transaction_date'], 0, 10);
+            $groupCurrency = count($currencies) === 1 ? (string) array_key_first($currencies) : '';
+            $net = 0;
+            $missingRate = '';
+            foreach ($lines as $line) {
+                $rate = count($currencies) === 1 ? 1.0 : gl_exchange_rate($pdo, $line['currency'], $day);
+                if ($rate === null) {
+                    $missingRate = $line['currency'];
+                    break;
+                }
+                $net += (int) round((gl_to_cents($line['debit']) - gl_to_cents($line['credit'])) * $rate);
+            }
+            if ($missingRate !== '') {
+                $stats['errors'][] = 'Transactions ' . implode(',', $ids) . ": no exchange rate for {$missingRate} on or before {$day}. Add one under Exchange Rates, then sync again.";
+                continue;
+            }
+
             $label = trim((string) ($first['description'] ?? '')) ?: ($rt !== '' ? "{$rt} #{$rid}" : 'Transaction #' . $first['id']);
-            if ($net !== 0) {
-                $lines = array_merge($lines, gl_bridge_counterpart_lines($pdo, $rt, $rid, $net, $label));
+            $isTransfer = strpos(strtolower($rt), 'transfer') !== false;
+            if ($net !== 0 && !($groupCurrency === '' && count($currencies) > 1 && $isTransfer)) {
+                foreach (gl_bridge_counterpart_lines($pdo, $rt, $rid, $net, $label) as $cp) {
+                    $cp['currency'] = $groupCurrency;
+                    $lines[] = $cp;
+                }
             }
 
             $accountNames = [];
@@ -471,7 +510,7 @@ if (!function_exists('gl_bridge_sync_transactions')) {
                 continue;
             }
             foreach ($group as $tx) {
-                gl_bridge_link($pdo, 'account_transactions', (int) $tx['id'], $res['entry_id'], gl_bridge_tx_fingerprint($tx));
+                gl_bridge_link($pdo, 'account_transactions', (int) $tx['id'], $res['entry_id'], gl_bridge_tx_fingerprint($tx, gl_bridge_fa_currency($pdo, (int) $tx['account_id'])));
             }
             if (!$res['existing']) {
                 $stats['posted']++;

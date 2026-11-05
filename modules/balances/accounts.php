@@ -171,6 +171,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             if (!empty($result['success'])) {
                 $_SESSION['bal_lottie_success'] = (string) ($result['message'] ?? 'Sub-account created successfully.');
+                $newCurrency = strtoupper(trim((string) ($_POST['currency'] ?? '')));
+                if (is_file(dirname(__DIR__, 2) . '/includes/gl/gl_core.php')) {
+                    require_once dirname(__DIR__, 2) . '/includes/gl/gl_core.php';
+                    if ($newCurrency !== '' && $newCurrency !== gl_base_currency($pdo) && gl_exchange_rate($pdo, $newCurrency, date('Y-m-d')) === null) {
+                        $_SESSION['bal_lottie_success'] .= ' Add a ' . $newCurrency . ' exchange rate (Accounting > Exchange Rates) so this account reaches the reports.';
+                    }
+                }
             } else {
                 $_SESSION['error'] = (string) ($result['message'] ?? 'Could not create sub-account.');
             }
@@ -1926,7 +1933,7 @@ include __DIR__ . '/includes/header.php';
                                                     <span class="ray-sub-group-name"><?= htmlspecialchars($subGroup['label'], ENT_QUOTES, 'UTF-8') ?></span>
                                                     <span class="ray-sub-group-count"><?= count($subGroup['rows']) ?></span>
                                                     <?php if ($subGroup['currency'] !== ''): ?>
-                                                        <span class="ray-sub-group-total"><?= htmlspecialchars($subGroup['currency'], ENT_QUOTES, 'UTF-8') ?> <?= number_format($subGroup['total'], 2) ?></span>
+                                                        <span class="ray-sub-group-total"<?= !empty($subGroup['approx']) ? ' title="Mixed currencies converted with the latest exchange rates"' : '' ?>><?= !empty($subGroup['approx']) ? '&asymp; ' : '' ?><?= htmlspecialchars($subGroup['currency'], ENT_QUOTES, 'UTF-8') ?> <?= number_format($subGroup['total'], 2) ?></span>
                                                     <?php endif; ?>
                                                 </div>
                                                 <?php endif; ?>
@@ -2049,7 +2056,7 @@ include __DIR__ . '/includes/header.php';
                                             <span class="ray-sub-group-name"><?= htmlspecialchars($subGroup['label'], ENT_QUOTES, 'UTF-8') ?></span>
                                             <span class="ray-sub-group-count"><?= count($subGroup['rows']) ?></span>
                                             <?php if ($subGroup['currency'] !== ''): ?>
-                                                <span class="ray-sub-group-total"><?= htmlspecialchars($subGroup['currency'], ENT_QUOTES, 'UTF-8') ?> <?= number_format($subGroup['total'], 2) ?></span>
+                                                <span class="ray-sub-group-total"<?= !empty($subGroup['approx']) ? ' title="Mixed currencies converted with the latest exchange rates"' : '' ?>><?= !empty($subGroup['approx']) ? '&asymp; ' : '' ?><?= htmlspecialchars($subGroup['currency'], ENT_QUOTES, 'UTF-8') ?> <?= number_format($subGroup['total'], 2) ?></span>
                                             <?php endif; ?>
                                         </td>
                                     </tr>

@@ -14,7 +14,7 @@
  */
 
 if (!defined('GL_SCHEMA_VERSION')) {
-    define('GL_SCHEMA_VERSION', 2);
+    define('GL_SCHEMA_VERSION', 3);
 }
 
 if (!function_exists('gl_table_exists')) {
@@ -159,6 +159,28 @@ if (!function_exists('gl_ensure_schema')) {
                 updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
+            $pdo->exec("CREATE TABLE IF NOT EXISTS gl_exchange_rates (
+                id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                currency CHAR(3) NOT NULL,
+                rate_date DATE NOT NULL,
+                rate DECIMAL(18,8) NOT NULL,
+                note VARCHAR(255) NULL,
+                created_by INT NULL,
+                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE KEY uq_gl_fx_currency_date (currency, rate_date)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+            // Foreign-currency lines keep the original amount and the rate used; debit/credit are in the base currency.
+            foreach ([
+                'currency' => 'CHAR(3) NULL DEFAULT NULL',
+                'fx_amount' => 'DECIMAL(18,2) NULL DEFAULT NULL',
+                'fx_rate' => 'DECIMAL(18,8) NULL DEFAULT NULL',
+            ] as $col => $def) {
+                if (!gl_column_exists($pdo, 'gl_journal_lines', $col)) {
+                    $pdo->exec("ALTER TABLE gl_journal_lines ADD COLUMN {$col} {$def}");
+                }
+            }
+
             if (!gl_column_exists($pdo, 'erp_accounts', 'system_key')) {
                 $pdo->exec('ALTER TABLE erp_accounts ADD COLUMN system_key VARCHAR(50) NULL DEFAULT NULL');
             }
@@ -222,7 +244,78 @@ if (!function_exists('gl_system_account_defs')) {
             'vat_payable' => ['2200', 'Tax Payable', 'liability'],
             'opening_balance_equity' => ['3900', 'Opening Balance Equity', 'equity'],
             'sales_revenue' => ['4002', 'Sales Revenue', 'revenue'],
+            'fx_gain_loss' => ['5990', 'Foreign Exchange Gain/Loss', 'expense'],
         ];
+    }
+}
+
+if (!function_exists('gl_base_currency')) {
+    /** Currency the ledger (and every report) is kept in. */
+    function gl_base_currency(PDO $pdo): string
+    {
+        static $cache = [];
+        $oid = spl_object_id($pdo);
+        if (!isset($cache[$oid])) {
+            $cur = strtoupper(trim((string) (gl_meta_get($pdo, 'base_currency') ?? '')));
+            $cache[$oid] = preg_match('/^[A-Z]{3}$/', $cur) ? $cur : 'TZS';
+        }
+        return $cache[$oid];
+    }
+}
+
+if (!function_exists('gl_normalize_currency')) {
+    function gl_normalize_currency($currency): string
+    {
+        $cur = strtoupper(trim((string) $currency));
+        return preg_match('/^[A-Z]{3}$/', $cur) ? $cur : '';
+    }
+}
+
+if (!function_exists('gl_exchange_rate')) {
+    /**
+     * Base-currency value of one unit of $currency, using the latest rate dated on or before $date.
+     * Returns 1.0 for the base currency and null when no rate has been entered yet.
+     */
+    function gl_exchange_rate(PDO $pdo, string $currency, string $date): ?float
+    {
+        $currency = gl_normalize_currency($currency);
+        if ($currency === '' || $currency === gl_base_currency($pdo)) {
+            return 1.0;
+        }
+        static $cache = [];
+        $ck = spl_object_id($pdo) . ':' . $currency . ':' . $date;
+        if (isset($cache[$ck])) {
+            return $cache[$ck];
+        }
+        try {
+            $st = $pdo->prepare('SELECT rate FROM gl_exchange_rates WHERE currency = ? AND rate_date <= ? ORDER BY rate_date DESC LIMIT 1');
+            $st->execute([$currency, $date]);
+            $rate = $st->fetchColumn();
+        } catch (Throwable $e) {
+            return null;
+        }
+        if ($rate === false || (float) $rate <= 0) {
+            return null;
+        }
+        return $cache[$ck] = (float) $rate;
+    }
+}
+
+if (!function_exists('gl_latest_exchange_rates')) {
+    /** @return array<string, array{rate:float, rate_date:string}> latest rate per currency */
+    function gl_latest_exchange_rates(PDO $pdo): array
+    {
+        $out = [];
+        try {
+            $rows = $pdo->query('SELECT r.currency, r.rate, r.rate_date FROM gl_exchange_rates r
+                                 JOIN (SELECT currency, MAX(rate_date) AS d FROM gl_exchange_rates GROUP BY currency) m
+                                   ON m.currency = r.currency AND m.d = r.rate_date')->fetchAll(PDO::FETCH_ASSOC);
+            foreach ($rows as $r) {
+                $out[(string) $r['currency']] = ['rate' => (float) $r['rate'], 'rate_date' => (string) $r['rate_date']];
+            }
+        } catch (Throwable $e) {
+        }
+        return $out;
     }
 }
 
@@ -359,6 +452,7 @@ if (!function_exists('gl_post_entry')) {
             return $fail('Invalid entry date.');
         }
         $date = date('Y-m-d', $ts);
+        $rateDate = $date;
         $originalDate = null;
         $lockedThrough = gl_locked_through($pdo);
         if ($lockedThrough !== null && $date <= $lockedThrough) {
@@ -366,10 +460,14 @@ if (!function_exists('gl_post_entry')) {
             $date = date('Y-m-d', strtotime($lockedThrough . ' +1 day'));
         }
 
+        // Line amounts are in the line's currency (default: base). Foreign lines are converted at the rate
+        // dated on or before the entry date, unless an fx_rate is given (reversals reuse the original rate).
+        $base = gl_base_currency($pdo);
         $clean = [];
         $totalDr = 0;
         $totalCr = 0;
         $accountIds = [];
+        $currencyNet = [];
         foreach ($lines as $line) {
             $accountId = (int) ($line['account_id'] ?? 0);
             $dr = gl_to_cents($line['debit'] ?? 0);
@@ -388,6 +486,29 @@ if (!function_exists('gl_post_entry')) {
             if ($accountId <= 0) {
                 return $fail('Every line needs a GL account.');
             }
+
+            $cur = gl_normalize_currency($line['currency'] ?? '');
+            $cur = $cur === $base ? '' : $cur;
+            $currencyNet[$cur === '' ? $base : $cur] = ($currencyNet[$cur === '' ? $base : $cur] ?? 0) + $dr - $cr;
+            $fxRate = null;
+            $fxCents = null;
+            if ($cur !== '') {
+                $fxRate = (isset($line['fx_rate']) && (float) $line['fx_rate'] > 0) ? (float) $line['fx_rate'] : gl_exchange_rate($pdo, $cur, $rateDate);
+                if ($fxRate === null) {
+                    return $fail("No exchange rate for {$cur} on or before {$rateDate}. Add one under Exchange Rates, then sync again.");
+                }
+                $fxCents = $dr > 0 ? $dr : $cr;
+                $baseCents = (int) round($fxCents * $fxRate);
+                if ($baseCents === 0) {
+                    continue;
+                }
+                if ($dr > 0) {
+                    $dr = $baseCents;
+                } else {
+                    $cr = $baseCents;
+                }
+            }
+
             $accountIds[$accountId] = true;
             $totalDr += $dr;
             $totalCr += $cr;
@@ -397,15 +518,37 @@ if (!function_exists('gl_post_entry')) {
                 'debit' => $dr,
                 'credit' => $cr,
                 'memo' => isset($line['memo']) ? mb_substr((string) $line['memo'], 0, 255) : null,
+                'currency' => $cur !== '' ? $cur : null,
+                'fx_amount' => $fxCents,
+                'fx_rate' => $fxRate,
             ];
         }
 
         if (count($clean) < 2) {
             return $fail('A journal entry needs at least two non-zero lines.');
         }
+        $hasForeign = count(array_diff(array_keys($currencyNet), [$base])) > 0;
+        if (count($currencyNet) === 1 && reset($currencyNet) !== 0) {
+            return $fail(sprintf('Entry is not balanced in %s (debits minus credits %.2f).', (string) key($currencyNet), reset($currencyNet) / 100));
+        }
+        if ($totalDr !== $totalCr && $hasForeign) {
+            // Rounding on conversion, or a real gain/loss when one entry mixes currencies (e.g. a USD to TZS transfer).
+            $diff = $totalDr - $totalCr;
+            $fxAcc = gl_system_account($pdo, 'fx_gain_loss');
+            $accountIds[$fxAcc] = true;
+            $clean[] = [
+                'account_id' => $fxAcc, 'financial_account_id' => null,
+                'debit' => $diff < 0 ? -$diff : 0, 'credit' => $diff > 0 ? $diff : 0,
+                'memo' => $diff > 0 ? 'Exchange gain' : 'Exchange loss',
+                'currency' => null, 'fx_amount' => null, 'fx_rate' => null,
+            ];
+            $totalDr = $totalCr = max($totalDr, $totalCr);
+        }
         if ($totalDr !== $totalCr) {
             return $fail(sprintf('Entry is not balanced (debits %.2f, credits %.2f).', $totalDr / 100, $totalCr / 100));
         }
+        $foreignOnly = array_values(array_diff(array_keys($currencyNet), [$base]));
+        $entryCurrency = (count($currencyNet) === 1 && count($foreignOnly) === 1) ? $foreignOnly[0] : $base;
 
         $ids = array_keys($accountIds);
         $in = implode(',', array_fill(0, count($ids), '?'));
@@ -448,7 +591,7 @@ if (!function_exists('gl_post_entry')) {
                             (string) ($entry['entry_kind'] ?? 'system'),
                             !empty($entry['reversal_of_id']) ? (int) $entry['reversal_of_id'] : null,
                             number_format($totalDr / 100, 2, '.', ''),
-                            (string) ($entry['currency'] ?? 'TZS'),
+                            $entryCurrency,
                             !empty($entry['company_id']) ? (int) $entry['company_id'] : null,
                             $entry['created_by'] ?? ($_SESSION['user_id'] ?? null),
                         ]);
@@ -469,7 +612,7 @@ if (!function_exists('gl_post_entry')) {
                 throw new RuntimeException('Could not allocate an entry number.');
             }
 
-            $ins = $pdo->prepare('INSERT INTO gl_journal_lines (entry_id, line_no, account_id, financial_account_id, debit, credit, memo) VALUES (?, ?, ?, ?, ?, ?, ?)');
+            $ins = $pdo->prepare('INSERT INTO gl_journal_lines (entry_id, line_no, account_id, financial_account_id, debit, credit, memo, currency, fx_amount, fx_rate) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
             foreach ($clean as $i => $l) {
                 $ins->execute([
                     $entryId,
@@ -479,6 +622,9 @@ if (!function_exists('gl_post_entry')) {
                     number_format($l['debit'] / 100, 2, '.', ''),
                     number_format($l['credit'] / 100, 2, '.', ''),
                     $l['memo'],
+                    $l['currency'],
+                    $l['fx_amount'] !== null ? number_format($l['fx_amount'] / 100, 2, '.', '') : null,
+                    $l['fx_rate'] !== null ? number_format($l['fx_rate'], 8, '.', '') : null,
                 ]);
             }
 
@@ -523,17 +669,25 @@ if (!function_exists('gl_reverse_entry')) {
             return ['ok' => false, 'entry_id' => 0, 'existing' => false, 'error' => 'A reversal cannot itself be reversed; post a new entry instead.'];
         }
 
-        $st = $pdo->prepare('SELECT account_id, financial_account_id, debit, credit, memo FROM gl_journal_lines WHERE entry_id = ? ORDER BY line_no');
+        $st = $pdo->prepare('SELECT account_id, financial_account_id, debit, credit, memo, currency, fx_amount, fx_rate FROM gl_journal_lines WHERE entry_id = ? ORDER BY line_no');
         $st->execute([$entryId]);
         $lines = [];
         foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $l) {
-            $lines[] = [
+            $line = [
                 'account_id' => (int) $l['account_id'],
                 'financial_account_id' => $l['financial_account_id'] !== null ? (int) $l['financial_account_id'] : null,
                 'debit' => $l['credit'],
                 'credit' => $l['debit'],
                 'memo' => $l['memo'],
             ];
+            if (!empty($l['currency']) && $l['fx_amount'] !== null && (float) $l['fx_rate'] > 0) {
+                $isDebit = (float) $l['debit'] > 0;
+                $line['currency'] = $l['currency'];
+                $line['fx_rate'] = (float) $l['fx_rate'];
+                $line['debit'] = $isDebit ? 0 : $l['fx_amount'];
+                $line['credit'] = $isDebit ? $l['fx_amount'] : 0;
+            }
+            $lines[] = $line;
         }
 
         return gl_post_entry($pdo, [
@@ -590,11 +744,19 @@ if (!function_exists('gl_trial_balance')) {
 }
 
 if (!function_exists('gl_financial_account_net')) {
-    /** Net (debit - credit) per financial account sub-ledger. @return array<int, float> */
-    function gl_financial_account_net(PDO $pdo): array
+    /**
+     * Net (debit - credit) per financial account sub-ledger, in each line's own currency
+     * (so it compares directly with the account balance). Pass $inBase = true for base-currency values.
+     *
+     * @return array<int, float>
+     */
+    function gl_financial_account_net(PDO $pdo, bool $inBase = false): array
     {
         $out = [];
-        $st = $pdo->query('SELECT financial_account_id, SUM(debit) - SUM(credit) AS net FROM gl_journal_lines WHERE financial_account_id IS NOT NULL GROUP BY financial_account_id');
+        $amount = $inBase || !gl_column_exists($pdo, 'gl_journal_lines', 'fx_amount')
+            ? 'debit - credit'
+            : 'CASE WHEN currency IS NOT NULL AND fx_amount IS NOT NULL THEN IF(debit > 0, fx_amount, -fx_amount) ELSE debit - credit END';
+        $st = $pdo->query("SELECT financial_account_id, SUM({$amount}) AS net FROM gl_journal_lines WHERE financial_account_id IS NOT NULL GROUP BY financial_account_id");
         foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $r) {
             $out[(int) $r['financial_account_id']] = round((float) $r['net'], 2);
         }

@@ -113,7 +113,7 @@ include __DIR__ . '/../modules/balances/includes/header.php';
     <div class="glr-cards">
       <div class="glr-card"><div class="k">Trial balance</div>
         <div class="v <?= $tbBalanced ? 'ok-t' : 'bad-t' ?>"><?= $tbBalanced ? 'Balanced' : 'Out by ' . $fmt($tbDr - $tbCr) ?></div>
-        <div class="s"><?= number_format($tbDr, 2) ?> TZS each side</div></div>
+        <div class="s"><?= number_format($tbDr, 2) ?> <?= $h(gl_base_currency($pdo)) ?> each side</div></div>
       <div class="glr-card"><div class="k">Journal entries</div>
         <div class="v"><?= number_format($entryCount) ?></div>
         <div class="s"><?= $pending > 0 ? number_format($pending) . ' transaction(s) waiting to post' : 'All transactions posted' ?></div></div>
@@ -131,9 +131,10 @@ include __DIR__ . '/../modules/balances/includes/header.php';
     <section class="glr-sec">
       <h2>Money accounts</h2>
       <div class="note"><b>Saved balance</b> is the number stored on the account. <b>From transactions</b> is opening balance plus all recorded movements.
-        <b>Ledger</b> is the double-entry balance (supplier payments that were saved as money in are treated as money out).</div>
+        <b>Ledger</b> is the double-entry balance (supplier payments that were saved as money in are treated as money out).
+        All three are in the account's own currency; reports convert them using <a href="gl-exchange-rates.php">exchange rates</a>.</div>
       <div class="glr-tw"><table class="glr-t">
-        <thead><tr><th>Account</th><th>Type</th><th class="n">Transactions</th><th class="n">Saved balance</th><th class="n">From transactions</th><th class="n">Ledger</th><th class="n">Saved minus ledger</th><th>Status</th></tr></thead>
+        <thead><tr><th>Account</th><th>Type</th><th>Currency</th><th class="n">Transactions</th><th class="n">Saved balance</th><th class="n">From transactions</th><th class="n">Ledger</th><th class="n">Saved minus ledger</th><th>Status</th></tr></thead>
         <tbody>
         <?php foreach ($moneyAccounts as $a): ?>
           <?php
@@ -146,6 +147,7 @@ include __DIR__ . '/../modules/balances/includes/header.php';
           <tr>
             <td><?= $h($a['name']) ?><?= $a['status'] === 'inactive' ? ' <small>(inactive)</small>' : '' ?></td>
             <td><?= $h(ucfirst($a['type'])) ?></td>
+            <td><?= $h($a['currency']) ?></td>
             <td class="n"><?= number_format($a['tx_count']) ?></td>
             <td class="n"><?= $fmt($a['stored']) ?></td>
             <td class="n"><?= $fmt($a['computed']) ?></td>

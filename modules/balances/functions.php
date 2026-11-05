@@ -1233,6 +1233,39 @@ function balances_store_uploaded_account_image(string $field = 'account_image'):
  * @param list<array<string, mixed>> $rows
  * @return list<array{key:string,label:?string,rows:list<array<string, mixed>>,total:float,currency:string}>
  */
+/**
+ * Sum balances held in different currencies in the ledger base currency, using the latest exchange rates.
+ * Returns [0.0, ''] when the ledger is unavailable or a currency has no rate yet.
+ *
+ * @return array{0:float, 1:string}
+ */
+function balances_total_in_base_currency(array $rows): array
+{
+    global $pdo;
+    if (!($pdo instanceof PDO)) {
+        return [0.0, ''];
+    }
+    if (!function_exists('gl_latest_exchange_rates') && is_file(dirname(__DIR__, 2) . '/includes/gl/gl_core.php')) {
+        require_once dirname(__DIR__, 2) . '/includes/gl/gl_core.php';
+    }
+    if (!function_exists('gl_latest_exchange_rates')) {
+        return [0.0, ''];
+    }
+    $base = gl_base_currency($pdo);
+    $rates = gl_latest_exchange_rates($pdo);
+    $total = 0.0;
+    foreach ($rows as $r) {
+        $cur = strtoupper((string) ($r['currency'] ?? $base));
+        $rate = $cur === $base ? 1.0 : ($rates[$cur]['rate'] ?? null);
+        if ($rate === null) {
+            return [0.0, ''];
+        }
+        $total += (float) ($r['balance'] ?? 0) * $rate;
+    }
+
+    return [round($total, 2), $base];
+}
+
 function balances_group_sub_accounts_by_payment_type(array $rows): array
 {
     $labels = ['bank' => 'Bank accounts', 'mobile' => 'Mobile money', 'cash' => 'Cash', 'other' => 'Other assets'];
@@ -1253,12 +1286,20 @@ function balances_group_sub_accounts_by_payment_type(array $rows): array
             continue;
         }
         $currencies = array_unique(array_map(static fn ($r) => (string) ($r['currency'] ?? 'TZS'), $groupRows));
+        $total = array_sum(array_map(static fn ($r) => (float) ($r['balance'] ?? 0), $groupRows));
+        $currency = count($currencies) === 1 ? (string) reset($currencies) : '';
+        $approx = false;
+        if ($currency === '') {
+            [$total, $currency] = balances_total_in_base_currency($groupRows);
+            $approx = $currency !== '';
+        }
         $out[] = [
             'key' => $key,
             'label' => $labels[$key],
             'rows' => $groupRows,
-            'total' => array_sum(array_map(static fn ($r) => (float) ($r['balance'] ?? 0), $groupRows)),
-            'currency' => count($currencies) === 1 ? (string) reset($currencies) : '',
+            'total' => $total,
+            'currency' => $currency,
+            'approx' => $approx,
         ];
     }
 

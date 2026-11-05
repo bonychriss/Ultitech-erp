@@ -2011,11 +2011,6 @@ include __DIR__ . '/includes/header.php';
                                     <div class="ray-m-accordion-panel">
                                         <?php if ($canManage): ?>
                                             <div class="ray-m-accordion-actions">
-                                                <?php if ($hasAssignable): ?>
-                                                    <button type="button" class="ray-btn-new ray-btn-new-account" onclick="event.stopPropagation(); openAssignForParent(<?= $parentId ?>)">
-                                                        <i class="fas fa-link text-xs"></i> Assign existing
-                                                    </button>
-                                                <?php endif; ?>
                                                 <button type="button" class="ray-btn-new ray-btn-new-account" onclick="event.stopPropagation(); openSubForParent(<?= $parentId ?>)">
                                                     <i class="fas fa-plus text-xs"></i> New Sub-account
                                                 </button>
@@ -2108,11 +2103,6 @@ include __DIR__ . '/includes/header.php';
                                     <i class="fas fa-check-square text-xs"></i> Select
                                 </button>
                             <?php endif; ?>
-                            <?php if (!empty($assignableAccounts)): ?>
-                                <button type="button" class="ray-btn-new ray-btn-new-account" id="openAssignAccountModal">
-                                    <i class="fas fa-link text-xs"></i> Assign existing
-                                </button>
-                            <?php endif; ?>
                             <button type="button" class="ray-btn-new ray-btn-new-account" id="openSubAccountModal">
                                 <i class="fas fa-plus text-xs"></i> New Sub-account
                             </button>
@@ -2144,9 +2134,6 @@ include __DIR__ . '/includes/header.php';
                                 <div>No sub-accounts yet</div>
                                 <?php if ($canManage): ?>
                                     <div class="ray-head-actions" style="margin-top:12px;justify-content:center;">
-                                        <?php if (!empty($assignableAccounts)): ?>
-                                            <button type="button" class="ray-btn-new ray-btn-new-account open-assign-modal-trigger">Assign existing account</button>
-                                        <?php endif; ?>
                                         <button type="button" class="ray-btn-new ray-btn-new-account open-sub-modal-trigger">Add first sub-account</button>
                                     </div>
                                 <?php endif; ?>

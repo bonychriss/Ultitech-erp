@@ -1092,18 +1092,7 @@ export default function PurchaseCreate({ data }) {
 
           <section id="pe-items" className="pe-section">
             <header className="pe-section-head">
-              <div className="pe-section-head-row">
-                <h2>Order Items <span className="pe-req">*</span></h2>
-                {catalogueUrl ? (
-                  <a
-                    className="pe-catalogue-link"
-                    href={catalogueUrlWithSelected(catalogueUrl, catalogueSelectionFromItems(products, items))}
-                    onClick={openCatalogue}
-                  >
-                    <HiOutlineBookOpen style={{ width: 16, height: 16 }} /> Product catalogue
-                  </a>
-                ) : null}
-              </div>
+              <h2>Order Items <span className="pe-req">*</span></h2>
               <p>Products, quantities and unit prices for this order.</p>
             </header>
             <div className="pe-card pe-card--items">
@@ -1187,9 +1176,20 @@ export default function PurchaseCreate({ data }) {
             </div>
 
             <div className="pe-items-foot">
-              <button type="button" className="pe-btn pe-btn--ghost" onClick={addRow}>
-                <HiOutlinePlus style={{ width: 16, height: 16 }} /> Add item
-              </button>
+              <div className="pe-items-foot-actions">
+                <button type="button" className="pe-btn pe-btn--ghost" onClick={addRow}>
+                  <HiOutlinePlus style={{ width: 16, height: 16 }} /> Add item
+                </button>
+                {catalogueUrl ? (
+                  <a
+                    className="pe-catalogue-link"
+                    href={catalogueUrlWithSelected(catalogueUrl, catalogueSelectionFromItems(products, items))}
+                    onClick={openCatalogue}
+                  >
+                    <HiOutlineBookOpen style={{ width: 16, height: 16 }} /> Product catalogue
+                  </a>
+                ) : null}
+              </div>
               <div className="pe-total">
                 <span>Subtotal ({validItemCount} item{validItemCount === 1 ? '' : 's'})</span>
                 <strong>{formatMoney(subtotal)}</strong>

@@ -1783,6 +1783,71 @@ include __DIR__ . '/includes/header.php';
         html[data-theme="dark"] body.page-balances-accounts .ray-m-name {
             color: #e9edef !important;
         }
+        html[data-theme="dark"] body.page-balances-accounts .ray-panel[aria-label="My accounts"] {
+            background: transparent !important;
+            border-color: transparent !important;
+            box-shadow: none !important;
+        }
+        html[data-theme="dark"] body.page-balances-accounts .ray-panel[aria-label="My accounts"] .ray-panel-head {
+            background: transparent !important;
+            border-bottom-color: transparent !important;
+        }
+        html[data-theme="dark"] body.page-balances-accounts .ray-panel[aria-label="My accounts"] .ray-search input[name="search"],
+        html[data-theme="dark"] body.page-balances-accounts .ray-panel[aria-label="My accounts"] .ray-search-field > input[type="text"] {
+            background: #111b21 !important;
+            border-color: #2a3942 !important;
+            color: #e9edef !important;
+            box-shadow: none;
+        }
+        html[data-theme="dark"] body.page-balances-accounts .ray-panel[aria-label="My accounts"] .ray-search input::placeholder {
+            color: #8696a0 !important;
+        }
+        html[data-theme="dark"] body.page-balances-accounts .ray-panel[aria-label="My accounts"] .ray-search input:focus {
+            border-color: #7c3aed !important;
+            box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.25) !important;
+        }
+        html[data-theme="dark"] body.page-balances-accounts .ray-m-card {
+            box-shadow: none;
+        }
+        html[data-theme="dark"] body.page-balances-accounts .ray-m-card.is-selected,
+        html[data-theme="dark"] body.page-balances-accounts .ray-m-card.is-open {
+            border-color: #6d28d9 !important;
+            background: #161f2b !important;
+            box-shadow: 0 0 0 1px rgba(124, 58, 237, 0.35);
+        }
+        html[data-theme="dark"] body.page-balances-accounts .ray-m-icon--violet { background: rgba(167, 139, 250, 0.16) !important; color: #c4b5fd !important; }
+        html[data-theme="dark"] body.page-balances-accounts .ray-m-icon--purple { background: rgba(139, 92, 246, 0.18) !important; color: #c4b5fd !important; }
+        html[data-theme="dark"] body.page-balances-accounts .ray-m-icon--orange { background: rgba(251, 146, 60, 0.16) !important; color: #fdba74 !important; }
+        html[data-theme="dark"] body.page-balances-accounts .ray-m-icon--green { background: rgba(74, 222, 128, 0.14) !important; color: #86efac !important; }
+        html[data-theme="dark"] body.page-balances-accounts .ray-m-icon--blue { background: rgba(96, 165, 250, 0.16) !important; color: #93c5fd !important; }
+        html[data-theme="dark"] body.page-balances-accounts .ray-m-icon--rose { background: rgba(251, 113, 133, 0.16) !important; color: #fda4af !important; }
+        html[data-theme="dark"] body.page-balances-accounts .ray-m-icon--amber { background: rgba(251, 191, 36, 0.16) !important; color: #fcd34d !important; }
+        html[data-theme="dark"] body.page-balances-accounts .ray-m-icon--indigo { background: rgba(129, 140, 248, 0.18) !important; color: #a5b4fc !important; }
+        html[data-theme="dark"] body.page-balances-accounts .ray-m-icon--slate { background: rgba(148, 163, 184, 0.16) !important; color: #cbd5e1 !important; }
+        html[data-theme="dark"] body.page-balances-accounts .ray-m-icon i {
+            color: inherit !important;
+        }
+        html[data-theme="dark"] body.page-balances-accounts .ray-m-lock {
+            color: #8696a0 !important;
+        }
+        html[data-theme="dark"] body.page-balances-accounts .ray-accounts-mobile .ray-badge-code {
+            background: #202c33 !important;
+            color: #aebac1 !important;
+        }
+        html[data-theme="dark"] body.page-balances-accounts .ray-m-sub-group {
+            color: #e9edef;
+        }
+        html[data-theme="dark"] body.page-balances-accounts .ray-m-sub-group .ray-sub-group-name,
+        html[data-theme="dark"] body.page-balances-accounts .ray-m-sub-group .ray-sub-group-total {
+            color: #e9edef !important;
+        }
+        html[data-theme="dark"] body.page-balances-accounts .ray-m-sub-group .ray-sub-group-count {
+            background: #2a3942 !important;
+            color: #e9edef !important;
+        }
+        html[data-theme="dark"] body.page-balances-accounts .ray-m-sub-empty {
+            color: #8696a0;
+        }
     }
 
     html[data-theme="dark"] body.page-balances-accounts .sidebar,

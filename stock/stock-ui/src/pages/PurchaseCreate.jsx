@@ -6,9 +6,7 @@ import {
   HiOutlineTrash,
   HiOutlineCube,
   HiOutlineExclamationCircle,
-  HiOutlineMagnifyingGlass,
   HiOutlineBookOpen,
-  HiOutlineChevronDown,
   HiOutlineCloudArrowUp,
   HiOutlineDocument,
   HiOutlineXMark,
@@ -114,22 +112,6 @@ function currencyFlagUrl(meta) {
         + '</svg>',
     )
   );
-}
-
-function voucherLabel(v) {
-  if (v?.label) return String(v.label);
-  const tag = String(v?.purpose_tag || (String(v?.purpose || '').toLowerCase() === 'stock_purchase' ? 'STK' : 'GEN'));
-  const no = v?.voucher_no || v?.pv_number || ('#' + (v?.id || ''));
-  const payee = v?.payee_name || 'Unknown payee';
-  const amount = v?.total_amount != null
-    ? Number(v.total_amount).toLocaleString('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-    : '';
-  const cur = v?.currency || '';
-  return [tag, no, payee, amount ? (cur + ' ' + amount).trim() : ''].filter(Boolean).join(' - ');
-}
-
-function itemsHaveProducts(rows) {
-  return (rows || []).some((r) => String(r.product_id || '').trim() !== '');
 }
 
 function mapLinesToItems(lines, rateNum) {
@@ -556,7 +538,6 @@ export default function PurchaseCreate({ data }) {
     currencySymbol = '',
     stockPurchaseVouchers = [],
     voucherSalesOrderItemsMap = {},
-    voucherPickerHint = '',
     cloned_po = null,
     cloned_items = [],
     classificationPrefillItems = null,
@@ -597,11 +578,9 @@ export default function PurchaseCreate({ data }) {
   );
   const [exchangeRate, setExchangeRate] = useState(initialDisplayRate);
   const [items, setItems] = useState([emptyItem()]);
-  const [selectedVoucherIds, setSelectedVoucherIds] = useState(() =>
+  const [selectedVoucherIds] = useState(() =>
     (initialSelectedVoucherIds || []).map((id) => Number(id)).filter((id) => id > 0),
   );
-  const [voucherSearch, setVoucherSearch] = useState('');
-  const [voucherPickerOpen, setVoucherPickerOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error] = useState(initialError);
   const [currencyMenuOpen, setCurrencyMenuOpen] = useState(false);
@@ -616,26 +595,7 @@ export default function PurchaseCreate({ data }) {
   const selectedCurrencyFlagUrl = currencyFlagUrl(selectedCurrencyMeta);
   const paymentVoucherIdsCsv = selectedVoucherIds.join(',');
   const paymentVoucherIdFirst = selectedVoucherIds.length ? String(selectedVoucherIds[0]) : '';
-  const selectedVoucherRows = useMemo(
-    () =>
-      selectedVoucherIds
-        .map((id) => (stockPurchaseVouchers || []).find((v) => Number(v.id) === Number(id)))
-        .filter(Boolean),
-    [selectedVoucherIds, stockPurchaseVouchers],
-  );
   const noSuppliers = !suppliers || suppliers.length === 0;
-
-  const filteredVouchers = useMemo(() => {
-    const q = voucherSearch.trim().toLowerCase();
-    if (!q) return stockPurchaseVouchers || [];
-    return (stockPurchaseVouchers || []).filter((v) =>
-      [voucherLabel(v), v.voucher_no, v.pv_number, v.payee_name, v.prepared_by, v.currency, String(v.id || '')]
-        .filter(Boolean)
-        .join(' ')
-        .toLowerCase()
-        .includes(q),
-    );
-  }, [stockPurchaseVouchers, voucherSearch]);
 
   useEffect(() => {
     if (initialized) return;
@@ -714,7 +674,6 @@ export default function PurchaseCreate({ data }) {
 
     const seedIds = (initialSelectedVoucherIds || []).map((id) => Number(id)).filter((id) => id > 0);
     if (seedIds.length) {
-      setSelectedVoucherIds(seedIds);
       const firstV = (stockPurchaseVouchers || []).find((v) => Number(v.id) === seedIds[0]);
       if (firstV?.supplier_id) setSupplierId((prev) => prev || String(firstV.supplier_id));
       if (!applied) {
@@ -778,38 +737,6 @@ export default function PurchaseCreate({ data }) {
     setExchangeRate(rateVal);
     const rateNum = parseFloat(rateVal) || 0;
     if (rateNum > 0) updateItemsCurrencyPricing(rateNum);
-  };
-
-  const applyVoucherLines = (voucherIdList) => {
-    const rateNum = Number(exchangeRate) || 1;
-    const lines = [];
-    voucherIdList.forEach((vid) => {
-      const mapped = voucherSalesOrderItemsMap?.[String(vid)] || voucherSalesOrderItemsMap?.[vid];
-      if (Array.isArray(mapped)) lines.push(...mapped);
-    });
-    const mappedItems = mapLinesToItems(lines, rateNum);
-    if (!mappedItems) return;
-    if (itemsHaveProducts(items)) {
-      const ok = window.confirm(
-        'Selected voucher has quotation lines. Replace current order items with those lines?',
-      );
-      if (!ok) return;
-    }
-    setItems(mappedItems);
-  };
-
-  const toggleVoucher = (voucher) => {
-    const vid = Number(voucher.id);
-    if (!vid) return;
-    if (selectedVoucherIds.includes(vid)) {
-      setSelectedVoucherIds((prev) => prev.filter((id) => id !== vid));
-      return;
-    }
-    const nextIds = [...selectedVoucherIds, vid];
-    setSelectedVoucherIds(nextIds);
-    if (voucher.supplier_id) setSupplierId(String(voucher.supplier_id));
-    const lines = voucherSalesOrderItemsMap?.[String(vid)] || voucherSalesOrderItemsMap?.[vid];
-    if (Array.isArray(lines) && lines.length > 0) applyVoucherLines(nextIds);
   };
 
   const addRow = () => setItems((prev) => [...prev, emptyItem()]);
@@ -1063,81 +990,6 @@ export default function PurchaseCreate({ data }) {
               </div>
             </div>
             <input type="hidden" name="supplier_invoice_no" value={supplierInvoiceNo} />
-            <div className="pe-split-col pe-span-3" id="pe-payment">
-              <label className="pe-label">Payment vouchers</label>
-              <div className="pe-field">
-                <button
-                  type="button"
-                  className={`pe-voucher-trigger${voucherPickerOpen ? ' is-open' : ''}`}
-                  aria-expanded={voucherPickerOpen}
-                  onClick={() => setVoucherPickerOpen((open) => !open)}
-                >
-                  <span className="pe-voucher-trigger-text">
-                    {selectedVoucherIds.length
-                      ? `${selectedVoucherIds.length} voucher${selectedVoucherIds.length === 1 ? '' : 's'} linked`
-                      : 'Link payment vouchers'}
-                  </span>
-                  <HiOutlineChevronDown style={{ width: 16, height: 16 }} />
-                </button>
-
-                {selectedVoucherRows.length && !voucherPickerOpen ? (
-                  <div className="pe-voucher-selected">
-                    {selectedVoucherRows.map((v) => (
-                      <span key={v.id} className="pe-voucher-chip" title={voucherLabel(v)}>
-                        {v.purpose_tag ? `${v.purpose_tag} ` : ''}
-                        {v.voucher_no || v.pv_number || `PV-${v.id}`}
-                      </span>
-                    ))}
-                  </div>
-                ) : null}
-
-                {voucherPickerOpen ? (
-                  <div className="pe-voucher-panel">
-                    {voucherPickerHint ? <p className="pe-voucher-hint">{voucherPickerHint}</p> : null}
-
-                    <div className="pe-voucher-search">
-                      <HiOutlineMagnifyingGlass style={{ width: 16, height: 16 }} />
-                      <input
-                        type="search"
-                        className="pe-input"
-                        value={voucherSearch}
-                        onChange={(e) => setVoucherSearch(e.target.value)}
-                        placeholder="Search vouchers by number, payee, amount..."
-                        aria-label="Search payment vouchers"
-                        autoFocus
-                      />
-                    </div>
-
-                    <div className="pe-voucher-list" role="group" aria-label="Payment vouchers">
-                      {!filteredVouchers.length ? (
-                        <div className="pe-voucher-empty">No vouchers match this search.</div>
-                      ) : (
-                        filteredVouchers.map((v) => {
-                          const vid = Number(v.id);
-                          const checked = selectedVoucherIds.includes(vid);
-                          const hasLines = !!(
-                            voucherSalesOrderItemsMap?.[String(vid)] || voucherSalesOrderItemsMap?.[vid]
-                          )?.length;
-                          return (
-                            <label key={vid} className={`pe-voucher-item${checked ? ' is-selected' : ''}`}>
-                              <input type="checkbox" checked={checked} onChange={() => toggleVoucher(v)} />
-                              <span className="pe-voucher-item-body">
-                                <span className="pe-voucher-item-title">{voucherLabel(v)}</span>
-                                <span className="pe-voucher-item-meta">
-                                  {v.date_created ? String(v.date_created).slice(0, 10) : ''}
-                                  {v.is_paid ? ' | Paid' : ' | Unpaid'}
-                                  {hasLines ? ' | Has quotation lines' : ''}
-                                </span>
-                              </span>
-                            </label>
-                          );
-                        })
-                      )}
-                    </div>
-                  </div>
-                ) : null}
-              </div>
-            </div>
             </div>
             </div>
           </section>

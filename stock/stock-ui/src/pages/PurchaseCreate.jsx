@@ -999,6 +999,7 @@ export default function PurchaseCreate({ data }) {
               <h2>Order Items <span className="pe-req">*</span></h2>
               <p>Products, quantities and unit prices for this order.</p>
             </header>
+            <div className="pe-card pe-card--items">
             <div className="pe-items">
               <div className="pe-items-head" aria-hidden="true">
                 <span className="pe-items-col pe-items-col--idx" />
@@ -1086,6 +1087,7 @@ export default function PurchaseCreate({ data }) {
                 <span>Subtotal ({validItemCount} item{validItemCount === 1 ? '' : 's'})</span>
                 <strong>{formatMoney(subtotal)}</strong>
               </div>
+            </div>
             </div>
           </section>
 

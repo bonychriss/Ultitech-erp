@@ -1536,6 +1536,21 @@
   margin-top: 16px;
 }
 
+.pe-shell--voucher .pe-card--items {
+  padding: 0.75rem 0.9rem 0.85rem;
+  overflow-x: auto;
+}
+
+.pe-shell--voucher .pe-card--items .pe-item--row {
+  background: #fbfcfe;
+}
+
+.pe-shell--voucher .pe-card--items .pe-items-foot {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--pe-border);
+}
+
 .pe-shell--voucher .pe-total {
   display: flex;
   flex-direction: column;

@@ -20,7 +20,7 @@ return [
     ['slug' => 'selcom-pesa', 'name' => 'Selcom Pesa', 'type' => 'mobile', 'domain' => 'selcom.net', 'color' => '#00a3e0', 'aliases' => ['selcom']],
 
     // Commercial banks
-    ['slug' => 'crdb', 'name' => 'CRDB Bank', 'type' => 'bank', 'domain' => 'crdbbank.co.tz', 'color' => '#00a651', 'aliases' => ['crdb']],
+    ['slug' => 'crdb', 'name' => 'CRDB Bank', 'type' => 'bank', 'domain' => 'crdbbank.co.tz', 'color' => '#43b02a', 'aliases' => ['crdb'], 'logo_url' => 'https://crdbbank.co.tz/storage/app/media/images/logo.svg', 'logo_crop' => 'main'],
     ['slug' => 'nmb', 'badge' => 'NMB', 'name' => 'NMB Bank', 'type' => 'bank', 'domain' => 'nmbbank.co.tz', 'color' => '#003a70', 'aliases' => ['nmb'], 'logo_url' => 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/88/Nmb_logo.jpg/330px-Nmb_logo.jpg'],
     ['slug' => 'nbc', 'name' => 'NBC Bank', 'type' => 'bank', 'domain' => 'nbc.co.tz', 'color' => '#e30613', 'aliases' => ['nbc', 'national bank of commerce'], 'logo_url' => 'https://www.nbc.co.tz/content/dam/nbc/tanzania/logos/NBC-logo-01.svg'],
     ['slug' => 'stanbic', 'name' => 'Stanbic Bank Tanzania', 'type' => 'bank', 'domain' => 'stanbicbank.co.tz', 'color' => '#0033a1', 'aliases' => ['stanbic']],

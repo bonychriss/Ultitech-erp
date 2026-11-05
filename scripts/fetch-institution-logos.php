@@ -153,18 +153,22 @@ function trim_margins($im)
     return $cropped ?: $im;
 }
 
-/** Keep only the leftmost mark of a wordmark logo (the block before the first clear vertical gap). */
-function crop_symbol($im)
+/**
+ * Split a logo into blocks separated by clear vertical gaps and keep one of them:
+ * 'symbol' keeps the leftmost block (the mark before a wordmark), 'main' keeps the widest block.
+ */
+function crop_symbol($im, string $mode = 'symbol')
 {
     $im = trim_margins($im);
     $w = imagesx($im);
     $h = imagesy($im);
     $minGap = max(3, (int) round($w * 0.02));
+    $blocks = [];
+    $start = null;
     $gap = 0;
-    $seenInk = false;
-    for ($x = 0; $x < $w; $x++) {
+    for ($x = 0; $x <= $w; $x++) {
         $ink = false;
-        for ($y = 0; $y < $h; $y++) {
+        for ($y = 0; $x < $w && $y < $h; $y++) {
             $c = imagecolorat($im, $x, $y);
             if ((($c >> 24) & 0x7f) < 100 && ((($c >> 16) & 0xff) < 240 || (($c >> 8) & 0xff) < 240 || ($c & 0xff) < 240)) {
                 $ink = true;
@@ -172,14 +176,26 @@ function crop_symbol($im)
             }
         }
         if ($ink) {
-            $seenInk = true;
+            $start ??= $x;
             $gap = 0;
-        } elseif ($seenInk && ++$gap >= $minGap) {
-            $cropped = imagecrop($im, ['x' => 0, 'y' => 0, 'width' => $x - $gap + 1, 'height' => $h]);
-            return $cropped ? trim_margins($cropped) : $im;
+        } elseif ($start !== null && (++$gap >= $minGap || $x === $w)) {
+            $blocks[] = [$start, $x - $gap + 1];
+            $start = null;
         }
     }
-    return $im;
+    if (count($blocks) < 2) {
+        return $im;
+    }
+    $pick = $blocks[0];
+    if ($mode === 'main') {
+        foreach ($blocks as $b) {
+            if ($b[1] - $b[0] > $pick[1] - $pick[0]) {
+                $pick = $b;
+            }
+        }
+    }
+    $cropped = imagecrop($im, ['x' => $pick[0], 'y' => 0, 'width' => $pick[1] - $pick[0], 'height' => $h]);
+    return $cropped ? trim_margins($cropped) : $im;
 }
 
 function save_square_png($src, string $path): void
@@ -260,7 +276,7 @@ foreach ($catalog as $inst) {
         $im = $res ? load_raster($res['body']) : null;
         if ($im && !empty($inst['logo_crop'])) {
             imagepalettetotruecolor($im);
-            $im = crop_symbol($im);
+            $im = crop_symbol($im, (string) $inst['logo_crop']);
         }
         if ($im) {
             save_square_png($im, $path);

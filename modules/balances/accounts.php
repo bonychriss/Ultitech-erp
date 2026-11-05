@@ -734,6 +734,18 @@ $hideHeaderCompanyBranding = true;
 $employeeHeaderExtraClass = 'employee-header--balances-accounts';
 $bodyExtraClass = 'page-balances-accounts';
 
+$rayAccountAvatar = static function (array $row) use ($pdo): string {
+    $raw = (array) ($row['raw'] ?? []);
+    $url = balances_account_logo_url($raw, $pdo);
+    if ($url !== '') {
+        return '<span class="ray-acc-logo"><img src="' . htmlspecialchars($url, ENT_QUOTES, 'UTF-8') . '" alt="" loading="lazy"></span>';
+    }
+    $label = trim(preg_replace('/^\s*\d+\s*-\s*/', '', (string) ($row['name'] ?? '')));
+    $initial = $label !== '' ? mb_strtoupper(mb_substr($label, 0, 1)) : '?';
+
+    return '<span class="ray-acc-logo ray-acc-logo--initial" aria-hidden="true">' . htmlspecialchars($initial, ENT_QUOTES, 'UTF-8') . '</span>';
+};
+
 $rayResolveParentIcon = static function (array $parentRow): array {
     $iconKey = strtolower(trim((string) ($parentRow['name'] ?? '') . ' ' . (string) ($parentRow['type'] ?? '') . ' ' . (string) ($parentRow['type_label'] ?? '')));
     $iconTone = 'slate';
@@ -946,6 +958,14 @@ include __DIR__ . '/includes/header.php';
     .ray-parent-row { cursor: pointer; transition: background 0.15s ease; }
     .ray-parent-row:hover { background: #f8fafc; }
     .ray-parent-row.is-selected { background: #eff6ff; }
+    .ray-acc-logo {
+        flex: 0 0 28px; width: 28px; height: 28px; border-radius: 8px; overflow: hidden;
+        display: inline-flex; align-items: center; justify-content: center; margin-right: 4px;
+        background: #fff; box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.08);
+    }
+    .ray-acc-logo img { width: 100%; height: 100%; object-fit: contain; }
+    .ray-acc-logo--initial { background: #ede9fe; color: #6d28d9; font-size: 0.75rem; font-weight: 700; box-shadow: none; }
+    html[data-theme="dark"] body.page-balances-accounts .ray-acc-logo--initial { background: #2a3942; color: #e9edef; }
     .ray-account-name { font-weight: 600; color: #111827; display: flex; align-items: center; flex-wrap: nowrap; white-space: nowrap; gap: 6px; }
     .ray-account-desc { font-size: 0.75rem; color: #6b7280; margin-top: 4px; line-height: 1.45; max-width: 360px; }
     .ray-table tr.ray-sub-group-row td { background: #f8fafc; padding: 0.55rem 1rem; border-bottom: 1px solid #eef2f7; }
@@ -1914,6 +1934,7 @@ include __DIR__ . '/includes/header.php';
                                                     $childEditUrl = 'coa_edit.php?id=' . (int) $childRow['id'] . ($moduleParam !== '' ? '&module=' . rawurlencode($moduleParam) : '');
                                                 ?>
                                                 <div class="ray-m-sub-item">
+                                                    <?= $rayAccountAvatar($childRow) ?>
                                                     <div class="ray-m-sub-copy">
                                                         <div class="ray-m-title">
                                                             <span class="ray-m-name"><?= htmlspecialchars($childRow['name'], ENT_QUOTES, 'UTF-8') ?></span>
@@ -2039,6 +2060,7 @@ include __DIR__ . '/includes/header.php';
                                     <tr data-sub-id="<?= (int) $childRow['id'] ?>"<?= $childIsSystem ? ' data-sub-system="1"' : '' ?>>
                                         <td>
                                             <div class="ray-account-name" title="<?= htmlspecialchars($childRow['description'], ENT_QUOTES, 'UTF-8') ?>">
+                                                <?= $rayAccountAvatar($childRow) ?>
                                                 <?= htmlspecialchars($childRow['name'], ENT_QUOTES, 'UTF-8') ?>
                                                 <?php if (!empty($childRow['is_system'])): ?>
                                                     <i class="fas fa-lock text-gray-400 ms-1 text-xs" title="System Account"></i>

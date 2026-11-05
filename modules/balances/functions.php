@@ -1137,6 +1137,44 @@ function balances_save_custom_institution(PDO $pdo, string $name, string $type, 
     }
 }
 
+/**
+ * Logo URL for an account row: its own uploaded image, otherwise (bank / mobile money accounts only)
+ * the logo of the institution whose name or alias appears in the account name. Returns '' when none fits.
+ */
+function balances_account_logo_url(array $account, ?PDO $pdo = null): string
+{
+    $image = trim((string) ($account['account_image'] ?? ''));
+    if ($image !== '' && ($url = balancesAccountImageUrl($image)) !== '') {
+        return $url;
+    }
+    $type = balances_normalize_payment_wallet_type((string) ($account['type'] ?? ''));
+    if ($type !== 'bank' && $type !== 'mobile') {
+        return '';
+    }
+    $name = mb_strtolower(trim(preg_replace('/^\s*\d+\s*-\s*/', '', (string) ($account['name'] ?? ''))));
+    if ($name === '') {
+        return '';
+    }
+    static $institutions = null;
+    $institutions ??= balances_institutions($pdo);
+    $best = null;
+    $bestLen = 0;
+    foreach ($institutions as $inst) {
+        if ($inst['logo'] === '') {
+            continue;
+        }
+        foreach (array_merge([mb_strtolower($inst['name'])], $inst['aliases']) as $needle) {
+            $len = mb_strlen($needle);
+            if ($len > $bestLen && preg_match('/(^|[^\p{L}\p{N}])' . preg_quote($needle, '/') . '($|[^\p{L}\p{N}])/u', $name)) {
+                $best = $inst;
+                $bestLen = $len;
+            }
+        }
+    }
+
+    return $best ? balancesAccountImageUrl($best['logo']) : '';
+}
+
 /** Copy an institution logo into the account images folder; returns the new relative path or ''. */
 function balances_copy_institution_logo(string $slug, ?PDO $pdo = null): string
 {

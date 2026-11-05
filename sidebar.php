@@ -323,7 +323,8 @@ if (!function_exists('sidebar_render_nav_icon')) {
         }
         $reactIcons = ['sack-dollar' => 'wallet', 'transactions-coin' => 'clipboard-list', 'transfer-bag' => 'arrows-right-left'];
         if (isset($reactIcons[$icon])) {
-            require_once __DIR__ . '/includes/sidebar_react_icons.php';
+            $reactIconsLib = __DIR__ . '/includes/sidebar_react_icons.php';
+            require_once is_file($reactIconsLib) ? $reactIconsLib : dirname(__DIR__) . '/includes/sidebar_react_icons.php';
             return sidebar_react_icon_svg($reactIcons[$icon]);
         }
         if (strpos($icon, 'fa-') !== false || str_contains($icon, ' ')) {

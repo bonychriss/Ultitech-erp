@@ -800,7 +800,7 @@ include __DIR__ . '/includes/header.php';
     .ray-accounts-wrap { max-width: 1400px; margin: 0 auto; padding: 1.5rem 1.75rem 2.5rem; }
     .ray-accounts-grid {
         display: grid;
-        grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+        grid-template-columns: minmax(410px, 0.75fr) minmax(0, 1.25fr);
         gap: 1.25rem;
         align-items: start;
     }
@@ -946,7 +946,7 @@ include __DIR__ . '/includes/header.php';
     .ray-parent-row { cursor: pointer; transition: background 0.15s ease; }
     .ray-parent-row:hover { background: #f8fafc; }
     .ray-parent-row.is-selected { background: #eff6ff; }
-    .ray-account-name { font-weight: 600; color: #111827; display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+    .ray-account-name { font-weight: 600; color: #111827; display: flex; align-items: center; flex-wrap: nowrap; white-space: nowrap; gap: 6px; }
     .ray-account-desc { font-size: 0.75rem; color: #6b7280; margin-top: 4px; line-height: 1.45; max-width: 360px; }
     .ray-table tr.ray-sub-group-row td { background: #f8fafc; padding: 0.55rem 1rem; border-bottom: 1px solid #eef2f7; }
     .ray-sub-group-row td, .ray-m-sub-group { font-size: 0.6875rem; }

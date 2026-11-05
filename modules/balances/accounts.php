@@ -975,6 +975,13 @@ include __DIR__ . '/includes/header.php';
     .ray-sub-group-count { display: inline-flex; min-width: 20px; justify-content: center; padding: 1px 6px; border-radius: 999px; background: #e2e8f0; color: #475569; font-weight: 600; margin-left: 6px; }
     .ray-sub-group-total { float: right; font-weight: 600; color: #0f172a; font-variant-numeric: tabular-nums; }
     .ray-m-sub-group .ray-sub-group-total { float: none; margin-left: auto; }
+    .ray-group-toggle { cursor: pointer; user-select: none; }
+    .ray-group-toggle:hover td, .ray-m-sub-group.ray-group-toggle:hover { background: #f1f5f9; }
+    .ray-group-chevron { font-size: 0.625rem; color: #64748b; width: 12px; margin-right: 6px; transition: transform 0.15s ease; }
+    .ray-group-toggle.is-collapsed .ray-group-chevron { transform: rotate(-90deg); }
+    [data-group-member].is-group-hidden { display: none !important; }
+    html[data-theme="dark"] body.page-balances-accounts .ray-group-toggle:hover td,
+    html[data-theme="dark"] body.page-balances-accounts .ray-m-sub-group.ray-group-toggle:hover { background: #202c33 !important; }
     html[data-theme="dark"] body.page-balances-accounts .ray-table tr.ray-sub-group-row td { background: #0b141a !important; }
     html[data-theme="dark"] body.page-balances-accounts .ray-sub-group-name { color: #8696a0; }
     html[data-theme="dark"] body.page-balances-accounts .ray-sub-group-count { background: #2a3942; color: #e9edef; }
@@ -1914,7 +1921,8 @@ include __DIR__ . '/includes/header.php';
                                             <div class="ray-m-sub-list">
                                                 <?php foreach (balances_group_sub_accounts_by_payment_type($rowChildren) as $subGroup): ?>
                                                 <?php if ($subGroup['label'] !== null): ?>
-                                                <div class="ray-m-sub-group">
+                                                <div class="ray-m-sub-group ray-group-toggle" role="button" tabindex="0" aria-expanded="true" data-group="<?= $parentId ?>-<?= htmlspecialchars($subGroup['key'], ENT_QUOTES, 'UTF-8') ?>">
+                                                    <i class="fas fa-chevron-down ray-group-chevron" aria-hidden="true"></i>
                                                     <span class="ray-sub-group-name"><?= htmlspecialchars($subGroup['label'], ENT_QUOTES, 'UTF-8') ?></span>
                                                     <span class="ray-sub-group-count"><?= count($subGroup['rows']) ?></span>
                                                     <?php if ($subGroup['currency'] !== ''): ?>
@@ -1926,7 +1934,7 @@ include __DIR__ . '/includes/header.php';
                                                     $childViewUrl = 'view_account.php?' . http_build_query(['module' => $moduleParam, 'id' => (int) $childRow['id']]);
                                                     $childEditUrl = 'coa_edit.php?id=' . (int) $childRow['id'] . ($moduleParam !== '' ? '&module=' . rawurlencode($moduleParam) : '');
                                                 ?>
-                                                <div class="ray-m-sub-item">
+                                                <div class="ray-m-sub-item"<?= $subGroup['label'] !== null ? ' data-group-member="' . $parentId . '-' . htmlspecialchars($subGroup['key'], ENT_QUOTES, 'UTF-8') . '"' : '' ?>>
                                                     <?= $rayAccountAvatar($childRow) ?>
                                                     <div class="ray-m-sub-copy">
                                                         <div class="ray-m-title">
@@ -2035,8 +2043,9 @@ include __DIR__ . '/includes/header.php';
                                 <tbody>
                                     <?php foreach (balances_group_sub_accounts_by_payment_type($selectedChildren) as $subGroup): ?>
                                     <?php if ($subGroup['label'] !== null): ?>
-                                    <tr class="ray-sub-group-row">
+                                    <tr class="ray-sub-group-row ray-group-toggle" role="button" tabindex="0" aria-expanded="true" data-group="<?= (int) $selectedId ?>-<?= htmlspecialchars($subGroup['key'], ENT_QUOTES, 'UTF-8') ?>">
                                         <td colspan="2">
+                                            <i class="fas fa-chevron-down ray-group-chevron" aria-hidden="true"></i>
                                             <span class="ray-sub-group-name"><?= htmlspecialchars($subGroup['label'], ENT_QUOTES, 'UTF-8') ?></span>
                                             <span class="ray-sub-group-count"><?= count($subGroup['rows']) ?></span>
                                             <?php if ($subGroup['currency'] !== ''): ?>
@@ -2050,7 +2059,7 @@ include __DIR__ . '/includes/header.php';
                                         $childEditUrl = 'coa_edit.php?id=' . (int) $childRow['id'] . ($moduleParam !== '' ? '&module=' . rawurlencode($moduleParam) : '');
                                         $childIsSystem = !empty($childRow['is_system']);
                                     ?>
-                                    <tr data-sub-id="<?= (int) $childRow['id'] ?>"<?= $childIsSystem ? ' data-sub-system="1"' : '' ?>>
+                                    <tr data-sub-id="<?= (int) $childRow['id'] ?>"<?= $childIsSystem ? ' data-sub-system="1"' : '' ?><?= $subGroup['label'] !== null ? ' data-group-member="' . (int) $selectedId . '-' . htmlspecialchars($subGroup['key'], ENT_QUOTES, 'UTF-8') . '"' : '' ?>>
                                         <td>
                                             <div class="ray-account-name" title="<?= htmlspecialchars($childRow['description'], ENT_QUOTES, 'UTF-8') ?>">
                                                 <?= $rayAccountAvatar($childRow) ?>
@@ -2600,6 +2609,35 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
     if (imageInput) imageInput.addEventListener('change', function () { hidden.value = ''; });
+});
+document.addEventListener('DOMContentLoaded', function () {
+    var storageKey = 'balancesCollapsedGroups';
+    var searching = <?= json_encode($subSearchQ !== '') ?>;
+    var collapsed = {};
+    try { collapsed = JSON.parse(localStorage.getItem(storageKey) || '{}') || {}; } catch (e) { collapsed = {}; }
+
+    function apply(toggle, isCollapsed) {
+        var key = toggle.getAttribute('data-group');
+        toggle.classList.toggle('is-collapsed', isCollapsed);
+        toggle.setAttribute('aria-expanded', isCollapsed ? 'false' : 'true');
+        document.querySelectorAll('[data-group-member="' + key + '"]').forEach(function (el) {
+            el.classList.toggle('is-group-hidden', isCollapsed);
+        });
+    }
+    document.querySelectorAll('.ray-group-toggle').forEach(function (toggle) {
+        var key = toggle.getAttribute('data-group');
+        if (!searching && collapsed[key]) apply(toggle, true);
+        function flip() {
+            var next = !toggle.classList.contains('is-collapsed');
+            apply(toggle, next);
+            if (next) collapsed[key] = 1; else delete collapsed[key];
+            try { localStorage.setItem(storageKey, JSON.stringify(collapsed)); } catch (e) {}
+        }
+        toggle.addEventListener('click', flip);
+        toggle.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); flip(); }
+        });
+    });
 });
 document.addEventListener('DOMContentLoaded', function () {
     var paySelect = document.getElementById('subPaymentWalletType');

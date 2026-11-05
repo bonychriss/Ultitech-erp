@@ -149,6 +149,46 @@ function makeItemFromBase(productId, quantity, basePrice, rateNum) {
   };
 }
 
+const CATALOGUE_ITEMS_KEY = 'purchase_catalogue_items';
+const CATALOGUE_SELECTION_DRAFT_KEY = 'purchase_catalogue_items_draft';
+const FORM_DRAFT_KEY = 'purchase_create_form_draft';
+
+function catalogueProductIdFor(products, stockItemId) {
+  const p = products.find((x) => String(x.id) === String(stockItemId));
+  return Number(p?.linked_product_id) || 0;
+}
+
+function stockItemForCatalogueProduct(products, catalogueProductId) {
+  const key = String(catalogueProductId);
+  return (
+    products.find((x) => x.linked_product_id != null && String(x.linked_product_id) === key)
+    || products.find((x) => String(x.id) === key)
+    || null
+  );
+}
+
+function catalogueSelectionFromItems(products, items) {
+  const byPid = new Map();
+  (items || []).forEach((row) => {
+    const pid = catalogueProductIdFor(products, row.product_id);
+    if (pid > 0) byPid.set(pid, (byPid.get(pid) || 0) + Math.max(1, Number(row.quantity) || 1));
+  });
+  return [...byPid.entries()].map(([product_id, quantity]) => ({ product_id, quantity }));
+}
+
+function catalogueUrlWithSelected(baseUrl, selection) {
+  if (!baseUrl) return baseUrl;
+  const ids = selection.map((s) => s.product_id).filter((id) => id > 0);
+  if (!ids.length) return baseUrl;
+  try {
+    const url = new URL(baseUrl, window.location.origin);
+    url.searchParams.set('selected', ids.join(','));
+    return `${url.pathname}${url.search}${url.hash}`;
+  } catch {
+    return baseUrl;
+  }
+}
+
 function productOptionLabel(product) {
   if (!product) return '';
   const name = String(product.name || '').trim();
@@ -602,27 +642,63 @@ export default function PurchaseCreate({ data }) {
     setInitialized(true);
     if (typeof window === 'undefined') return;
 
-    const rateNum = Number(exchangeRate) || 1;
+    let rateNum = Number(exchangeRate) || 1;
     let applied = false;
+    let draftItems = [];
+    let draftSupplier = '';
 
     try {
-      const raw = localStorage.getItem('purchase_catalogue_items');
-      if (raw) {
-        const picked = JSON.parse(raw);
-        if (Array.isArray(picked) && picked.length > 0) {
-          localStorage.removeItem('purchase_catalogue_items');
-          const firstProd = products.find((p) => String(p.id) === String(picked[0].product_id));
+      const rawDraft = sessionStorage.getItem(FORM_DRAFT_KEY);
+      if (rawDraft) {
+        sessionStorage.removeItem(FORM_DRAFT_KEY);
+        const d = JSON.parse(rawDraft) || {};
+        if (d.supplierId) { draftSupplier = String(d.supplierId); setSupplierId(draftSupplier); }
+        if (d.purchaseType) setPurchaseType(d.purchaseType);
+        if (d.purchaseOrderDate) setPurchaseOrderDate(d.purchaseOrderDate);
+        if (d.currencyCode) setCurrencyCode(d.currencyCode);
+        if (Number(d.exchangeRate) > 0) { rateNum = Number(d.exchangeRate); setExchangeRate(rateNum); }
+        if (d.notes != null) setNotes(d.notes);
+        if (d.termsConditions != null) setTermsConditions(d.termsConditions);
+        if (d.taxPercentage != null) setTaxPercentage(d.taxPercentage);
+        if (d.discountPercentage != null) setDiscountPercentage(d.discountPercentage);
+        draftItems = (Array.isArray(d.items) ? d.items : [])
+          .filter((it) => it && it.product_id)
+          .map((it) => ({ ...it, id: newRowId() }));
+      }
+    } catch (_) { /* ignore */ }
+
+    try {
+      const raw = localStorage.getItem(CATALOGUE_ITEMS_KEY);
+      localStorage.removeItem(CATALOGUE_ITEMS_KEY);
+      localStorage.removeItem(CATALOGUE_SELECTION_DRAFT_KEY);
+      const picked = raw ? JSON.parse(raw) : null;
+      if (Array.isArray(picked) && picked.length > 0) {
+        const merged = [...draftItems];
+        picked.forEach((it) => {
+          const p = stockItemForCatalogueProduct(products, it.product_id);
+          if (!p) return;
+          const existing = merged.findIndex((row) => String(row.product_id) === String(p.id));
+          if (existing >= 0) {
+            merged[existing] = { ...merged[existing], quantity: Number(it.quantity) || 1 };
+          } else {
+            merged.push(makeItemFromBase(p.id, it.quantity, productUnitBase(p), rateNum));
+          }
+        });
+        if (!draftSupplier) {
+          const firstProd = stockItemForCatalogueProduct(products, picked[0].product_id);
           if (firstProd?.supplier_id) setSupplierId(String(firstProd.supplier_id));
-          setItems(
-            picked.map((it) => {
-              const p = products.find((x) => String(x.id) === String(it.product_id));
-              return makeItemFromBase(it.product_id, it.quantity, productUnitBase(p), rateNum);
-            }),
-          );
+        }
+        if (merged.length) {
+          setItems(merged);
           applied = true;
         }
       }
     } catch (_) { /* ignore */ }
+
+    if (!applied && draftItems.length) {
+      setItems(draftItems);
+      applied = true;
+    }
 
     if (!applied) {
       const params = new URLSearchParams(window.location.search);
@@ -740,6 +816,27 @@ export default function PurchaseCreate({ data }) {
   };
 
   const addRow = () => setItems((prev) => [...prev, emptyItem()]);
+
+  const openCatalogue = () => {
+    try {
+      sessionStorage.setItem(FORM_DRAFT_KEY, JSON.stringify({
+        supplierId,
+        purchaseType,
+        purchaseOrderDate,
+        currencyCode,
+        exchangeRate,
+        notes,
+        termsConditions,
+        taxPercentage,
+        discountPercentage,
+        items: items.filter((row) => row.product_id),
+      }));
+      localStorage.setItem(
+        CATALOGUE_SELECTION_DRAFT_KEY,
+        JSON.stringify(catalogueSelectionFromItems(products, items)),
+      );
+    } catch (_) { /* ignore */ }
+  };
   const removeRow = (id) => setItems((prev) => (prev.length > 1 ? prev.filter((r) => r.id !== id) : prev));
 
   const updateRow = (id, updates) => {
@@ -795,10 +892,9 @@ export default function PurchaseCreate({ data }) {
         <div className="pe-topbar-actions">
           {catalogueUrl ? (
             <a
-              href={catalogueUrl}
+              href={catalogueUrlWithSelected(catalogueUrl, catalogueSelectionFromItems(products, items))}
+              onClick={openCatalogue}
               className="pe-icon-link"
-              target="_blank"
-              rel="noopener noreferrer"
               title="Catalogue"
               aria-label="Open catalogue"
             >
@@ -996,7 +1092,18 @@ export default function PurchaseCreate({ data }) {
 
           <section id="pe-items" className="pe-section">
             <header className="pe-section-head">
-              <h2>Order Items <span className="pe-req">*</span></h2>
+              <div className="pe-section-head-row">
+                <h2>Order Items <span className="pe-req">*</span></h2>
+                {catalogueUrl ? (
+                  <a
+                    className="pe-catalogue-link"
+                    href={catalogueUrlWithSelected(catalogueUrl, catalogueSelectionFromItems(products, items))}
+                    onClick={openCatalogue}
+                  >
+                    <HiOutlineBookOpen style={{ width: 16, height: 16 }} /> Product catalogue
+                  </a>
+                ) : null}
+              </div>
               <p>Products, quantities and unit prices for this order.</p>
             </header>
             <div className="pe-card pe-card--items">

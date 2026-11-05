@@ -96,15 +96,99 @@ function load_raster(string $data)
         $data = $png;
     }
     if (str_starts_with(ltrim($data), '<')) {
-        return null;
+        return render_svg($data);
     }
     $im = @imagecreatefromstring($data);
     return $im ?: null;
 }
 
+/** Render an SVG with headless Chrome into a GD image (GD cannot read SVG). */
+function render_svg($svg)
+{
+    $chrome = 'C:/Program Files/Google/Chrome/Application/chrome.exe';
+    $head = strtolower(substr(ltrim($svg), 0, 200));
+    if (!is_file($chrome) || !(str_starts_with($head, '<svg') || (str_starts_with($head, '<?xml') && str_contains(strtolower($svg), '<svg')))) {
+        return null;
+    }
+    $tmp = sys_get_temp_dir() . '/inst_' . bin2hex(random_bytes(4));
+    file_put_contents($tmp . '.html', '<html><body style="margin:0;background:#fff;width:512px;height:512px;display:flex;align-items:center;justify-content:center">'
+        . '<img src="data:image/svg+xml;base64,' . base64_encode($svg) . '" style="max-width:480px;max-height:480px;width:480px;height:480px;object-fit:contain"></body></html>');
+    $cmd = '"' . $chrome . '" --headless=new --disable-gpu --hide-scrollbars --window-size=512,512 --virtual-time-budget=2000'
+        . ' --screenshot="' . $tmp . '.png" "file:///' . str_replace('\\', '/', $tmp) . '.html" 2>&1';
+    exec($cmd);
+    $im = is_file($tmp . '.png') ? @imagecreatefrompng($tmp . '.png') : null;
+    @unlink($tmp . '.html');
+    @unlink($tmp . '.png');
+    return $im ?: null;
+}
+
+/** Crop near-white / transparent margins so wide wordmarks fill the square. */
+function trim_margins($im)
+{
+    $w = imagesx($im);
+    $h = imagesy($im);
+    $minX = $w;
+    $minY = $h;
+    $maxX = -1;
+    $maxY = -1;
+    for ($y = 0; $y < $h; $y++) {
+        for ($x = 0; $x < $w; $x++) {
+            $c = imagecolorat($im, $x, $y);
+            $a = ($c >> 24) & 0x7f;
+            $r = ($c >> 16) & 0xff;
+            $g = ($c >> 8) & 0xff;
+            $b = $c & 0xff;
+            if ($a < 100 && ($r < 240 || $g < 240 || $b < 240)) {
+                $minX = min($minX, $x);
+                $maxX = max($maxX, $x);
+                $minY = min($minY, $y);
+                $maxY = max($maxY, $y);
+            }
+        }
+    }
+    if ($maxX < 0 || ($maxX - $minX) < 8 || ($maxY - $minY) < 8) {
+        return $im;
+    }
+    $cropped = imagecrop($im, ['x' => $minX, 'y' => $minY, 'width' => $maxX - $minX + 1, 'height' => $maxY - $minY + 1]);
+    return $cropped ?: $im;
+}
+
+/** Keep only the leftmost mark of a wordmark logo (the block before the first clear vertical gap). */
+function crop_symbol($im)
+{
+    $im = trim_margins($im);
+    $w = imagesx($im);
+    $h = imagesy($im);
+    $minGap = max(3, (int) round($w * 0.02));
+    $gap = 0;
+    $seenInk = false;
+    for ($x = 0; $x < $w; $x++) {
+        $ink = false;
+        for ($y = 0; $y < $h; $y++) {
+            $c = imagecolorat($im, $x, $y);
+            if ((($c >> 24) & 0x7f) < 100 && ((($c >> 16) & 0xff) < 240 || (($c >> 8) & 0xff) < 240 || ($c & 0xff) < 240)) {
+                $ink = true;
+                break;
+            }
+        }
+        if ($ink) {
+            $seenInk = true;
+            $gap = 0;
+        } elseif ($seenInk && ++$gap >= $minGap) {
+            $cropped = imagecrop($im, ['x' => 0, 'y' => 0, 'width' => $x - $gap + 1, 'height' => $h]);
+            return $cropped ? trim_margins($cropped) : $im;
+        }
+    }
+    return $im;
+}
+
 function save_square_png($src, string $path): void
 {
     $size = 128;
+    if (!imageistruecolor($src)) {
+        imagepalettetotruecolor($src);
+    }
+    $src = trim_margins($src);
     $dst = imagecreatetruecolor($size, $size);
     imagesavealpha($dst, true);
     imagefill($dst, 0, 0, imagecolorallocatealpha($dst, 255, 255, 255, 0));
@@ -169,6 +253,22 @@ foreach ($catalog as $inst) {
     if (is_file($path) && !$force) {
         $report[] = sprintf('%-20s kept existing', $slug);
         continue;
+    }
+
+    if (!empty($inst['logo_url'])) {
+        $res = http_get($inst['logo_url']);
+        $im = $res ? load_raster($res['body']) : null;
+        if ($im && !empty($inst['logo_crop'])) {
+            imagepalettetotruecolor($im);
+            $im = crop_symbol($im);
+        }
+        if ($im) {
+            save_square_png($im, $path);
+            imagedestroy($im);
+            $report[] = sprintf('%-20s logo  (curated)  %s', $slug, $inst['logo_url']);
+            continue;
+        }
+        $report[] = sprintf('%-20s curated logo_url failed, searching the site', $slug);
     }
 
     $candidates = [];

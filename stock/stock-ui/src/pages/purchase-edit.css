@@ -1457,3 +1457,173 @@
     gap: 0.3rem;
   }
 }
+
+/* Voucher-style layout (matches employee Create Voucher form) */
+.pe-shell--voucher .pe-layout--flat {
+  display: block;
+}
+
+.pe-shell--voucher .pe-section {
+  padding-bottom: 1.25rem;
+  margin-bottom: 0.75rem;
+  border-bottom: none;
+}
+
+.pe-shell--voucher .pe-section-head {
+  margin-bottom: 14px;
+}
+
+.pe-shell--voucher .pe-section-head h2 {
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.pe-shell--voucher .pe-card {
+  background: var(--pe-surface);
+  border: 1px solid var(--pe-border);
+  border-radius: 12px;
+  padding: 0.85rem 1.1rem 0.55rem;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.pe-shell--voucher .pe-card .pe-row {
+  grid-template-columns: 140px 1fr;
+  gap: 10px 14px;
+  margin-bottom: 10px;
+}
+
+.pe-shell--voucher .pe-card .pe-row--split {
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 16px;
+  align-items: start;
+}
+
+.pe-shell--voucher .pe-split-col {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.pe-shell--voucher .pe-card .pe-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--pe-text-2);
+}
+
+.pe-shell--voucher .pe-card .pe-row--top .pe-label {
+  padding-top: 8px;
+}
+
+.pe-shell--voucher .pe-card .pe-input,
+.pe-shell--voucher .pe-card .pe-select,
+.pe-shell--voucher .pe-card .pe-textarea {
+  padding: 7px 12px;
+  font-size: 13px;
+}
+
+.pe-shell--voucher .pe-item--row {
+  border-radius: 12px;
+  padding: 0.6rem 0.7rem;
+}
+
+.pe-shell--voucher .pe-items-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.pe-shell--voucher .pe-total {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.pe-shell--voucher .pe-total span {
+  font-size: 12px;
+  color: var(--pe-muted);
+}
+
+.pe-shell--voucher .pe-total strong {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--pe-text);
+}
+
+.pe-shell--voucher .pe-summary {
+  margin: 4px 0 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--pe-border);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pe-shell--voucher .pe-summary > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+}
+
+.pe-shell--voucher .pe-summary dt {
+  font-weight: 500;
+  color: var(--pe-muted);
+}
+
+.pe-shell--voucher .pe-summary dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+  color: var(--pe-text-2);
+}
+
+.pe-shell--voucher .pe-summary .is-grand {
+  margin-top: 4px;
+  padding-top: 8px;
+  border-top: 1px solid var(--pe-border);
+}
+
+.pe-shell--voucher .pe-summary .is-grand dt,
+.pe-shell--voucher .pe-summary .is-grand dd {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--pe-text);
+}
+
+.pe-shell--voucher .pe-card .pe-notes-split {
+  margin-bottom: 10px;
+}
+
+.pe-shell--voucher .pe-card .pe-attach {
+  margin: 0 0 10px;
+}
+
+.pe-shell--voucher .pe-card .pe-voucher-trigger {
+  max-width: none;
+  padding: 8px 12px;
+  font-size: 13px;
+}
+
+.pe-shell--voucher .pe-card .pe-attach-head .pe-field-label {
+  display: none;
+}
+
+.pe-shell--voucher .pe-actions {
+  margin-top: 16px;
+}
+
+@media (max-width: 640px) {
+  .pe-shell--voucher .pe-card .pe-row,
+  .pe-shell--voucher .pe-card .pe-row--split {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .pe-shell--voucher .pe-card .pe-row--split .pe-split-col[aria-hidden="true"] {
+    display: none;
+  }
+}

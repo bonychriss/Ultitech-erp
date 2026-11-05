@@ -17,13 +17,6 @@ import './purchase-edit.css';
 
 const newRowId = () => 'r-' + Date.now() + '-' + Math.random().toString(36).slice(2, 9);
 
-const SECTIONS = [
-  { id: 'pe-supplier', label: 'Supplier' },
-  { id: 'pe-payment', label: 'Payment' },
-  { id: 'pe-items', label: 'Items' },
-  { id: 'pe-notes', label: 'Notes' },
-];
-
 const emptyItem = () => ({ id: newRowId(), product_id: '', quantity: 1, unit_price: 0, base_price: 0 });
 
 function productUnitBase(product) {
@@ -611,7 +604,6 @@ export default function PurchaseCreate({ data }) {
   const [voucherPickerOpen, setVoucherPickerOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error] = useState(initialError);
-  const [activeSection, setActiveSection] = useState(SECTIONS[0].id);
   const [currencyMenuOpen, setCurrencyMenuOpen] = useState(false);
   const [initialized, setInitialized] = useState(false);
   const currencyPickerRef = useRef(null);
@@ -753,23 +745,6 @@ export default function PurchaseCreate({ data }) {
     };
   }, [currencyMenuOpen]);
 
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const visible = entries
-          .filter((e) => e.isIntersecting)
-          .sort((a, b) => b.intersectionRatio - a.intersectionRatio);
-        if (visible[0]) setActiveSection(visible[0].target.id);
-      },
-      { rootMargin: '-40% 0px -50% 0px', threshold: [0, 0.25, 0.5, 1] },
-    );
-    SECTIONS.forEach((s) => {
-      const el = document.getElementById(s.id);
-      if (el) observer.observe(el);
-    });
-    return () => observer.disconnect();
-  }, []);
-
   const updateItemsCurrencyPricing = (rateNum) => {
     setItems((prev) =>
       prev.map((it) => ({ ...it, unit_price: Number(((Number(it.base_price) || 0) * rateNum).toFixed(2)) })),
@@ -881,16 +856,14 @@ export default function PurchaseCreate({ data }) {
     ' ' +
     (Number(n) || 0).toLocaleString('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-  const scrollToSection = (id) => {
-    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  };
+  const validItemCount = items.filter((r) => String(r.product_id || '').trim() !== '').length;
 
   const submitLabel = isClassificationEdit
     ? (isSubmitting ? 'Saving...' : 'Save classification')
     : (isSubmitting ? 'Creating...' : 'Create Purchase Order');
 
   return (
-    <div className="pe-shell pe-shell--compact">
+    <div className="pe-shell pe-shell--compact pe-shell--voucher">
       <div className="pe-topbar pe-topbar--actions-only">
         <div className="pe-topbar-actions">
           {catalogueUrl ? (
@@ -943,7 +916,7 @@ export default function PurchaseCreate({ data }) {
         action={formAction}
         encType="multipart/form-data"
         onSubmit={() => setIsSubmitting(true)}
-        className="pe-layout"
+        className="pe-layout pe-layout--flat"
       >
         <input type="hidden" name="procurement_journey" value="standard" />
         <input type="hidden" name="payment_voucher_ids" value={paymentVoucherIdsCsv} />
@@ -955,22 +928,35 @@ export default function PurchaseCreate({ data }) {
           </>
         ) : null}
 
-        <nav className="pe-nav" aria-label="Form sections">
-          {SECTIONS.map((s) => (
-            <button
-              key={s.id}
-              type="button"
-              className={`pe-nav-item${activeSection === s.id ? ' is-active' : ''}`}
-              onClick={() => scrollToSection(s.id)}
-            >
-              {s.label}
-            </button>
-          ))}
-        </nav>
-
         <div className="pe-main">
           <section id="pe-supplier" className="pe-section">
+            <header className="pe-section-head">
+              <h2>General Information</h2>
+              <p>Who you are buying from, in which currency, and when.</p>
+            </header>
+            <div className="pe-card">
             <div className="pe-row">
+              <label className="pe-label">
+                Supplier <span className="pe-req">*</span>
+              </label>
+              <div className="pe-field">
+                <select
+                  className="pe-select"
+                  name="supplier_id"
+                  required={!selectedVoucherIds.length}
+                  value={supplierId}
+                  onChange={(e) => setSupplierId(e.target.value)}
+                >
+                  <option value="">Select supplier</option>
+                  {suppliers.map((s) => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="pe-row pe-row--split">
+            <div className="pe-split-col">
               <label className="pe-label">Purchase type</label>
               <div className="pe-field">
                 <div className="pe-type-toggle" role="radiogroup" aria-label="Purchase type">
@@ -997,32 +983,11 @@ export default function PurchaseCreate({ data }) {
                 </div>
               </div>
             </div>
-
-            <div className="pe-row">
-              <label className="pe-label">
-                Supplier <span className="pe-req">*</span>
-              </label>
-              <div className="pe-field">
-                <select
-                  className="pe-select"
-                  name="supplier_id"
-                  required={!selectedVoucherIds.length}
-                  value={supplierId}
-                  onChange={(e) => setSupplierId(e.target.value)}
-                >
-                  <option value="">Select supplier</option>
-                  {suppliers.map((s) => (
-                    <option key={s.id} value={s.id}>{s.name}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div className="pe-row">
+            <div className="pe-split-col">
               <label className="pe-label">
                 PO Date <span className="pe-req">*</span>
               </label>
-              <div className="pe-field pe-field--narrow">
+              <div className="pe-field">
                 <input
                   type="date"
                   name="purchase_order_date"
@@ -1033,10 +998,12 @@ export default function PurchaseCreate({ data }) {
                 />
               </div>
             </div>
+            </div>
 
-            <div className="pe-row">
+            <div className="pe-row pe-row--split">
+            <div className="pe-split-col">
               <label className="pe-label">Currency</label>
-              <div className="pe-field pe-field--narrow">
+              <div className="pe-field">
                 <input type="hidden" name="currency" value={currencyCode} />
                 <div className={`pe-currency-picker${currencyMenuOpen ? ' is-open' : ''}`} ref={currencyPickerRef}>
                   <button
@@ -1084,10 +1051,9 @@ export default function PurchaseCreate({ data }) {
                 </div>
               </div>
             </div>
-
-            <div className="pe-row">
+            <div className="pe-split-col">
               <label className="pe-label">Exchange Rate</label>
-              <div className="pe-field pe-field--narrow">
+              <div className="pe-field">
                 <input
                   type="number"
                   step="0.0001"
@@ -1100,10 +1066,12 @@ export default function PurchaseCreate({ data }) {
                 />
               </div>
             </div>
+            </div>
 
-            <div className="pe-row">
+            <div className="pe-row pe-row--split">
+            <div className="pe-split-col">
               <label className="pe-label">Supplier Invoice #</label>
-              <div className="pe-field pe-field--narrow">
+              <div className="pe-field">
                 <input
                   type="text"
                   name="supplier_invoice_no"
@@ -1114,10 +1082,10 @@ export default function PurchaseCreate({ data }) {
                 />
               </div>
             </div>
-          </section>
+            <div className="pe-split-col" aria-hidden="true" />
+            </div>
 
-          <section id="pe-payment" className="pe-section">
-            <div className="pe-row pe-row--top">
+            <div className="pe-row pe-row--top" id="pe-payment">
               <label className="pe-label">Payment vouchers</label>
               <div className="pe-field">
                 <button
@@ -1192,9 +1160,14 @@ export default function PurchaseCreate({ data }) {
                 ) : null}
               </div>
             </div>
+            </div>
           </section>
 
           <section id="pe-items" className="pe-section">
+            <header className="pe-section-head">
+              <h2>Order Items <span className="pe-req">*</span></h2>
+              <p>Products, quantities and unit prices for this order.</p>
+            </header>
             <div className="pe-items">
               <div className="pe-items-head" aria-hidden="true">
                 <span className="pe-items-col pe-items-col--idx" />
@@ -1274,15 +1247,27 @@ export default function PurchaseCreate({ data }) {
               })}
             </div>
 
-            <div style={{ marginTop: 10 }}>
+            <div className="pe-items-foot">
               <button type="button" className="pe-btn pe-btn--ghost" onClick={addRow}>
                 <HiOutlinePlus style={{ width: 16, height: 16 }} /> Add item
               </button>
+              <div className="pe-total">
+                <span>Subtotal ({validItemCount} item{validItemCount === 1 ? '' : 's'})</span>
+                <strong>{formatMoney(subtotal)}</strong>
+              </div>
             </div>
+          </section>
 
-            <div className="pe-row" style={{ marginTop: 24 }}>
+          <section id="pe-totals" className="pe-section">
+            <header className="pe-section-head">
+              <h2>Discount &amp; Tax</h2>
+              <p>Adjust the order total before it goes to the supplier.</p>
+            </header>
+            <div className="pe-card">
+            <div className="pe-row pe-row--split">
+            <div className="pe-split-col">
               <label className="pe-label">Discount (%)</label>
-              <div className="pe-field pe-field--narrow">
+              <div className="pe-field">
                 <input
                   type="number"
                   step="0.01"
@@ -1295,9 +1280,9 @@ export default function PurchaseCreate({ data }) {
                 />
               </div>
             </div>
-            <div className="pe-row">
+            <div className="pe-split-col">
               <label className="pe-label">Tax rate (%)</label>
-              <div className="pe-field pe-field--narrow">
+              <div className="pe-field">
                 <input
                   type="number"
                   step="0.01"
@@ -1309,33 +1294,23 @@ export default function PurchaseCreate({ data }) {
                 />
               </div>
             </div>
-            <div className="pe-row">
-              <label className="pe-label">Subtotal</label>
-              <div className="pe-field pe-field--narrow">
-                <input type="text" className="pe-input pe-input--ro" value={formatMoney(subtotal)} readOnly />
-              </div>
             </div>
-            <div className="pe-row">
-              <label className="pe-label">Discount</label>
-              <div className="pe-field pe-field--narrow">
-                <input type="text" className="pe-input pe-input--ro" value={formatMoney(discountAmt)} readOnly />
-              </div>
-            </div>
-            <div className="pe-row">
-              <label className="pe-label">Tax amount</label>
-              <div className="pe-field pe-field--narrow">
-                <input type="text" className="pe-input pe-input--ro" value={formatMoney(taxAmount)} readOnly />
-              </div>
-            </div>
-            <div className="pe-row">
-              <label className="pe-label">Grand total</label>
-              <div className="pe-field pe-field--narrow">
-                <input type="text" className="pe-input pe-input--ro" value={formatMoney(grandTotal)} readOnly />
-              </div>
+
+            <dl className="pe-summary">
+              <div><dt>Subtotal</dt><dd>{formatMoney(subtotal)}</dd></div>
+              <div><dt>Discount</dt><dd>{discountAmt > 0 ? '- ' : ''}{formatMoney(discountAmt)}</dd></div>
+              <div><dt>Tax amount</dt><dd>{formatMoney(taxAmount)}</dd></div>
+              <div className="is-grand"><dt>Grand total</dt><dd>{formatMoney(grandTotal)}</dd></div>
+            </dl>
             </div>
           </section>
 
           <section id="pe-notes" className="pe-section">
+            <header className="pe-section-head">
+              <h2>Notes &amp; Terms</h2>
+              <p>Internal notes and the terms that apply to this order.</p>
+            </header>
+            <div className="pe-card">
             <div className="pe-notes-split">
               <div className="pe-notes-col">
                 <label className="pe-field-label" htmlFor="pe-notes-input">Notes</label>
@@ -1362,8 +1337,17 @@ export default function PurchaseCreate({ data }) {
                 />
               </div>
             </div>
+            </div>
+          </section>
 
-            <AttachmentsPicker />
+          <section id="pe-attachments" className="pe-section">
+            <header className="pe-section-head">
+              <h2>Attachments</h2>
+              <p>Upload the supplier quotation, proforma or other documents (PDF, images, Office files).</p>
+            </header>
+            <div className="pe-card">
+              <AttachmentsPicker />
+            </div>
 
             <div className="pe-actions">
               <a href={indexUrl} className="pe-btn pe-btn--ghost">Cancel</a>

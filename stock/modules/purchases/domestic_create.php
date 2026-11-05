@@ -612,7 +612,7 @@ $rate = $settings['exchange_rate'] ?? 1;
 $currency = getCurrencySymbol($settings['currency'] ?? 'USD');
 
 $companyCurrency = strtoupper((string) ($settings['currency'] ?? 'USD'));
-$selectedCurrencyCode = strtoupper((string) ($_POST['currency'] ?? $_GET['currency'] ?? $companyCurrency));
+$selectedCurrencyCode = strtoupper((string) ($_POST['currency'] ?? $_GET['currency'] ?? 'TZS'));
 
 $poCurrencyOptions = [];
 if (function_exists('expenses_currency_catalog')) {

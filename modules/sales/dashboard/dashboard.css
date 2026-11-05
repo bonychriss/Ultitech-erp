@@ -1,4 +1,9 @@
 /* Sales Dashboard - Reference Design */
+html[data-theme="dark"] {
+    --text-primary: #e9edef;
+    --text-muted: #8696a0;
+    --card-border: #2a3942;
+}
 :root {
     --text-primary: #1e293b;
     --text-muted: #64748b;

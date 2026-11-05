@@ -9449,6 +9449,24 @@ function erp_get_dark_theme_head_html(): string
     return $html;
 }
 
+/** Script that remaps slate dark-mode neutrals to the shared Accounting dark palette. */
+function erp_get_dark_palette_script_html(): string
+{
+    static $rendered = false;
+    if ($rendered || !erp_should_inject_theme_assets()) {
+        return '';
+    }
+    $path = dirname(__DIR__) . '/assets/js/dark-palette.js';
+    if (!is_file($path)) {
+        return '';
+    }
+    $rendered = true;
+    $v = (int) filemtime($path);
+    $url = function_exists('app_url') ? app_url('/assets/js/dark-palette.js') : '/assets/js/dark-palette.js';
+
+    return '<script id="erp-dark-palette" src="' . htmlspecialchars($url . '?v=' . $v, ENT_QUOTES, 'UTF-8') . '"></script>' . "\n";
+}
+
 /**
  * Neutralize sequences that break HTML when CSS is inlined in a &lt;style&gt; tag
  * (naive injectors and browsers treat &lt;/…&gt; specially outside of proper CSS parsing).
@@ -9844,6 +9862,9 @@ function erp_inject_system_font_into_html_buffer(string $buffer): string
         }
         if (stripos($buffer, 'id="erp-dark-theme"') === false) {
             $headMarkup .= erp_get_dark_theme_head_html();
+        }
+        if (stripos($buffer, 'dark-palette.js') === false) {
+            $headMarkup .= erp_get_dark_palette_script_html();
         }
         // System-wide one-step-back (skip if page already included it).
         if (stripos($buffer, 'nav-back.js') === false && stripos($buffer, 'erpNavBack') === false) {

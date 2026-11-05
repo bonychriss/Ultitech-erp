@@ -1699,3 +1699,46 @@
 .pe-shell--voucher { position: relative; }
 .pe-shell--voucher > .pe-topbar--actions-only { position: absolute; top: 0; right: 0; margin: 0; padding: 0; min-height: 0; border: 0; background: transparent; z-index: 2; }
 .pe-shell--voucher #pe-supplier .pe-section-head { padding-right: 96px; }
+
+html[data-theme="dark"] .pe-shell {
+  --pe-bg: #0b141a;
+  --pe-surface: #111b21;
+  --pe-text: #e9edef;
+  --pe-text-2: #d1d7db;
+  --pe-muted: #8696a0;
+  --pe-border: #2a3942;
+  --pe-divider: #2a3942;
+}
+html[data-theme="dark"] .pe-shell--voucher .pe-card { box-shadow: none; }
+html[data-theme="dark"] .pe-shell--voucher .pe-card--items .pe-item--row,
+html[data-theme="dark"] .pe-shell .pe-item--row { background: #202c33; border-color: #2a3942; }
+html[data-theme="dark"] .pe-shell .pe-input,
+html[data-theme="dark"] .pe-shell .pe-select,
+html[data-theme="dark"] .pe-shell .pe-textarea,
+html[data-theme="dark"] .pe-shell .pe-voucher-trigger {
+  background: #0b141a;
+  border-color: #3b4a54;
+  color: #e9edef;
+}
+html[data-theme="dark"] .pe-shell .pe-input::placeholder,
+html[data-theme="dark"] .pe-shell .pe-textarea::placeholder { color: #8696a0; }
+html[data-theme="dark"] .pe-shell .pe-type-option { background: #202c33; border-color: #3b4a54; color: #d1d7db; }
+html[data-theme="dark"] .pe-shell .pe-type-option.is-active { background: rgba(124, 58, 237, 0.18); border-color: #8b5cf6; color: #e9edef; }
+html[data-theme="dark"] .pe-shell .pe-field-label,
+html[data-theme="dark"] .pe-shell .pe-items-head,
+html[data-theme="dark"] .pe-shell .pe-items-head span { color: #8696a0; }
+html[data-theme="dark"] .pe-shell .pe-currency-picker-trigger,
+html[data-theme="dark"] .pe-shell .pe-currency-picker-trigger:disabled {
+  background-color: #0b141a;
+  border-color: #3b4a54;
+  color: #d1d7db;
+  opacity: 1;
+}
+html[data-theme="dark"] .pe-shell .pe-currency-picker-trigger:disabled { opacity: 0.7; }
+html[data-theme="dark"] .pe-shell .pe-currency-picker-menu { background: #202c33; border-color: #3b4a54; box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45); }
+html[data-theme="dark"] .pe-shell .pe-currency-picker-option:hover,
+html[data-theme="dark"] .pe-shell .pe-currency-picker-option.is-selected { background: #2a3942; }
+html[data-theme="dark"] .pe-catalogue-link { color: #53bdeb; }
+html[data-theme="dark"] .pe-catalogue-link:hover { color: #7fd0f2; }
+html[data-theme="dark"] .pe-shell .pe-btn--ghost { background: #202c33; border-color: #3b4a54; color: #e9edef; }
+html[data-theme="dark"] .pe-shell .pe-item-thumb { background: #202c33; border-color: #3b4a54; color: #8696a0; }

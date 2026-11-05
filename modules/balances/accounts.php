@@ -754,6 +754,9 @@ $hideHeaderCompanyBranding = true;
 $employeeHeaderExtraClass = 'employee-header--balances-accounts';
 $bodyExtraClass = 'page-balances-accounts';
 
+require_once dirname(__DIR__, 2) . '/includes/sidebar_react_icons.php';
+$rayMenuIcon = static fn (string $name): string => sidebar_react_icon_svg($name, 'ray-menu-icon');
+
 $rayAccountAvatar = static function (array $row) use ($pdo): string {
     $raw = (array) ($row['raw'] ?? []);
     $url = balances_account_logo_url($raw, $pdo);
@@ -987,6 +990,11 @@ include __DIR__ . '/includes/header.php';
     .ray-acc-logo--initial { background: #ede9fe; color: #6d28d9; font-size: 0.75rem; font-weight: 700; box-shadow: none; }
     html[data-theme="dark"] body.page-balances-accounts .ray-acc-logo--initial { background: #2a3942; color: #e9edef; }
     .ray-account-name { font-weight: 600; color: #111827; display: flex; align-items: center; flex-wrap: nowrap; white-space: nowrap; gap: 6px; }
+    .ray-panel .dropdown-item,
+    .ray-m-floating-menu a,
+    .ray-m-floating-menu button { display: flex !important; align-items: center; gap: 0.55rem; }
+    .ray-menu-icon { width: 17px; height: 17px; flex-shrink: 0; opacity: 0.75; }
+    .dropdown-item.text-danger .ray-menu-icon, .ray-m-floating-menu .is-danger .ray-menu-icon { opacity: 1; }
     .ray-sub-check { display: none; width: 15px; height: 15px; margin: 0 2px 0 0; accent-color: #dc2626; cursor: pointer; flex-shrink: 0; }
     .ray-panel--subaccounts.is-selecting .ray-sub-check { display: inline-block; }
     .ray-panel--subaccounts.is-selecting tr[data-sub-id].is-checked td { background: #fef2f2; }
@@ -1878,20 +1886,20 @@ include __DIR__ . '/includes/header.php';
                                                     <i class="fas fa-ellipsis-v"></i>
                                                 </button>
                                                 <ul class="dropdown-menu dropdown-menu-end shadow-sm">
-                                                    <li><a class="dropdown-item" href="<?= htmlspecialchars('view_account.php?' . http_build_query(['module' => $moduleParam, 'id' => $parentId]), ENT_QUOTES, 'UTF-8') ?>">View</a></li>
+                                                    <li><a class="dropdown-item" href="<?= htmlspecialchars('view_account.php?' . http_build_query(['module' => $moduleParam, 'id' => $parentId]), ENT_QUOTES, 'UTF-8') ?>"><?= $rayMenuIcon('eye') ?>View</a></li>
                                                     <?php if ($canManage): ?>
                                                         <li>
                                                             <button type="button"
                                                                     class="dropdown-item"
                                                                     onclick="openMoveParentModal(<?= $parentId ?>)">
-                                                                Move under parent account
+                                                                <?= $rayMenuIcon('arrow-turn-down-right') ?>Move under parent account
                                                             </button>
                                                         </li>
                                                     <?php endif; ?>
                                                     <?php if (isAdmin()): ?>
-                                                        <li><a class="dropdown-item" href="<?= htmlspecialchars($editUrl, ENT_QUOTES, 'UTF-8') ?>">Edit</a></li>
+                                                        <li><a class="dropdown-item" href="<?= htmlspecialchars($editUrl, ENT_QUOTES, 'UTF-8') ?>"><?= $rayMenuIcon('pencil-square') ?>Edit</a></li>
                                                         <li><hr class="dropdown-divider"></li>
-                                                        <li><button type="button" class="dropdown-item text-danger" onclick="deleteAccount(<?= $parentId ?>)">Delete</button></li>
+                                                        <li><button type="button" class="dropdown-item text-danger" onclick="deleteAccount(<?= $parentId ?>)"><?= $rayMenuIcon('trash') ?>Delete</button></li>
                                                     <?php endif; ?>
                                                 </ul>
                                             </div>
@@ -2129,22 +2137,22 @@ include __DIR__ . '/includes/header.php';
                                                         <i class="fas fa-ellipsis-v"></i>
                                                     </button>
                                                     <ul class="dropdown-menu dropdown-menu-end shadow-sm">
-                                                        <li><a class="dropdown-item" href="<?= htmlspecialchars($childViewUrl, ENT_QUOTES, 'UTF-8') ?>">View</a></li>
+                                                        <li><a class="dropdown-item" href="<?= htmlspecialchars($childViewUrl, ENT_QUOTES, 'UTF-8') ?>"><?= $rayMenuIcon('eye') ?>View</a></li>
                                                         <?php if (isAdmin()): ?>
-                                                            <li><a class="dropdown-item" href="<?= htmlspecialchars($childEditUrl, ENT_QUOTES, 'UTF-8') ?>">Edit</a></li>
+                                                            <li><a class="dropdown-item" href="<?= htmlspecialchars($childEditUrl, ENT_QUOTES, 'UTF-8') ?>"><?= $rayMenuIcon('pencil-square') ?>Edit</a></li>
                                                         <?php endif; ?>
                                                         <?php if ($canManage): ?>
                                                             <li>
                                                                 <button type="button"
                                                                         class="dropdown-item"
                                                                         onclick="unassignSubAccount(<?= (int) $childRow['id'] ?>, <?= (int) $selectedId ?>)">
-                                                                    Move to main accounts
+                                                                    <?= $rayMenuIcon('arrow-uturn-left') ?>Move to main accounts
                                                                 </button>
                                                             </li>
                                                         <?php endif; ?>
                                                         <?php if (isAdmin()): ?>
                                                             <li><hr class="dropdown-divider"></li>
-                                                            <li><button type="button" class="dropdown-item text-danger" onclick="deleteAccount(<?= (int) $childRow['id'] ?>)">Delete</button></li>
+                                                            <li><button type="button" class="dropdown-item text-danger" onclick="deleteAccount(<?= (int) $childRow['id'] ?>)"><?= $rayMenuIcon('trash') ?>Delete</button></li>
                                                         <?php endif; ?>
                                                     </ul>
                                                 </div>
@@ -2426,19 +2434,25 @@ function rayOpenMobileSubMenu(btn) {
     var canManage = btn.getAttribute('data-can-manage') === '1';
     var canDelete = btn.getAttribute('data-can-delete') === '1';
 
+    var icons = <?= json_encode([
+        'eye' => $rayMenuIcon('eye'),
+        'edit' => $rayMenuIcon('pencil-square'),
+        'move' => $rayMenuIcon('arrow-uturn-left'),
+        'trash' => $rayMenuIcon('trash'),
+    ], JSON_UNESCAPED_SLASHES | JSON_HEX_TAG) ?>;
     var html = '';
     if (viewUrl) {
-        html += '<a role="menuitem" href="' + viewUrl.replace(/"/g, '&quot;') + '">View</a>';
+        html += '<a role="menuitem" href="' + viewUrl.replace(/"/g, '&quot;') + '">' + icons.eye + 'View</a>';
     }
     if (canEdit && editUrl) {
-        html += '<a role="menuitem" href="' + editUrl.replace(/"/g, '&quot;') + '">Edit</a>';
+        html += '<a role="menuitem" href="' + editUrl.replace(/"/g, '&quot;') + '">' + icons.edit + 'Edit</a>';
     }
     if (canManage && childId > 0 && parentId > 0) {
-        html += '<button type="button" role="menuitem" data-ray-action="unassign" data-child-id="' + childId + '" data-parent-id="' + parentId + '">Move to main accounts</button>';
+        html += '<button type="button" role="menuitem" data-ray-action="unassign" data-child-id="' + childId + '" data-parent-id="' + parentId + '">' + icons.move + 'Move to main accounts</button>';
     }
     if (canDelete && childId > 0) {
         html += '<div class="ray-m-menu-sep" role="separator"></div>';
-        html += '<button type="button" role="menuitem" class="is-danger" data-ray-action="delete" data-child-id="' + childId + '">Delete</button>';
+        html += '<button type="button" role="menuitem" class="is-danger" data-ray-action="delete" data-child-id="' + childId + '">' + icons.trash + 'Delete</button>';
     }
     if (!html) return;
 

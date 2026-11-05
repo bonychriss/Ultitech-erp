@@ -969,10 +969,10 @@ include __DIR__ . '/includes/header.php';
     .ray-account-name { font-weight: 600; color: #111827; display: flex; align-items: center; flex-wrap: nowrap; white-space: nowrap; gap: 6px; }
     .ray-account-desc { font-size: 0.75rem; color: #6b7280; margin-top: 4px; line-height: 1.45; max-width: 360px; }
     .ray-table tr.ray-sub-group-row td { background: #f8fafc; padding: 0.55rem 1rem; border-bottom: 1px solid #eef2f7; }
-    .ray-sub-group-row td, .ray-m-sub-group { font-size: 0.6875rem; }
+    .ray-sub-group-row td, .ray-m-sub-group { font-size: 0.75rem; }
     .ray-m-sub-group { display: flex; align-items: center; gap: 0.4rem; padding: 0.6rem 0.25rem 0.2rem; }
-    .ray-sub-group-name { font-weight: 600; color: #334155; text-transform: uppercase; letter-spacing: 0.03em; }
-    .ray-sub-group-count { display: inline-flex; min-width: 20px; justify-content: center; padding: 1px 6px; border-radius: 999px; background: #e2e8f0; color: #475569; font-weight: 600; margin-left: 6px; }
+    .ray-sub-group-name { font-weight: 800; color: #0f172a; text-transform: uppercase; letter-spacing: 0.03em; }
+    .ray-sub-group-count { display: inline-flex; min-width: 20px; justify-content: center; padding: 1px 6px; border-radius: 999px; background: #e2e8f0; color: #0f172a; font-weight: 800; margin-left: 6px; }
     .ray-sub-group-total { float: right; font-weight: 600; color: #0f172a; font-variant-numeric: tabular-nums; }
     .ray-m-sub-group .ray-sub-group-total { float: none; margin-left: auto; }
     .ray-group-toggle { cursor: pointer; user-select: none; }
@@ -983,7 +983,7 @@ include __DIR__ . '/includes/header.php';
     html[data-theme="dark"] body.page-balances-accounts .ray-group-toggle:hover td,
     html[data-theme="dark"] body.page-balances-accounts .ray-m-sub-group.ray-group-toggle:hover { background: #202c33 !important; }
     html[data-theme="dark"] body.page-balances-accounts .ray-table tr.ray-sub-group-row td { background: #0b141a !important; }
-    html[data-theme="dark"] body.page-balances-accounts .ray-sub-group-name { color: #8696a0; }
+    html[data-theme="dark"] body.page-balances-accounts .ray-sub-group-name { color: #e9edef; }
     html[data-theme="dark"] body.page-balances-accounts .ray-sub-group-count { background: #2a3942; color: #e9edef; }
     html[data-theme="dark"] body.page-balances-accounts .ray-sub-group-total { color: #e9edef; }
     .ray-badge {

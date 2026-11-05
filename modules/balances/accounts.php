@@ -1004,15 +1004,7 @@ include __DIR__ . '/includes/header.php';
     .ray-action-btn:hover { background: #f3f4f6; color: #374151; }
     .ray-panel-body { flex: 1; overflow: auto; }
     .ray-detail-head {
-        display: flex;
-        flex-direction: row;
         flex-wrap: nowrap;
-        align-items: center;
-        justify-content: space-between;
-        gap: 12px;
-        padding: 0;
-        border-bottom: none;
-        background: transparent;
     }
     .ray-detail-head > div:first-child {
         min-width: 0;
@@ -1021,7 +1013,8 @@ include __DIR__ . '/includes/header.php';
     .ray-detail-title {
         display: flex;
         align-items: center;
-        flex-wrap: wrap;
+        flex-wrap: nowrap;
+        white-space: nowrap;
         gap: 8px;
         font-size: 1.05rem;
         font-weight: 700;
@@ -1985,7 +1978,8 @@ include __DIR__ . '/includes/header.php';
                 <a class="ray-mobile-back" href="<?= htmlspecialchars($accountsListUrl, ENT_QUOTES, 'UTF-8') ?>">
                     <i class="fas fa-arrow-left" aria-hidden="true"></i> All accounts
                 </a>
-                <div class="ray-detail-head">
+                <section class="ray-panel ray-panel--subaccounts">
+                <div class="ray-panel-head ray-detail-head">
                     <div>
                         <div class="ray-detail-title">
                             <?= htmlspecialchars($selectedParent['name'], ENT_QUOTES, 'UTF-8') ?>
@@ -2006,7 +2000,6 @@ include __DIR__ . '/includes/header.php';
                         </div>
                     <?php endif; ?>
                 </div>
-                <section class="ray-panel ray-panel--subaccounts">
                     <form method="GET" action="<?= htmlspecialchars($accountsGetAction, ENT_QUOTES, 'UTF-8') ?>" class="ray-search">
                         <?php if ($moduleParam !== ''): ?>
                             <input type="hidden" name="module" value="<?= htmlspecialchars($moduleParam, ENT_QUOTES, 'UTF-8') ?>">

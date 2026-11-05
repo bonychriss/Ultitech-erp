@@ -2196,7 +2196,7 @@ include __DIR__ . '/includes/header.php';
                 </div>
                 <input type="hidden" name="institution" id="subInstitution" value="">
             </div>
-            <p class="sub-modal-hint">Optional logo &middot; JPG, PNG, WEBP, GIF &middot; max 2MB</p>
+            <p class="sub-modal-hint">Optional logo &middot; JPG, PNG, WEBP, GIF &middot; max 2MB &middot; <a href="<?= htmlspecialchars('institutions.php' . ($moduleParam !== '' ? '?module=' . rawurlencode($moduleParam) : ''), ENT_QUOTES, 'UTF-8') ?>">Manage saved logos</a></p>
             <div class="sub-modal-pair">
             <div>
             <div class="sub-modal-label-row">

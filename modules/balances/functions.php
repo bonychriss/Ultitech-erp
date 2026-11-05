@@ -1175,6 +1175,100 @@ function balances_account_logo_url(array $account, ?PDO $pdo = null): string
     return $best ? balancesAccountImageUrl($best['logo']) : '';
 }
 
+/**
+ * Saved institutions visible to the current company.
+ *
+ * @return list<array{id:int,name:string,type:string,logo:string,created_at:string}>
+ */
+function balances_list_custom_institutions(PDO $pdo): array
+{
+    balances_ensure_custom_institutions_table($pdo);
+    $companyId = function_exists('currentCompanyId') ? (int) (currentCompanyId() ?? 0) : 0;
+    $stmt = $pdo->prepare('SELECT id, name, type, logo, created_at FROM balances_custom_institutions
+                           WHERE company_id IS NULL OR company_id = 0 OR company_id = ? ORDER BY name');
+    $stmt->execute([$companyId]);
+
+    return array_map(static fn ($r) => [
+        'id' => (int) $r['id'],
+        'name' => (string) $r['name'],
+        'type' => (string) $r['type'],
+        'logo' => (string) $r['logo'],
+        'created_at' => (string) $r['created_at'],
+    ], $stmt->fetchAll(PDO::FETCH_ASSOC));
+}
+
+/**
+ * Rename / retype a saved institution and optionally replace its logo with an uploaded file.
+ *
+ * @return array{success:bool,message:string}
+ */
+function balances_update_custom_institution(PDO $pdo, int $id, string $name, string $type, string $newLogo = ''): array
+{
+    $name = trim(preg_replace('/\s+/', ' ', $name));
+    if ($name === '' || mb_strlen($name) > 100) {
+        return ['success' => false, 'message' => 'Name is required (up to 100 characters).'];
+    }
+    if (!in_array($type, ['bank', 'mobile', 'cash'], true)) {
+        return ['success' => false, 'message' => 'Choose Bank, Mobile money or Cash.'];
+    }
+    $row = balances_find_custom_institution($pdo, $id);
+    if (!$row) {
+        return ['success' => false, 'message' => 'Saved logo not found.'];
+    }
+    $dupe = $pdo->prepare('SELECT 1 FROM balances_custom_institutions WHERE company_id <=> ? AND name = ? AND id <> ? LIMIT 1');
+    $dupe->execute([$row['company_id'], $name, $id]);
+    if ($dupe->fetchColumn()) {
+        return ['success' => false, 'message' => '"' . $name . '" is already saved.'];
+    }
+
+    $root = dirname(__DIR__, 2);
+    $logo = (string) $row['logo'];
+    if ($newLogo !== '') {
+        $targetDir = $root . '/uploads/balances/institutions/';
+        if (!is_dir($targetDir) && !mkdir($targetDir, 0755, true) && !is_dir($targetDir)) {
+            return ['success' => false, 'message' => 'Could not save the new logo.'];
+        }
+        $fileName = 'INST_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . (strtolower(pathinfo($newLogo, PATHINFO_EXTENSION)) ?: 'png');
+        if (!rename($root . '/' . $newLogo, $targetDir . $fileName)) {
+            return ['success' => false, 'message' => 'Could not save the new logo.'];
+        }
+        $logo = 'uploads/balances/institutions/' . $fileName;
+    }
+    $pdo->prepare('UPDATE balances_custom_institutions SET name = ?, type = ?, logo = ? WHERE id = ?')->execute([$name, $type, $logo, $id]);
+    if ($logo !== $row['logo'] && str_starts_with((string) $row['logo'], 'uploads/balances/institutions/')) {
+        @unlink($root . '/' . $row['logo']);
+    }
+
+    return ['success' => true, 'message' => 'Saved logo updated.'];
+}
+
+/** Remove a saved institution and its logo file. Accounts that already copied the logo keep their own copy. */
+function balances_delete_custom_institution(PDO $pdo, int $id): bool
+{
+    $row = balances_find_custom_institution($pdo, $id);
+    if (!$row) {
+        return false;
+    }
+    $pdo->prepare('DELETE FROM balances_custom_institutions WHERE id = ?')->execute([$id]);
+    if (str_starts_with((string) $row['logo'], 'uploads/balances/institutions/')) {
+        @unlink(dirname(__DIR__, 2) . '/' . $row['logo']);
+    }
+
+    return true;
+}
+
+/** @return array<string, mixed>|null a saved institution of the current company (or a shared one) */
+function balances_find_custom_institution(PDO $pdo, int $id): ?array
+{
+    balances_ensure_custom_institutions_table($pdo);
+    $companyId = function_exists('currentCompanyId') ? (int) (currentCompanyId() ?? 0) : 0;
+    $stmt = $pdo->prepare('SELECT * FROM balances_custom_institutions WHERE id = ? AND (company_id IS NULL OR company_id = 0 OR company_id = ?) LIMIT 1');
+    $stmt->execute([$id, $companyId]);
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    return $row ?: null;
+}
+
 /** Copy an institution logo into the account images folder; returns the new relative path or ''. */
 function balances_copy_institution_logo(string $slug, ?PDO $pdo = null): string
 {

@@ -891,7 +891,16 @@ function vv_load_view_payload(PDO $pdo, int $voucherId, array $opts = []): array
                 require_once $balancesFunctions;
             }
         }
+        $liveBalances = [];
+        if (function_exists('balancesFetchAccountsWithLiveBalance')) {
+            foreach (balancesFetchAccountsWithLiveBalance($pdo, true) as $liveRow) {
+                $liveBalances[(int) $liveRow['id']] = (float) $liveRow['live_balance'];
+            }
+        }
         foreach ($finAccounts as &$finAccount) {
+            if (isset($liveBalances[(int) $finAccount['id']])) {
+                $finAccount['current_balance'] = $liveBalances[(int) $finAccount['id']];
+            }
             try {
                 $finAccount['image_url'] = function_exists('balances_account_logo_url')
                     ? balances_account_logo_url($finAccount, $pdo)

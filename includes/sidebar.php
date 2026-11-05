@@ -669,24 +669,10 @@ if (!function_exists('sidebar_link_is_current')) {
             if ($item['id'] === 'logout') {
                  $activeClass = 'text-danger fw-bold';
             }
-            $moneyBagSrc = htmlspecialchars(
-                function_exists('app_url') ? app_url('assets/icons/money-bag.png') : '/assets/icons/money-bag.png',
-                ENT_QUOTES,
-                'UTF-8'
-            );
-            $transactionsSrc = htmlspecialchars(
-                function_exists('app_url') ? app_url('assets/icons/transactions.png') : '/assets/icons/transactions.png',
-                ENT_QUOTES,
-                'UTF-8'
-            );
-            $transferSrc = htmlspecialchars(
-                function_exists('app_url') ? app_url('assets/icons/transfer.png') : '/assets/icons/transfer.png',
-                ENT_QUOTES,
-                'UTF-8'
-            );
-            $sackDollarSvg = '<img class="sidebar-nav-icon sidebar-nav-icon--money-bag me-2" src="' . $moneyBagSrc . '" alt="" width="22" height="22" style="width:22px;height:22px;object-fit:contain;flex-shrink:0;" aria-hidden="true">';
-            $transactionsSvg = '<img class="sidebar-nav-icon sidebar-nav-icon--transactions me-2" src="' . $transactionsSrc . '" alt="" width="22" height="22" style="width:22px;height:22px;object-fit:contain;flex-shrink:0;" aria-hidden="true">';
-            $transferSvg = '<img class="sidebar-nav-icon sidebar-nav-icon--transfer me-2" src="' . $transferSrc . '" alt="" width="22" height="22" style="width:22px;height:22px;object-fit:contain;flex-shrink:0;" aria-hidden="true">';
+            require_once __DIR__ . '/sidebar_react_icons.php';
+            $sackDollarSvg = str_replace('<svg ', '<svg style="width:20px;height:20px;flex-shrink:0;" ', sidebar_react_icon_svg('wallet', 'me-2'));
+            $transactionsSvg = str_replace('<svg ', '<svg style="width:20px;height:20px;flex-shrink:0;" ', sidebar_react_icon_svg('clipboard-list', 'me-2'));
+            $transferSvg = str_replace('<svg ', '<svg style="width:20px;height:20px;flex-shrink:0;" ', sidebar_react_icon_svg('arrows-right-left', 'me-2'));
         ?>
         <?php
             $isCategoryHub = ($item['id'] ?? '') === 'account-category' && !empty($item['children']);

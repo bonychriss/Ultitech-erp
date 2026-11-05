@@ -321,30 +321,10 @@ if (!function_exists('sidebar_render_nav_icon')) {
         if ($icon === '') {
             return '<i class="bi bi-circle" aria-hidden="true"></i>';
         }
-        if ($icon === 'sack-dollar' || $icon === 'money-bag') {
-            // Exact artwork provided by user (money-bag-euro).
-            $src = htmlspecialchars(
-                function_exists('app_url') ? app_url('assets/icons/money-bag.png') : '/assets/icons/money-bag.png',
-                ENT_QUOTES,
-                'UTF-8'
-            );
-            return '<img class="sidebar-nav-icon sidebar-nav-icon--money-bag" src="' . $src . '" alt="" width="22" height="22" aria-hidden="true">';
-        }
-        if ($icon === 'transactions-coin' || $icon === 'tx-exchange') {
-            $src = htmlspecialchars(
-                function_exists('app_url') ? app_url('assets/icons/transactions.png') : '/assets/icons/transactions.png',
-                ENT_QUOTES,
-                'UTF-8'
-            );
-            return '<img class="sidebar-nav-icon sidebar-nav-icon--transactions" src="' . $src . '" alt="" width="22" height="22" aria-hidden="true">';
-        }
-        if ($icon === 'transfer-bag' || $icon === 'internal-transfer') {
-            $src = htmlspecialchars(
-                function_exists('app_url') ? app_url('assets/icons/transfer.png') : '/assets/icons/transfer.png',
-                ENT_QUOTES,
-                'UTF-8'
-            );
-            return '<img class="sidebar-nav-icon sidebar-nav-icon--transfer" src="' . $src . '" alt="" width="22" height="22" aria-hidden="true">';
+        $reactIcons = ['sack-dollar' => 'wallet', 'transactions-coin' => 'clipboard-list', 'transfer-bag' => 'arrows-right-left'];
+        if (isset($reactIcons[$icon])) {
+            require_once __DIR__ . '/includes/sidebar_react_icons.php';
+            return sidebar_react_icon_svg($reactIcons[$icon]);
         }
         if (strpos($icon, 'fa-') !== false || str_contains($icon, ' ')) {
             return '<i class="' . htmlspecialchars($icon, ENT_QUOTES, 'UTF-8') . '" aria-hidden="true"></i>';
@@ -1412,14 +1392,10 @@ if (!isset($_GET['print'])) {
         vertical-align: -0.15em;
         flex-shrink: 0;
     }
-    .nav-pills .nav-link .sidebar-nav-icon--money-bag,
-    .nav-pills .nav-link .sidebar-nav-icon--transactions,
-    .nav-pills .nav-link .sidebar-nav-icon--transfer {
-        width: 1.45rem !important;
-        height: 1.45rem !important;
-        min-width: 26px;
-        object-fit: contain;
-        display: inline-block;
+    .nav-pills .nav-link .sidebar-nav-icon--react {
+        width: 1.25rem;
+        height: 1.25rem;
+        min-width: 24px;
         vertical-align: -0.2em;
     }
     .exp-module-update-badge {

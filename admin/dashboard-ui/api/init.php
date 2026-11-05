@@ -284,7 +284,7 @@ try {
             ? balancesFetchAccountsWithLiveBalance($balancesPdo, true)
             : [];
         if ($accRows === []) {
-            $faStmt = $balancesPdo->query("SELECT id, name, current_balance, currency, type FROM financial_accounts WHERE status = 'active' ORDER BY name ASC");
+            $faStmt = $balancesPdo->query("SELECT * FROM financial_accounts WHERE status = 'active' ORDER BY name ASC");
             $accRows = $faStmt ? ($faStmt->fetchAll(PDO::FETCH_ASSOC) ?: []) : [];
         }
         foreach ($accRows as $acc) {
@@ -298,6 +298,9 @@ try {
                 'current_balance' => (float) ($acc['live_balance'] ?? $acc['current_balance'] ?? 0),
                 'currency' => (string) ($acc['currency'] ?? 'TZS'),
                 'type' => (string) ($acc['type'] ?? ''),
+                'image_url' => function_exists('balances_account_logo_url')
+                    ? balances_account_logo_url($acc, $balancesPdo)
+                    : '',
             ];
         }
     } catch (Throwable $eAcc) {

@@ -5,17 +5,34 @@ import '../pay-modal.css'
 
 const ACCEPTED_PROOF = '.pdf,.jpg,.jpeg,.png,.gif,.webp,.svg,.bmp,.doc,.docx,.xls,.xlsx'
 const TYPE_LABELS = { bank: 'Bank account', cash: 'Cash account', mobile: 'Mobile money' }
+const STOCK_PAYMENT_METHODS = ['Bank Transfer', 'RTGS / SWIFT', 'Cash', 'Mobile Money', 'Cheque']
 
-function PaymentAccountIcon({ type, size }) {
+function PaymentAccountIcon({ type, size, imageUrl }) {
+  const [imageFailed, setImageFailed] = useState(false)
+  useEffect(() => { setImageFailed(false) }, [imageUrl])
+  if (imageUrl && !imageFailed) {
+    return <img className="vv-pay-modal__account-logo" src={imageUrl} alt="" loading="lazy" onError={() => setImageFailed(true)} />
+  }
   const Icon = type === 'bank' ? Landmark : type === 'mobile' ? Smartphone : type === 'cash' ? Coins : Wallet
   return <Icon size={size} aria-hidden="true" />
 }
 
-function formatMoney(currency, value) {
-  return `${currency} ${Number(value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+function toNumber(value) {
+  const n = Number(value)
+  return Number.isFinite(n) ? n : 0
 }
 
-export default function MarkPaidModal({ voucher, accounts, actionUrl, module, formatAmount, onClose }) {
+function formatMoney(currency, value) {
+  return `${currency} ${toNumber(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+}
+
+function todayIso() {
+  const d = new Date()
+  const pad = (n) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+}
+
+export default function MarkPaidModal({ voucher, accounts, actionUrl, module, formatAmount, onClose, stockPurchase = false, returnTo = '' }) {
   const fileInputRef = useRef(null)
   const pickerRef = useRef(null)
   const xhrRef = useRef(null)
@@ -28,6 +45,12 @@ export default function MarkPaidModal({ voucher, accounts, actionUrl, module, fo
   const [uploadProgress, setUploadProgress] = useState(0)
   const [uploadError, setUploadError] = useState('')
   const isUploading = uploadState === 'uploading' || uploadState === 'saving'
+
+  const currency = voucher.currency || 'TZS'
+  const total = toNumber(voucher.total_amount)
+  const paidSoFar = toNumber(voucher.paid_so_far)
+  const balanceDue = Math.max(0, Math.round((total - paidSoFar) * 100) / 100)
+  const [amount, setAmount] = useState(balanceDue ? balanceDue.toFixed(2) : '')
 
   function closeModal() {
     if (!isUploading) onClose()
@@ -83,6 +106,14 @@ export default function MarkPaidModal({ voucher, accounts, actionUrl, module, fo
 
     setAccountError('')
     setUploadError('')
+
+    if (stockPurchase) {
+      // The stock purchase endpoint finishes with a redirect back to the dashboard.
+      setUploadState('saving')
+      form.submit()
+      return
+    }
+
     setUploadProgress(0)
     setUploadState('uploading')
 
@@ -128,9 +159,15 @@ export default function MarkPaidModal({ voucher, accounts, actionUrl, module, fo
     xhr.send(new FormData(form))
   }
 
-  const list = accounts || []
+  const rawList = accounts || []
+  const list = stockPurchase
+    ? [...rawList.filter((a) => !a.currency || a.currency === currency), ...rawList.filter((a) => a.currency && a.currency !== currency)]
+    : rawList
   const selected = list.find((a) => String(a.id) === accountId)
   const selectedType = ['bank', 'cash', 'mobile'].includes(selected?.type) ? selected.type : 'cash'
+  const payAmount = toNumber(amount)
+  const afterBalance = stockPurchase && selected ? toNumber(selected.current_balance) - payAmount : null
+  const isPartial = stockPurchase && payAmount > 0 && payAmount < balanceDue - 0.009
 
   return createPortal(
     <div className="vv-pay-overlay" role="dialog" aria-modal="true" onMouseDown={(e) => { if (e.target === e.currentTarget) closeModal() }}>
@@ -147,12 +184,19 @@ export default function MarkPaidModal({ voucher, accounts, actionUrl, module, fo
         </header>
         <div className="vv-pay-modal__summary">
           <div><strong>Voucher:</strong> {voucher.voucher_no}</div>
-          <div><strong>Payee:</strong> {voucher.payee_name}</div>
-          <div><strong>Amount:</strong> {formatAmount(voucher.currency, voucher.total_amount)}</div>
+          <div><strong>{stockPurchase ? 'Supplier' : 'Payee'}:</strong> {voucher.payee_name}</div>
+          <div><strong>Amount:</strong> {formatAmount(currency, voucher.total_amount)}</div>
+          {stockPurchase && paidSoFar > 0 ? (
+            <>
+              <div><strong>Already paid:</strong> {formatAmount(currency, paidSoFar)}</div>
+              <div><strong>Balance due:</strong> {formatAmount(currency, balanceDue)}</div>
+            </>
+          ) : null}
         </div>
         <form action={actionUrl} method="POST" encType="multipart/form-data" onSubmit={handleSubmit}>
           <input type="hidden" name="voucher_id" value={voucher.id} />
-          <input type="hidden" name="mark_paid" value="1" />
+          {stockPurchase ? null : <input type="hidden" name="mark_paid" value="1" />}
+          {stockPurchase && returnTo ? <input type="hidden" name="return_to" value={returnTo} /> : null}
           <input type="hidden" name="account_id" value={accountId} />
           {module ? <input type="hidden" name="module" value={module} /> : null}
           <div className="vv-pay-modal__field">
@@ -165,7 +209,7 @@ export default function MarkPaidModal({ voucher, accounts, actionUrl, module, fo
                 onClick={(e) => { if (isUploading) e.preventDefault() }}
               >
                 <span className={`vv-pay-modal__account-icon is-${selected ? selectedType : 'cash'}`}>
-                  <PaymentAccountIcon type={selected?.type} size={19} />
+                  <PaymentAccountIcon type={selected?.type} size={19} imageUrl={selected?.image_url} />
                 </span>
                 <span className="vv-pay-modal__account-summary" id="ed-pay-account-value">
                   <strong>{selected?.name || 'Select a payment account'}</strong>
@@ -192,7 +236,7 @@ export default function MarkPaidModal({ voucher, accounts, actionUrl, module, fo
                     }}
                   >
                     <span className={`vv-pay-modal__account-option-icon is-${a.type}`}>
-                      <PaymentAccountIcon type={a.type} size={17} />
+                      <PaymentAccountIcon type={a.type} size={17} imageUrl={a.image_url} />
                     </span>
                     <span className="vv-pay-modal__account-option-copy">
                       <strong>{a.name}</strong>
@@ -209,7 +253,52 @@ export default function MarkPaidModal({ voucher, accounts, actionUrl, module, fo
               </div>
             </details>
             {accountError && <span className="vv-pay-modal__account-error" role="alert">{accountError}</span>}
+            {afterBalance !== null ? (
+              <span className={`vv-pay-modal__hint${afterBalance < 0 ? ' is-negative' : ''}`}>
+                Balance after payment: {formatMoney(selected.currency, afterBalance)}
+                {selected.currency && selected.currency !== currency ? ' (account currency differs from voucher)' : ''}
+              </span>
+            ) : null}
           </div>
+          {stockPurchase ? (
+            <>
+              <div className="vv-pay-modal__grid">
+                <label className="vv-pay-modal__field">
+                  <span className="vv-pay-modal__label">Amount to pay ({currency})</span>
+                  <input
+                    className="vv-pay-modal__input"
+                    type="number"
+                    name="payment_amount"
+                    required
+                    min="0.01"
+                    step="0.01"
+                    max={balanceDue || undefined}
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                  />
+                </label>
+                <label className="vv-pay-modal__field">
+                  <span className="vv-pay-modal__label">Payment date</span>
+                  <input className="vv-pay-modal__input" type="date" name="payment_date" required defaultValue={todayIso()} />
+                </label>
+                <label className="vv-pay-modal__field">
+                  <span className="vv-pay-modal__label">Payment method</span>
+                  <select className="vv-pay-modal__input" name="payment_method" required defaultValue="Bank Transfer">
+                    {STOCK_PAYMENT_METHODS.map((m) => <option key={m} value={m}>{m}</option>)}
+                  </select>
+                </label>
+                <label className="vv-pay-modal__field">
+                  <span className="vv-pay-modal__label">Reference no.</span>
+                  <input className="vv-pay-modal__input" type="text" name="payment_reference_no" required placeholder="Bank / SWIFT reference" />
+                </label>
+              </div>
+              {isPartial ? <p className="vv-pay-modal__hint">Partial payment: the voucher stays open until the balance is paid.</p> : null}
+              <label className="vv-pay-modal__field">
+                <span className="vv-pay-modal__label">Notes (optional)</span>
+                <input className="vv-pay-modal__input" type="text" name="payment_notes" placeholder="e.g. first installment" />
+              </label>
+            </>
+          ) : null}
           <div className="vv-pay-modal__field">
             <label>SWIFT Proof (Required)</label>
             <label
@@ -223,7 +312,7 @@ export default function MarkPaidModal({ voucher, accounts, actionUrl, module, fo
                 type="file"
                 name="swift_file"
                 required
-                disabled={isUploading}
+                disabled={isUploading && !stockPurchase}
                 accept={ACCEPTED_PROOF}
                 onChange={(e) => setProofFile(e.target.files?.[0])}
               />
@@ -240,7 +329,7 @@ export default function MarkPaidModal({ voucher, accounts, actionUrl, module, fo
                   <span>
                     {uploadState === 'ready' && 'File attached. Click Mark as Paid to upload and save the proof.'}
                     {uploadState === 'uploading' && `Uploading proof… ${uploadProgress}%`}
-                    {uploadState === 'saving' && 'Upload complete. Saving payment and confirming proof…'}
+                    {uploadState === 'saving' && (stockPurchase ? 'Saving payment…' : 'Upload complete. Saving payment and confirming proof…')}
                     {uploadState === 'success' && 'Payment proof saved. Refreshing…'}
                     {uploadState === 'error' && uploadError}
                   </span>

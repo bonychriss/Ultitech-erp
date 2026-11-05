@@ -831,7 +831,7 @@ include __DIR__ . '/includes/header.php';
         padding: 1rem 1.25rem;
         border-bottom: 1px solid #f1f5f9;
     }
-    .ray-panel-title { font-size: 1.125rem; font-weight: 600; color: #111827; margin: 0; }
+    .ray-panel-title { font-size: 1rem; font-weight: 600; color: #111827; margin: 0; }
     .ray-btn-new {
         display: inline-flex;
         align-items: center;
@@ -908,7 +908,7 @@ include __DIR__ . '/includes/header.php';
         padding: 0.65rem 0.85rem;
         border: 1px solid #e5e7eb;
         border-radius: 8px;
-        font-size: 0.875rem;
+        font-size: 0.8125rem;
         color: #111827;
         background: #fff;
     }
@@ -927,8 +927,8 @@ include __DIR__ . '/includes/header.php';
     }
     .ray-table { width: 100%; border-collapse: collapse; }
     .ray-table thead th {
-        padding: 0.7rem 1rem;
-        font-size: 0.75rem;
+        padding: 0.6rem 1rem;
+        font-size: 0.6875rem;
         font-weight: 500;
         color: #6b7280;
         text-align: left;
@@ -939,7 +939,7 @@ include __DIR__ . '/includes/header.php';
         padding: 0.55rem 1rem;
         border-bottom: 1px solid #f8fafc;
         vertical-align: middle;
-        font-size: 0.875rem;
+        font-size: 0.8125rem;
         color: #111827;
     }
     .ray-table tbody tr:last-child td { border-bottom: 0; }
@@ -949,7 +949,7 @@ include __DIR__ . '/includes/header.php';
     .ray-account-name { font-weight: 600; color: #111827; display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
     .ray-account-desc { font-size: 0.75rem; color: #6b7280; margin-top: 4px; line-height: 1.45; max-width: 360px; }
     .ray-table tr.ray-sub-group-row td { background: #f8fafc; padding: 0.55rem 1rem; border-bottom: 1px solid #eef2f7; }
-    .ray-sub-group-row td, .ray-m-sub-group { font-size: 0.75rem; }
+    .ray-sub-group-row td, .ray-m-sub-group { font-size: 0.6875rem; }
     .ray-m-sub-group { display: flex; align-items: center; gap: 0.4rem; padding: 0.6rem 0.25rem 0.2rem; }
     .ray-sub-group-name { font-weight: 600; color: #334155; text-transform: uppercase; letter-spacing: 0.03em; }
     .ray-sub-group-count { display: inline-flex; min-width: 20px; justify-content: center; padding: 1px 6px; border-radius: 999px; background: #e2e8f0; color: #475569; font-weight: 600; margin-left: 6px; }
@@ -964,14 +964,14 @@ include __DIR__ . '/includes/header.php';
         align-items: center;
         padding: 2px 7px;
         border-radius: 6px;
-        font-size: 0.6875rem;
+        font-size: 0.625rem;
         font-weight: 600;
         line-height: 1.2;
     }
     .ray-badge-code { background: #f3f4f6; color: #374151; }
     .ray-badge-dr { background: #dbeafe; color: #1d4ed8; }
     .ray-badge-cr { background: #ede9fe; color: #6d28d9; }
-    .ray-sub-count { font-size: 0.875rem; color: #111827; font-weight: 500; }
+    .ray-sub-count { font-size: 0.8125rem; color: #111827; font-weight: 500; }
     .ray-action-btn {
         width: 30px;
         height: 30px;
@@ -1003,7 +1003,7 @@ include __DIR__ . '/includes/header.php';
         align-items: center;
         flex-wrap: wrap;
         gap: 8px;
-        font-size: 1.25rem;
+        font-size: 1.05rem;
         font-weight: 700;
         color: #111827;
     }
@@ -1088,7 +1088,7 @@ include __DIR__ . '/includes/header.php';
     .sub-modal-count { font-size: 0.75rem; color: #9ca3af; }
     .sub-modal-input {
         width: 100%; padding: 0.8rem 0.9rem; border: 1px solid #d1d5db; border-radius: 8px;
-        font-size: 0.875rem; color: #111827;
+        font-size: 0.8125rem; color: #111827;
     }
     .sub-modal-input:focus {
         outline: none; border-color: #0f766e; box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.12);
@@ -1429,7 +1429,7 @@ include __DIR__ . '/includes/header.php';
             gap: 0.75rem;
         }
         .ray-panel[aria-label="My accounts"] .ray-panel-title {
-            font-size: 1.5rem;
+            font-size: 1.25rem;
             font-weight: 800;
             letter-spacing: -0.03em;
             color: #0f172a;
@@ -1578,7 +1578,7 @@ include __DIR__ . '/includes/header.php';
             width: 100%;
         }
         .ray-m-name {
-            font-size: 0.98rem;
+            font-size: 0.875rem;
             font-weight: 700;
             color: #0f172a;
             line-height: 1.3;
@@ -1605,8 +1605,8 @@ include __DIR__ . '/includes/header.php';
         .ray-m-chevron { display: none !important; }
         .ray-accounts-mobile .ray-badge {
             border-radius: 999px;
-            padding: 0.18rem 0.52rem;
-            font-size: 0.68rem;
+            padding: 0.15rem 0.48rem;
+            font-size: 0.625rem;
             flex-shrink: 0;
             line-height: 1.2;
         }
@@ -1666,6 +1666,7 @@ include __DIR__ . '/includes/header.php';
             justify-content: space-between;
             gap: 0.55rem;
             padding: 0.55rem 0.85rem;
+            font-size: 0.8125rem;
             border: 1px solid #eef2f7;
             border-radius: 12px;
             background: #f8fafc;

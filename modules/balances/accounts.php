@@ -1017,34 +1017,6 @@ include __DIR__ . '/includes/header.php';
         flex: 1;
         min-height: 0;
     }
-    .ray-sub-bulk-bar {
-        display: flex;
-        align-items: center;
-        justify-content: flex-end;
-        gap: 10px;
-        padding: 0 1rem 0.35rem;
-    }
-    .ray-sub-bulk-bar[hidden] { display: none !important; }
-    .ray-sub-bulk-count {
-        font-size: 0.8125rem;
-        font-weight: 500;
-        color: #6b7280;
-    }
-    .ray-sub-bulk-delete {
-        color: #9ca3af;
-    }
-    .ray-sub-bulk-delete:hover {
-        background: #f3f4f6;
-        color: #dc2626;
-    }
-    .ray-sub-check {
-        width: 16px;
-        height: 16px;
-        accent-color: #7c3aed;
-        cursor: pointer;
-    }
-    .ray-sub-check:disabled { cursor: not-allowed; opacity: 0.45; }
-    .ray-table tbody tr.is-sub-selected { background: #fef2f2; }
     .ray-empty {
         padding: 3rem 1.5rem;
         text-align: center;
@@ -1244,7 +1216,6 @@ include __DIR__ . '/includes/header.php';
         color: #e9edef !important;
     }
     html[data-theme="dark"] body.page-balances-accounts .ray-account-desc,
-    html[data-theme="dark"] body.page-balances-accounts .ray-sub-bulk-count,
     html[data-theme="dark"] body.page-balances-accounts .ray-empty,
     html[data-theme="dark"] body.page-balances-accounts .sub-modal-hint,
     html[data-theme="dark"] body.page-balances-accounts .sub-modal-count,
@@ -1286,11 +1257,6 @@ include __DIR__ . '/includes/header.php';
     html[data-theme="dark"] body.page-balances-accounts .ray-parent-row.is-selected td {
         background: #202c33 !important;
         background-color: #202c33 !important;
-    }
-    html[data-theme="dark"] body.page-balances-accounts .ray-table tbody tr.is-sub-selected,
-    html[data-theme="dark"] body.page-balances-accounts .ray-table tbody tr.is-sub-selected td {
-        background: rgba(251, 113, 133, 0.12) !important;
-        background-color: rgba(251, 113, 133, 0.12) !important;
     }
     html[data-theme="dark"] body.page-balances-accounts .ray-badge-code {
         background: #2a3942;
@@ -2045,33 +2011,9 @@ include __DIR__ . '/includes/header.php';
                                 <?php endif; ?>
                             </div>
                         <?php else: ?>
-                            <?php
-                            $deletableSubCount = 0;
-                            foreach ($selectedChildren as $childRow) {
-                                if (empty($childRow['is_system'])) {
-                                    $deletableSubCount++;
-                                }
-                            }
-                            ?>
-                            <?php if (isAdmin() && $deletableSubCount > 0): ?>
-                                <div class="ray-sub-bulk-bar" id="subBulkBar" hidden>
-                                    <span class="ray-sub-bulk-count" id="subBulkCount">0 selected</span>
-                                    <button type="button" class="ray-action-btn ray-sub-bulk-delete" id="subBulkDeleteBtn" aria-label="Delete selected sub-accounts" title="Delete selected">
-                                        <i class="fas fa-trash-can" aria-hidden="true"></i>
-                                    </button>
-                                </div>
-                            <?php endif; ?>
                             <table class="ray-table" id="subAccountsTable">
                                 <thead>
                                     <tr>
-                                        <?php if (isAdmin() && $deletableSubCount > 0): ?>
-                                            <th style="width:40px;">
-                                                <input type="checkbox"
-                                                       class="ray-sub-check"
-                                                       id="subSelectAll"
-                                                       aria-label="Select all sub-accounts">
-                                            </th>
-                                        <?php endif; ?>
                                         <th>Sub-account</th>
                                         <th style="width:52px;">Action</th>
                                     </tr>
@@ -2080,7 +2022,7 @@ include __DIR__ . '/includes/header.php';
                                     <?php foreach (balances_group_sub_accounts_by_payment_type($selectedChildren) as $subGroup): ?>
                                     <?php if ($subGroup['label'] !== null): ?>
                                     <tr class="ray-sub-group-row">
-                                        <td colspan="<?= isAdmin() && $deletableSubCount > 0 ? 3 : 2 ?>">
+                                        <td colspan="2">
                                             <span class="ray-sub-group-name"><?= htmlspecialchars($subGroup['label'], ENT_QUOTES, 'UTF-8') ?></span>
                                             <span class="ray-sub-group-count"><?= count($subGroup['rows']) ?></span>
                                             <?php if ($subGroup['currency'] !== ''): ?>
@@ -2095,16 +2037,6 @@ include __DIR__ . '/includes/header.php';
                                         $childIsSystem = !empty($childRow['is_system']);
                                     ?>
                                     <tr data-sub-id="<?= (int) $childRow['id'] ?>"<?= $childIsSystem ? ' data-sub-system="1"' : '' ?>>
-                                        <?php if (isAdmin() && $deletableSubCount > 0): ?>
-                                            <td>
-                                                <?php if (!$childIsSystem): ?>
-                                                    <input type="checkbox"
-                                                           class="ray-sub-check sub-account-select"
-                                                           value="<?= (int) $childRow['id'] ?>"
-                                                           aria-label="Select <?= htmlspecialchars($childRow['name'], ENT_QUOTES, 'UTF-8') ?>">
-                                                <?php endif; ?>
-                                            </td>
-                                        <?php endif; ?>
                                         <td>
                                             <div class="ray-account-name" title="<?= htmlspecialchars($childRow['description'], ENT_QUOTES, 'UTF-8') ?>">
                                                 <?= htmlspecialchars($childRow['name'], ENT_QUOTES, 'UTF-8') ?>
@@ -2368,14 +2300,6 @@ include __DIR__ . '/includes/header.php';
     <input type="hidden" name="selected" value="<?= (int) $selectedId ?>">
 </form>
 
-<form id="bulkDeleteForm" method="POST" class="d-none">
-    <input type="hidden" name="action" value="bulk_delete_sub_accounts">
-    <input type="hidden" name="delete_mode" id="bulkDeleteMode" value="deactivate">
-    <input type="hidden" name="parent_id" value="<?= (int) $selectedId ?>">
-    <input type="hidden" name="module" value="<?= htmlspecialchars($moduleParam, ENT_QUOTES, 'UTF-8') ?>">
-    <input type="hidden" name="selected" value="<?= (int) $selectedId ?>">
-    <div id="bulkDeleteIdsContainer"></div>
-</form>
 
 <script>
 var moveParentTargets = <?= json_encode($moveParentTargets, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
@@ -2846,72 +2770,6 @@ function deleteAccount(id) {
     });
 }
 
-function getSelectedSubAccountIds() {
-    return Array.prototype.slice.call(document.querySelectorAll('.sub-account-select:checked'))
-        .map(function (el) { return parseInt(el.value, 10); })
-        .filter(function (id) { return id > 0; });
-}
-
-function updateSubBulkBar() {
-    var bar = document.getElementById('subBulkBar');
-    var countEl = document.getElementById('subBulkCount');
-    var deleteBtn = document.getElementById('subBulkDeleteBtn');
-    var selectAll = document.getElementById('subSelectAll');
-    if (!bar || !countEl || !deleteBtn) return;
-
-    var ids = getSelectedSubAccountIds();
-    var total = document.querySelectorAll('.sub-account-select').length;
-    bar.hidden = ids.length === 0;
-    countEl.textContent = ids.length === 1 ? '1 selected' : ids.length + ' selected';
-
-    document.querySelectorAll('.sub-account-select').forEach(function (cb) {
-        var row = cb.closest('tr');
-        if (row) row.classList.toggle('is-sub-selected', cb.checked);
-    });
-
-    if (selectAll) {
-        selectAll.indeterminate = ids.length > 0 && ids.length < total;
-        selectAll.checked = total > 0 && ids.length === total;
-    }
-}
-
-function deleteSelectedSubAccounts() {
-    var ids = getSelectedSubAccountIds();
-    if (ids.length === 0) return;
-
-    var noun = ids.length === 1 ? 'this sub-account' : ids.length + ' sub-accounts';
-    Swal.fire({
-        icon: 'warning',
-        title: 'Remove selected sub-accounts?',
-        text: 'Remove from list keeps transaction history (recommended). Delete permanently erases the selected accounts and their transactions.',
-        showCancelButton: true,
-        showDenyButton: true,
-        confirmButtonText: 'Remove from list',
-        denyButtonText: 'Delete permanently',
-        cancelButtonText: 'Cancel',
-        confirmButtonColor: '#2563eb',
-        denyButtonColor: '#dc2626'
-    }).then(function (result) {
-        if (!result.isConfirmed && !result.isDenied) return;
-
-        var form = document.getElementById('bulkDeleteForm');
-        var container = document.getElementById('bulkDeleteIdsContainer');
-        var modeInput = document.getElementById('bulkDeleteMode');
-        if (!form || !container || !modeInput) return;
-
-        container.innerHTML = '';
-        ids.forEach(function (id) {
-            var input = document.createElement('input');
-            input.type = 'hidden';
-            input.name = 'ids[]';
-            input.value = String(id);
-            container.appendChild(input);
-        });
-        modeInput.value = result.isDenied ? 'delete_permanent' : 'deactivate';
-        form.submit();
-    });
-}
-
 document.addEventListener('DOMContentLoaded', function () {
     var subModal = document.getElementById('subAccountModal');
     var subNameInput = document.getElementById('subAccountName');
@@ -3011,25 +2869,6 @@ document.addEventListener('DOMContentLoaded', function () {
             if (e.target === moveParentModal) closeMoveParentModal();
         });
     }
-
-    var subSelectAll = document.getElementById('subSelectAll');
-    if (subSelectAll) {
-        subSelectAll.addEventListener('change', function () {
-            var checked = subSelectAll.checked;
-            document.querySelectorAll('.sub-account-select').forEach(function (cb) {
-                cb.checked = checked;
-            });
-            updateSubBulkBar();
-        });
-    }
-    document.querySelectorAll('.sub-account-select').forEach(function (cb) {
-        cb.addEventListener('change', updateSubBulkBar);
-    });
-    var subBulkDeleteBtn = document.getElementById('subBulkDeleteBtn');
-    if (subBulkDeleteBtn) {
-        subBulkDeleteBtn.addEventListener('click', deleteSelectedSubAccounts);
-    }
-    updateSubBulkBar();
 
     // Mobile: if URL has an explicit selection, open that accordion on load.
     if (rayIsMobileAccounts()) {

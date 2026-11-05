@@ -4,7 +4,8 @@
  * a Bank / Mobile money account. Logos live in assets/balances/institutions/{slug}.{ext}
  * (fetched by scripts/fetch-institution-logos.php).
  *
- * Optional keys: 'logo_url' (verified logo, used before searching the site), 'logo_crop' => 'symbol' (keep only\n * the brand mark of a wide wordmark) and 'badge' (initials when no logo exists).
+ * Optional keys: 'logo_url' (verified logo, used before searching the site), 'logo_crop' => 'symbol' (keep only
+ * the brand mark of a wide wordmark) and 'badge' (initials when no logo exists).
  *
  * @return list<array{slug:string,name:string,type:string,domain:string,color:string,aliases:list<string>,logo_url?:string,badge?:string}>
  */

@@ -2,6 +2,8 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App';
 import './index.css';
+// Compiled styles from the 2026-11-04 build; index.css lost rules (account cards, month search row) that only existed there.
+import './restored-build.css';
 
 function showBootError(message: string) {
   const rootEl = document.getElementById('root');

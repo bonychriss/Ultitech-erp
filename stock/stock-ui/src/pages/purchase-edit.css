@@ -1695,3 +1695,7 @@
 @media (min-width: 901px) {
   .pe-shell--voucher .pe-section-pair > #pe-totals { order: 2; }
 }
+
+.pe-shell--voucher { position: relative; }
+.pe-shell--voucher > .pe-topbar--actions-only { position: absolute; top: 0; right: 0; margin: 0; padding: 0; min-height: 0; border: 0; background: transparent; z-index: 2; }
+.pe-shell--voucher #pe-supplier .pe-section-head { padding-right: 96px; }

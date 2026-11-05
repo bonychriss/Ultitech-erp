@@ -1336,7 +1336,7 @@ $viewVoucherUrl = function_exists('app_url')
 $page_title = $isPoClassificationEdit
     ? ('Edit Purchase Order - ' . ($classificationPoNumber !== '' ? $classificationPoNumber : ('#' . $classificationEditPoId)))
     : ($purchaseTypeDefault === 'import' ? 'New Abroad Purchase Order' : 'New Internal Purchase Order');
-$employeeHeaderTitle = $isPoClassificationEdit ? 'Edit purchase order' : 'New purchase order';
+$employeeHeaderTitle = null;
 $hideHeaderCompanyBranding = true;
 $employeeHeaderExtraClass = 'employee-header--products-desk';
 $bodyExtraClass = 'page-products-desk page-purchase-create-react';
@@ -1423,6 +1423,10 @@ main.main-content.products-desk-react-root #root {
     max-width: none;
     margin: 0;
     min-height: 320px;
+}
+@media (min-width: 992px) {
+    body.page-purchase-create-react .employee-header.employee-header--products-desk { display: none !important; }
+    body.page-purchase-create-react main.main-content.products-desk-react-root { padding-top: 1rem !important; }
 }
 @media (max-width: 767.98px) {
     body.page-products-desk .employee-header.employee-header--products-desk { padding: 0 0.75rem !important; }

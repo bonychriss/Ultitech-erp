@@ -15,6 +15,8 @@ final class RevenueShell
      *   headMarkup:string,
      *   footerScripts:string,
      *   employeeHeaderTitle:string,
+     *   employeeHeaderSubtitle:string,
+     *   employeeHeaderRightHtml:string,
      *   hideHeaderCompanyBranding:bool,
      *   employeeHeaderExtraClass:string,
      *   mainRootClass:string
@@ -67,6 +69,25 @@ final class RevenueShell
 
         $extraClass = 'employee-header--rev-desk';
         $bodyClass = 'page-rev-desk rev-dashboard-page page-revenue-laravel page-erp-laravel';
+        $headerSubtitle = '';
+        $headerRightHtml = '';
+        if ($page === 'list') {
+            $companySlug = trim((string) ($cfg['companySlug'] ?? ''));
+            $homeUrl = function_exists('company_url') && $companySlug !== ''
+                ? company_url('select-module', $companySlug)
+                : (function_exists('app_url') ? app_url('/select-module.php') : '/select-module.php');
+            $accountingUrl = function_exists('company_url')
+                ? company_url('modules/accounting/index', $companySlug !== '' ? $companySlug : null)
+                : (function_exists('app_url') ? app_url('/modules/accounting/index.php') : '/modules/accounting/index.php');
+            $headerSubtitle = '<nav class="vv-breadcrumb rev-desk-breadcrumb" aria-label="Breadcrumb">'
+                . '<a class="vv-breadcrumb-link erp-nav-back-ignore" href="' . htmlspecialchars($homeUrl, ENT_QUOTES, 'UTF-8') . '">Home</a>'
+                . '<span class="vv-breadcrumb-sep">/</span>'
+                . '<a class="vv-breadcrumb-link erp-nav-back-ignore" href="' . htmlspecialchars($accountingUrl . '?module=accounting', ENT_QUOTES, 'UTF-8') . '">Accounting</a>'
+                . '<span class="vv-breadcrumb-sep">/</span>'
+                . '<span class="vv-breadcrumb-current">Revenue</span>'
+                . '</nav>';
+            $headerRightHtml = '<div id="rev-desk-header-tools" class="rev-desk-header-tools"></div>';
+        }
         if ($page === 'create') {
             $extraClass .= ' employee-header--rev-create';
             $bodyClass .= ' page-rev-create';
@@ -93,6 +114,8 @@ final class RevenueShell
             'headMarkup' => $headMarkup,
             'footerScripts' => $footerScripts,
             'employeeHeaderTitle' => $headerTitle,
+            'employeeHeaderSubtitle' => $headerSubtitle,
+            'employeeHeaderRightHtml' => $headerRightHtml,
             'hideHeaderCompanyBranding' => true,
             'employeeHeaderExtraClass' => $extraClass,
             'mainRootClass' => 'rev-desk-react-root',
@@ -240,6 +263,34 @@ body.page-rev-desk .employee-header--rev-desk .employee-header-page-title {
     letter-spacing: -0.02em;
     white-space: nowrap;
 }
+body.page-rev-desk .employee-header--rev-desk .employee-header-page-subtitle {
+    color: inherit !important;
+}
+body.page-rev-desk .employee-header--rev-desk .rev-desk-breadcrumb {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem;
+    margin: 0;
+    font-size: 0.82rem;
+    line-height: 1.3;
+}
+body.page-rev-desk .employee-header--rev-desk .rev-desk-breadcrumb .vv-breadcrumb-link {
+    color: #2563eb !important;
+    font-weight: 600;
+    text-decoration: none !important;
+}
+body.page-rev-desk .employee-header--rev-desk .rev-desk-breadcrumb .vv-breadcrumb-link:hover {
+    color: #1d4ed8 !important;
+    text-decoration: underline !important;
+}
+body.page-rev-desk .employee-header--rev-desk .rev-desk-breadcrumb .vv-breadcrumb-sep {
+    color: #94a3b8;
+}
+body.page-rev-desk .employee-header--rev-desk .rev-desk-breadcrumb .vv-breadcrumb-current {
+    color: #64748b;
+    font-weight: 600;
+}
 body.page-rev-desk .employee-header--rev-desk .header-right.header-actions-tray {
     display: flex !important;
     align-items: center !important;
@@ -248,37 +299,50 @@ body.page-rev-desk .employee-header--rev-desk .header-right.header-actions-tray 
     flex: 0 0 auto !important;
     gap: 0.5rem !important;
 }
+body.page-rev-desk .employee-header--rev-desk .header-content,
+body.page-rev-desk .employee-header--rev-desk .header-right.header-actions-tray,
+body.page-rev-desk .employee-header--rev-desk .rev-desk-header-tools {
+    position: static !important;
+}
 main.main-content.rev-desk-react-root {
     flex: 1 1 auto !important;
     min-height: 0 !important;
     width: 100% !important;
     max-width: none !important;
     padding: 0 1.25rem 1rem !important;
-    overflow: hidden !important;
-    overscroll-behavior: none !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    overscroll-behavior-y: auto !important;
     background: #f8fafc !important;
     display: flex !important;
     flex-direction: column !important;
-    scrollbar-width: none !important;
-}
-main.main-content.rev-desk-react-root::-webkit-scrollbar {
-    width: 0 !important;
-    height: 0 !important;
-    display: none !important;
+    scrollbar-width: thin !important;
 }
 main.main-content.rev-desk-react-root #root,
 main.main-content.rev-desk-react-root .rev-desk-page {
     width: 100%;
-    flex: 1 1 auto;
+    flex: 0 0 auto;
     min-height: 0 !important;
-    max-height: 100% !important;
+    max-height: none !important;
+    height: auto !important;
     display: flex !important;
     flex-direction: column !important;
-    overflow: hidden !important;
-    overscroll-behavior: none !important;
+    overflow: visible !important;
+    overscroll-behavior: auto !important;
 }
 @media (max-width: 767.98px) {
     main.main-content.rev-desk-react-root { padding: 0 0.75rem 1.5rem !important; }
+}
+body.page-rev-create main.main-content.rev-desk-react-root {
+    overflow-y: auto !important;
+    overscroll-behavior-y: contain !important;
+    scrollbar-width: thin !important;
+}
+body.page-rev-create main.main-content.rev-desk-react-root #root {
+    flex: 0 0 auto !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
 }
 html[data-theme="dark"] body.page-rev-desk,
 html[data-theme="dark"] body.page-rev-desk.dashboard,
@@ -286,10 +350,100 @@ html[data-theme="dark"] body.page-rev-desk .layout-main-wrapper,
 html[data-theme="dark"] body.page-rev-desk .layout-main-wrapper > .flex-grow-1,
 html[data-theme="dark"] body.page-rev-desk main.main-content.rev-desk-react-root,
 html[data-theme="dark"] body.page-rev-desk .employee-header.employee-header--rev-desk {
-    background: #0f172a !important;
+    background: #0b141a !important;
 }
 html[data-theme="dark"] body.page-rev-desk .employee-header--rev-desk .employee-header-page-title {
-    color: #f8fafc !important;
+    color: #e9edef !important;
+}
+html[data-theme="dark"] body.page-rev-desk .employee-header.employee-header--rev-desk {
+    border-bottom-color: #2a3942 !important;
+}
+html[data-theme="dark"] body.page-rev-desk .employee-header--rev-desk .employee-header-menu-btn {
+    color: #e9edef !important;
+}
+html[data-theme="dark"] body.page-rev-desk .employee-header--rev-desk .rev-desk-breadcrumb .vv-breadcrumb-link,
+html[data-theme="dark"] body.page-rev-desk .employee-header--rev-desk .rev-desk-breadcrumb .vv-breadcrumb-sep,
+html[data-theme="dark"] body.page-rev-desk .employee-header--rev-desk .rev-desk-breadcrumb .vv-breadcrumb-current {
+    color: #00a884 !important;
+}
+html[data-theme="dark"] body.page-rev-desk .employee-header--rev-desk .rev-desk-breadcrumb .vv-breadcrumb-link:hover {
+    color: #06cf9c !important;
+}
+html[data-theme="dark"] body.page-rev-create main.main-content.rev-desk-react-root {
+    background: #0b141a !important;
+}
+html[data-theme="dark"] body.page-rev-desk #native-sidebar.theme-minimal {
+    --sidebar-bg: #0b141a !important;
+    --sidebar-text: #e9edef !important;
+    --sidebar-hover-bg: #202c33 !important;
+    --sidebar-hover-text: #e9edef !important;
+    --sidebar-active-bg: rgba(0, 168, 132, 0.16) !important;
+    --sidebar-active-text: #00a884 !important;
+    --sidebar-border: #2a3942 !important;
+    --sidebar-icon-color: #8696a0 !important;
+    --sidebar-hover-icon: #e9edef !important;
+    background: #0b141a !important;
+    background-color: #0b141a !important;
+    border-right: 1px solid #2a3942 !important;
+    color: #e9edef !important;
+}
+html[data-theme="dark"] body.page-rev-desk #native-sidebar .nav-link {
+    color: #e9edef !important;
+}
+html[data-theme="dark"] body.page-rev-desk #native-sidebar .nav-link i {
+    color: #8696a0 !important;
+}
+html[data-theme="dark"] body.page-rev-desk #native-sidebar .nav-link:hover {
+    background: #202c33 !important;
+    color: #e9edef !important;
+}
+html[data-theme="dark"] body.page-rev-desk #native-sidebar .nav-link.active,
+html[data-theme="dark"] body.page-rev-desk #native-sidebar .nav-link.active:hover,
+html[data-theme="dark"] body.page-rev-desk #native-sidebar .sidebar-revenue-link {
+    background: rgba(0, 168, 132, 0.16) !important;
+    color: #00a884 !important;
+}
+html[data-theme="dark"] body.page-rev-desk #native-sidebar .nav-link.active i,
+html[data-theme="dark"] body.page-rev-desk #native-sidebar .sidebar-revenue-link i {
+    color: #00a884 !important;
+}
+html[data-theme="dark"] body.page-rev-desk #native-sidebar .user-profile-link,
+html[data-theme="dark"] body.page-rev-desk #native-sidebar .user-profile-link .sidebar-text div,
+html[data-theme="dark"] body.page-rev-desk #native-sidebar .sidebar-logo,
+html[data-theme="dark"] body.page-rev-desk #native-sidebar .dropdown > a,
+html[data-theme="dark"] body.page-rev-desk #native-sidebar .sidebar-text {
+    color: #e9edef !important;
+}
+html[data-theme="dark"] body.page-rev-desk #native-sidebar > hr,
+html[data-theme="dark"] body.page-rev-desk #native-sidebar .sidebar-submenu {
+    border-color: #2a3942 !important;
+}
+html[data-theme="dark"] body.page-rev-desk .rev-desk-search-field {
+    background: #111b21 !important;
+    border-color: #2a3942 !important;
+}
+html[data-theme="dark"] body.page-rev-desk .rev-desk-search-field:focus-within {
+    border-color: #818cf8 !important;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.22) !important;
+}
+html[data-theme="dark"] body.page-rev-desk .rev-desk-search-icon {
+    color: #8696a0 !important;
+}
+html[data-theme="dark"] body.page-rev-desk .rev-desk-search-input,
+html[data-theme="dark"] body.page-rev-desk .rev-desk-search-input:focus {
+    background: transparent !important;
+    background-color: transparent !important;
+    border-color: transparent !important;
+    color: #e9edef !important;
+}
+html[data-theme="dark"] body.page-rev-desk .rev-desk-search-input::placeholder {
+    color: #8696a0 !important;
+}
+html[data-theme="dark"] body.page-rev-desk .employee-header.employee-header--rev-desk .rev-desk-search-field input.rev-desk-search-input,
+html[data-theme="dark"] body.page-rev-desk .employee-header.employee-header--rev-desk .rev-desk-search-field input.rev-desk-search-input:focus {
+    background-color: transparent !important;
+    border-color: transparent !important;
+    color: #e9edef !important;
 }
 </style>
 <script>document.documentElement.classList.add('page-rev-desk-lock');</script>

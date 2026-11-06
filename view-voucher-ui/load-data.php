@@ -551,6 +551,36 @@ function vv_load_view_payload(PDO $pdo, int $voucherId, array $opts = []): array
         }
     } catch (Throwable $e) { /* ignore */ }
 
+    // Signatories recorded on this voucher may sit outside the company-scoped user list
+    // (e.g. a cross-company admin giving final approval); load their signature by id.
+    try {
+        $extraSigIds = [];
+        if (!empty($voucher['approved_by'])) {
+            $extraSigIds[(int) $voucher['approved_by']] = true;
+        }
+        $__apIds = $pdo->prepare('SELECT DISTINCT approver_id FROM approvals WHERE voucher_id = ? AND approver_id IS NOT NULL');
+        $__apIds->execute([$voucherId]);
+        foreach ($__apIds->fetchAll(PDO::FETCH_COLUMN) ?: [] as $__aid) {
+            $extraSigIds[(int) $__aid] = true;
+        }
+        $extraSigIds = array_filter(array_keys($extraSigIds), static function ($id) use ($signaturesById) {
+            return $id > 0 && !isset($signaturesById[$id]);
+        });
+        if (!empty($extraSigIds)) {
+            $ph = implode(',', array_fill(0, count($extraSigIds), '?'));
+            $xStmt = $pdo->prepare("SELECT id, signature_path FROM users WHERE id IN ($ph) AND signature_path IS NOT NULL AND signature_path <> ''");
+            $xStmt->execute(array_values($extraSigIds));
+            while ($xRow = $xStmt->fetch(PDO::FETCH_ASSOC)) {
+                $xSig = function_exists('mediaUrlFromPath') ? mediaUrlFromPath($xRow['signature_path']) : '';
+                if ($xSig !== '') {
+                    $signaturesById[(int) $xRow['id']] = $xSig;
+                }
+            }
+        }
+    } catch (Throwable $e) {
+        error_log('view-voucher approver signature lookup failed: ' . $e->getMessage());
+    }
+
     // Approvals list + role map
     $approvalsList = [];
     $roleStatusMap = [];

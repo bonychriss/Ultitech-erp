@@ -14,23 +14,27 @@
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  margin-bottom: 1.5rem;
-  padding-bottom: 0.75rem;
+  margin-bottom: 1.25rem;
+  padding: 0.25rem 0 1rem;
   border-bottom: 1px solid #e5e7eb;
 }
 
 .rev-create-topbar h1 {
   margin: 0;
-  font-size: 1.25rem;
+  font-size: 1.4rem;
   font-weight: 700;
   color: #0f172a;
 }
 
+.rev-create-topbar p {
+  margin: 0.25rem 0 0;
+  font-size: 0.875rem;
+  color: #64748b;
+}
+
 .rev-create-layout {
-  display: grid;
-  grid-template-columns: 180px minmax(0, 1fr);
-  gap: 2rem;
-  align-items: start;
+  width: 100%;
+  max-width: 960px;
   min-width: 0;
 }
 
@@ -38,88 +42,75 @@
   min-width: 0;
 }
 
-.rev-create-nav {
-  position: sticky;
-  top: 96px;
-  align-self: start;
-}
-
-.rev-create-nav ul {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.rev-create-nav li + li {
-  margin-top: 0.5rem;
-}
-
-.rev-create-nav button {
-  display: block;
-  width: 100%;
-  text-align: left;
-  padding: 0.45rem 0.75rem;
-  border: none;
-  border-radius: 8px;
-  color: #64748b;
-  font-size: 13px;
-  font-weight: 500;
-  background: transparent;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.rev-create-nav button:hover {
-  background: #fff7ed;
-  color: #2563eb;
-}
-
-.rev-create-nav button.is-active {
-  background: #fff7ed;
-  color: #d97706;
-  font-weight: 600;
-}
-
 .rev-create-section {
-  padding-bottom: 2rem;
-  margin-bottom: 2rem;
-  border-bottom: 1px solid #e5e7eb;
-  scroll-margin-top: 100px;
+  margin-bottom: 1rem;
 }
 
-.rev-create-section:last-of-type {
-  margin-bottom: 1.5rem;
+.rev-create-card {
+  padding: 0.85rem 1.1rem 0.55rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.rev-create-card--fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem 1.25rem;
+}
+
+.rev-create-card--fields .rev-create-row {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.35rem;
+  min-width: 0;
+  margin: 0;
+}
+
+.rev-create-card--fields .rev-create-row--wide {
+  grid-column: 1 / -1;
+}
+
+.rev-create-card--fields .rev-create-label {
+  padding-top: 0;
 }
 
 .rev-create-section-header {
-  margin-bottom: 1.25rem;
+  margin-bottom: 0.75rem;
 }
 
 .rev-create-section-header h2 {
-  margin: 0 0 0.35rem;
+  margin: 0;
   font-size: 1.125rem;
   font-weight: 600;
   color: #0f172a;
 }
 
 .rev-create-section-header p {
-  margin: 0;
+  margin: 0.25rem 0 0;
   font-size: 0.875rem;
   color: #64748b;
 }
 
 .rev-create-row {
   display: grid;
-  grid-template-columns: 210px 1fr;
+  grid-template-columns: 200px minmax(0, 1fr);
   align-items: start;
-  margin-bottom: 24px;
+  gap: 0.5rem 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.rev-create-card .rev-create-row:last-child {
+  margin-bottom: 0.25rem;
 }
 
 .rev-create-label {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
   color: #1e293b;
-  padding-top: 12px;
+  padding-top: 0.55rem;
 }
 
 .rev-create-label .req {
@@ -131,7 +122,7 @@
 .rev-create-select,
 .rev-create-textarea {
   width: 100%;
-  padding: 12px 16px;
+  padding: 9px 12px;
   border: 1px solid #e2e8f0;
   border-radius: 10px;
   font-size: 14px;
@@ -448,43 +439,15 @@ body.page-rev-desk button.rev-create-btn-save {
 
 /* Narrow content column (small laptop / ERP sidebar open) */
 @container rev-create (max-width: 1080px) {
-  .rev-create-layout {
-    grid-template-columns: 1fr;
-    gap: 1.25rem;
-  }
-
-  .rev-create-nav {
-    position: static;
-  }
-
-  .rev-create-nav ul {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-  }
-
-  .rev-create-nav li + li {
-    margin-top: 0;
-  }
-
-  .rev-create-nav button {
-    width: auto;
-  }
-
   .rev-create-row {
     grid-template-columns: minmax(0, 10.5rem) minmax(0, 1fr);
     gap: 0.5rem 1rem;
-    margin-bottom: 1.25rem;
+    margin-bottom: 0.75rem;
   }
 
   .rev-create-label {
     padding-top: 0.65rem;
     font-size: 13px;
-  }
-
-  .rev-create-section {
-    padding-bottom: 1.5rem;
-    margin-bottom: 1.5rem;
   }
 
   .rev-create-currency {
@@ -497,6 +460,15 @@ body.page-rev-desk button.rev-create-btn-save {
 }
 
 @container rev-create (max-width: 720px) {
+  .rev-create-card--fields {
+    grid-template-columns: 1fr;
+    gap: 0.85rem;
+  }
+
+  .rev-create-card--fields .rev-create-row--wide {
+    grid-column: auto;
+  }
+
   .rev-create-row {
     grid-template-columns: 1fr;
     gap: 0.35rem;
@@ -533,6 +505,14 @@ body.page-rev-desk button.rev-create-btn-save {
     font-size: 1.125rem;
   }
 
+  .rev-create-topbar {
+    align-items: flex-start;
+  }
+
+  .rev-create-topbar p {
+    font-size: 0.8125rem;
+  }
+
   .rev-create-section-header h2 {
     font-size: 1rem;
   }
@@ -541,29 +521,6 @@ body.page-rev-desk button.rev-create-btn-save {
 /* Viewport fallbacks when container queries are unavailable */
 @supports not (container-type: inline-size) {
   @media (max-width: 1280px) {
-    .rev-create-layout {
-      grid-template-columns: 1fr;
-      gap: 1.25rem;
-    }
-
-    .rev-create-nav {
-      position: static;
-    }
-
-    .rev-create-nav ul {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.5rem;
-    }
-
-    .rev-create-nav li + li {
-      margin-top: 0;
-    }
-
-    .rev-create-nav button {
-      width: auto;
-    }
-
     .rev-create-row {
       grid-template-columns: minmax(0, 10.5rem) minmax(0, 1fr);
       gap: 0.5rem 1rem;
@@ -576,27 +533,12 @@ body.page-rev-desk button.rev-create-btn-save {
 }
 
 @media (max-width: 900px) {
-  .rev-create-layout {
+  .rev-create-card--fields {
     grid-template-columns: 1fr;
-    gap: 1rem;
   }
 
-  .rev-create-nav {
-    position: static;
-  }
-
-  .rev-create-nav ul {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-  }
-
-  .rev-create-nav li + li {
-    margin-top: 0;
-  }
-
-  .rev-create-nav button {
-    width: auto;
+  .rev-create-card--fields .rev-create-row--wide {
+    grid-column: auto;
   }
 
   .rev-create-row {
@@ -671,4 +613,3 @@ body.page-rev-desk button.rev-create-btn-save {
 body.page-rev-desk button.rev-create-btn {
   border-radius: 9999px !important;
 }
-

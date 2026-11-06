@@ -24,7 +24,7 @@ class RevenuePageController extends Controller
             'apiBase' => $apiBase,
             'revenuePage' => 'list',
             'pageTitle' => 'Revenues',
-            'headerTitle' => 'Revenues',
+            'headerTitle' => 'Revenue',
             'companySlug' => (string) ($erp['company_slug'] ?? ''),
             'backUrl' => (string) ($erp['back_url'] ?? ''),
         ]);
@@ -42,12 +42,16 @@ class RevenuePageController extends Controller
         $GLOBALS['page_title'] = $viewData['pageTitle'];
         $page_title = $viewData['pageTitle'];
         $employeeHeaderTitle = $viewData['employeeHeaderTitle'];
+        $employeeHeaderSubtitle = $viewData['employeeHeaderSubtitle'];
+        $employeeHeaderRightHtml = $viewData['employeeHeaderRightHtml'];
         $hideHeaderCompanyBranding = $viewData['hideHeaderCompanyBranding'];
         $employeeHeaderExtraClass = $viewData['employeeHeaderExtraClass'];
 
         return view('erp.react-shell', $viewData + [
             'page_title' => $page_title,
             'employeeHeaderTitle' => $employeeHeaderTitle,
+            'employeeHeaderSubtitle' => $employeeHeaderSubtitle,
+            'employeeHeaderRightHtml' => $employeeHeaderRightHtml,
             'hideHeaderCompanyBranding' => $hideHeaderCompanyBranding,
             'employeeHeaderExtraClass' => $employeeHeaderExtraClass,
         ]);

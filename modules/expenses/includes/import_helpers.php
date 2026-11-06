@@ -1007,6 +1007,9 @@ function expenses_import_commit_rows(
     if (expenses_is_petty_cash_account_row($sourceRow)) {
         return ['ok' => false, 'message' => 'Petty cash payments belong in the Petty Cash module, not Expenses.'];
     }
+    if (expenses_is_payment_group_account($pdo, $sourceAccountId)) {
+        return ['ok' => false, 'message' => 'Select a specific bank, cash or mobile account, not a parent group.'];
+    }
 
     $expenseAccountCache = [];
     $prepared = [];
@@ -1062,6 +1065,9 @@ function expenses_import_commit_rows(
                 }
                 if (expenses_is_petty_cash_account_row($srcCheck)) {
                     return ['ok' => false, 'message' => $label . 'petty cash payments belong in the Petty Cash module, not Expenses.'];
+                }
+                if (expenses_is_payment_group_account($pdo, $rowSourceId)) {
+                    return ['ok' => false, 'message' => $label . 'select a specific bank, cash or mobile account, not a parent group.'];
                 }
             }
         }

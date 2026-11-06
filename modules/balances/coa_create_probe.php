@@ -1,6 +1,6 @@
 <?php
 /**
- * Deployment probe for coa_create.php — remove after verification.
+ * Deployment probe for coa_create.php ï¿½ remove after verification.
  * URL: /ultimate/modules/balances/coa_create_probe.php
  */
 header('Content-Type: text/plain; charset=utf-8');

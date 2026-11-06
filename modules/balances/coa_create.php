@@ -264,6 +264,10 @@ $showPaymentWalletType = $isSubAccount
     && is_array($parentAccount)
     && function_exists('balances_parent_is_payment_wallet_group')
     && balances_parent_is_payment_wallet_group($parentAccount);
+$showOptionalPaymentWalletType = $isSubAccount
+    && is_array($parentAccount)
+    && function_exists('balances_is_asset_main_account')
+    && balances_is_asset_main_account($parentAccount);
 $paymentWalletType = trim((string) ($_POST['payment_wallet_type'] ?? ''));
 if ($showPaymentWalletType && $paymentWalletType === '') {
     $paymentWalletType = balances_infer_payment_wallet_type($parentAccount);
@@ -336,6 +340,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         throw new RuntimeException('Please select a payment type (Cash, Bank, or Mobile money).');
                     }
                     $normalizedType = $walletType;
+                } elseif (
+                    function_exists('balances_is_asset_main_account')
+                    && balances_is_asset_main_account($parentAccount)
+                ) {
+                    $normalizedType = balances_normalize_payment_wallet_type(
+                        trim((string) ($_POST['payment_wallet_type'] ?? ''))
+                    ) ?? $accountType;
                 }
             }
 
@@ -982,17 +993,22 @@ try {
                     <?php endif; ?>
                 </div>
 
-                <?php if ($showPaymentWalletType): ?>
+                <?php if ($showPaymentWalletType || $showOptionalPaymentWalletType): ?>
                 <div class="coa-field">
-                    <label for="payment_wallet_type">Payment type <span class="req">*</span></label>
-                    <select class="coa-select" id="payment_wallet_type" name="payment_wallet_type" required>
+                    <label for="payment_wallet_type">
+                        Payment type<?= $showPaymentWalletType ? ' <span class="req">*</span>' : ' (optional)' ?>
+                    </label>
+                    <select class="coa-select" id="payment_wallet_type" name="payment_wallet_type"<?= $showPaymentWalletType ? ' required' : '' ?>>
+                        <?php if (!$showPaymentWalletType): ?>
+                            <option value="">Regular asset account</option>
+                        <?php endif; ?>
                         <?php foreach (balances_payment_wallet_types() as $walletSlug => $walletLabel): ?>
                             <option value="<?= $esc($walletSlug) ?>"<?= $paymentWalletType === $walletSlug ? ' selected' : '' ?>>
                                 <?= $esc($walletLabel) ?>
                             </option>
                         <?php endforeach; ?>
                     </select>
-                    <div class="coa-image-hint">Used on expenses and transfers as cash, bank, or mobile money.</div>
+                    <div class="coa-image-hint">Choose cash, bank, or mobile money for a payment wallet. Leave the default for other asset accounts.</div>
                 </div>
                 <?php elseif ($isPettyCashCategorySub): ?>
                     <input type="hidden" name="payment_wallet_type" value="cash">

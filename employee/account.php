@@ -64,10 +64,10 @@ if (function_exists('ensureWhatsAppColumn')) {
     ensureWhatsAppColumn();
 }
 $psSyncCompanyIndex = static function () use ($userId): void {
-    $cid = (int) (currentCompanyId() ?? ($_SESSION['company_id'] ?? 0));
-    if ($cid > 0 && function_exists('syncUserCompanyIndex')) {
-        syncUserCompanyIndex($cid, $userId);
-    }
+                    $cid = (int) (currentCompanyId() ?? ($_SESSION['company_id'] ?? 0));
+                    if ($cid > 0 && function_exists('syncUserCompanyIndex')) {
+                        syncUserCompanyIndex($cid, $userId);
+                    }
 };
 /** @return true|string true on success, otherwise an error message */
 $psUpdateFullName = static function (string $newFullName) use ($pdo, $userId) {
@@ -79,17 +79,17 @@ $psUpdateFullName = static function (string $newFullName) use ($pdo, $userId) {
     if (!$stmt->execute([$newFullName, $userId])) {
         return 'Failed to update name.';
     }
-    $_SESSION['full_name'] = $newFullName;
+                $_SESSION['full_name'] = $newFullName;
     // payment_vouchers stores these names as legacy text, not user ids
     foreach (['applicant', 'prepared_by', 'checked_by', 'department_manager', 'general_manager'] as $field) {
-        try {
-            $colCheck = $pdo->query("SHOW COLUMNS FROM payment_vouchers LIKE '$field'");
-            if ($colCheck->fetch()) {
-                $upd = $pdo->prepare("UPDATE payment_vouchers SET $field = ? WHERE $field = ?");
-                $upd->execute([$newFullName, $oldFullName]);
-            }
-        } catch (Exception $e) { }
-    }
+                    try {
+                        $colCheck = $pdo->query("SHOW COLUMNS FROM payment_vouchers LIKE '$field'");
+                        if ($colCheck->fetch()) {
+                            $upd = $pdo->prepare("UPDATE payment_vouchers SET $field = ? WHERE $field = ?");
+                            $upd->execute([$newFullName, $oldFullName]);
+                        }
+                    } catch (Exception $e) { }
+                }
     return true;
 };
 $psUpdateUsername = static function (string $newUsername) use ($pdo, $userId, $psSyncCompanyIndex) {
@@ -97,15 +97,15 @@ $psUpdateUsername = static function (string $newUsername) use ($pdo, $userId, $p
         return 'Username must be at least 3 characters.';
     }
     $stmt = $pdo->prepare('SELECT id FROM users WHERE username = ? AND id != ?');
-    $stmt->execute([$newUsername, $userId]);
-    if ($stmt->fetch()) {
+            $stmt->execute([$newUsername, $userId]);
+            if ($stmt->fetch()) {
         return 'Username already taken.';
     }
     $stmt = $pdo->prepare('UPDATE users SET username = ? WHERE id = ?');
     if (!$stmt->execute([$newUsername, $userId])) {
         return 'Failed to update username.';
     }
-    $_SESSION['username'] = $newUsername;
+                    $_SESSION['username'] = $newUsername;
     $psSyncCompanyIndex();
     return true;
 };
@@ -1076,14 +1076,14 @@ $isActiveUser = !isset($user['is_active']) || (int) $user['is_active'] === 1;
                             <?php else: ?>
                                 <span class="account-avatar-fallback"><?= $esc($initial) ?></span>
                             <?php endif; ?>
-                        </div>
+                </div>
                         <form method="post" enctype="multipart/form-data">
                             <label class="account-avatar-btn" title="Upload photo">
                                 <i class="fas fa-camera"></i>
                                 <input type="file" name="profile_photo" accept="image/*" hidden onchange="this.form.submit()">
                             </label>
                         </form>
-                    </div>
+            </div>
                     <div class="ps-hero-copy">
                         <h2><?= $esc($user['full_name'] ?? '') ?></h2>
                         <div class="ps-hero-chips">
@@ -1103,11 +1103,11 @@ $isActiveUser = !isset($user['is_active']) || (int) $user['is_active'] === 1;
                     <li><a href="#change-password"><i class="fas fa-lock"></i> Security</a></li>
                     <li><a href="#digital-signature"><i class="fas fa-signature"></i> Signature</a></li>
                     <li><a href="#personal-email"><i class="far fa-envelope"></i> Email</a></li>
-                </ul>
+                    </ul>
             </nav>
-
+                
             <div class="ps-body">
-                    <div class="editor-main">
+                <div class="editor-main">
 		            <?php require __DIR__ . '/includes/account-settings-view.inc.php'; ?>
 			<!-- Digital Signature -->
 			<section class="editor-section ps-sig-wrap" id="digital-signature">
@@ -1115,39 +1115,39 @@ $isActiveUser = !isset($user['is_active']) || (int) $user['is_active'] === 1;
                     <div class="ps-sig-head">
                         <div class="ps-sec-head">
                             <span class="ps-sec-icon"><i class="fas fa-pen"></i></span>
-                            <div>
+                    <div>
                                 <h2 class="section-title"><?= $currentSig ? 'Replace Signature' : 'Digital Signature' ?></h2>
                                 <p class="section-subtitle"><?= $currentSig
                                     ? 'Draw a new signature. Saving it replaces your current one.'
                                     : 'Draw your signature below. It will appear on vouchers and approvals where your name is used.' ?></p>
                             </div>
-                        </div>
-                        <?php if ($currentSig): ?>
+                    </div>
+                    <?php if ($currentSig): ?>
                             <span class="ps-sig-status is-active"><span class="ps-sig-status-dot"></span>Signature Active</span>
-                        <?php else: ?>
+                    <?php else: ?>
                             <span class="ps-sig-status is-missing"><span class="ps-sig-status-dot"></span>Signature Missing</span>
-                        <?php endif; ?>
-                    </div>
-                    <div class="sig-tools">
-                        <div class="sig-tool-group">
+                    <?php endif; ?>
+                </div>
+                        <div class="sig-tools">
+                            <div class="sig-tool-group">
                             <span class="sig-tool-label">Pen size</span>
-                            <button type="button" class="pen-size-btn active" data-size="2" onclick="setPenSize(2)" title="Thin"><div class="dot"></div></button>
-                            <button type="button" class="pen-size-btn" data-size="4" onclick="setPenSize(4)" title="Medium"><div class="dot"></div></button>
-                            <button type="button" class="pen-size-btn" data-size="6" onclick="setPenSize(6)" title="Thick"><div class="dot"></div></button>
-                        </div>
+                                <button type="button" class="pen-size-btn active" data-size="2" onclick="setPenSize(2)" title="Thin"><div class="dot"></div></button>
+                                <button type="button" class="pen-size-btn" data-size="4" onclick="setPenSize(4)" title="Medium"><div class="dot"></div></button>
+                                <button type="button" class="pen-size-btn" data-size="6" onclick="setPenSize(6)" title="Thick"><div class="dot"></div></button>
+                            </div>
                         <span class="sig-tool-divider" aria-hidden="true"></span>
-                        <div class="sig-tool-group">
+                            <div class="sig-tool-group">
                             <span class="sig-tool-label">Ink color</span>
-                            <button type="button" class="color-btn active" data-color="#000000" onclick="setPenColor('#000000')" title="Black"><div class="color-circle" style="background:#000;"></div></button>
-                            <button type="button" class="color-btn" data-color="#1e40af" onclick="setPenColor('#1e40af')" title="Blue"><div class="color-circle" style="background:#1e40af;"></div></button>
-                            <button type="button" class="color-btn" data-color="#7c3aed" onclick="setPenColor('#7c3aed')" title="Purple"><div class="color-circle" style="background:#7c3aed;"></div></button>
+                                <button type="button" class="color-btn active" data-color="#000000" onclick="setPenColor('#000000')" title="Black"><div class="color-circle" style="background:#000;"></div></button>
+                                <button type="button" class="color-btn" data-color="#1e40af" onclick="setPenColor('#1e40af')" title="Blue"><div class="color-circle" style="background:#1e40af;"></div></button>
+                                <button type="button" class="color-btn" data-color="#7c3aed" onclick="setPenColor('#7c3aed')" title="Purple"><div class="color-circle" style="background:#7c3aed;"></div></button>
+                            </div>
                         </div>
-                    </div>
-                    <div class="canvas-container" id="canvasContainer">
+                        <div class="canvas-container" id="canvasContainer">
                         <canvas id="sigCanvas" height="125"></canvas>
                         <div class="canvas-placeholder"><i class="fas fa-pencil"></i><span>Sign here</span></div>
-                    </div>
-                    <div class="sig-actions">
+                        </div>
+                        <div class="sig-actions">
                         <button type="button" class="ps-sig-btn ps-sig-btn--plain" onclick="undoStroke()" id="undoBtn" disabled><i class="fas fa-rotate-left"></i> Undo</button>
                         <button type="button" class="ps-sig-btn ps-sig-btn--plain" onclick="redoStroke()" id="redoBtn" disabled><i class="fas fa-rotate-right"></i> Redo</button>
                         <button type="button" class="ps-sig-btn ps-sig-btn--danger ps-sig-btn--plain" onclick="clearCanvas()"><i class="fas fa-trash"></i> Clear</button>
@@ -1155,22 +1155,22 @@ $isActiveUser = !isset($user['is_active']) || (int) $user['is_active'] === 1;
                             <button type="button" class="ps-sig-btn" onclick="psCancelReplaceSignature()">Cancel</button>
                         <?php endif; ?>
                         <button type="button" class="ps-sig-save" onclick="saveSignature()" id="saveBtn" disabled><i class="fas fa-floppy-disk"></i> Save signature</button>
+                        </div>
                     </div>
-                </div>
 
-                <?php if ($currentSig): ?>
+                        <?php if ($currentSig): ?>
                 <div class="ps-sig-card">
                     <div class="ps-sec-head ps-sig-current-head">
                         <span class="ps-sec-icon"><i class="far fa-image"></i></span>
                         <div>
                             <h2 class="section-title">Current Signature</h2>
                             <p class="section-subtitle">This is your currently saved signature.</p>
-                        </div>
+                                </div>
                     </div>
                     <div class="ps-sig-current">
                         <div class="ps-sig-current-preview">
-                            <img src="<?= $esc(function_exists('mediaUrlFromPath') ? mediaUrlFromPath($currentSig, false) : ('../' . ltrim((string) $currentSig, '/'))) ?>" alt="Current signature">
-                        </div>
+                                    <img src="<?= $esc(function_exists('mediaUrlFromPath') ? mediaUrlFromPath($currentSig, false) : ('../' . ltrim((string) $currentSig, '/'))) ?>" alt="Current signature">
+                                </div>
                             <div class="ps-sig-current-actions">
                                 <button type="button" class="ps-sig-btn ps-sig-btn--accent ps-sig-btn--plain" onclick="psReplaceSignature()"><i class="fas fa-rotate"></i> Replace</button>
                                 <form method="post" id="psDeleteSigForm" style="margin:0;">
@@ -1178,8 +1178,8 @@ $isActiveUser = !isset($user['is_active']) || (int) $user['is_active'] === 1;
                                     <button type="button" class="ps-sig-btn ps-sig-btn--danger ps-sig-btn--plain" onclick="psConfirmDeleteSignature()"><i class="fas fa-trash"></i> Remove</button>
                                 </form>
                             </div>
+                            </div>
                     </div>
-                </div>
                 <?php endif; ?>
 			</section>
 
@@ -1188,9 +1188,9 @@ $isActiveUser = !isset($user['is_active']) || (int) $user['is_active'] === 1;
                 <div class="section-header ps-sec-head">
                     <span class="ps-sec-icon"><i class="far fa-envelope"></i></span>
                     <div>
-                        <h2 class="section-title">Personal Email Account</h2>
-                        <p class="section-subtitle">Configure your personal IMAP/SMTP credentials for the email module.</p>
-                    </div>
+					<h2 class="section-title">Personal Email Account</h2>
+                    <p class="section-subtitle">Configure your personal IMAP/SMTP credentials for the email module.</p>
+				</div>
 				</div>
                 <?php $psEmailComingSoon = true; ?>
                 <?php if ($psEmailComingSoon): ?>
@@ -1280,7 +1280,7 @@ $isActiveUser = !isset($user['is_active']) || (int) $user['is_active'] === 1;
                 </form>
                 <?php endif; ?>
             </section>
-                    </div>
+                </div>
 
                 <aside class="acct-aside">
                     <div class="ps-status-card">
@@ -1593,11 +1593,11 @@ function clearCanvas() {
 		confirmText: 'Yes, Clear!',
 		fallback: 'Clear your signature?'
 	}, () => {
-		ctx.clearRect(0, 0, canvas.width, canvas.height);
-		strokes = [];
-		redoStack = [];
-		updateButtons();
-		updatePlaceholder();
+	ctx.clearRect(0, 0, canvas.width, canvas.height);
+	strokes = [];
+	redoStack = [];
+	updateButtons();
+	updatePlaceholder();
 	});
 }
 

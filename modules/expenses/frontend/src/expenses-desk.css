@@ -6922,3 +6922,19 @@ body.page-exp-desk button.exp-desk-row-action {
 
 
 .exp-kpi-scroll-btn--up { bottom: 24px; }
+
+/* AI insight - tidy mobile layout */
+@media (max-width: 720px) {
+  .exp-ai-bar { border-radius: 14px; }
+  .exp-ai-bar-head { flex-wrap: wrap; align-items: center; row-gap: 4px; padding: 10px 12px; }
+  .exp-ai-bar-title { order: 1; font-size: 13px; }
+  .exp-ai-bar-icon { order: 0; }
+  .exp-ai-bar-badge { order: 2; }
+  .exp-ai-bar-head > svg:last-child { order: 3; margin-left: auto; }
+  .exp-ai-bar-head > .animate-spin { order: 2; }
+  .exp-ai-bar-summary { order: 4; flex: 0 0 100%; font-size: 12px; line-height: 1.45; opacity: 0.85; }
+  .exp-ai-bar-body { padding: 0 12px 10px; gap: 6px; border-top: 1px solid rgba(124,58,237,0.18); padding-top: 8px; }
+  .exp-ai-bar-line { padding-right: 0; font-size: 12.5px; line-height: 1.45; }
+  .exp-ai-bar-link { position: static; align-self: flex-end; font-size: 12.5px; padding: 2px 0; }
+  .exp-ai-bar-details { padding: 8px 12px 10px; }
+}

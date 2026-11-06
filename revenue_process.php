@@ -378,6 +378,7 @@ if (isset($_POST['action']) && $_POST['action'] === 'register_entry') {
             $pdo->prepare('UPDATE revenue_entries SET total_paid = ?, payment_status = ?, payment_mode = ?, attachment = ? WHERE id = ?')
                 ->execute([$newTotalPaid, $paymentStatus, $paymentType, $attachment, $entryId]);
         }
+        syncOutstandingRevenueBalance($pdo, $entryId);
 
         $invCols = invoiceTableColumns($pdo);
         if ($invoiceId > 0 && in_array('amount_paid', $invCols, true) && in_array('status', $invCols, true)) {
@@ -475,6 +476,7 @@ if (isset($_POST['action']) && $_POST['action'] === 'collect_payment') {
             
             $stmt = $pdo->prepare("UPDATE revenue_entries SET total_paid = ?, payment_status = ? WHERE id = ?");
             $stmt->execute([$new_total_paid, $new_status, $entry_id]);
+            syncOutstandingRevenueBalance($pdo, $entry_id);
 
             // Record in Balances
                 if (!empty($_POST['account_id'])) {

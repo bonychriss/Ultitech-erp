@@ -16329,10 +16329,78 @@ function endMeeting($meeting_id)
 /**
  * Ensure schema for Outstanding Invoices module
  */
-function ensureOutstandingInvoicesSchema()
+function ensurePaymentVoucherDueDateColumn(PDO $connection): void
+{
+    if (!columnExists('payment_vouchers', 'due_date', $connection)) {
+        $connection->exec('ALTER TABLE payment_vouchers ADD COLUMN due_date DATE NULL DEFAULT NULL');
+    }
+}
+
+function validOutstandingDueDate(string $value): bool
+{
+    $date = DateTimeImmutable::createFromFormat('!Y-m-d', $value);
+    return $date !== false && $date->format('Y-m-d') === $value;
+}
+
+/** Read linked receivables using their current revenue balance, not a stale snapshot. */
+function outstandingInvoiceRows(PDO $connection): array
+{
+    $hasRevenue = tableExists('revenue_entries', $connection)
+        && columnExists('revenue_entries', 'amount_total', $connection)
+        && columnExists('revenue_entries', 'total_paid', $connection);
+    $hasInvoices = tableExists('invoices', $connection) && columnExists('invoices', 'status', $connection);
+    $hasVouchers = tableExists('payment_vouchers', $connection)
+        && columnExists('payment_vouchers', 'due_date', $connection);
+    $sql = 'SELECT oi.*';
+    $sql .= $hasRevenue ? ', re.id AS live_revenue_id, re.amount_total AS live_total, re.total_paid AS live_paid' : '';
+    $sql .= $hasInvoices ? ', i.status AS live_invoice_status' : '';
+    $sql .= $hasVouchers ? ', pv.due_date AS voucher_due_date' : '';
+    $sql .= ' FROM erp_outstanding_invoices oi';
+    $sql .= $hasRevenue ? ' LEFT JOIN revenue_entries re ON re.id = oi.source_revenue_entry_id AND oi.type = \'receivable\'' : '';
+    $sql .= $hasInvoices ? ' LEFT JOIN invoices i ON i.id = oi.source_invoice_id AND oi.type = \'receivable\'' : '';
+    $sql .= $hasVouchers ? ' LEFT JOIN payment_vouchers pv ON pv.id = oi.source_payment_voucher_id AND oi.type = \'payable\'' : '';
+    $sql .= ' ORDER BY oi.invoice_date DESC';
+    $rows = [];
+    foreach ($connection->query($sql)->fetchAll(PDO::FETCH_ASSOC) as $row) {
+        if ($row['type'] === 'receivable' && !empty($row['live_revenue_id'])) {
+            if (in_array(strtolower(trim((string) ($row['live_invoice_status'] ?? ''))), ['paid', 'cancelled', 'canceled', 'void'], true)) {
+                continue;
+            }
+            $paid = max(0.0, (float) $row['live_paid']);
+            $row['amount'] = max(0.0, (float) $row['live_total'] - $paid);
+            if ((float) $row['amount'] <= 0.009) {
+                continue;
+            }
+            $row['partially_paid'] = $paid > 0.009;
+        } elseif ($row['status'] !== 'outstanding') {
+            continue;
+        }
+        if ($row['type'] === 'payable' && !empty($row['voucher_due_date']) && $row['voucher_due_date'] !== '0000-00-00') {
+            $row['due_date'] = $row['voucher_due_date'];
+        }
+        $rows[] = $row;
+    }
+    return $rows;
+}
+
+function syncOutstandingRevenueBalance(PDO $connection, int $entryId): void
+{
+    if (!tableExists('erp_outstanding_invoices', $connection)
+        || !columnExists('erp_outstanding_invoices', 'source_revenue_entry_id', $connection)) {
+        return;
+    }
+    $connection->prepare("UPDATE erp_outstanding_invoices oi
+        INNER JOIN revenue_entries re ON re.id = oi.source_revenue_entry_id
+        SET oi.amount = GREATEST(COALESCE(re.amount_total, 0) - COALESCE(re.total_paid, 0), 0),
+            oi.status = CASE WHEN COALESCE(re.amount_total, 0) - COALESCE(re.total_paid, 0) > 0.009 THEN 'outstanding' ELSE 'paid' END
+        WHERE oi.type = 'receivable' AND re.id = ?")->execute([$entryId]);
+}
+
+function ensureOutstandingInvoicesSchema($connection = null)
 {
     global $pdo;
-    $pdo->exec("CREATE TABLE IF NOT EXISTS erp_outstanding_invoices (
+    $connection = $connection instanceof PDO ? $connection : $pdo;
+    $connection->exec("CREATE TABLE IF NOT EXISTS erp_outstanding_invoices (
         id INT AUTO_INCREMENT PRIMARY KEY,
         type ENUM('receivable', 'payable') NOT NULL,
         invoice_date DATE NOT NULL,
@@ -16341,10 +16409,237 @@ function ensureOutstandingInvoicesSchema()
         narration TEXT,
         amount DECIMAL(15,2) NOT NULL DEFAULT 0.00,
         attachment VARCHAR(255) NULL,
+        source_invoice_id INT NULL DEFAULT NULL,
+        due_date DATE NULL DEFAULT NULL,
+        source_revenue_entry_id INT NULL DEFAULT NULL,
+        source_payment_voucher_id INT NULL DEFAULT NULL,
         status ENUM('outstanding', 'paid') NOT NULL DEFAULT 'outstanding',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY uniq_source_invoice (source_invoice_id),
+        UNIQUE KEY uniq_source_revenue_entry (source_revenue_entry_id),
+        UNIQUE KEY uniq_source_payment_voucher (source_payment_voucher_id)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
+
+    $invoiceColumns = $connection->query('SHOW COLUMNS FROM erp_outstanding_invoices')->fetchAll(PDO::FETCH_COLUMN) ?: [];
+    if (!in_array('source_payment_voucher_id', $invoiceColumns, true)) {
+        $connection->exec('ALTER TABLE erp_outstanding_invoices ADD COLUMN source_payment_voucher_id INT NULL DEFAULT NULL');
+    }
+    if (!in_array('source_invoice_id', $invoiceColumns, true)) {
+        $connection->exec('ALTER TABLE erp_outstanding_invoices ADD COLUMN source_invoice_id INT NULL DEFAULT NULL');
+    }
+    if (!in_array('due_date', $invoiceColumns, true)) {
+        $connection->exec('ALTER TABLE erp_outstanding_invoices ADD COLUMN due_date DATE NULL DEFAULT NULL');
+    }
+    if (!in_array('source_revenue_entry_id', $invoiceColumns, true)) {
+        $connection->exec('ALTER TABLE erp_outstanding_invoices ADD COLUMN source_revenue_entry_id INT NULL DEFAULT NULL');
+    }
+    foreach ([
+        'uniq_source_payment_voucher' => 'source_payment_voucher_id',
+        'uniq_source_invoice' => 'source_invoice_id',
+        'uniq_source_revenue_entry' => 'source_revenue_entry_id',
+    ] as $indexName => $columnName) {
+        $index = $connection->query("SHOW INDEX FROM erp_outstanding_invoices WHERE Key_name = '{$indexName}'")->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        if ($index === []) {
+            $connection->exec("ALTER TABLE erp_outstanding_invoices ADD UNIQUE KEY {$indexName} ({$columnName})");
+        }
+    }
+}
+
+/** Backfill invoice due dates on existing receivables linked through revenue entries. */
+function backfillOutstandingInvoiceDueDates(): void
+{
+    global $pdo;
+    if (!($pdo instanceof PDO) || !function_exists('tableExists') || !function_exists('columnExists')) {
+        return;
+    }
+    if (!tableExists('revenue_entries', $pdo) || !tableExists('invoices', $pdo)) {
+        return;
+    }
+    ensureOutstandingInvoicesSchema($pdo);
+    foreach ([
+        ['erp_outstanding_invoices', 'source_revenue_entry_id'],
+        ['erp_outstanding_invoices', 'source_invoice_id'],
+        ['erp_outstanding_invoices', 'due_date'],
+        ['revenue_entries', 'source_invoice_id'],
+        ['invoices', 'due_date'],
+    ] as [$table, $column]) {
+        if (!columnExists($table, $column, $pdo)) {
+            return;
+        }
+    }
+
+    $revenueColumns = $pdo->query('SHOW COLUMNS FROM revenue_entries')->fetchAll(PDO::FETCH_COLUMN) ?: [];
+    $invoiceColumns = $pdo->query('SHOW COLUMNS FROM invoices')->fetchAll(PDO::FETCH_COLUMN) ?: [];
+    foreach (['customer_name', 'source_invoice_id', 'amount_total', 'total_paid'] as $requiredColumn) {
+        if (!in_array($requiredColumn, $revenueColumns, true)) {
+            return;
+        }
+    }
+    foreach (['id', 'invoice_number', 'invoice_date', 'customer_id'] as $requiredColumn) {
+        if (!in_array($requiredColumn, $invoiceColumns, true)) {
+            return;
+        }
+    }
+
+    $companyId = function_exists('currentCompanyId') ? (int) (currentCompanyId() ?? 0) : 0;
+    $companyFilter = '';
+    $hasCompanyScope = false;
+    foreach ([['invoices', $invoiceColumns, 'i'], ['revenue_entries', $revenueColumns, 're']] as [$table, $columns, $alias]) {
+        if (!in_array('company_id', $columns, true)) {
+            continue;
+        }
+        $hasCompanyScope = true;
+        if ($companyId <= 0) {
+            return;
+        }
+        $isUltimate = function_exists('isUltimatePrimaryCompanyId')
+            ? isUltimatePrimaryCompanyId($companyId)
+            : ($companyId === 1);
+        $companyFilter .= $isUltimate
+            ? " AND ({$alias}.company_id = {$companyId} OR {$alias}.company_id IS NULL OR {$alias}.company_id = 0)"
+            : " AND {$alias}.company_id = {$companyId}";
+    }
+
+    $pdo->exec("CREATE TABLE IF NOT EXISTS erp_outstanding_invoice_migrations (
+        migration_key VARCHAR(100) NOT NULL PRIMARY KEY,
+        completed_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+    $migrationKey = 'backfill_sales_invoice_receivables_v1' . ($hasCompanyScope ? '_company_' . $companyId : '');
+    $migrationCheck = $pdo->prepare('SELECT 1 FROM erp_outstanding_invoice_migrations WHERE migration_key = ? LIMIT 1');
+    $migrationCheck->execute([$migrationKey]);
+    if ($migrationCheck->fetchColumn()) {
+        return;
+    }
+
+    $dueDateExpr = in_array('due_date', $invoiceColumns, true) ? 'NULLIF(i.due_date, \'0000-00-00\')' : 'NULL';
+    $narrationExpr = in_array('narration', $revenueColumns, true)
+        ? "COALESCE(NULLIF(re.narration, ''), CONCAT('Sales invoice ', i.invoice_number))"
+        : "CONCAT('Sales invoice ', i.invoice_number)";
+    $statusFilter = in_array('status', $invoiceColumns, true)
+        ? " AND LOWER(TRIM(COALESCE(i.status, ''))) NOT IN ('cancelled', 'canceled', 'void')"
+        : '';
+    $attachmentExpr = in_array('attachment', $revenueColumns, true) ? 're.attachment' : 'NULL';
+    $backfill = $pdo->prepare("INSERT INTO erp_outstanding_invoices
+        (type, invoice_date, entity_name, invoice_number, narration, amount, attachment, source_invoice_id, due_date, source_revenue_entry_id)
+        SELECT 'receivable',
+            COALESCE(i.invoice_date, CURDATE()),
+            COALESCE(NULLIF(TRIM(re.customer_name), ''), CONCAT('Customer #', i.customer_id)),
+            i.invoice_number,
+            {$narrationExpr},
+            GREATEST(COALESCE(re.amount_total, 0) - COALESCE(re.total_paid, 0), 0),
+            {$attachmentExpr},
+            i.id,
+            {$dueDateExpr},
+            re.id
+        FROM revenue_entries re
+        INNER JOIN invoices i ON i.id = re.source_invoice_id
+        WHERE re.source_invoice_id > 0
+            AND COALESCE(re.amount_total, 0) - COALESCE(re.total_paid, 0) > 0.009
+            {$statusFilter}
+            {$companyFilter}
+        ON DUPLICATE KEY UPDATE
+            source_invoice_id = VALUES(source_invoice_id),
+            due_date = VALUES(due_date),
+            invoice_number = VALUES(invoice_number),
+            amount = VALUES(amount)");
+    $backfill->execute();
+    $pdo->prepare('INSERT INTO erp_outstanding_invoice_migrations (migration_key) VALUES (?)')->execute([$migrationKey]);
+}
+
+/** Backfill existing unpaid TZS credit vouchers into Outstanding Payables once. */
+function backfillOutstandingCreditVoucherPayables(): void
+{
+    global $pdo;
+    static $checked = false;
+    if ($checked || !($pdo instanceof PDO)) {
+        return;
+    }
+    $checked = true;
+    if (!function_exists('tableExists') || !tableExists('payment_vouchers', $pdo) || !tableExists('voucher_items', $pdo)) {
+        return;
+    }
+
+    try {
+        $pdo->exec("CREATE TABLE IF NOT EXISTS erp_outstanding_invoice_migrations (
+            migration_key VARCHAR(100) NOT NULL PRIMARY KEY,
+            completed_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+        $voucherColumns = $pdo->query('SHOW COLUMNS FROM payment_vouchers')->fetchAll(PDO::FETCH_COLUMN) ?: [];
+        $companyId = function_exists('currentCompanyId') ? (int) (currentCompanyId() ?? 0) : 0;
+        $hasCompanyColumn = in_array('company_id', $voucherColumns, true);
+        if ($hasCompanyColumn && $companyId <= 0) {
+            return;
+        }
+        $migrationKey = 'backfill_credit_pv_payables_v1' . ($hasCompanyColumn ? '_company_' . $companyId : '');
+        $migrationCheck = $pdo->prepare('SELECT 1 FROM erp_outstanding_invoice_migrations WHERE migration_key = ? LIMIT 1');
+        $migrationCheck->execute([$migrationKey]);
+        if ($migrationCheck->fetchColumn()) {
+            return;
+        }
+
+        $paidFilter = in_array('is_paid', $voucherColumns, true)
+            ? 'COALESCE(pv.is_paid, 0) = 0'
+            : "LOWER(TRIM(COALESCE(pv.status, ''))) <> 'paid'";
+        $draftFilter = in_array('is_draft', $voucherColumns, true)
+            ? 'COALESCE(pv.is_draft, 0) = 0'
+            : "LOWER(TRIM(COALESCE(pv.status, ''))) <> 'draft'";
+        $companyFilter = $hasCompanyColumn ? ' AND pv.company_id = ' . $companyId : '';
+        $credits = $pdo->query("SELECT pv.id, pv.voucher_no, pv.payee_name, pv.description,
+                    DATE(pv.date_created) AS invoice_date, SUM(vi.amount) AS credit_amount
+                FROM payment_vouchers pv
+                INNER JOIN voucher_items vi ON vi.voucher_id = pv.id
+                WHERE UPPER(TRIM(COALESCE(vi.payment_type, ''))) = 'CREDIT'
+                    AND UPPER(TRIM(COALESCE(pv.currency, 'TZS'))) = 'TZS'
+                    AND TRIM(COALESCE(pv.voucher_no, '')) <> ''
+                    AND TRIM(COALESCE(pv.payee_name, '')) <> ''
+                    AND {$paidFilter}
+                    AND {$draftFilter}
+                    {$companyFilter}
+                    AND LOWER(TRIM(COALESCE(pv.status, ''))) NOT IN ('draft', 'rejected', 'paid', 'cancelled', 'canceled')
+                GROUP BY pv.id, pv.voucher_no, pv.payee_name, pv.description, pv.date_created
+                HAVING SUM(vi.amount) > 0")->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+        $findPayable = $pdo->prepare("SELECT id, status FROM erp_outstanding_invoices
+            WHERE type = 'payable' AND (source_payment_voucher_id = ? OR (source_payment_voucher_id IS NULL AND invoice_number = ? AND entity_name = ?))
+            ORDER BY (source_payment_voucher_id = ?) DESC, id ASC LIMIT 1");
+        $linkExisting = $pdo->prepare("UPDATE erp_outstanding_invoices
+            SET source_payment_voucher_id = ?, invoice_date = ?, invoice_number = ?, narration = ?, amount = ?
+            WHERE id = ? AND status = 'outstanding' AND (source_payment_voucher_id IS NULL OR source_payment_voucher_id = ?)");
+        $insertPayable = $pdo->prepare("INSERT INTO erp_outstanding_invoices
+            (type, invoice_date, entity_name, invoice_number, narration, amount, source_payment_voucher_id)
+            VALUES ('payable', ?, ?, ?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID(id)");
+
+        foreach ($credits as $credit) {
+            $voucherId = (int) $credit['id'];
+            $voucherNo = trim((string) $credit['voucher_no']);
+            $payeeName = trim((string) $credit['payee_name']);
+            $invoiceDate = (string) ($credit['invoice_date'] ?? '');
+            if ($invoiceDate === '' || $invoiceDate === '0000-00-00') {
+                $invoiceDate = date('Y-m-d');
+            }
+            $description = trim((string) ($credit['description'] ?? ''));
+            if ($description === '') {
+                $description = 'Payment voucher ' . $voucherNo;
+            }
+            $amount = (float) $credit['credit_amount'];
+
+            $findPayable->execute([$voucherId, $voucherNo, $payeeName, $voucherId]);
+            $existing = $findPayable->fetch(PDO::FETCH_ASSOC);
+            if ($existing) {
+                if (($existing['status'] ?? '') === 'outstanding') {
+                    $linkExisting->execute([$voucherId, $invoiceDate, $voucherNo, $description, $amount, (int) $existing['id'], $voucherId]);
+                }
+                continue;
+            }
+            $insertPayable->execute([$invoiceDate, $payeeName, $voucherNo, $description, $amount, $voucherId]);
+        }
+
+        $pdo->prepare('INSERT INTO erp_outstanding_invoice_migrations (migration_key) VALUES (?)')->execute([$migrationKey]);
+    } catch (Throwable $e) {
+        error_log('Outstanding credit voucher backfill failed: ' . $e->getMessage());
+    }
 }
 
 /**

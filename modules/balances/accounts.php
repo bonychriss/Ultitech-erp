@@ -802,6 +802,19 @@ $rayResolveParentIcon = static function (array $parentRow): array {
     return [$iconTone, $iconClass];
 };
 
+if (($_GET['from'] ?? '') === 'accounting-settings') {
+    $_SESSION['balances_coa_from'] = 'accounting-settings';
+} elseif (!str_contains((string) ($_SERVER['HTTP_REFERER'] ?? ''), '/balances/accounts')) {
+    unset($_SESSION['balances_coa_from']);
+}
+if (($_SESSION['balances_coa_from'] ?? '') === 'accounting-settings') {
+    $erpBreadcrumbs = [
+        ['label' => 'Accounting', 'href' => app_url('/modules/accounting/index.php?module=accounting')],
+        ['label' => 'Settings', 'href' => company_url('accounting/settings?module=accounting')],
+        ['label' => 'Chart of Accounts'],
+    ];
+}
+
 include __DIR__ . '/includes/header.php';
 ?>
 <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">

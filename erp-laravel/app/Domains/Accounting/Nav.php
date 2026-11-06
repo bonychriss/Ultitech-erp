@@ -85,14 +85,6 @@ final class Nav
                 'tone' => 'violet',
             ],
             [
-                'id' => 'journal-configuration',
-                'title' => 'Journal Configuration',
-                'desc' => 'Configure journal settings and posting rules.',
-                'href' => $u('accounting/journal-configuration') . '?module=accounting',
-                'icon' => 'gear',
-                'tone' => 'violet',
-            ],
-            [
                 'id' => 'financial-statements',
                 'title' => 'Financial Statements',
                 'desc' => 'Trial balance and other period financial reports.',

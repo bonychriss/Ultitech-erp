@@ -127,19 +127,19 @@ $fontFamily = function_exists('sales_document_font_family_css')
         .sheet-container:last-child,
         .sheet:last-child,
         .doc-sheet:last-child {
-            page-break-after: auto;
+            page-break-after: auto; 
         }
         body.pdf-mode { background: white; }
         body.pdf-mode .sheet-container,
         body.pdf-mode .sheet,
         body.pdf-mode .doc-sheet {
-            box-shadow: none;
-            margin: 0;
+            box-shadow: none; 
+            margin: 0; 
             border: none;
             width: 100% !important;
             min-height: auto !important;
             padding-top: 5mm !important;
-            padding-bottom: 5mm !important;
+            padding-bottom: 5mm !important; 
         }
         body.pdf-mode .no-print,
         body.pdf-mode #downloadBtn { display: none; }
@@ -195,7 +195,7 @@ $fontFamily = function_exists('sales_document_font_family_css')
                 notifySalesDocPdf(false, 'Document content not found.');
                 return;
             }
-
+            
             const opt = {
                 margin: [0, 0, 0, 0],
                 filename: <?php echo json_encode($filename_prefix . $displayOrderNumber . '.pdf'); ?>,
@@ -225,20 +225,20 @@ $fontFamily = function_exists('sales_document_font_family_css')
             <?php endif; ?>
         });
     </script>
-
+    
     <?php if (!$auto_print && empty($embedMode)): ?>
     <button id="downloadBtn" class="no-print" type="button" onclick="downloadPDF()" style="
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        z-index: 9999;
-        background: #008784;
+        position: fixed; 
+        top: 20px; 
+        right: 20px; 
+        z-index: 9999; 
+        background: #008784; 
         color: #fff;
-        border: none;
+        border: none; 
         border-radius: 8px;
         padding: 10px 16px;
         font-weight: 600;
-        cursor: pointer;
+        cursor: pointer; 
         box-shadow: 0 2px 5px rgba(0,0,0,0.2);
     ">
         <i class="fas fa-download"></i> Download PDF

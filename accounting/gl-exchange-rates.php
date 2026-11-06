@@ -11,6 +11,10 @@ if (!isAdmin() && !isFinance()) {
 global $pdo;
 
 $schemaReady = gl_ensure_schema($pdo);
+if ($schemaReady && $_SERVER['REQUEST_METHOD'] !== 'POST') {
+    require_once __DIR__ . '/../includes/gl/gl_fx_auto.php';
+    gl_fx_auto_refresh_if_due($pdo, $_SESSION['user_id'] ?? null);
+}
 $base = gl_base_currency($pdo);
 $flash = null;
 $flashOk = true;

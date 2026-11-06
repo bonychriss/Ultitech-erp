@@ -156,6 +156,10 @@ if ($view === 'list') {
         $where[] = '(e.entry_number LIKE ? OR e.description LIKE ? OR e.source_ref LIKE ?)';
         array_push($params, "%{$q}%", "%{$q}%", "%{$q}%");
     }
+    if ($jrn !== '') {
+        $where[] = 'e.journal_code = ?';
+        $params[] = $jrn;
+    }
     if (isset($kindLabels[$kind])) {
         $where[] = 'e.entry_kind = ?';
         $params[] = $kind;
@@ -200,18 +204,20 @@ $accountOptions = static function (int $selected) use ($accounts, $typeLabels): 
       <form method="get" class="glr-sec glr-form">
         <input type="search" name="q" value="<?= gl_h($q) ?>" placeholder="Entry no., description or reference" style="width:260px">
         <select name="kind"><option value="">All kinds</option><?php foreach ($kindLabels as $k => $l): ?><option value="<?= gl_h($k) ?>" <?= $kind === $k ? 'selected' : '' ?>><?= gl_h($l) ?></option><?php endforeach; ?></select>
+        <select name="journal"><option value="">All journals</option><?php foreach ($jrnList as $j): ?><option value="<?= gl_h($j['code'] ?? '') ?>" <?= $jrn === ($j['code'] ?? '') ? 'selected' : '' ?>><?= gl_h(($j['code'] ?? '') . ' - ' . ($j['name'] ?? '')) ?></option><?php endforeach; ?></select>
         <label>From <input type="date" name="from_date" value="<?= gl_h($from) ?>"></label>
         <label>To <input type="date" name="to_date" value="<?= gl_h($to) ?>"></label>
         <button class="glr-btn" type="submit">Filter</button>
       </form>
       <section class="glr-sec">
         <div class="glr-tw"><table class="glr-t">
-          <thead><tr><th>Entry</th><th>Date</th><th>Description</th><th>Reference</th><th>Kind</th><th class="n">Amount</th></tr></thead>
+          <thead><tr><th>Entry</th><th>Journal</th><th>Date</th><th>Description</th><th>Reference</th><th>Kind</th><th class="n">Amount</th></tr></thead>
           <tbody>
-          <?php if (!$entries): ?><tr><td colspan="6">No entries match.</td></tr><?php endif; ?>
+          <?php if (!$entries): ?><tr><td colspan="7">No entries match.</td></tr><?php endif; ?>
           <?php foreach ($entries as $e): ?>
             <tr>
               <td><a href="gl-journal.php?id=<?= (int) $e['id'] ?>"><b><?= gl_h($e['entry_number']) ?></b></a></td>
+              <td><?= gl_h($e['journal_code'] ?? accounting_journal_code_for_source($pdo, (string) $e['source_type'], !empty($e['reversal_of_id']) ? (int) $e['reversal_of_id'] : null)) ?></td>
               <td><?= gl_h(date('d M Y', strtotime($e['entry_date']))) ?></td>
               <td class="wrap"><?= gl_h($e['description']) ?></td>
               <td><?= gl_h($e['source_ref']) ?></td>

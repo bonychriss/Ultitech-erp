@@ -124,6 +124,22 @@
 .gpt-links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
 .gpt-links a { color: #0d0d0d; font-size: 14px; }
 
+.gpt-table-wrap { overflow-x: auto; margin: 10px 0; white-space: normal; }
+.gpt-table { border-collapse: collapse; width: 100%; font-size: 13px; }
+.gpt-table th, .gpt-table td { border: 1px solid #e5e7eb; padding: 6px 10px; text-align: left; }
+.gpt-table th { background: #f3f4f6; font-weight: 600; }
+.gpt-chart { margin: 10px 0; white-space: normal; font-size: 12px; }
+.gpt-chart-title { font-weight: 600; margin-bottom: 6px; font-size: 13px; }
+.gpt-bar-row { display: grid; grid-template-columns: minmax(90px, 30%) 1fr auto; gap: 8px; align-items: center; margin-bottom: 4px; }
+.gpt-bar-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gpt-bar-track { background: #eef0f4; border-radius: 6px; height: 12px; }
+.gpt-bar { background: #6d4aff; height: 12px; border-radius: 6px; }
+.gpt-bar-value { font-variant-numeric: tabular-nums; }
+.gpt-image { max-width: 100%; border-radius: 10px; margin: 8px 0; display: block; }
+html[data-theme="dark"] .gpt-table th, html[data-theme="dark"] .gpt-table td { border-color: #3a3a3a; }
+html[data-theme="dark"] .gpt-table th { background: #2a2a2a; }
+html[data-theme="dark"] .gpt-bar-track { background: #333; }
+
 .gpt-dots { display: inline-flex; gap: 4px; padding-top: 8px; }
 .gpt-dots span {
   width: 7px;

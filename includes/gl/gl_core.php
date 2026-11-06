@@ -14,7 +14,7 @@
  */
 
 if (!defined('GL_SCHEMA_VERSION')) {
-    define('GL_SCHEMA_VERSION', 3);
+    define('GL_SCHEMA_VERSION', 4);
 }
 
 if (!function_exists('gl_table_exists')) {
@@ -186,6 +186,10 @@ if (!function_exists('gl_ensure_schema')) {
                 }
             }
 
+            // Journal the entry belongs to (e.g. SAL). Older entries stay NULL; reports derive theirs from source_type.
+            if (!gl_column_exists($pdo, 'gl_journal_entries', 'journal_code')) {
+                $pdo->exec('ALTER TABLE gl_journal_entries ADD COLUMN journal_code VARCHAR(8) NULL DEFAULT NULL, ADD KEY idx_gl_journal_code (journal_code)');
+            }
             if (!gl_column_exists($pdo, 'erp_accounts', 'system_key')) {
                 $pdo->exec('ALTER TABLE erp_accounts ADD COLUMN system_key VARCHAR(50) NULL DEFAULT NULL');
             }
@@ -248,6 +252,7 @@ if (!function_exists('gl_system_account_defs')) {
             'accounts_payable' => ['2100', 'Accounts Payable', 'liability'],
             'vat_payable' => ['2200', 'Tax Payable', 'liability'],
             'opening_balance_equity' => ['3900', 'Opening Balance Equity', 'equity'],
+            'retained_earnings' => ['3200', 'Retained Earnings', 'equity'],
             'sales_revenue' => ['4002', 'Sales Revenue', 'revenue'],
             'fx_gain_loss' => ['5990', 'Foreign Exchange Gain/Loss', 'expense'],
         ];
@@ -342,6 +347,20 @@ if (!function_exists('gl_system_account')) {
         }
         [$code, $name, $type] = $defs[$key];
 
+        if (!function_exists('accounting_get_gl_role_account_id')) {
+            require_once dirname(__DIR__) . '/accounting_settings.php';
+        }
+        $configured = 0;
+        if ($key === 'sales_revenue') {
+            $configured = (int) (accounting_get_default_sales_revenue_gl_account_id($pdo) ?: 0);
+        } elseif ($role = accounting_role_for_gl_system_key($key)) {
+            $configured = (int) (accounting_get_gl_role_account_id($pdo, $role) ?: 0);
+        }
+        if ($configured > 0) {
+            $cache[$ck] = $configured;
+            return $configured;
+        }
+
         $st = $pdo->prepare('SELECT id FROM erp_accounts WHERE system_key = ? LIMIT 1');
         $st->execute([$key]);
         $id = (int) ($st->fetchColumn() ?: 0);
@@ -350,8 +369,14 @@ if (!function_exists('gl_system_account')) {
             $id = (int) (accounting_resolve_default_sales_revenue_gl_account_id($pdo) ?: 0);
         }
         if ($id <= 0) {
-            $st = $pdo->prepare('SELECT id FROM erp_accounts WHERE code = ? AND LOWER(type) = ? AND system_key IS NULL ORDER BY id LIMIT 1');
-            $st->execute([$code, $type]);
+            // Only adopt an untagged account by code when its name also fits (e.g. 2100 "Loans Payable" is not Accounts Payable).
+            $nameHints = [
+                'accounts_receivable' => 'receivable', 'inventory' => 'inventor', 'transfer_clearing' => 'transfer',
+                'suspense' => 'suspense', 'accounts_payable' => 'accounts payable', 'vat_payable' => 'tax',
+                'opening_balance_equity' => 'opening', 'retained_earnings' => 'retained', 'sales_revenue' => 'revenue', 'fx_gain_loss' => 'exchange',
+            ];
+            $st = $pdo->prepare('SELECT id FROM erp_accounts WHERE code = ? AND LOWER(type) = ? AND system_key IS NULL AND LOWER(name) LIKE ? ORDER BY id LIMIT 1');
+            $st->execute([$code, $type, '%' . ($nameHints[$key] ?? strtolower($name)) . '%']);
             $id = (int) ($st->fetchColumn() ?: 0);
         }
         if ($id <= 0) {
@@ -368,6 +393,29 @@ if (!function_exists('gl_system_account')) {
 
         $cache[$ck] = $id;
         return $id;
+    }
+}
+
+if (!function_exists('gl_fiscal_year_start_month')) {
+    /** Month (1-12) the financial year starts in; defaults to January. */
+    function gl_fiscal_year_start_month(PDO $pdo): int
+    {
+        $m = (int) (gl_meta_get($pdo, 'fiscal_year_start_month') ?? 1);
+        return ($m >= 1 && $m <= 12) ? $m : 1;
+    }
+}
+
+if (!function_exists('gl_fiscal_year_bounds')) {
+    /** @return array{0:string,1:string} first and last day of the financial year containing $date */
+    function gl_fiscal_year_bounds(PDO $pdo, ?string $date = null): array
+    {
+        $ts = $date ? strtotime($date) : time();
+        $ts = $ts ?: time();
+        $m = gl_fiscal_year_start_month($pdo);
+        $year = (int) date('Y', $ts) - ((int) date('n', $ts) < $m ? 1 : 0);
+        $start = sprintf('%04d-%02d-01', $year, $m);
+        $end = date('Y-m-d', strtotime($start . ' +1 year -1 day'));
+        return [$start, $end];
     }
 }
 
@@ -572,6 +620,21 @@ if (!function_exists('gl_post_entry')) {
             }
         }
 
+        $journalCode = null;
+        try {
+            if (!function_exists('accounting_journal_code_for_source') && is_file(dirname(__DIR__) . '/accounting_journals.php')) {
+                require_once dirname(__DIR__) . '/accounting_settings.php';
+                require_once dirname(__DIR__) . '/accounting_journals.php';
+            }
+            if (!empty($entry['journal_code'])) {
+                $journalCode = strtoupper(mb_substr((string) $entry['journal_code'], 0, 8));
+            } elseif (function_exists('accounting_journal_code_for_source')) {
+                $journalCode = accounting_journal_code_for_source($pdo, $sourceType, !empty($entry['reversal_of_id']) ? (int) $entry['reversal_of_id'] : null);
+            }
+        } catch (Throwable $e) {
+            error_log('gl_post_entry journal lookup: ' . $e->getMessage());
+        }
+
         $own = !$pdo->inTransaction();
         try {
             if ($own) {
@@ -583,8 +646,8 @@ if (!function_exists('gl_post_entry')) {
                 try {
                     $pdo->prepare('INSERT INTO gl_journal_entries
                         (entry_number, entry_date, original_date, description, source_type, source_key, source_ref,
-                         entry_kind, reversal_of_id, total_amount, currency, company_id, created_by)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+                         entry_kind, reversal_of_id, total_amount, currency, company_id, created_by, journal_code)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
                         ->execute([
                             gl_next_entry_number($pdo, $date),
                             $date,
@@ -599,6 +662,7 @@ if (!function_exists('gl_post_entry')) {
                             $entryCurrency,
                             !empty($entry['company_id']) ? (int) $entry['company_id'] : null,
                             $entry['created_by'] ?? ($_SESSION['user_id'] ?? null),
+                            $journalCode,
                         ]);
                     $entryId = (int) $pdo->lastInsertId();
                 } catch (PDOException $e) {

@@ -33,9 +33,10 @@ if (!function_exists('gl_account_movements')) {
      *
      * @return list<array<string, mixed>>
      */
-    function gl_account_movements(PDO $pdo, ?string $from, string $to): array
+    function gl_account_movements(PDO $pdo, ?string $from, string $to, bool $excludeClosing = false): array
     {
         $from = $from ?: '0001-01-01';
+        $closing = $excludeClosing ? " AND e.entry_kind <> 'closing'" : '';
         $st = $pdo->prepare("SELECT a.id, COALESCE(a.code, '') AS code, a.name, a.type,
                                     SUM(IF(e.entry_date < ?, l.debit - l.credit, 0)) AS opening,
                                     SUM(IF(e.entry_date BETWEEN ? AND ?, l.debit, 0)) AS debit,
@@ -43,7 +44,7 @@ if (!function_exists('gl_account_movements')) {
                              FROM gl_journal_lines l
                              JOIN gl_journal_entries e ON e.id = l.entry_id
                              JOIN erp_accounts a ON a.id = l.account_id
-                             WHERE e.entry_date <= ?
+                             WHERE e.entry_date <= ?{$closing}
                              GROUP BY a.id, a.code, a.name, a.type
                              ORDER BY a.code + 0, a.code, a.name");
         $st->execute([$from, $from, $to, $from, $to, $to]);
@@ -76,7 +77,7 @@ if (!function_exists('gl_profit_and_loss')) {
     {
         $rev = [];
         $exp = [];
-        foreach (gl_account_movements($pdo, $from, $to) as $a) {
+        foreach (gl_account_movements($pdo, $from, $to, true) as $a) {
             $period = round($a['debit'] - $a['credit'], 2);
             if (abs($period) < 0.005) {
                 continue;

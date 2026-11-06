@@ -1883,7 +1883,11 @@ if (!isset($_GET['print'])) {
         }
     }
     ?>
-    <a href="<?= $accountLink ?>" class="d-flex align-items-center mb-3 px-2 text-decoration-none user-profile-link" style="color: inherit; gap: 12px;">
+    <?php
+    $__sidebarScriptPath = str_replace('\\', '/', (string) ($_SERVER['SCRIPT_NAME'] ?? ''));
+    $__onProfilePage = strpos($__sidebarScriptPath, '/employee/account.php') !== false;
+    ?>
+    <a href="<?= $accountLink ?>" class="d-flex align-items-center mb-3 px-2 text-decoration-none user-profile-link user-profile-toggle<?= $__onProfilePage ? ' is-open' : '' ?>" style="color: inherit; gap: 12px;" title="Profile Settings and Preferences"<?= $__onProfilePage ? ' aria-current="page"' : '' ?>>
         <div style="background: #e2e8f0; color: #475569; width: 36px !important; height: 36px !important; min-width: 36px !important; min-height: 36px !important; max-width: 36px !important; max-height: 36px !important; border-radius: 50% !important; aspect-ratio: 1/1 !important; display: flex !important; align-items: center !important; justify-content: center !important; font-size: 18px; border: 1.5px solid var(--sidebar-border, rgba(0, 0, 0, 0.1)) !important; flex-shrink: 0 !important; position: relative !important; overflow: hidden !important;">
             <i class="bi bi-person-fill"></i>
             <?php if (!empty($sidebarUserPhotoUrl)): ?>
@@ -1894,11 +1898,38 @@ if (!isset($_GET['print'])) {
              <div style="font-weight: 700; font-size: 13px; color: #1e293b; line-height: 1.2;"><?= htmlspecialchars($_SESSION['full_name'] ?? 'User') ?></div>
              <div style="font-size: 11px; font-weight: 500; color: #5c59f0;"><?= htmlspecialchars(ucwords(str_replace('_', ' ', $_SESSION['role'] ?? 'Staff'))) ?></div>
         </div>
+        <i class="bi bi-chevron-right sidebar-text user-profile-chevron" aria-hidden="true"></i>
     </a>
     <style>
-        .user-profile-link:hover {
-            background-color: transparent;
-            border-radius: 8px;
+        #native-sidebar .user-profile-toggle {
+            width: 100%;
+            background: transparent;
+            border: 0;
+            border-radius: 10px;
+            padding-top: 6px;
+            padding-bottom: 6px;
+            text-align: left;
+            cursor: pointer;
+        }
+        #native-sidebar .user-profile-toggle:hover,
+        #native-sidebar .user-profile-toggle.is-open {
+            background-color: rgba(92, 89, 240, 0.08);
+        }
+        #native-sidebar .user-profile-toggle .sidebar-text:not(.user-profile-chevron) {
+            flex: 1 1 auto;
+            min-width: 0;
+        }
+        #native-sidebar .user-profile-chevron {
+            font-size: 12px;
+            color: #94a3b8;
+            flex-shrink: 0;
+        }
+        body.sidebar-collapsed #native-sidebar .user-profile-toggle {
+            justify-content: center;
+        }
+        html[data-theme="dark"] #native-sidebar .user-profile-toggle:hover,
+        html[data-theme="dark"] #native-sidebar .user-profile-toggle.is-open {
+            background-color: rgba(255, 255, 255, 0.06);
         }
     </style>
     
@@ -1910,7 +1941,7 @@ if (!isset($_GET['print'])) {
 
     <ul class="nav nav-pills flex-column mb-auto">
         <?php foreach ($menuItems as $item):
-            if ($item['id'] === 'account') continue; // Move to Account section later
+            if (in_array($item['id'], ['account', 'ai-agent', 'personalization'], true)) continue;
             if ($active_module === 'todo' && $item['id'] === 'dashboard') continue;
             
             $hasChildren = !empty($item['children']) && is_array($item['children']);
@@ -2136,24 +2167,7 @@ if (!isset($_GET['print'])) {
     ?>
 
     <?php if ($active_module !== 'analytics'): ?>
-    <div class="px-3 mb-2 mt-4 small fw-bold text-muted sidebar-text" style="font-size: 10px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.5;">
-        Account
-    </div>
-    
-    <ul class="nav nav-pills flex-column">
-        <li class="nav-item">
-             <?php $__onAccountPage = strpos(str_replace('\\', '/', (string) ($_SERVER['SCRIPT_NAME'] ?? '')), '/employee/account.php') !== false; ?>
-             <a href="<?= $accountLink ?>" class="nav-link<?= $__onAccountPage ? ' active' : '' ?>" title="Profile Settings"<?= $__onAccountPage ? ' aria-current="page"' : '' ?>>
-                <i class="bi bi-person"></i>
-                <span class="sidebar-text">Profile Settings</span>
-            </a>
-        </li>
-        <li class="nav-item">
-             <a href="#" class="nav-link" onclick="openThemeModal(); return false;" title="Appearance">
-                <i class="bi bi-palette"></i>
-                <span class="sidebar-text">Appearance</span>
-            </a>
-        </li>
+    <ul class="nav nav-pills flex-column mt-3">
         <li class="nav-item sidebar-logout-mobile">
             <a href="<?= $prefix ?>logout.php" class="nav-link text-danger" title="Logout">
                 <i class="bi bi-box-arrow-right"></i>

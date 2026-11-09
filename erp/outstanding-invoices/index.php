@@ -97,18 +97,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
     
-    // Mark as Paid (Soft delete or status update) - User asked for "Outstanding", so marking paid removes it from list usually.
-    // Mark as Paid (Soft delete or status update) - User asked for "Outstanding", so marking paid removes it from list usually.
     if (isset($_POST['mark_paid'])) {
-        if (!isFinance()) {
-            $error = 'Only Finance users can mark invoices as paid.';
-        } else {
-            $id = (int)$_POST['id'];
-            $stmt = $pdo->prepare("DELETE FROM erp_outstanding_invoices WHERE id = ?");
-            if ($stmt->execute([$id])) {
-                $success = 'Invoice marked as paid and removed.';
-            }
-        }
+        $error = 'Mark Paid is no longer available on this page. Record the payment on the original invoice or voucher.';
     }
 
     // Delete Invoice
@@ -140,10 +130,12 @@ $entryMode = (($_GET['entry'] ?? '') === 'new');
 $typeFilter = ($activeTab === 'payables') ? 'payable' : 'receivable';
 
 $invoiceTotals = ['receivable' => 0.0, 'payable' => 0.0];
+$invoiceCounts = ['receivable' => 0, 'payable' => 0];
 $invoices = [];
 foreach (outstandingInvoiceRows($pdo) as $row) {
     if (isset($invoiceTotals[$row['type']])) {
         $invoiceTotals[$row['type']] += (float) $row['amount'];
+        $invoiceCounts[$row['type']]++;
     }
     if ($row['type'] === $typeFilter) $invoices[] = $row;
 }
@@ -464,6 +456,7 @@ $entityLabel = $activeTab === 'receivables' ? 'Customer' : 'Supplier';
         .oi-account-copy { display: grid; min-width: 0; gap: 3px; }
         .oi-account-copy strong { color: #334155; font-size: 0.74rem; font-weight: 650; }
         .oi-account-copy small { color: #64748b; font-size: 0.68rem; }
+        .oi-account-count { display: none; }
         .oi-account-total { margin-left: auto; color: #0f172a; font-size: 0.88rem; font-weight: 750; font-variant-numeric: tabular-nums; white-space: nowrap; }
         .oi-account-chevron { width: 16px; height: 16px; flex: 0 0 16px; color: #94a3b8; }
         .oi-header-search--mobile { display: none; }
@@ -525,6 +518,7 @@ $entityLabel = $activeTab === 'receivables' ? 'Customer' : 'Supplier';
             }
             .oi-account-copy strong { font-size: 0.7rem; line-height: 1.2; }
             .oi-account-copy small { font-size: 0.62rem; line-height: 1.2; }
+            .oi-account-count { display: block; }
             .oi-account-total {
                 grid-column: 1 / -1;
                 grid-row: 2;
@@ -982,13 +976,13 @@ $entityLabel = $activeTab === 'receivables' ? 'Customer' : 'Supplier';
         <nav class="oi-account-switcher" aria-label="Outstanding invoice type">
             <a href="<?= oi_h(oi_url(['tab' => 'receivables', 'q' => null, 'p' => null, 'sort' => null, 'dir' => null])) ?>" class="oi-account-card oi-account-card--receivables <?= $activeTab === 'receivables' ? 'is-active' : '' ?>" <?= $activeTab === 'receivables' ? 'aria-current="page"' : '' ?>>
                 <span class="oi-account-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.75h12a1 1 0 0 1 1 1v15.5l-3-1.8-4 1.8-4-1.8-3 1.8V4.75a1 1 0 0 1 1-1Z"/><path d="M9 8h6M9 12h6M9 16h3"/></svg></span>
-                <span class="oi-account-copy"><strong>Receivables</strong><small>Customer Invoices</small></span>
+                <span class="oi-account-copy"><strong>Receivables</strong><small>Customer Invoices</small><small class="oi-account-count"><?= $invoiceCounts['receivable'] ?> <?= $invoiceCounts['receivable'] === 1 ? 'invoice' : 'invoices' ?></small></span>
                 <span class="oi-account-total">TZS <?= number_format($invoiceTotals['receivable'], 2) ?></span>
                 <svg class="oi-account-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
             </a>
             <a href="<?= oi_h(oi_url(['tab' => 'payables', 'q' => null, 'p' => null, 'sort' => null, 'dir' => null])) ?>" class="oi-account-card oi-account-card--payables <?= $activeTab === 'payables' ? 'is-active' : '' ?>" <?= $activeTab === 'payables' ? 'aria-current="page"' : '' ?>>
                 <span class="oi-account-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="14" rx="2"/><path d="M7 7V5a2 2 0 0 1 2-2h9v4M3 11h18"/><path d="M16 14h2"/></svg></span>
-                <span class="oi-account-copy"><strong>Payables</strong><small>Supplier Bills</small></span>
+                <span class="oi-account-copy"><strong>Payables</strong><small>Supplier Bills</small><small class="oi-account-count"><?= $invoiceCounts['payable'] ?> <?= $invoiceCounts['payable'] === 1 ? 'invoice' : 'invoices' ?></small></span>
                 <span class="oi-account-total">TZS <?= number_format($invoiceTotals['payable'], 2) ?></span>
                 <svg class="oi-account-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
             </a>
@@ -1221,11 +1215,6 @@ $entityLabel = $activeTab === 'receivables' ? 'Customer' : 'Supplier';
                                     </summary>
                                     <div class="oi-row-actions-menu">
                                     <?php if ($activeTab === 'payables') oi_due_date_form($inv); ?>
-                                    <form method="POST" onsubmit="return confirm('Mark this invoice as Paid?');">
-                                        <input type="hidden" name="mark_paid" value="1">
-                                        <input type="hidden" name="id" value="<?= $inv['id'] ?>">
-                                        <button type="submit" class="oi-row-action-item">Mark Paid</button>
-                                    </form>
                                     <button type="button" class="oi-row-action-item oi-row-action-item--delete" onclick="confirmDelete(<?= $inv['id'] ?>)">Delete</button>
                                     </div>
                                 </details>
@@ -1380,17 +1369,23 @@ $entityLabel = $activeTab === 'receivables' ? 'Customer' : 'Supplier';
             }
 
             const trigger = document.querySelector('.new-invoice-btn');
-            const panel = document.getElementById('new-outstanding-invoice-panel');
-
-            if (!trigger || !panel) {
-                return;
+            const picker = document.getElementById('new-outstanding-invoice-panel');
+            if (trigger && picker) {
+                function closePicker() {
+                    picker.hidden = true;
+                    trigger.setAttribute('aria-expanded', 'false');
+                }
+                trigger.addEventListener('click', function (event) {
+                    event.stopPropagation();
+                    picker.hidden = !picker.hidden;
+                    trigger.setAttribute('aria-expanded', String(!picker.hidden));
+                });
+                picker.addEventListener('click', function (event) { event.stopPropagation(); });
+                document.addEventListener('click', closePicker);
+                document.addEventListener('keydown', function (event) {
+                    if (event.key === 'Escape') closePicker();
+                });
             }
-
-            trigger.addEventListener('click', function () {
-                const isHidden = panel.hidden;
-                panel.hidden = !isHidden;
-                trigger.setAttribute('aria-expanded', String(!isHidden));
-            });
         });
     </script>
 

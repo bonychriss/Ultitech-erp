@@ -16370,12 +16370,16 @@ function outstandingInvoiceRows(PDO $connection): array
         && columnExists('revenue_entries', 'amount_total', $connection)
         && columnExists('revenue_entries', 'total_paid', $connection);
     $hasInvoices = tableExists('invoices', $connection) && columnExists('invoices', 'status', $connection);
-    $hasVouchers = tableExists('payment_vouchers', $connection)
-        && columnExists('payment_vouchers', 'due_date', $connection);
+    $hasVouchers = tableExists('payment_vouchers', $connection);
+    $hasVoucherDueDate = $hasVouchers && columnExists('payment_vouchers', 'due_date', $connection);
+    $hasVoucherPaid = $hasVouchers && columnExists('payment_vouchers', 'is_paid', $connection);
+    $hasVoucherStatus = $hasVouchers && columnExists('payment_vouchers', 'status', $connection);
     $sql = 'SELECT oi.*';
     $sql .= $hasRevenue ? ', re.id AS live_revenue_id, re.amount_total AS live_total, re.total_paid AS live_paid' : '';
     $sql .= $hasInvoices ? ', i.status AS live_invoice_status' : '';
-    $sql .= $hasVouchers ? ', pv.due_date AS voucher_due_date' : '';
+    $sql .= $hasVoucherDueDate ? ', pv.due_date AS voucher_due_date' : '';
+    $sql .= $hasVoucherPaid ? ', pv.is_paid AS voucher_is_paid' : '';
+    $sql .= $hasVoucherStatus ? ', pv.status AS voucher_status' : '';
     $sql .= ' FROM erp_outstanding_invoices oi';
     $sql .= $hasRevenue ? ' LEFT JOIN revenue_entries re ON re.id = oi.source_revenue_entry_id AND oi.type = \'receivable\'' : '';
     $sql .= $hasInvoices ? ' LEFT JOIN invoices i ON i.id = oi.source_invoice_id AND oi.type = \'receivable\'' : '';
@@ -16383,18 +16387,25 @@ function outstandingInvoiceRows(PDO $connection): array
     $sql .= ' ORDER BY oi.invoice_date DESC';
     $rows = [];
     foreach ($connection->query($sql)->fetchAll(PDO::FETCH_ASSOC) as $row) {
+        if ($row['status'] !== 'outstanding') {
+            continue;
+        }
+        if ($row['type'] === 'receivable'
+            && in_array(strtolower(trim((string) ($row['live_invoice_status'] ?? ''))), ['paid', 'cancelled', 'canceled', 'void'], true)) {
+            continue;
+        }
+        if ($row['type'] === 'payable'
+            && ((int) ($row['voucher_is_paid'] ?? 0) === 1
+                || in_array(strtolower(trim((string) ($row['voucher_status'] ?? ''))), ['paid', 'cancelled', 'canceled', 'void'], true))) {
+            continue;
+        }
         if ($row['type'] === 'receivable' && !empty($row['live_revenue_id'])) {
-            if (in_array(strtolower(trim((string) ($row['live_invoice_status'] ?? ''))), ['paid', 'cancelled', 'canceled', 'void'], true)) {
-                continue;
-            }
             $paid = max(0.0, (float) $row['live_paid']);
             $row['amount'] = max(0.0, (float) $row['live_total'] - $paid);
             if ((float) $row['amount'] <= 0.009) {
                 continue;
             }
             $row['partially_paid'] = $paid > 0.009;
-        } elseif ($row['status'] !== 'outstanding') {
-            continue;
         }
         if ($row['type'] === 'payable' && !empty($row['voucher_due_date']) && $row['voucher_due_date'] !== '0000-00-00') {
             $row['due_date'] = $row['voucher_due_date'];

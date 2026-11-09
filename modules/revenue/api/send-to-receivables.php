@@ -61,15 +61,21 @@ try {
 
     $entityName = trim((string) ($entry['customer_name'] ?? ''));
     $invoiceNumber = trim((string) ($entry['voucher_number'] ?? ''));
+    $dueDate = null;
     if ($sourceInvoiceId > 0 && function_exists('tableExists') && tableExists('invoices', $pdo)) {
         $invoiceColumns = $pdo->query('SHOW COLUMNS FROM invoices')->fetchAll(PDO::FETCH_COLUMN) ?: [];
         $invoiceSelect = [];
         if (in_array('invoice_number', $invoiceColumns, true)) $invoiceSelect[] = 'invoice_number';
         if (in_array('customer_id', $invoiceColumns, true)) $invoiceSelect[] = 'customer_id';
+        if (in_array('due_date', $invoiceColumns, true)) $invoiceSelect[] = 'due_date';
         if ($invoiceSelect !== []) {
             $invoiceStmt = $pdo->prepare('SELECT ' . implode(', ', $invoiceSelect) . ' FROM invoices WHERE id = ? LIMIT 1');
             $invoiceStmt->execute([$sourceInvoiceId]);
             $invoice = $invoiceStmt->fetch(PDO::FETCH_ASSOC) ?: [];
+            $dueDate = trim((string) ($invoice['due_date'] ?? ''));
+            if ($dueDate === '' || $dueDate === '0000-00-00') {
+                $dueDate = null;
+            }
             if (trim((string) ($invoice['invoice_number'] ?? '')) !== '') {
                 $invoiceNumber = trim((string) $invoice['invoice_number']);
             }
@@ -100,7 +106,14 @@ try {
 
     $existingStmt = $pdo->prepare('SELECT id FROM erp_outstanding_invoices WHERE source_revenue_entry_id = ? LIMIT 1');
     $existingStmt->execute([$entryId]);
-    $alreadySent = (int) ($existingStmt->fetchColumn() ?: 0) > 0;
+    $existingReceivableId = (int) ($existingStmt->fetchColumn() ?: 0);
+    $alreadySent = $existingReceivableId > 0;
+    if ($alreadySent && $sourceInvoiceId > 0) {
+        $updateExisting = $pdo->prepare('UPDATE erp_outstanding_invoices
+            SET source_invoice_id = ?, due_date = COALESCE(?, due_date)
+            WHERE id = ? AND type = \'receivable\'');
+        $updateExisting->execute([$sourceInvoiceId, $dueDate, $existingReceivableId]);
+    }
     if (!$alreadySent) {
         $entryDate = trim((string) ($entry['entry_date'] ?? ''));
         $dateObj = DateTime::createFromFormat('!Y-m-d', $entryDate);
@@ -111,11 +124,13 @@ try {
 
         try {
             $insert = $pdo->prepare("INSERT INTO erp_outstanding_invoices
-                (type, invoice_date, entity_name, invoice_number, narration, amount, attachment, source_revenue_entry_id)
-                VALUES ('receivable', ?, ?, ?, ?, ?, ?, ?)");
-            $insert->execute([$entryDate, $entityName, $invoiceNumber !== '' ? $invoiceNumber : null, $description, $balance, $attachment !== '' ? $attachment : null, $entryId]);
+                (type, invoice_date, entity_name, invoice_number, narration, amount, attachment, source_invoice_id, due_date, source_revenue_entry_id)
+                VALUES ('receivable', ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+            $insert->execute([$entryDate, $entityName, $invoiceNumber !== '' ? $invoiceNumber : null, $description, $balance, $attachment !== '' ? $attachment : null, $sourceInvoiceId > 0 ? $sourceInvoiceId : null, $dueDate, $entryId]);
         } catch (PDOException $e) {
             if ((string) $e->getCode() !== '23000') throw $e;
+            $existingStmt->execute([$entryId]);
+            if (!$existingStmt->fetchColumn()) throw $e;
             $alreadySent = true;
         }
     }

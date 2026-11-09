@@ -898,15 +898,7 @@ $docFontImport = function_exists('sales_document_font_import_css')
         return '';
     };
 
-    $truckPay = function_exists('sales_document_payment_details')
-        ? sales_document_payment_details($company_settings, true)
-        : $pick($company_settings, 'truck_payment_details', 'spare_payment_details');
-    if ($truckPay === '' || $isBlankFooter($truckPay)) {
-        $truckPay = trim((string) ($company_settings['bank_details'] ?? ''));
-    }
-    if ($isBlankFooter($truckPay)) {
-        $truckPay = '';
-    }
+    $truckPay = $pick($company_settings, 'truck_payment_details', 'spare_payment_details');
     $truckTerms = $pick($company_settings, 'truck_terms', 'spare_terms');
     $truckValidity = $pick($company_settings, 'truck_validity', 'spare_validity');
     $truckReturn = $pick($company_settings, 'truck_return_policy', 'spare_return_policy');
@@ -922,7 +914,10 @@ $docFontImport = function_exists('sales_document_font_import_css')
     }
     $invRemarks = implode("\n\n", $remarkParts);
 
-    $bankDetails = '';
+    $bankDetails = trim((string) ($company_settings['bank_details'] ?? ''));
+    if ($isBlankFooter($bankDetails) || $bankDetails === $truckPay) {
+        $bankDetails = '';
+    }
     $thanksSecond = $pick($company_settings, 'truck_thanks_note', 'spare_thanks_note');
     // Page 2 only when Document Footer Content has real text (not empty/placeholder).
     $showTruckTermsPage = ($truckTerms !== '' || $truckValidity !== '' || $invRemarks !== ''

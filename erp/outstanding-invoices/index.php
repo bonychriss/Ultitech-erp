@@ -461,7 +461,6 @@ $entityLabel = $activeTab === 'receivables' ? 'Customer' : 'Supplier';
         .oi-account-copy small { color: #64748b; font-size: 0.68rem; }
         .oi-account-count { display: none; }
         .oi-account-total { margin-left: auto; color: #0f172a; font-size: 0.88rem; font-weight: 750; font-variant-numeric: tabular-nums; white-space: nowrap; }
-        .oi-account-chevron { width: 16px; height: 16px; flex: 0 0 16px; color: #94a3b8; }
         .oi-header-search--mobile { display: none; }
         .oi-header-breadcrumb { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 0.3rem; margin: 0; color: #64748b; font-size: 0.76rem; line-height: 1.25; }
         .oi-header-breadcrumb a { color: #2563eb; text-decoration: none; }
@@ -490,13 +489,12 @@ $entityLabel = $activeTab === 'receivables' ? 'Customer' : 'Supplier';
         html[data-theme="dark"] body.page-outstanding-invoices .oi-account-copy small { color: #8696a0; }
         html[data-theme="dark"] body.page-outstanding-invoices .oi-account-icon { background: rgba(37, 99, 235, 0.2); color: #93c5fd; }
         html[data-theme="dark"] body.page-outstanding-invoices .oi-account-card--payables .oi-account-icon { background: rgba(5, 150, 105, 0.2); color: #6ee7b7; }
-        html[data-theme="dark"] body.page-outstanding-invoices .oi-account-chevron { color: #8696a0; }
         @media (max-width: 620px) {
             .oi-account-switcher { grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; gap: 8px; margin: 12px auto 16px; }
             .oi-account-card {
                 position: relative;
                 display: grid;
-                grid-template-columns: 42px minmax(0, 1fr) 14px;
+                grid-template-columns: 42px minmax(0, 1fr);
                 grid-template-rows: minmax(44px, 1fr) auto;
                 align-items: start;
                 min-height: 96px;
@@ -531,7 +529,6 @@ $entityLabel = $activeTab === 'receivables' ? 'Customer' : 'Supplier';
                 font-size: clamp(0.62rem, 2.5vw, 0.78rem);
                 white-space: nowrap;
             }
-            .oi-account-chevron { grid-column: 3; grid-row: 1; align-self: center; justify-self: end; width: 14px; }
             html[data-theme="dark"] body.page-outstanding-invoices .oi-account-copy { border-left-color: #2a3942; }
         }
         
@@ -981,13 +978,11 @@ $entityLabel = $activeTab === 'receivables' ? 'Customer' : 'Supplier';
                 <span class="oi-account-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.75h12a1 1 0 0 1 1 1v15.5l-3-1.8-4 1.8-4-1.8-3 1.8V4.75a1 1 0 0 1 1-1Z"/><path d="M9 8h6M9 12h6M9 16h3"/></svg></span>
                 <span class="oi-account-copy"><strong>Receivables</strong><small>Customer Invoices</small><small class="oi-account-count"><?= $invoiceCounts['receivable'] ?> <?= $invoiceCounts['receivable'] === 1 ? 'invoice' : 'invoices' ?></small></span>
                 <span class="oi-account-total">TZS <?= number_format($invoiceTotals['receivable'], 2) ?></span>
-                <svg class="oi-account-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
             </a>
             <a href="<?= oi_h(oi_url(['tab' => 'payables', 'q' => null, 'p' => null, 'sort' => null, 'dir' => null])) ?>" class="oi-account-card oi-account-card--payables <?= $activeTab === 'payables' ? 'is-active' : '' ?>" <?= $activeTab === 'payables' ? 'aria-current="page"' : '' ?>>
                 <span class="oi-account-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="14" rx="2"/><path d="M7 7V5a2 2 0 0 1 2-2h9v4M3 11h18"/><path d="M16 14h2"/></svg></span>
                 <span class="oi-account-copy"><strong>Payables</strong><small>Supplier Bills</small><small class="oi-account-count"><?= $invoiceCounts['payable'] ?> <?= $invoiceCounts['payable'] === 1 ? 'invoice' : 'invoices' ?></small></span>
                 <span class="oi-account-total">TZS <?= number_format($invoiceTotals['payable'], 2) ?></span>
-                <svg class="oi-account-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
             </a>
         </nav>
 

@@ -17,9 +17,11 @@ import {
   HiOutlineXMark,
   HiOutlineChevronLeft,
   HiOutlineChevronRight,
+  HiEllipsisVertical,
 } from 'react-icons/hi2';
 import ProductsDeskSkeleton from './ProductsDeskSkeleton';
 import ProductThumb from './ProductThumb';
+import ImageViewer from './ImageViewer';
 import './products-desk.css';
 
 function typeLabel(type) {
@@ -141,6 +143,18 @@ export default function ProductsList({ data }) {
   const [booting, setBooting] = useState(true);
   const [pageLoading, setPageLoading] = useState(false);
   const [missingImagesOpen, setMissingImagesOpen] = useState(false);
+  const [cardMenuId, setCardMenuId] = useState(null);
+  const [viewerImage, setViewerImage] = useState(null);
+  const closeViewer = React.useCallback(() => setViewerImage(null), []);
+
+  useEffect(() => {
+    if (cardMenuId == null) return undefined;
+    const close = (e) => {
+      if (!e.target.closest('.prod-desk-mcard-menu-wrap')) setCardMenuId(null);
+    };
+    document.addEventListener('pointerdown', close);
+    return () => document.removeEventListener('pointerdown', close);
+  }, [cardMenuId]);
   const [glowIds, setGlowIds] = useState(() =>
     products.filter((p) => p.is_recent).map((p) => p.id)
   );
@@ -383,6 +397,15 @@ export default function ProductsList({ data }) {
       return `${baseUrl}uploads/products/${product.id}/medium/${product.main_image}`;
     }
     return '';
+  };
+
+  const openImageViewer = (product) => {
+    const src = imageSrc(product);
+    if (!src) return;
+    const large = /[?&]size=(thumbnail|medium)\b/.test(src)
+      ? src.replace(/([?&]size=)(thumbnail|medium)\b/, '$1large')
+      : src.replace(/\/(thumbnail|medium)\//, '/large/');
+    setViewerImage({ src, large, title: product.name || '', code: product.product_code || '' });
   };
 
   const openSuggestion = (item) => {
@@ -640,6 +663,11 @@ export default function ProductsList({ data }) {
         </div>
       </div>
 
+      <a href={addUrl} className="prod-desk-mobile-cta">
+        <HiOutlinePlus size={20} aria-hidden="true" />
+        Add Product
+      </a>
+
       {totalDuplicateRows > 0 && !isFilteringDuplicates && !dupDismissed && (
         <div className="prod-desk-alert prod-desk-alert--dup">
           <div>
@@ -731,6 +759,7 @@ export default function ProductsList({ data }) {
 
       <section className="prod-desk-results">
         <div className="prod-desk-results-head">
+          <h2 className="prod-desk-results-title">All Products</h2>
           <span className="prod-desk-results-count">
             {pageInfo.total > 0
               ? `Showing ${(pageInfo.page - 1) * pageInfo.perPage + 1}–${Math.min(pageInfo.page * pageInfo.perPage, pageInfo.total)} of ${pageInfo.total}`
@@ -797,7 +826,18 @@ export default function ProductsList({ data }) {
                       </td>
                       <td>
                         <div className="prod-desk-product">
-                          <ProductThumb src={img} className="prod-desk-thumb" size={14} />
+                          {img ? (
+                            <button
+                              type="button"
+                              className="prod-desk-thumb-btn"
+                              onClick={() => openImageViewer(product)}
+                              aria-label={`View image of ${product.name}`}
+                            >
+                              <ProductThumb src={img} alt={product.name} className="prod-desk-thumb" size={14} />
+                            </button>
+                          ) : (
+                            <ProductThumb src="" className="prod-desk-thumb" size={14} />
+                          )}
                           <div style={{ minWidth: 0 }}>
                             <a href={viewUrl(product.id)} className="prod-desk-name">
                               {product.name}
@@ -907,6 +947,94 @@ export default function ProductsList({ data }) {
             </table>
           </div>
         )}
+
+        {products.length > 0 && (
+          <div className="prod-desk-mcards">
+            {products.map((product) => {
+              const qty = Number(product.quantity ?? 0);
+              const low = qty <= Number(product.reorder_level ?? 0);
+              const health = String(product.health || 'none');
+              const brandName = (product.brand || '').trim();
+              let status = { label: 'In stock', cls: 'is-ok' };
+              if (health === 'expired') status = { label: 'Expired', cls: 'is-bad' };
+              else if (qty <= 0) status = { label: 'Out of stock', cls: 'is-bad' };
+              else if (health === 'expiring') status = { label: 'Expiring', cls: 'is-warn' };
+              else if (low) status = { label: 'Low stock', cls: 'is-warn' };
+              const menuOpen = cardMenuId === product.id;
+              return (
+                <div className="prod-desk-mcard" key={product.id}>
+                  {imageSrc(product) ? (
+                    <button
+                      type="button"
+                      className="prod-desk-thumb-btn prod-desk-mcard-thumb-btn"
+                      onClick={() => openImageViewer(product)}
+                      aria-label={`View image of ${product.name}`}
+                    >
+                      <ProductThumb src={imageSrc(product)} alt={product.name} className="prod-desk-thumb prod-desk-mcard-thumb" size={16} />
+                    </button>
+                  ) : (
+                    <span className="prod-desk-mcard-thumb-btn">
+                      <ProductThumb src="" className="prod-desk-thumb prod-desk-mcard-thumb" size={16} />
+                    </span>
+                  )}
+                  <a href={viewUrl(product.id)} className="prod-desk-mcard-main">
+                    <span className="prod-desk-mcard-body">
+                      <span className="prod-desk-mcard-top">
+                        <span className="prod-desk-mcard-code">{product.product_code || '—'}</span>
+                        <span className={`prod-desk-mcard-status ${status.cls}`}>{status.label}</span>
+                      </span>
+                      <span className="prod-desk-mcard-name">{product.name}</span>
+                      <span className="prod-desk-mcard-price">
+                        {product.currency || 'USD'} {formatMoney(product.unit_price)}
+                      </span>
+                      <span className="prod-desk-mcard-meta">
+                        {[product.category_name, brandName].filter(Boolean).join(' · ') || typeLabel(product.item_type)}
+                      </span>
+                    </span>
+                  </a>
+                  <div className="prod-desk-mcard-foot">
+                    <span className="prod-desk-mcard-qty">Qty {qty}</span>
+                    <div className="prod-desk-mcard-menu-wrap">
+                      <button
+                        type="button"
+                        className="prod-desk-mcard-menu-btn"
+                        aria-label={`Actions for ${product.name}`}
+                        aria-expanded={menuOpen}
+                        onClick={() => setCardMenuId(menuOpen ? null : product.id)}
+                      >
+                        <HiEllipsisVertical size={20} aria-hidden="true" />
+                      </button>
+                      {menuOpen && (
+                        <div className="prod-desk-mcard-menu" role="menu">
+                          <a role="menuitem" href={viewUrl(product.id)}>
+                            <HiOutlineEye size={16} aria-hidden="true" /> View
+                          </a>
+                          <a role="menuitem" href={editUrl(product.id)}>
+                            <HiOutlinePencilSquare size={16} aria-hidden="true" /> Edit
+                          </a>
+                          <a role="menuitem" href={`duplicate.php?id=${product.id}`}>
+                            <HiOutlineDocumentDuplicate size={16} aria-hidden="true" /> Duplicate
+                          </a>
+                          <button
+                            type="button"
+                            role="menuitem"
+                            className="is-danger"
+                            onClick={() => {
+                              setCardMenuId(null);
+                              confirmDelete(product.id);
+                            }}
+                          >
+                            <HiOutlineTrash size={16} aria-hidden="true" /> Delete
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
         {pageInfo.totalPages > 1 && (
           <nav className="prod-desk-pagination" aria-label="Product pages">
             <a
@@ -953,6 +1081,8 @@ export default function ProductsList({ data }) {
           </button>
         </div>
       )}
+
+      <ImageViewer image={viewerImage} onClose={closeViewer} />
 
       {missingImagesOpen && missingImagesCount > 0 ? (
         <div

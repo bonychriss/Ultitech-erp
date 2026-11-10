@@ -469,6 +469,7 @@ if (function_exists('getVoucherAttachments')) {
 }
 
 $page_title = 'Journal Entry Details';
+$bodyExtraClass = trim((string) ($bodyExtraClass ?? '') . ' page-journal-detail');
 include __DIR__ . '/../modules/balances/includes/header.php';
 ?>
 <?php
@@ -504,6 +505,7 @@ $jeListHref = 'journal-entries.php?module=' . rawurlencode((string) $jeModule);
 $jeHomeHref = function_exists('company_dashboard_url') ? company_dashboard_url() : '../select-module.php';
 ?>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<script>document.documentElement.classList.add('page-journal-detail');</script>
 <style>
 .employee-header{display:none!important}
 .jed-shell{--jed-bg:#f6f8fb;--jed-card:#fff;--jed-line:#e5e7eb;--jed-line-soft:#eef2f7;--jed-ink:#0f172a;--jed-muted:#64748b;--jed-soft:#f8fafc;--jed-link:#2563eb;--jed-green:#16a34a;--jed-green-ink:#15803d;--jed-green-bg:#dcfce7;--jed-green-line:#86efac;--jed-green-soft:#f0fdf4;--jed-danger:#dc2626;--jed-danger-line:#fca5a5;--jed-btn-bg:#fff;--jed-btn-line:#dbe2ea;--jed-btn-fg:#0f172a;--jed-icon-bg:#f1f5f9;--jed-icon-fg:#475569;--jed-warn-fg:#f97316}
@@ -709,6 +711,8 @@ html[data-theme="dark"] .jed-print-sheet p.sub,html[data-theme="dark"] .jed-prin
 @media(max-width:900px){.jed-grid{grid-template-columns:1fr}}
 @media(max-width:700px){.jed-facts{grid-template-columns:1fr 1fr}.jed-fact:nth-child(3){border-left:0}.jed-fact:nth-child(n+3){border-top:1px solid var(--jed-line-soft)}.jed-footer-tot{grid-template-columns:1fr}.jed-ref{font-size:24px}.jed-title{font-size:24px}}
 @media(max-width:600px){
+  html.page-journal-detail,body.page-journal-detail{scrollbar-width:none;-ms-overflow-style:none}
+  html.page-journal-detail::-webkit-scrollbar,body.page-journal-detail::-webkit-scrollbar{display:none;width:0;height:0}
   .jed-top{gap:12px;margin-bottom:12px}
   .jed-top{flex-wrap:nowrap}
   .jed-top>div:first-child{min-width:0}

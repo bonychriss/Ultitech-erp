@@ -78,6 +78,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             recalculateBalance($fromAccount);
             recalculateBalance($toAccount);
+            balancesScheduleLedgerSync($pdo);
 
             $_SESSION['success'] = 'Transfer created successfully.';
             $redirectQs = ['module' => 'balances'];

@@ -524,6 +524,11 @@ export default function ProductCreate({ data = {} }) {
     product?.category_id != null ? String(product.category_id) : ''
   );
   const [description, setDescription] = useState(product?.description || '');
+  const [useDescriptionOnDocuments, setUseDescriptionOnDocuments] = useState(
+    product?.use_description_on_documents == null
+      ? true
+      : Number(product.use_description_on_documents) !== 0
+  );
   const [brand, setBrand] = useState(product?.brand || '');
   const [supplierId, setSupplierId] = useState(
     product?.supplier_id != null ? String(product.supplier_id) : ''
@@ -635,15 +640,17 @@ export default function ProductCreate({ data = {} }) {
     const nextErrors = [];
     if (isEdit && !productCode.trim()) nextErrors.push('Product code is required.');
     if (isTruck) {
-      if (!modelNumber.trim()) nextErrors.push('Model No. is required.');
-      if (!brand.trim()) nextErrors.push('Make is required.');
-      if (!truckType.trim()) nextErrors.push('Truck type is required.');
-      if (!cabDetails.trim()) nextErrors.push('Cabin is required.');
-      if (!engineModel.trim()) nextErrors.push('Engine is required.');
-      if (!transmission.trim()) nextErrors.push('Transmission is required.');
-      if (!fuelType.trim()) nextErrors.push('Fuel type is required.');
-      if (!isEdit && (currentStock === '' || Number.isNaN(Number(currentStock)))) {
-        nextErrors.push('Opening stock is required.');
+      if (!isEdit) {
+        if (!modelNumber.trim()) nextErrors.push('Model No. is required.');
+        if (!brand.trim()) nextErrors.push('Make is required.');
+        if (!truckType.trim()) nextErrors.push('Truck type is required.');
+        if (!cabDetails.trim()) nextErrors.push('Cabin is required.');
+        if (!engineModel.trim()) nextErrors.push('Engine is required.');
+        if (!transmission.trim()) nextErrors.push('Transmission is required.');
+        if (!fuelType.trim()) nextErrors.push('Fuel type is required.');
+        if (currentStock === '' || Number.isNaN(Number(currentStock))) {
+          nextErrors.push('Opening stock is required.');
+        }
       }
     } else {
       if (!name.trim()) nextErrors.push('Product name is required.');
@@ -692,6 +699,7 @@ export default function ProductCreate({ data = {} }) {
     fd.append('name', submitName);
     fd.append('category_id', submitCategoryId);
     fd.append('description', description);
+    fd.append('use_description_on_documents', useDescriptionOnDocuments ? '1' : '0');
     fd.append('brand', brand);
     fd.append('supplier_id', supplierId);
     fd.append('unit_of_measure', uom);
@@ -957,6 +965,29 @@ export default function ProductCreate({ data = {} }) {
                       </select>
                     </FieldRow>
                   </div>
+                  <FieldRow
+                    label="Description on quotes & invoices"
+                    htmlFor="prod-desc"
+                    help="On: use this text. Off: build the line description from the truck details above."
+                  >
+                    <textarea
+                      id="prod-desc"
+                      className="prod-create-textarea"
+                      rows={3}
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                      placeholder="Enter what should appear on the quote or invoice"
+                    />
+                  </FieldRow>
+                  <label className="prod-create-document-description-toggle">
+                    <input
+                      type="checkbox"
+                      checked={useDescriptionOnDocuments}
+                      onChange={(e) => setUseDescriptionOnDocuments(e.target.checked)}
+                    />
+                    <span className="prod-create-document-description-switch" aria-hidden="true" />
+                    <span>Use this description on quotes & invoices</span>
+                  </label>
                 </div>
               ) : (
                 <>
@@ -1368,16 +1399,6 @@ export default function ProductCreate({ data = {} }) {
                         <input id="prod-color" className="prod-create-input" value={color} onChange={(e) => setColor(e.target.value)} />
                       </FieldRow>
                     </div>
-                    <FieldRow label="Description" htmlFor="prod-desc">
-                      <textarea
-                        id="prod-desc"
-                        className="prod-create-textarea"
-                        rows={3}
-                        value={description}
-                        onChange={(e) => setDescription(e.target.value)}
-                        placeholder="Short description"
-                      />
-                    </FieldRow>
                     <FieldRow label="Currency" htmlFor="prod-currency">
                       <CurrencyPicker value={currency} options={currencies} onChange={setCurrency} />
                     </FieldRow>

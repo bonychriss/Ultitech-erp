@@ -3,6 +3,12 @@ require_once __DIR__ . '/../includes/functions.php';
 requireLogin();
 global $pdo;
 
+require_once __DIR__ . '/../includes/gl/gl_reports.php';
+if (gl_report_source($pdo) === 'ledger' && !isset($_GET['legacy'])) {
+    header('Location: gl-journal.php');
+    exit;
+}
+
 $journals = [];
 try {
     $journals = $pdo->query("
@@ -177,6 +183,7 @@ if (!function_exists('je_money_size_class')) {
 $page_title = 'Journal Entries';
 $employeeHeaderTitle = 'Journal Entries';
 $employeeHeaderExtraClass = 'je-page-header';
+$bodyExtraClass = trim((string) ($bodyExtraClass ?? '') . ' page-je-desk');
 $hideHeaderCompanyBranding = true;
 $jeSearchHtml = '<div class="je-header-search">'
     . '<svg class="je-header-search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>'
@@ -200,13 +207,28 @@ $employeeHeaderSubtitle = '<nav class="je-crumbs" aria-label="Breadcrumb">'
     . '</nav>';
 include __DIR__ . '/../modules/balances/includes/header.php';
 ?>
+<script>document.documentElement.classList.add('page-je-desk-lock');</script>
 <style>
+html.page-je-desk-lock,html.page-je-desk-lock body,body.page-je-desk{
+  height:100dvh;max-height:100dvh;overflow:hidden;overscroll-behavior:none
+}
+body.page-je-desk .layout-main-wrapper{
+  height:100dvh;max-height:100dvh;min-height:0!important;overflow:hidden
+}
+body.page-je-desk .layout-main-wrapper>.flex-grow-1{
+  min-height:0;height:100%;max-height:100%;overflow:hidden
+}
+body.page-je-desk .je-page-header{flex:0 0 auto}
+body.page-je-desk main.main-content{
+  flex:1 1 auto;min-height:0;overflow-x:hidden;overflow-y:auto;overscroll-behavior-y:auto;scrollbar-width:thin
+}
+.je-table-wrap{max-height:max(20rem,calc(100dvh - 11rem));-webkit-overflow-scrolling:touch}
 .employee-header.employee-header--page-context .header-content{display:flex!important;flex-wrap:nowrap!important;align-items:flex-start!important}
 .employee-header .employee-header-page-heading{flex:1 1 auto!important;min-width:0!important}
 .employee-header .header-right.header-actions-tray{position:static!important;flex:0 0 auto!important;align-self:flex-start!important;margin-left:auto!important;padding-top:4px!important;width:auto!important;height:auto!important}
 html[data-theme="dark"] body .layout-main-wrapper header.employee-header.employee-header--page-context.je-page-header{background:#0f172a!important;background-color:#0f172a!important;border:0!important;border-bottom:0!important;box-shadow:none!important}
-.je-page-header{--je-crumb-link:#64748b;--je-crumb-sep:#cbd5e1;--je-crumb-current:#0f172a}
-html[data-theme="dark"] .je-page-header{--je-crumb-link:#94a3b8;--je-crumb-sep:#475569;--je-crumb-current:#e2e8f0}
+.je-page-header{--je-crumb-link:#2563eb;--je-crumb-hover:#1d4ed8;--je-crumb-sep:#94a3b8;--je-crumb-current:#64748b}
+html[data-theme="dark"] .je-page-header{--je-crumb-link:#60a5fa;--je-crumb-hover:#06cf9c;--je-crumb-sep:#00a884;--je-crumb-current:#00a884}
 .je-header-search{position:relative;display:flex;align-items:center;width:100%;height:40px;background:#fff;border:1px solid #e2e8f0;border-radius:9999px;transition:border-color .15s,box-shadow .15s}
 .je-header-search:focus-within{border-color:#a5b4fc;box-shadow:0 0 0 3px rgba(79,70,229,.12)}
 .je-header-search-icon{position:absolute;left:.85rem;top:50%;transform:translateY(-50%);width:1rem;height:1rem;color:#94a3b8;pointer-events:none}
@@ -219,14 +241,14 @@ html[data-theme="dark"] .je-header-search-input{color:#f8fafc}
 html[data-theme="dark"] .je-header-search-input::placeholder{color:#64748b}
 html[data-theme="dark"] .je-header-search-kbd{background:#0f172a;border-color:#334155;color:#94a3b8}
 @media (max-width:767.98px){.je-header-search-kbd{display:none}.je-header-search-input{padding-right:1rem}}
-.je-crumbs{display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;font-size:13px;font-weight:500;line-height:1.3}
-.je-crumbs a{text-decoration:none}
-.je-crumbs a:hover{text-decoration:underline}
+.je-crumbs{display:inline-flex;align-items:center;gap:.35rem;flex-wrap:wrap;margin:0;font-size:.82rem;font-weight:400;line-height:1.3}
+.je-crumbs a{font-weight:600;text-decoration:none}
+.je-crumbs a:hover{--je-crumb-link:var(--je-crumb-hover);text-decoration:underline}
 .je-crumb-current{font-weight:600}
 .employee-header .employee-header-page-title{font-size:26px!important;font-weight:800!important;letter-spacing:-.01em!important;line-height:1.2!important}
 .je-desk{--je-blue:#2563eb;--je-ink:#0f172a;--je-muted:#64748b;--je-line:#e2e8f0;--je-soft:#f8fafc;--je-kpi-radius:14px;max-width:1600px;margin:0 auto;padding:0.75rem 1.5rem 2rem;font-family:Inter,system-ui,-apple-system,sans-serif;color:var(--je-ink)}
 .je-desk *{box-sizing:border-box}
-.je-hero{display:grid;grid-template-columns:1fr minmax(16rem,36rem) 1fr;align-items:center;gap:1rem 1.25rem;margin:-2.5rem 0 1.25rem;position:relative;z-index:1000}
+.je-hero{display:grid;grid-template-columns:1fr minmax(16rem,36rem) 1fr;align-items:center;gap:1rem 1.25rem;margin:0 0 1.25rem;position:relative;z-index:1000}
 .je-hero-search{grid-column:2;width:100%;min-width:0;justify-self:center}
 .je-hero-actions{grid-column:3;display:flex;gap:.6rem;flex-wrap:nowrap;align-items:center;justify-content:flex-end;position:relative}
 @media (max-width:900px){
@@ -359,8 +381,11 @@ html[data-theme="dark"] .je-header-search-kbd{background:#0f172a;border-color:#3
 .je-m-only{display:none!important}
 .je-m-meta{display:inline-flex;align-items:center;gap:6px}
 @media (max-width:640px){
+  body.page-je-desk main.main-content,.je-table-wrap{scrollbar-width:none;-ms-overflow-style:none}
+  body.page-je-desk main.main-content::-webkit-scrollbar,.je-table-wrap::-webkit-scrollbar{display:none;width:0;height:0}
+  .je-footer{display:none}
   .je-m-only{display:inline-flex!important}
-  .je-table-wrap{border:0;background:transparent;overflow:visible;border-radius:0}
+  .je-table-wrap{border:0;background:transparent;border-radius:0;overscroll-behavior-y:auto}
   .je-table{min-width:0;display:block}
   .je-table colgroup,.je-table thead{display:none}
   .je-table tbody{display:flex;flex-direction:column;gap:10px}
@@ -449,7 +474,7 @@ html[data-theme="dark"] .je-actions-menu a:hover,html[data-theme="dark"] .je-act
 }
 </style>
 
-<main class="main-content">
+<main class="main-content" tabindex="0">
   <div class="je-desk">
     <div class="je-hero">
       <div class="je-hero-search"><?= $jeSearchHtml ?></div>
@@ -512,7 +537,7 @@ html[data-theme="dark"] .je-actions-menu a:hover,html[data-theme="dark"] .je-act
     </div>
     <div class="je-active-filters" id="jeActiveFilters" aria-label="Active filters" hidden></div>
 
-    <div class="je-table-wrap">
+    <div class="je-table-wrap" role="region" aria-label="Journal entries" tabindex="0">
       <table class="je-table" id="jeTable">
         <colgroup>
           <col class="col-ref">

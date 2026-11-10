@@ -4,6 +4,13 @@ requireLogin();
 
 global $pdo;
 
+require_once __DIR__ . '/../includes/gl/gl_reports.php';
+if (gl_report_source($pdo) === 'ledger' && !isset($_GET['legacy'])) {
+    define('GL_VIEW', true);
+    require __DIR__ . '/gl-views/ledger.php';
+    exit;
+}
+
 // Get all accounts for filter
 $accounts = $pdo->query("SELECT * FROM erp_accounts ORDER BY code")->fetchAll();
 

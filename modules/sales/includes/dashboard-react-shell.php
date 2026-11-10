@@ -27,6 +27,10 @@ $GLOBALS['_erp_header_style_linked'] = true;
 
 <style>
 body.page-exp-desk.dashboard .layout-main-wrapper { align-items: stretch; }
+body.page-sales-dashboard-desk .employee-header-page-heading,
+body.page-sales-dashboard-desk #erp-auto-breadcrumb {
+    display: none !important;
+}
 body.page-exp-desk.dashboard .layout-main-wrapper > .flex-grow-1 {
     min-height: 0;
     display: flex;
@@ -46,9 +50,13 @@ body.page-exp-desk .employee-header.employee-header--exp-desk {
     margin-bottom: 0;
     height: auto !important;
     min-height: 0;
-    position: sticky !important;
-    top: 0 !important;
-    z-index: 1020 !important;
+    position: static !important;
+}
+html body.dashboard.page-exp-desk:not(.att-top-chrome-hidden) header.employee-header.employee-header--exp-desk,
+html body.dashboard.page-exp-desk.att-top-chrome-hidden header.employee-header.employee-header--exp-desk {
+    position: static !important;
+    top: auto !important;
+    z-index: auto !important;
 }
 body.page-exp-desk .employee-header--exp-desk::after { display: none !important; }
 body.page-exp-desk .employee-header--exp-desk .header-content {

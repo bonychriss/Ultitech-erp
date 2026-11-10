@@ -14,6 +14,10 @@ if (is_file($botExchangeFile)) {
 }
 requireLogin();
 
+if (function_exists('ensureStocksSchema')) {
+    ensureStocksSchema();
+}
+
 // Ensure stocks_purchase_orders schema supports domestic/import split.
 try {
     $cols = $pdo->query("SHOW COLUMNS FROM stocks_purchase_orders")->fetchAll(PDO::FETCH_COLUMN);
@@ -439,8 +443,8 @@ $products = $pdo->query("
             (
                 SELECT p.product_code
                 FROM products p
-                WHERE LOWER(TRIM(p.name)) = LOWER(TRIM(si.name))
-                   OR (si.sku IS NOT NULL AND si.sku <> '' AND LOWER(TRIM(p.product_code)) = LOWER(TRIM(si.sku)))
+                WHERE CONVERT(LOWER(TRIM(p.name)) USING utf8mb4) COLLATE utf8mb4_unicode_ci = CONVERT(LOWER(TRIM(si.name)) USING utf8mb4) COLLATE utf8mb4_unicode_ci
+                   OR (si.sku IS NOT NULL AND si.sku <> '' AND CONVERT(LOWER(TRIM(p.product_code)) USING utf8mb4) COLLATE utf8mb4_unicode_ci = CONVERT(LOWER(TRIM(si.sku)) USING utf8mb4) COLLATE utf8mb4_unicode_ci)
                 LIMIT 1
             ),
             si.sku
@@ -449,8 +453,8 @@ $products = $pdo->query("
             (
                 SELECT p.id
                 FROM products p
-                WHERE LOWER(TRIM(p.name)) = LOWER(TRIM(si.name))
-                   OR (si.sku IS NOT NULL AND si.sku <> '' AND LOWER(TRIM(p.product_code)) = LOWER(TRIM(si.sku)))
+                WHERE CONVERT(LOWER(TRIM(p.name)) USING utf8mb4) COLLATE utf8mb4_unicode_ci = CONVERT(LOWER(TRIM(si.name)) USING utf8mb4) COLLATE utf8mb4_unicode_ci
+                   OR (si.sku IS NOT NULL AND si.sku <> '' AND CONVERT(LOWER(TRIM(p.product_code)) USING utf8mb4) COLLATE utf8mb4_unicode_ci = CONVERT(LOWER(TRIM(si.sku)) USING utf8mb4) COLLATE utf8mb4_unicode_ci)
                 LIMIT 1
             ),
             NULL
@@ -459,8 +463,8 @@ $products = $pdo->query("
             (
                 SELECT p.id
                 FROM products p
-                WHERE LOWER(TRIM(p.name)) = LOWER(TRIM(si.name))
-                   OR (si.sku IS NOT NULL AND si.sku <> '' AND LOWER(TRIM(p.product_code)) = LOWER(TRIM(si.sku)))
+                WHERE CONVERT(LOWER(TRIM(p.name)) USING utf8mb4) COLLATE utf8mb4_unicode_ci = CONVERT(LOWER(TRIM(si.name)) USING utf8mb4) COLLATE utf8mb4_unicode_ci
+                   OR (si.sku IS NOT NULL AND si.sku <> '' AND CONVERT(LOWER(TRIM(p.product_code)) USING utf8mb4) COLLATE utf8mb4_unicode_ci = CONVERT(LOWER(TRIM(si.sku)) USING utf8mb4) COLLATE utf8mb4_unicode_ci)
                 LIMIT 1
             ),
             NULL
@@ -469,8 +473,8 @@ $products = $pdo->query("
             (
                 SELECT $productBuyingPriceSelect
                 FROM products p
-                WHERE LOWER(TRIM(p.name)) = LOWER(TRIM(si.name))
-                   OR (si.sku IS NOT NULL AND si.sku <> '' AND LOWER(TRIM(p.product_code)) = LOWER(TRIM(si.sku)))
+                WHERE CONVERT(LOWER(TRIM(p.name)) USING utf8mb4) COLLATE utf8mb4_unicode_ci = CONVERT(LOWER(TRIM(si.name)) USING utf8mb4) COLLATE utf8mb4_unicode_ci
+                   OR (si.sku IS NOT NULL AND si.sku <> '' AND CONVERT(LOWER(TRIM(p.product_code)) USING utf8mb4) COLLATE utf8mb4_unicode_ci = CONVERT(LOWER(TRIM(si.sku)) USING utf8mb4) COLLATE utf8mb4_unicode_ci)
                 LIMIT 1
             ),
             $stockItemBuyingPriceSelect,
@@ -480,8 +484,8 @@ $products = $pdo->query("
             (
                 SELECT $productImageSelect
                 FROM products p
-                WHERE LOWER(TRIM(p.name)) = LOWER(TRIM(si.name))
-                   OR (si.sku IS NOT NULL AND si.sku <> '' AND LOWER(TRIM(p.product_code)) = LOWER(TRIM(si.sku)))
+                WHERE CONVERT(LOWER(TRIM(p.name)) USING utf8mb4) COLLATE utf8mb4_unicode_ci = CONVERT(LOWER(TRIM(si.name)) USING utf8mb4) COLLATE utf8mb4_unicode_ci
+                   OR (si.sku IS NOT NULL AND si.sku <> '' AND CONVERT(LOWER(TRIM(p.product_code)) USING utf8mb4) COLLATE utf8mb4_unicode_ci = CONVERT(LOWER(TRIM(si.sku)) USING utf8mb4) COLLATE utf8mb4_unicode_ci)
                 LIMIT 1
             ),
             NULL
@@ -490,8 +494,8 @@ $products = $pdo->query("
             (
                 SELECT $productSupplierSelect
                 FROM products p
-                WHERE LOWER(TRIM(p.name)) = LOWER(TRIM(si.name))
-                   OR (si.sku IS NOT NULL AND si.sku <> '' AND LOWER(TRIM(p.product_code)) = LOWER(TRIM(si.sku)))
+                WHERE CONVERT(LOWER(TRIM(p.name)) USING utf8mb4) COLLATE utf8mb4_unicode_ci = CONVERT(LOWER(TRIM(si.name)) USING utf8mb4) COLLATE utf8mb4_unicode_ci
+                   OR (si.sku IS NOT NULL AND si.sku <> '' AND CONVERT(LOWER(TRIM(p.product_code)) USING utf8mb4) COLLATE utf8mb4_unicode_ci = CONVERT(LOWER(TRIM(si.sku)) USING utf8mb4) COLLATE utf8mb4_unicode_ci)
                 LIMIT 1
             ),
             NULL
@@ -506,6 +510,14 @@ foreach ($products as &$prodRow) {
     $prodRow['image_url'] = ($imgProductId > 0 && function_exists('stock_product_list_image_url'))
         ? stock_product_list_image_url($imgProductId, $imgFile, 'medium', (string) ($stockBasePath ?? ''))
         : '';
+    // Same fallback as the sales catalogue: stored filename missing/stale (e.g. "placeholder.jpg") but a real upload exists.
+    if ($prodRow['image_url'] === '' && $imgProductId > 0 && function_exists('stock_resolve_product_image_file') && function_exists('stock_image_company_context')) {
+        $imgCtx = stock_image_company_context();
+        $diskImg = stock_resolve_product_image_file($imgProductId, 'medium', '', (string) $imgCtx['slug'], (int) $imgCtx['company_id']);
+        if ($diskImg !== null && is_file($diskImg)) {
+            $prodRow['image_url'] = stock_product_list_image_url($imgProductId, basename($diskImg), 'medium', (string) ($stockBasePath ?? ''));
+        }
+    }
 }
 unset($prodRow);
 
@@ -600,7 +612,7 @@ $rate = $settings['exchange_rate'] ?? 1;
 $currency = getCurrencySymbol($settings['currency'] ?? 'USD');
 
 $companyCurrency = strtoupper((string) ($settings['currency'] ?? 'USD'));
-$selectedCurrencyCode = strtoupper((string) ($_POST['currency'] ?? $_GET['currency'] ?? $companyCurrency));
+$selectedCurrencyCode = strtoupper((string) ($_POST['currency'] ?? $_GET['currency'] ?? 'TZS'));
 
 $poCurrencyOptions = [];
 if (function_exists('expenses_currency_catalog')) {
@@ -1324,7 +1336,7 @@ $viewVoucherUrl = function_exists('app_url')
 $page_title = $isPoClassificationEdit
     ? ('Edit Purchase Order - ' . ($classificationPoNumber !== '' ? $classificationPoNumber : ('#' . $classificationEditPoId)))
     : ($purchaseTypeDefault === 'import' ? 'New Abroad Purchase Order' : 'New Internal Purchase Order');
-$employeeHeaderTitle = $isPoClassificationEdit ? 'Edit purchase order' : 'New purchase order';
+$employeeHeaderTitle = null;
 $hideHeaderCompanyBranding = true;
 $employeeHeaderExtraClass = 'employee-header--products-desk';
 $bodyExtraClass = 'page-products-desk page-purchase-create-react';
@@ -1411,6 +1423,10 @@ main.main-content.products-desk-react-root #root {
     max-width: none;
     margin: 0;
     min-height: 320px;
+}
+@media (min-width: 992px) {
+    body.page-purchase-create-react .employee-header.employee-header--products-desk { display: none !important; }
+    body.page-purchase-create-react main.main-content.products-desk-react-root { padding-top: 1rem !important; }
 }
 @media (max-width: 767.98px) {
     body.page-products-desk .employee-header.employee-header--products-desk { padding: 0 0.75rem !important; }

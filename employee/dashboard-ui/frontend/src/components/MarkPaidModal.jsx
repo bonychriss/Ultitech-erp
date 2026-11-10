@@ -6,16 +6,35 @@ import '../pay-modal.css'
 const ACCEPTED_PROOF = '.pdf,.jpg,.jpeg,.png,.gif,.webp,.svg,.bmp,.doc,.docx,.xls,.xlsx'
 const TYPE_LABELS = { bank: 'Bank account', cash: 'Cash account', mobile: 'Mobile money' }
 
-function PaymentAccountIcon({ type, size }) {
+function PaymentAccountIcon({ type, size, imageUrl }) {
+  const [imageFailed, setImageFailed] = useState(false)
+  useEffect(() => { setImageFailed(false) }, [imageUrl])
+  if (imageUrl && !imageFailed) {
+    return <img className="vv-pay-modal__account-logo" src={imageUrl} alt="" loading="lazy" onError={() => setImageFailed(true)} />
+  }
   const Icon = type === 'bank' ? Landmark : type === 'mobile' ? Smartphone : type === 'cash' ? Coins : Wallet
   return <Icon size={size} aria-hidden="true" />
 }
 
-function formatMoney(currency, value) {
-  return `${currency} ${Number(value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+function toNumber(value) {
+  const n = Number(value)
+  return Number.isFinite(n) ? n : 0
 }
 
-export default function MarkPaidModal({ voucher, accounts, actionUrl, module, formatAmount, onClose }) {
+function formatMoney(currency, value) {
+  return `${currency} ${toNumber(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+}
+
+function isVoucherPageRedirect(xhr) {
+  try {
+    return new URL(xhr.responseURL, window.location.href).pathname.endsWith('/view-voucher.php')
+  } catch {
+    return false
+  }
+}
+
+// redirectEndpoint: the action (mark-paid.php) answers with a redirect to view-voucher.php instead of JSON.
+export default function MarkPaidModal({ voucher, accounts, actionUrl, module, formatAmount, onClose, supplierLabel = false, redirectEndpoint = false }) {
   const fileInputRef = useRef(null)
   const pickerRef = useRef(null)
   const xhrRef = useRef(null)
@@ -98,10 +117,17 @@ export default function MarkPaidModal({ voucher, accounts, actionUrl, module, fo
     xhr.addEventListener('load', () => {
       xhrRef.current = null
       let result = null
-      try {
-        result = JSON.parse(xhr.responseText)
-      } catch {
-        result = null
+      if (redirectEndpoint) {
+        const text = xhr.responseText?.trim() || ''
+        result = xhr.status >= 200 && xhr.status < 300 && isVoucherPageRedirect(xhr)
+          ? { ok: true }
+          : { ok: false, error: text && !text.startsWith('<') ? text.slice(0, 300) : '' }
+      } else {
+        try {
+          result = JSON.parse(xhr.responseText)
+        } catch {
+          result = null
+        }
       }
       if (xhr.status >= 200 && xhr.status < 300 && result?.ok === true) {
         setUploadProgress(100)
@@ -147,7 +173,7 @@ export default function MarkPaidModal({ voucher, accounts, actionUrl, module, fo
         </header>
         <div className="vv-pay-modal__summary">
           <div><strong>Voucher:</strong> {voucher.voucher_no}</div>
-          <div><strong>Payee:</strong> {voucher.payee_name}</div>
+          <div><strong>{supplierLabel ? 'Supplier' : 'Payee'}:</strong> {voucher.payee_name}</div>
           <div><strong>Amount:</strong> {formatAmount(voucher.currency, voucher.total_amount)}</div>
         </div>
         <form action={actionUrl} method="POST" encType="multipart/form-data" onSubmit={handleSubmit}>
@@ -165,7 +191,7 @@ export default function MarkPaidModal({ voucher, accounts, actionUrl, module, fo
                 onClick={(e) => { if (isUploading) e.preventDefault() }}
               >
                 <span className={`vv-pay-modal__account-icon is-${selected ? selectedType : 'cash'}`}>
-                  <PaymentAccountIcon type={selected?.type} size={19} />
+                  <PaymentAccountIcon type={selected?.type} size={19} imageUrl={selected?.image_url} />
                 </span>
                 <span className="vv-pay-modal__account-summary" id="ed-pay-account-value">
                   <strong>{selected?.name || 'Select a payment account'}</strong>
@@ -192,7 +218,7 @@ export default function MarkPaidModal({ voucher, accounts, actionUrl, module, fo
                     }}
                   >
                     <span className={`vv-pay-modal__account-option-icon is-${a.type}`}>
-                      <PaymentAccountIcon type={a.type} size={17} />
+                      <PaymentAccountIcon type={a.type} size={17} imageUrl={a.image_url} />
                     </span>
                     <span className="vv-pay-modal__account-option-copy">
                       <strong>{a.name}</strong>

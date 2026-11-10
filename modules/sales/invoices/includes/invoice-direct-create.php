@@ -17,6 +17,8 @@ function sales_process_direct_invoice_create(array $input): array
     if ($salesDb instanceof PDO) {
         $pdo = $salesDb;
     }
+    require_once dirname(__DIR__, 4) . '/includes/invoice_gl_posting.php';
+    invoice_gl_require_stock_accounts($pdo);
     $company_id = (int) (currentCompanyId() ?? 0);
 
     ensureCustomerColumnsExist();

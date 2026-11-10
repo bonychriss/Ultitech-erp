@@ -273,6 +273,27 @@ main.main-content.cashbook-react-root #root {
     width: 100%;
     min-height: 40vh;
 }
+html[data-theme="dark"] body.page-exp-desk,
+html[data-theme="dark"] body.page-exp-desk .layout-main-wrapper,
+html[data-theme="dark"] body.page-exp-desk .layout-main-wrapper > .flex-grow-1,
+html[data-theme="dark"] body.page-inv-desk,
+html[data-theme="dark"] body.page-inv-desk .layout-main-wrapper,
+html[data-theme="dark"] body.page-inv-desk .layout-main-wrapper > .flex-grow-1,
+html[data-theme="dark"] body.page-order-view,
+html[data-theme="dark"] body.page-order-view .layout-main-wrapper,
+html[data-theme="dark"] body.page-order-view .layout-main-wrapper > .flex-grow-1,
+html[data-theme="dark"] body.page-invoice-view,
+html[data-theme="dark"] body.page-invoice-view .layout-main-wrapper,
+html[data-theme="dark"] body.page-invoice-view .layout-main-wrapper > .flex-grow-1,
+html[data-theme="dark"] body.page-orders-desk main.main-content.exp-desk-react-root,
+html[data-theme="dark"] body.page-invoices-desk main.main-content.exp-desk-react-root,
+html[data-theme="dark"] main.main-content.ov-react-root {
+    background: #0b141a !important;
+}
+html[data-theme="dark"] body.page-exp-desk .employee-header--exp-desk .employee-header-page-title,
+html[data-theme="dark"] body.page-inv-desk .employee-header--inv-desk .employee-header-page-title {
+    color: #e9edef !important;
+}
 @media print {
     body.page-order-view .employee-header,
     body.page-invoice-view .employee-header,

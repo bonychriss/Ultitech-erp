@@ -254,7 +254,9 @@ export default function CustomerIndexPage() {
   const trimmedSearch = searchTerm.trim();
   const resultsLabel = trimmedSearch
     ? `${filteredCustomers.length} ${filteredCustomers.length === 1 ? 'result' : 'results'} for "${trimmedSearch}"`
-    : `${allCustomers.length} ${allCustomers.length === 1 ? 'customer' : 'customers'}`;
+    : allCustomers.length > 0
+      ? `Showing 1–${allCustomers.length} of ${allCustomers.length}`
+      : '0 results';
 
   return (
     <div className="exp-desk-page">
@@ -312,8 +314,20 @@ export default function CustomerIndexPage() {
         </div>
       </div>
 
+      {urls.add && (
+        <button
+          type="button"
+          className="ci-mobile-cta"
+          onClick={() => setAddModalOpen(true)}
+        >
+          <Plus size={18} aria-hidden="true" />
+          Add Customer
+        </button>
+      )}
+
       <section className="exp-desk-results ci-customers-table">
         <div className="exp-desk-results-head">
+          <h2 className="ci-results-title">All Customers</h2>
           <span className="exp-desk-results-count">{resultsLabel}</span>
         </div>
 
@@ -344,8 +358,72 @@ export default function CustomerIndexPage() {
             )}
           </div>
         ) : (
-          <div className="exp-desk-table-wrap">
-            <table className="exp-desk-table">
+          <>
+            <div className="ci-mobile-cards">
+              {filteredCustomers.map((customer, index) => {
+                const style = avatarStyle(customer.id);
+                const viewUrl = buildViewUrl(customer.id);
+                const editUrl = buildEditUrl(customer.id);
+                return (
+                  <article
+                    key={customer.id}
+                    className={`ci-mobile-card${openedId === Number(customer.id) ? ' is-selected' : ''}`}
+                    data-customer-id={customer.id}
+                  >
+                    <a className="ci-mobile-card-main" href={viewUrl} onClick={() => markOpened(customer.id)}>
+                      <span className="ci-mobile-card-avatar" style={style} aria-hidden="true">
+                        {getInitials(customer.company_name)}
+                      </span>
+                      <span className="ci-mobile-card-identity">
+                        <span className="ci-mobile-card-top">
+                          <span className="ci-mobile-card-code">{cellOrDash(customer.customer_code)}</span>
+                          <span className="ci-mobile-card-number">#{index + 1}</span>
+                        </span>
+                        <span className="ci-mobile-card-company">{cellOrDash(customer.company_name)}</span>
+                        <span className="ci-mobile-card-contact">{cellOrDash(customer.contact_person)}</span>
+                        {customer.phone ? <span className="ci-mobile-card-phone">{customer.phone}</span> : null}
+                        {customer.email ? <span className="ci-mobile-card-email">{customer.email}</span> : null}
+                        <span className="ci-mobile-card-meta">
+                          <span className="ci-type-badge">{cellOrDash(customer.customer_type)}</span>
+                        </span>
+                      </span>
+                    </a>
+                    <div className="ci-mobile-card-foot" data-exp-row-ignore onClick={(event) => event.stopPropagation()}>
+                      <span className="ci-mobile-card-action-label">Customer</span>
+                      <div className="ci-mobile-card-actions">
+                        <a
+                          href={editUrl}
+                          onClick={() => markOpened(customer.id)}
+                          className="exp-desk-row-action"
+                          title="Edit customer"
+                          aria-label={`Edit ${customer.company_name || 'customer'}`}
+                        >
+                          <Pencil size={15} aria-hidden="true" />
+                          <span>Edit</span>
+                        </a>
+                        <button
+                          type="button"
+                          className="exp-desk-row-action exp-desk-row-action--danger"
+                          title="Delete customer"
+                          aria-label={`Delete ${customer.company_name || 'customer'}`}
+                          disabled={deletingId === customer.id}
+                          onClick={(event) => handleDeleteCustomer(customer, event)}
+                        >
+                          {deletingId === customer.id ? (
+                            <Loader2 size={15} className="ci-delete-spinner" aria-hidden="true" />
+                          ) : (
+                            <Trash2 size={15} aria-hidden="true" />
+                          )}
+                          <span>Delete</span>
+                        </button>
+                      </div>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+            <div className="exp-desk-table-wrap">
+              <table className="exp-desk-table">
               <thead>
                 <tr>
                   <th className="ci-col-serial" title={`${filteredCustomers.length} customers in this list`}>No.</th>
@@ -440,6 +518,7 @@ export default function CustomerIndexPage() {
               </tbody>
             </table>
           </div>
+          </>
         )}
       </section>
 

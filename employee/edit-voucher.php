@@ -400,6 +400,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['limited_classificati
         if (empty($items)) {
             throw new Exception('Please add at least one valid payment item');
         }
+        $creditAmount = 0.0;
+        foreach ($items as $item) {
+            if (strcasecmp($item['payment_type'], 'Credit') === 0) {
+                $creditAmount += (float) $item['amount'];
+            }
+        }
+        $voucherDueDate = trim((string) ($_POST['due_date'] ?? ''));
+        if ($voucherDueDate !== '' && !validOutstandingDueDate($voucherDueDate)) {
+            throw new Exception('Please enter a valid due date.');
+        }
+        if ($creditAmount > 0 && $voucherDueDate === '') {
+            throw new Exception('Please enter a due date for the credit payment.');
+        }
+        ensurePaymentVoucherDueDateColumn($pdo);
+        ensureOutstandingInvoicesSchema($pdo);
         
     // Start transaction
     $pdo->beginTransaction();
@@ -506,6 +521,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['limited_classificati
                 $item['amount'],
                 $item['description']
             ]);
+        }
+        $pdo->prepare('UPDATE payment_vouchers SET due_date = ? WHERE id = ?')
+            ->execute([$creditAmount > 0 ? $voucherDueDate : null, $voucher_id]);
+        if ($creditAmount > 0 && strtoupper(trim((string) $currency)) === 'TZS' && !$isPaidFlag) {
+            $pdo->prepare("INSERT INTO erp_outstanding_invoices
+                (type, invoice_date, entity_name, invoice_number, narration, amount, source_payment_voucher_id, due_date)
+                VALUES ('payable', ?, ?, ?, ?, ?, ?, ?)
+                ON DUPLICATE KEY UPDATE invoice_date = VALUES(invoice_date), entity_name = VALUES(entity_name),
+                    invoice_number = VALUES(invoice_number), narration = VALUES(narration),
+                    amount = VALUES(amount), due_date = VALUES(due_date)")
+                ->execute([$date_created, $payee_name, $voucher['voucher_no'], $description, $creditAmount, $voucher_id, $voucherDueDate]);
+        } else {
+            $pdo->prepare("UPDATE erp_outstanding_invoices SET status = 'paid'
+                WHERE type = 'payable' AND source_payment_voucher_id = ?")->execute([$voucher_id]);
         }
         
         // Handle newly uploaded supporting files (additive; existing retained)
@@ -858,6 +887,7 @@ $editVoucherConfig = [
         'payee_name' => $payeeName,
         'currency' => (string) ($voucher['currency'] ?? 'TZS'),
         'date_created' => (string) ($voucher['date_created'] ?? date('Y-m-d')),
+        'due_date' => (string) ($voucher['due_date'] ?? ''),
         'purpose' => $purpose,
         'is_restricted' => !empty($voucher['is_restricted']),
         'description' => (string) ($voucher['description'] ?? ''),

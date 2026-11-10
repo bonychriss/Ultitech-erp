@@ -41,6 +41,43 @@ async function postAsk(message) {
   return res.json()
 }
 
+function money(value) {
+  const n = Number(value) || 0
+  return n.toLocaleString(undefined, { maximumFractionDigits: 2 })
+}
+
+function buildTable(reply) {
+  if (reply.table && Array.isArray(reply.table.columns) && Array.isArray(reply.table.rows)) return reply.table
+  const invoices = (reply.invoices || []).filter((invoice) => invoice && invoice.invoice_number)
+  if (invoices.length < 2) return null
+  return {
+    columns: ['Invoice', 'Customer', 'Due date', 'Days overdue', 'Balance due'],
+    rows: invoices.map((invoice) => [
+      invoice.invoice_number,
+      invoice.customer_name || '',
+      invoice.due_date || '',
+      Number(invoice.days_overdue) > 0 ? String(invoice.days_overdue) : '-',
+      money(invoice.balance_due),
+    ]),
+  }
+}
+
+function buildChart(reply) {
+  if (reply.chart && Array.isArray(reply.chart.labels) && Array.isArray(reply.chart.values)) return reply.chart
+  const invoices = (reply.invoices || []).filter((invoice) => invoice && Number(invoice.balance_due) > 0)
+  if (invoices.length < 2) return null
+  return {
+    title: 'Balance due by invoice',
+    labels: invoices.map((invoice) => invoice.invoice_number + ' - ' + (invoice.customer_name || '')),
+    values: invoices.map((invoice) => Number(invoice.balance_due)),
+  }
+}
+
+function safeImageUrl(url) {
+  const value = String(url || '')
+  return /^(https?:\/\/|\/(?!\/)|data:image\/(png|jpe?g|gif|webp);)/i.test(value) ? value : ''
+}
+
 function AssistantBody({ reply }) {
   if (!reply) return null
   if (reply.pending) {
@@ -59,10 +96,45 @@ function AssistantBody({ reply }) {
       links.push({ href: invoice.view_url, label: 'View ' + (invoice.invoice_number || 'invoice') })
     }
   })
+  const table = buildTable(reply)
+  const chart = buildChart(reply)
+  const maxValue = chart ? Math.max(...chart.values.map((v) => Number(v) || 0), 1) : 1
+  const images = (reply.images || []).map((img) => ({ src: safeImageUrl(img && img.url), alt: (img && img.alt) || '' })).filter((img) => img.src)
   return (
     <>
       {reply.text ? <p>{reply.text}</p> : null}
       {reply.facts ? <p>{reply.facts}</p> : null}
+      {table ? (
+        <div className="gpt-table-wrap">
+          <table className="gpt-table">
+            <thead>
+              <tr>{table.columns.map((col, i) => <th key={i}>{col}</th>)}</tr>
+            </thead>
+            <tbody>
+              {table.rows.map((row, r) => (
+                <tr key={r}>{row.map((cell, c) => <td key={c}>{String(cell)}</td>)}</tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : null}
+      {chart ? (
+        <div className="gpt-chart">
+          {chart.title ? <div className="gpt-chart-title">{chart.title}</div> : null}
+          {chart.labels.map((label, i) => {
+            const value = Number(chart.values[i]) || 0
+            return (
+              <div className="gpt-bar-row" key={i}>
+                <div className="gpt-bar-label">{label}</div>
+                <div className="gpt-bar-track"><div className="gpt-bar" style={{ width: Math.max(2, (value / maxValue) * 100) + '%' }} /></div>
+                <div className="gpt-bar-value">{money(value)}</div>
+              </div>
+            )
+          })}
+        </div>
+      ) : null}
+      {images.map((img, i) => <img key={i} className="gpt-image" src={img.src} alt={img.alt} />)}
+
       {links.length ? (
         <div className="gpt-links">
           {links.map((link) => <a key={link.href + link.label} href={link.href}>{link.label}</a>)}

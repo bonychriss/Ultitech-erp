@@ -1,199 +1,72 @@
 <?php
 
 require_once __DIR__ . '/../includes/functions.php';
-require_once __DIR__ . '/../includes/accounting_settings.php';
+require_once __DIR__ . '/../includes/accounting_journals.php';
 requireLogin();
 
 $page_title = 'Journal Configuration';
 
 global $pdo;
 
-$salesRevenueDefaultLabel = '4001 - Sales Revenue';
-$salesRevenueGlId = accounting_resolve_default_sales_revenue_gl_account_id($pdo);
-if ($salesRevenueGlId) {
-    $salesRevStmt = $pdo->prepare('SELECT code, name FROM erp_accounts WHERE id = ? LIMIT 1');
-    $salesRevStmt->execute([$salesRevenueGlId]);
-    $salesRevRow = $salesRevStmt->fetch(PDO::FETCH_ASSOC);
-    if ($salesRevRow) {
-        $salesRevenueDefaultLabel = accounting_settings_format_gl_account_label($salesRevRow);
+if (!isAdmin() && !isFinance()) {
+    http_response_code(403);
+    die('Access denied.');
+}
+
+$jeModuleRaw = isset($_GET['module']) ? (string) $_GET['module'] : 'balances';
+$jeModuleEsc = htmlspecialchars($jeModuleRaw, ENT_QUOTES, 'UTF-8');
+$flash = '';
+$flashError = false;
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!verify_csrf($_POST['csrf_token'] ?? '')) {
+        $flash = 'Your session expired. Reload the page and try again.';
+        $flashError = true;
+    } elseif (($_POST['action'] ?? '') === 'toggle_status') {
+        $result = accounting_journal_toggle_status($pdo, trim((string) ($_POST['id'] ?? '')));
+        $flash = $result['ok'] ? 'Journal status updated.' : $result['error'];
+        $flashError = !$result['ok'];
+    } else {
+        $flash = 'The requested journal action is not valid.';
+        $flashError = true;
+    }
+
+    if ($flash !== '') {
+        $_SESSION['journal_config_flash'] = ['message' => $flash, 'error' => $flashError];
+        header('Location: journal-configuration.php?module=' . rawurlencode($jeModuleRaw));
+        exit;
     }
 }
 
-$journals = [
-    [
-        'id' => 'gen',
-        'name' => 'General Journal',
-        'code' => 'GEN',
-        'type' => 'General',
-        'debit_display' => '—',
-        'credit_display' => '—',
-        'status' => 'active',
-        'is_default' => 'yes',
-        'description' => 'Default journal for adjustments, accruals, and entries that do not belong to a specialized journal.',
-        'default_debit' => null,
-        'default_credit' => null,
-        'currency' => 'TZS',
-        'posting_sequence' => 'JE-',
-        'allow_manual' => true,
-        'allow_posting' => true,
-        'allow_reverse' => true,
-        'created_by' => 'System Admin',
-        'created_at' => '15 Jan 2024, 10:00',
-    ],
-    [
-        'id' => 'sal',
-        'name' => 'Sales Journal',
-        'code' => 'SAL',
-        'type' => 'Sales',
-        'debit_display' => '1200 - Accounts Receivable',
-        'credit_display' => $salesRevenueDefaultLabel,
-        'status' => 'active',
-        'is_default' => 'yes',
-        'description' => 'Customer invoicing and sales revenue recognition.',
-        'default_debit' => '1200 - Accounts Receivable',
-        'default_credit' => $salesRevenueDefaultLabel,
-        'currency' => 'TZS',
-        'posting_sequence' => 'SJ-',
-        'allow_manual' => true,
-        'allow_posting' => true,
-        'allow_reverse' => true,
-        'created_by' => 'System Admin',
-        'created_at' => '15 Jan 2024, 10:15',
-    ],
-    [
-        'id' => 'bnk',
-        'name' => 'Bank Journal',
-        'code' => 'BNK',
-        'type' => 'Bank',
-        'debit_display' => '1002 - Bank',
-        'credit_display' => '1001 - Cash',
-        'status' => 'active',
-        'is_default' => 'no',
-        'description' => 'Bank receipts, payments, and bank charges.',
-        'default_debit' => '1002 - Bank',
-        'default_credit' => '1001 - Cash',
-        'currency' => 'TZS',
-        'posting_sequence' => 'BJ-',
-        'allow_manual' => true,
-        'allow_posting' => true,
-        'allow_reverse' => true,
-        'created_by' => 'System Admin',
-        'created_at' => '20 Jan 2024, 09:20',
-    ],
-    [
-        'id' => 'pur',
-        'name' => 'Purchase Journal',
-        'code' => 'PUR',
-        'type' => 'Purchase',
-        'debit_display' => '5100 - Purchases',
-        'credit_display' => '2200 - Tax Payable',
-        'status' => 'active',
-        'is_default' => 'no',
-        'description' => 'Supplier bills and purchase expenses.',
-        'default_debit' => '5100 - Purchases',
-        'default_credit' => '2200 - Tax Payable',
-        'currency' => 'TZS',
-        'posting_sequence' => 'PJ-',
-        'allow_manual' => true,
-        'allow_posting' => true,
-        'allow_reverse' => true,
-        'created_by' => 'Finance User',
-        'created_at' => '22 Jan 2024, 14:00',
-    ],
-    [
-        'id' => 'pym',
-        'name' => 'Payment Voucher',
-        'code' => 'PAY',
-        'type' => 'Payments',
-        'debit_display' => '—',
-        'credit_display' => '1002 - Bank',
-        'status' => 'active',
-        'is_default' => 'yes',
-        'description' => 'Outgoing payments and vendor settlements.',
-        'default_debit' => null,
-        'default_credit' => '1002 - Bank',
-        'currency' => 'TZS',
-        'posting_sequence' => 'PV-',
-        'allow_manual' => true,
-        'allow_posting' => true,
-        'allow_reverse' => true,
-        'created_by' => 'Finance User',
-        'created_at' => '01 Feb 2024, 08:30',
-    ],
-    [
-        'id' => 'csh',
-        'name' => 'Cash Journal',
-        'code' => 'CSH',
-        'type' => 'Cash',
-        'debit_display' => '1001 - Cash',
-        'credit_display' => '—',
-        'status' => 'active',
-        'is_default' => 'no',
-        'description' => 'Petty cash and on-hand cash movements.',
-        'default_debit' => '1001 - Cash',
-        'default_credit' => null,
-        'currency' => 'TZS',
-        'posting_sequence' => 'CJ-',
-        'allow_manual' => true,
-        'allow_posting' => true,
-        'allow_reverse' => false,
-        'created_by' => 'Finance User',
-        'created_at' => '05 Feb 2024, 11:45',
-    ],
-    [
-        'id' => 'pay',
-        'name' => 'Payroll Journal',
-        'code' => 'PAYRL',
-        'type' => 'Payroll',
-        'debit_display' => '5001 - Salary & Wage Expense',
-        'credit_display' => '2002 - NSSF Payable',
-        'status' => 'active',
-        'is_default' => 'no',
-        'description' => 'Payroll accruals, statutory deductions, and net pay (adjust default accounts to match your chart).',
-        'default_debit' => '5001 - Salary & Wage Expense',
-        'default_credit' => '2002 - NSSF Payable',
-        'currency' => 'TZS',
-        'posting_sequence' => 'PR-',
-        'allow_manual' => true,
-        'allow_posting' => true,
-        'allow_reverse' => true,
-        'created_by' => 'HR Admin',
-        'created_at' => '10 Mar 2024, 16:00',
-    ],
-    [
-        'id' => 'opn',
-        'name' => 'Opening Journal',
-        'code' => 'OPN',
-        'type' => 'General',
-        'debit_display' => '—',
-        'credit_display' => '—',
-        'status' => 'inactive',
-        'is_default' => 'no',
-        'description' => 'Legacy opening balance journal (archived).',
-        'default_debit' => null,
-        'default_credit' => null,
-        'currency' => 'TZS',
-        'posting_sequence' => 'OP-',
-        'allow_manual' => false,
-        'allow_posting' => false,
-        'allow_reverse' => false,
-        'created_by' => 'System Admin',
-        'created_at' => '01 Jan 2023, 00:00',
-    ],
-];
+if (isset($_SESSION['journal_config_flash']) && is_array($_SESSION['journal_config_flash'])) {
+    $flash = (string) ($_SESSION['journal_config_flash']['message'] ?? '');
+    $flashError = !empty($_SESSION['journal_config_flash']['error']);
+    unset($_SESSION['journal_config_flash']);
+}
+if ($flash === '' && isset($_GET['saved'])) {
+    $flash = 'Journal settings saved.';
+}
 
-$totalJournals = count($journals);
-$activeCount = count(array_filter($journals, function ($j) {
-    return ($j['status'] ?? '') === 'active';
-}));
-$inactiveCount = $totalJournals - $activeCount;
-$defaultCount = count(array_filter($journals, function ($j) {
-    return ($j['is_default'] ?? '') === 'yes';
+$journals = accounting_journals_get($pdo);
+$journalTypes = accounting_journal_types();
+foreach ($journals as &$journal) {
+    $journal['type_label'] = $journalTypes[$journal['type'] ?? ''] ?? 'General';
+    $journal['is_default'] = !empty($journal['is_default']);
+    $journal['debit_display'] = 'â€”';
+    $journal['credit_display'] = 'â€”';
+}
+unset($journal);
+
+$inactiveCount = count(array_filter($journals, function ($j) {
+    return ($j['status'] ?? '') !== 'active';
 }));
 
 $company_display = $_SESSION['company_name'] ?? (defined('COMPANY_NAME') ? COMPANY_NAME : 'Company');
-$jeModuleRaw = isset($_GET['module']) ? (string) $_GET['module'] : 'balances';
-$jeModuleEsc = htmlspecialchars($jeModuleRaw, ENT_QUOTES, 'UTF-8');
+
+$jcEmbed = isset($_GET['embed']);
+if ($jcEmbed) {
+    $hideSidebar = true;
+}
 
 include __DIR__ . '/../modules/balances/includes/header.php';
 ?>
@@ -384,7 +257,7 @@ include __DIR__ . '/../modules/balances/includes/header.php';
         padding: 0.625rem 0.75rem 0.625rem 0;
     }
     .stock-dash .tx-search-input::placeholder { color: #94a3b8; }
-    .stock-dash .ledger-table { width: 100%; margin: 0; font-size: 0.8125rem; min-width: 980px; }
+    .stock-dash .ledger-table { width: 100%; margin: 0; font-size: 0.8125rem; min-width: 680px; }
     .stock-dash .ledger-table thead th {
         background: #f8fafc;
         color: #475569;
@@ -503,12 +376,48 @@ include __DIR__ . '/../modules/balances/includes/header.php';
     }
 </style>
 
+<?php if ($jcEmbed): ?>
+<style>
+    html, body { background: transparent !important; }
+    .employee-header, #erp-auto-breadcrumb, .erp-auto-breadcrumb { display: none !important; }
+    .layout-main-wrapper { min-height: 0 !important; }
+    body .main-content { padding: 0 !important; margin: 0 !important; background: transparent !important; }
+    .stock-dash { max-width: none !important; padding: 0.4rem 0.2rem 1rem !important; }
+    .stock-dash .dash-header h1, .stock-dash .dash-header-title > p { display: none !important; }
+    .stock-dash .dash-header--ledger { grid-template-columns: minmax(160px, 1fr) auto !important; gap: 0.6rem 1rem; margin-bottom: 0.9rem; }
+    .stock-dash .dash-header--ledger .dash-header-title:empty, .stock-dash .dash-header--ledger .dash-header-title { grid-column: 1 / -1; order: 3; margin: 0; }
+    .stock-dash .dash-header--ledger .dash-header-title { display: contents; }
+    .stock-dash .dash-alert { margin: 0; grid-column: 1 / -1; order: 3; width: fit-content; }
+    .stock-dash .dash-header p { font-size: 0.72rem !important; }
+    .stock-dash .dash-alert { font-size: 0.72rem; padding: 0.2rem 0.55rem; margin-top: 0.4rem; background: #fffbeb; border-color: #fde68a; color: #b45309; }
+    .stock-dash .tx-search-wrap, .stock-dash .tx-search-input { font-size: 0.78rem; }
+    .stock-dash .btn-outline { font-size: 0.74rem; padding: 0.4rem 0.8rem; }
+    .stock-dash .btn-blue { background: #059669 !important; border-color: #059669 !important; font-size: 0.74rem; padding: 0.4rem 0.8rem; }
+    .stock-dash .btn-blue:hover { background: #065f46 !important; border-color: #065f46 !important; }
+    .stock-dash .kpi-card { padding: 0.7rem 0.9rem; }
+    .stock-dash .kpi-value { font-size: 1.15rem !important; }
+    .stock-dash .kpi-label { font-size: 0.74rem !important; }
+    .stock-dash .kpi-sub { font-size: 0.68rem !important; }
+    .stock-dash .dash-card-h h3 { font-size: 0.85rem !important; }
+    .stock-dash .dash-card-h h3 .text-blue-600 { color: #059669 !important; }
+    .stock-dash table { font-size: 0.76rem; }
+    .stock-dash .dash-alert[role="note"] { display: none !important; }
+    .stock-dash .dash-header--ledger { margin-bottom: 0.5rem !important; }
+    .stock-dash .dash-card { margin-bottom: 0.5rem !important; }
+    .stock-dash .dash-card-h { padding: 0.45rem 0.8rem !important; }
+    .stock-dash .ledger-table { min-width: 0 !important; }
+    .stock-dash table th, .stock-dash table td { padding: 0.4rem 0.6rem !important; }
+    @media (max-width: 992px) { .stock-dash .dash-header--ledger { grid-template-columns: 1fr; } }
+</style>
+<?php endif; ?>
+
 <main class="main-content">
 <div class="stock-dash">
     <div class="dash-header dash-header--ledger">
         <div class="dash-header-title">
             <h1>Journal Configuration</h1>
-            <p class="mt-1"><?= date('l, d M Y') ?> · <?= htmlspecialchars($company_display) ?></p>
+            <p class="mt-1"><?= date('l, d M Y') ?> Â· <?= htmlspecialchars($company_display) ?></p>
+            <p class="mt-1">Journal profiles are saved for this company. GL account mappings remain under Accounting Settings.</p>
             <?php if ($inactiveCount > 0): ?>
             <div class="dash-alert">
                 <i class="fas fa-exclamation-triangle" aria-hidden="true"></i>
@@ -519,7 +428,7 @@ include __DIR__ . '/../modules/balances/includes/header.php';
         <div class="tx-search-form">
             <div class="tx-search-wrap">
                 <i class="fas fa-search" aria-hidden="true"></i>
-                <input type="search" id="jconfSearch" class="tx-search-input" placeholder="Search journals…" autocomplete="off" aria-label="Search journals">
+                <input type="search" id="jconfSearch" class="tx-search-input" placeholder="Search journalsâ€¦" autocomplete="off" aria-label="Search journals">
             </div>
         </div>
         <div class="dash-header-actions">
@@ -528,62 +437,39 @@ include __DIR__ . '/../modules/balances/includes/header.php';
         </div>
     </div>
 
-    <div class="kpi-grid kpi-grid--four">
-        <div class="kpi-card">
-            <div class="kpi-icon kpi-icon--total"><i class="far fa-file-lines"></i></div>
-            <div class="kpi-value"><?= (int) $totalJournals ?></div>
-            <div class="kpi-label">Total Journals</div>
-            <div class="kpi-sub">Configured in system</div>
+    <?php if ($flash !== ''): ?>
+        <div class="dash-alert" role="status" style="<?= $flashError ? 'background:#fef2f2;border-color:#fecaca;color:#b91c1c;' : 'background:#f0fdf4;border-color:#bbf7d0;color:#15803d;' ?>">
+            <?= htmlspecialchars($flash, ENT_QUOTES, 'UTF-8') ?>
         </div>
-        <div class="kpi-card">
-            <div class="kpi-icon kpi-icon--active"><i class="fas fa-circle-check"></i></div>
-            <div class="kpi-value"><?= (int) $activeCount ?></div>
-            <div class="kpi-label">Active Journals</div>
-            <div class="kpi-sub">Available for posting</div>
-        </div>
-        <div class="kpi-card">
-            <div class="kpi-icon kpi-icon--inactive"><i class="fas fa-ban"></i></div>
-            <div class="kpi-value"><?= (int) $inactiveCount ?></div>
-            <div class="kpi-label">Inactive Journals</div>
-            <div class="kpi-sub">Archived or disabled</div>
-        </div>
-        <div class="kpi-card">
-            <div class="kpi-icon kpi-icon--default"><i class="fas fa-star"></i></div>
-            <div class="kpi-value"><?= (int) $defaultCount ?></div>
-            <div class="kpi-label">Default Journals</div>
-            <div class="kpi-sub">Auto-selected on create</div>
-        </div>
+    <?php endif; ?>
+
+    <div class="dash-alert" role="note" style="margin-bottom:1rem;">
+        These profiles and their behavior flags are saved for reference but are not yet enforced by GL posting.
+        They do not override chart-of-accounts mappings; set GL accounts in <a href="settings.php?module=<?= $jeModuleEsc ?>">Accounting Settings</a>.
     </div>
 
     <div class="dash-card">
         <div class="dash-card-h">
             <h3><i class="fas fa-list text-blue-600 me-1"></i> Journals</h3>
-            <span class="text-xs font-semibold text-slate-500"><?= (int) $totalJournals ?> journal<?= $totalJournals === 1 ? '' : 's' ?></span>
         </div>
         <div class="table-wrap">
             <table class="table ledger-table mb-0" id="jconfTable">
                 <thead>
                     <tr>
-                        <th style="width:48px;">#</th>
-                        <th>Journal name</th>
+                        <th>Journal</th>
                         <th>Code</th>
                         <th>Type</th>
-                        <th>Default debit account</th>
-                        <th>Default credit account</th>
                         <th>Status</th>
-                        <th>Is default</th>
+                        <th>Default</th>
                         <th class="text-end">Actions</th>
                     </tr>
                 </thead>
                 <tbody id="jconfTbody">
-                    <?php foreach ($journals as $idx => $j): ?>
+                    <?php foreach ($journals as $j): ?>
                         <tr data-id="<?= htmlspecialchars($j['id']) ?>" tabindex="0" role="button">
-                            <td><?= $idx + 1 ?></td>
                             <td><?= htmlspecialchars($j['name']) ?></td>
                             <td><strong><?= htmlspecialchars($j['code']) ?></strong></td>
-                            <td><?= htmlspecialchars($j['type']) ?></td>
-                            <td><?= htmlspecialchars($j['debit_display']) ?></td>
-                            <td><?= htmlspecialchars($j['credit_display']) ?></td>
+                            <td><?= htmlspecialchars($j['type_label']) ?></td>
                             <td>
                                 <?php if (($j['status'] ?? '') === 'active'): ?>
                                     <span class="status-pill status-active">Active</span>
@@ -592,81 +478,24 @@ include __DIR__ . '/../modules/balances/includes/header.php';
                                 <?php endif; ?>
                             </td>
                             <td>
-                                <span class="<?= ($j['is_default'] ?? '') === 'yes' ? 'default-yes' : 'default-no' ?>">
-                                    <?= ($j['is_default'] ?? '') === 'yes' ? 'Yes' : 'No' ?>
+                                <span class="<?= !empty($j['is_default']) ? 'default-yes' : 'default-no' ?>">
+                                    <?= !empty($j['is_default']) ? 'Yes' : 'No' ?>
                                 </span>
                             </td>
                             <td class="text-end">
                                 <a href="#" class="action-btn jconf-edit" data-id="<?= htmlspecialchars($j['id']) ?>" title="Edit" aria-label="Edit" onclick="event.stopPropagation();"><i class="fas fa-pen"></i></a>
-                            </td>
+                                                                <?php $jActive = ($j['status'] ?? '') === 'active'; $jLocked = $jActive && !empty($j['is_default']); ?>
+                                                                <form method="post" class="jconf-status-form" style="display:inline;" onclick="event.stopPropagation();">
+                                                                    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token(), ENT_QUOTES, 'UTF-8') ?>">
+                                                                    <input type="hidden" name="action" value="toggle_status">
+                                                                    <input type="hidden" name="id" value="<?= htmlspecialchars($j['id']) ?>">
+                                                                    <button type="submit" class="action-btn" style="background:none;border:0;<?= $jLocked ? 'opacity:.35;cursor:not-allowed;' : '' ?>" <?= $jLocked ? 'disabled' : '' ?> title="<?= $jLocked ? 'Set another active journal as default first.' : ($jActive ? 'Deactivate' : 'Activate') ?>" aria-label="<?= $jActive ? 'Deactivate' : 'Activate' ?>"><i class="fas fa-power-off"></i></button>
+                                                                </form>
+                                                            </td>
                         </tr>
                     <?php endforeach; ?>
                 </tbody>
             </table>
-        </div>
-    </div>
-
-    <div class="dash-card" id="jconfDetail" style="margin-bottom:0;">
-        <div class="jconf-detail-hd">
-            <div>
-                <h2 id="detailTitle">General Journal <span style="color:#64748b;font-weight:600;">(GEN)</span></h2>
-                <p class="meta" id="detailMeta">General · Active</p>
-            </div>
-            <div class="jconf-detail-actions">
-                <button type="button" class="btn-outline" id="detailEditBtn"><i class="fas fa-pen"></i> Edit journal</button>
-                <button type="button" class="btn-outline btn-danger" id="detailDeactivateBtn"><i class="fas fa-power-off"></i> Deactivate</button>
-            </div>
-        </div>
-        <div class="jconf-tabs" role="tablist">
-            <button type="button" class="active" data-tab="general" role="tab" aria-selected="true">General information</button>
-            <button type="button" data-tab="accounts" role="tab" aria-selected="false">Accounts</button>
-            <button type="button" data-tab="settings" role="tab" aria-selected="false">Settings</button>
-            <button type="button" data-tab="permissions" role="tab" aria-selected="false">Permissions</button>
-            <button type="button" data-tab="history" role="tab" aria-selected="false">History</button>
-        </div>
-        <div id="panel-general" class="jconf-tab-panel active" role="tabpanel">
-            <div class="jconf-grid3">
-                <div>
-                    <div class="jconf-fg"><label>Journal name</label><div class="val" id="d_name">—</div></div>
-                    <div class="jconf-fg" style="margin-top:12px;"><label>Journal code</label><div class="val" id="d_code">—</div></div>
-                    <div class="jconf-fg" style="margin-top:12px;"><label>Journal type</label><div class="val" id="d_type">—</div></div>
-                    <div class="jconf-fg" style="margin-top:12px;"><label>Status</label><div class="val" id="d_status">—</div></div>
-                    <div class="jconf-fg" style="margin-top:12px;"><label>Description</label><div class="val" id="d_desc" style="line-height:1.5;">—</div></div>
-                </div>
-                <div>
-                    <div class="jconf-fg"><label>Default debit account</label><div class="val" id="d_debit">—</div></div>
-                    <div class="jconf-fg" style="margin-top:12px;"><label>Default credit account</label><div class="val" id="d_credit">—</div></div>
-                    <div class="jconf-fg" style="margin-top:12px;"><label>Currency</label><div class="val" id="d_currency">—</div></div>
-                    <div class="jconf-fg" style="margin-top:12px;"><label>Posting sequence</label><div class="val" id="d_seq">—</div></div>
-                </div>
-                <div>
-                    <div class="jconf-check" id="chk_manual"><i class="fas fa-check"></i> Allow manual entries</div>
-                    <div class="jconf-check" id="chk_post"><i class="fas fa-check"></i> Allow posting</div>
-                    <div class="jconf-check" id="chk_rev"><i class="fas fa-check"></i> Allow reverse</div>
-                    <div class="jconf-check" id="chk_def"><i class="fas fa-check"></i> Is default journal</div>
-                    <div class="jconf-fg" style="margin-top:16px;"><label>Created by</label><div class="val" id="d_by">—</div></div>
-                    <div class="jconf-fg" style="margin-top:12px;"><label>Created at</label><div class="val" id="d_at">—</div></div>
-                </div>
-            </div>
-        </div>
-        <div id="panel-accounts" class="jconf-tab-panel" role="tabpanel" hidden>
-            <p style="color:#64748b;margin:0;">Default GL mapping for this journal. Override per line when posting if needed.</p>
-            <div class="jconf-grid3" style="margin-top:14px;">
-                <div class="jconf-fg"><label>Debit template</label><div class="val" id="a_debit">—</div></div>
-                <div class="jconf-fg"><label>Credit template</label><div class="val" id="a_credit">—</div></div>
-            </div>
-        </div>
-        <div id="panel-settings" class="jconf-tab-panel" role="tabpanel" hidden>
-            <div class="jconf-grid3">
-                <div class="jconf-fg"><label>Posting prefix</label><div class="val" id="s_seq">—</div></div>
-                <div class="jconf-fg"><label>Currency</label><div class="val" id="s_cur">—</div></div>
-            </div>
-        </div>
-        <div id="panel-permissions" class="jconf-tab-panel" role="tabpanel" hidden>
-            <p style="color:#64748b;">Role-based access for this journal is managed in <strong>Users &amp; Roles</strong>. Finance roles can post by default.</p>
-        </div>
-        <div id="panel-history" class="jconf-tab-panel" role="tabpanel" hidden>
-            <p style="color:#64748b;">No audit log entries in this build. Activity history can be connected to your audit table later.</p>
         </div>
     </div>
 </div>
@@ -677,75 +506,17 @@ include __DIR__ . '/../modules/balances/includes/header.php';
     const rows = <?= json_encode($journals, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>;
     const byId = Object.fromEntries(rows.map(r => [r.id, r]));
 
-    function escapeHtml(s) {
-        const d = document.createElement('div');
-        d.textContent = s;
-        return d.innerHTML;
-    }
-
-    function setCheck(el, on) {
-        if (!el) return;
-        el.style.display = 'flex';
-        el.querySelector('i').className = on ? 'fas fa-check' : 'fas fa-xmark';
-        el.style.opacity = on ? '1' : '0.45';
-    }
-
-    function fillDetail(r) {
-        if (!r) return;
-        document.getElementById('detailTitle').innerHTML = `${escapeHtml(r.name)} <span style="color:#64748b;font-weight:600;">(${escapeHtml(r.code)})</span>`;
-        document.getElementById('detailMeta').textContent = `${r.type} · ${r.status === 'active' ? 'Active' : 'Inactive'}`;
-        document.getElementById('d_name').textContent = r.name;
-        document.getElementById('d_code').textContent = r.code;
-        document.getElementById('d_type').textContent = r.type;
-        document.getElementById('d_status').textContent = r.status === 'active' ? 'Active' : 'Inactive';
-        document.getElementById('d_desc').textContent = r.description || '—';
-        document.getElementById('d_debit').textContent = r.default_debit || r.debit_display || '—';
-        document.getElementById('d_credit').textContent = r.default_credit || r.credit_display || '—';
-        document.getElementById('d_currency').textContent = r.currency || 'TZS';
-        document.getElementById('d_seq').textContent = (r.posting_sequence || '') + '#####';
-        document.getElementById('d_by').textContent = r.created_by || '—';
-        document.getElementById('d_at').textContent = r.created_at || '—';
-        document.getElementById('a_debit').textContent = r.default_debit || r.debit_display || '—';
-        document.getElementById('a_credit').textContent = r.default_credit || r.credit_display || '—';
-        document.getElementById('s_seq').textContent = (r.posting_sequence || '') + '#####';
-        document.getElementById('s_cur').textContent = r.currency || 'TZS';
-        setCheck(document.getElementById('chk_manual'), !!r.allow_manual);
-        setCheck(document.getElementById('chk_post'), !!r.allow_posting);
-        setCheck(document.getElementById('chk_rev'), !!r.allow_reverse);
-        setCheck(document.getElementById('chk_def'), r.is_default === 'yes');
-        const deact = document.getElementById('detailDeactivateBtn');
-        if (deact) {
-            deact.style.display = r.status === 'active' ? 'inline-flex' : 'none';
-        }
-    }
-
     function selectRow(tr) {
         document.querySelectorAll('#jconfTbody tr').forEach(t => t.classList.remove('selected'));
         tr.classList.add('selected');
         const id = tr.getAttribute('data-id');
         activeJournalId = id;
-        fillDetail(byId[id]);
     }
 
     document.querySelectorAll('#jconfTbody tr').forEach(tr => {
         tr.addEventListener('click', () => selectRow(tr));
         tr.addEventListener('keydown', e => {
             if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectRow(tr); }
-        });
-    });
-
-    document.querySelectorAll('.jconf-tabs button').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const tab = btn.getAttribute('data-tab');
-            document.querySelectorAll('.jconf-tabs button').forEach(b => {
-                b.classList.toggle('active', b === btn);
-                b.setAttribute('aria-selected', b === btn ? 'true' : 'false');
-            });
-            document.querySelectorAll('.jconf-tab-panel').forEach(p => {
-                const show = p.id === 'panel-' + tab;
-                p.classList.toggle('active', show);
-                p.hidden = !show;
-            });
         });
     });
 
@@ -766,11 +537,7 @@ include __DIR__ . '/../modules/balances/includes/header.php';
         u.searchParams.set('module', '<?= $jeModuleEsc ?>');
         if (journalId && byId[journalId]) {
             const r = byId[journalId];
-            u.searchParams.set('name', r.name || '');
-            u.searchParams.set('code', r.code || '');
-            u.searchParams.set('type', (r.type || '').toLowerCase());
-            u.searchParams.set('prefix', r.posting_sequence || r.code || 'JNL');
-            u.searchParams.set('description', r.description || '');
+            u.searchParams.set('id', r.id);
         }
         window.location.href = u.toString();
     }
@@ -778,9 +545,11 @@ include __DIR__ . '/../modules/balances/includes/header.php';
     document.getElementById('jconfNewJournal')?.addEventListener('click', () => {
         openCreatePage(null);
     });
-    document.getElementById('detailEditBtn')?.addEventListener('click', () => {
-        openCreatePage(activeJournalId);
-    });
+    document.querySelectorAll('.jconf-status-form').forEach(f => f.addEventListener('submit', (event) => {
+        if (!window.confirm('Change the active status of this journal profile?')) {
+            event.preventDefault();
+        }
+    }));
     document.querySelectorAll('.jconf-edit').forEach(a => {
         a.addEventListener('click', e => {
             e.preventDefault();
@@ -808,4 +577,3 @@ include __DIR__ . '/../modules/balances/includes/header.php';
 </script>
 
 <?php include __DIR__ . '/../modules/balances/includes/footer.php'; ?>
-

@@ -6,9 +6,7 @@ import {
   HiOutlineTrash,
   HiOutlineCube,
   HiOutlineExclamationCircle,
-  HiOutlineMagnifyingGlass,
   HiOutlineBookOpen,
-  HiOutlineChevronDown,
   HiOutlineCloudArrowUp,
   HiOutlineDocument,
   HiOutlineXMark,
@@ -16,13 +14,6 @@ import {
 import './purchase-edit.css';
 
 const newRowId = () => 'r-' + Date.now() + '-' + Math.random().toString(36).slice(2, 9);
-
-const SECTIONS = [
-  { id: 'pe-supplier', label: 'Supplier' },
-  { id: 'pe-payment', label: 'Payment' },
-  { id: 'pe-items', label: 'Items' },
-  { id: 'pe-notes', label: 'Notes' },
-];
 
 const emptyItem = () => ({ id: newRowId(), product_id: '', quantity: 1, unit_price: 0, base_price: 0 });
 
@@ -123,22 +114,6 @@ function currencyFlagUrl(meta) {
   );
 }
 
-function voucherLabel(v) {
-  if (v?.label) return String(v.label);
-  const tag = String(v?.purpose_tag || (String(v?.purpose || '').toLowerCase() === 'stock_purchase' ? 'STK' : 'GEN'));
-  const no = v?.voucher_no || v?.pv_number || ('#' + (v?.id || ''));
-  const payee = v?.payee_name || 'Unknown payee';
-  const amount = v?.total_amount != null
-    ? Number(v.total_amount).toLocaleString('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-    : '';
-  const cur = v?.currency || '';
-  return [tag, no, payee, amount ? (cur + ' ' + amount).trim() : ''].filter(Boolean).join(' - ');
-}
-
-function itemsHaveProducts(rows) {
-  return (rows || []).some((r) => String(r.product_id || '').trim() !== '');
-}
-
 function mapLinesToItems(lines, rateNum) {
   const rate = Number(rateNum) > 0 ? Number(rateNum) : 1;
   const merged = {};
@@ -172,6 +147,72 @@ function makeItemFromBase(productId, quantity, basePrice, rateNum) {
     base_price: base,
     unit_price: Number((base * rate).toFixed(2)),
   };
+}
+
+const CATALOGUE_ITEMS_KEY = 'purchase_catalogue_items';
+const CATALOGUE_SELECTION_DRAFT_KEY = 'purchase_catalogue_items_draft';
+const formDraftKey = () =>
+  `purchase_create_form_draft:${typeof window !== 'undefined' ? window.location.pathname : ''}`;
+
+function readFormDraft() {
+  try {
+    const raw = localStorage.getItem(formDraftKey());
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeFormDraft(draft) {
+  try {
+    localStorage.setItem(formDraftKey(), JSON.stringify(draft));
+  } catch {
+    // ignore
+  }
+}
+
+function clearFormDraft() {
+  try {
+    localStorage.removeItem(formDraftKey());
+  } catch {
+    // ignore
+  }
+}
+
+function catalogueProductIdFor(products, stockItemId) {
+  const p = products.find((x) => String(x.id) === String(stockItemId));
+  return Number(p?.linked_product_id) || 0;
+}
+
+function stockItemForCatalogueProduct(products, catalogueProductId) {
+  const key = String(catalogueProductId);
+  return (
+    products.find((x) => x.linked_product_id != null && String(x.linked_product_id) === key)
+    || products.find((x) => String(x.id) === key)
+    || null
+  );
+}
+
+function catalogueSelectionFromItems(products, items) {
+  const byPid = new Map();
+  (items || []).forEach((row) => {
+    const pid = catalogueProductIdFor(products, row.product_id);
+    if (pid > 0) byPid.set(pid, (byPid.get(pid) || 0) + Math.max(1, Number(row.quantity) || 1));
+  });
+  return [...byPid.entries()].map(([product_id, quantity]) => ({ product_id, quantity }));
+}
+
+function catalogueUrlWithSelected(baseUrl, selection) {
+  if (!baseUrl) return baseUrl;
+  const ids = selection.map((s) => s.product_id).filter((id) => id > 0);
+  if (!ids.length) return baseUrl;
+  try {
+    const url = new URL(baseUrl, window.location.origin);
+    url.searchParams.set('selected', ids.join(','));
+    return `${url.pathname}${url.search}${url.hash}`;
+  } catch {
+    return baseUrl;
+  }
 }
 
 function productOptionLabel(product) {
@@ -563,7 +604,6 @@ export default function PurchaseCreate({ data }) {
     currencySymbol = '',
     stockPurchaseVouchers = [],
     voucherSalesOrderItemsMap = {},
-    voucherPickerHint = '',
     cloned_po = null,
     cloned_items = [],
     classificationPrefillItems = null,
@@ -587,7 +627,7 @@ export default function PurchaseCreate({ data }) {
     purchaseTypeDefault === 'import' || cloned_po?.purchase_type === 'import' ? 'import' : 'domestic',
   );
   const [supplierId, setSupplierId] = useState(cloned_po?.supplier_id != null ? String(cloned_po.supplier_id) : '');
-  const [supplierInvoiceNo, setSupplierInvoiceNo] = useState(cloned_po?.supplier_invoice_no || '');
+  const [supplierInvoiceNo] = useState(cloned_po?.supplier_invoice_no || '');
   const [purchaseOrderDate, setPurchaseOrderDate] = useState(() => {
     if (cloned_po?.purchase_order_date) return String(cloned_po.purchase_order_date).slice(0, 10);
     if (cloned_po?.created_at) return String(cloned_po.created_at).slice(0, 10);
@@ -604,17 +644,24 @@ export default function PurchaseCreate({ data }) {
   );
   const [exchangeRate, setExchangeRate] = useState(initialDisplayRate);
   const [items, setItems] = useState([emptyItem()]);
-  const [selectedVoucherIds, setSelectedVoucherIds] = useState(() =>
+  const [selectedVoucherIds] = useState(() =>
     (initialSelectedVoucherIds || []).map((id) => Number(id)).filter((id) => id > 0),
   );
-  const [voucherSearch, setVoucherSearch] = useState('');
-  const [voucherPickerOpen, setVoucherPickerOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error] = useState(initialError);
-  const [activeSection, setActiveSection] = useState(SECTIONS[0].id);
   const [currencyMenuOpen, setCurrencyMenuOpen] = useState(false);
   const [initialized, setInitialized] = useState(false);
   const currencyPickerRef = useRef(null);
+  const [hasSeedSource] = useState(() => {
+    const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : new URLSearchParams();
+    return !!(
+      cloned_po
+      || isClassificationEdit
+      || prefillProductId
+      || params.get('product_id')
+      || (initialSelectedVoucherIds || []).some((id) => Number(id) > 0)
+    );
+  });
 
   const currencyCodes = useMemo(() => Object.keys(poCurrencyOptions || {}), [poCurrencyOptions]);
   const selectedCurrencyMeta = poCurrencyOptions[currencyCode] || {
@@ -624,53 +671,70 @@ export default function PurchaseCreate({ data }) {
   const selectedCurrencyFlagUrl = currencyFlagUrl(selectedCurrencyMeta);
   const paymentVoucherIdsCsv = selectedVoucherIds.join(',');
   const paymentVoucherIdFirst = selectedVoucherIds.length ? String(selectedVoucherIds[0]) : '';
-  const selectedVoucherRows = useMemo(
-    () =>
-      selectedVoucherIds
-        .map((id) => (stockPurchaseVouchers || []).find((v) => Number(v.id) === Number(id)))
-        .filter(Boolean),
-    [selectedVoucherIds, stockPurchaseVouchers],
-  );
   const noSuppliers = !suppliers || suppliers.length === 0;
-
-  const filteredVouchers = useMemo(() => {
-    const q = voucherSearch.trim().toLowerCase();
-    if (!q) return stockPurchaseVouchers || [];
-    return (stockPurchaseVouchers || []).filter((v) =>
-      [voucherLabel(v), v.voucher_no, v.pv_number, v.payee_name, v.prepared_by, v.currency, String(v.id || '')]
-        .filter(Boolean)
-        .join(' ')
-        .toLowerCase()
-        .includes(q),
-    );
-  }, [stockPurchaseVouchers, voucherSearch]);
 
   useEffect(() => {
     if (initialized) return;
     setInitialized(true);
     if (typeof window === 'undefined') return;
 
-    const rateNum = Number(exchangeRate) || 1;
+    let rateNum = Number(exchangeRate) || 1;
     let applied = false;
+    let draftItems = [];
+    let draftSupplier = '';
+
+    const fromCatalogue = !!localStorage.getItem(CATALOGUE_ITEMS_KEY)
+      || new URLSearchParams(window.location.search).has('catalogue_product_ids');
+    try {
+      const d = (fromCatalogue || !hasSeedSource) ? readFormDraft() : null;
+      if (d) {
+        if (d.supplierId) { draftSupplier = String(d.supplierId); setSupplierId(draftSupplier); }
+        if (d.purchaseType) setPurchaseType(d.purchaseType);
+        if (d.purchaseOrderDate) setPurchaseOrderDate(d.purchaseOrderDate);
+        if (d.currencyCode) setCurrencyCode(d.currencyCode);
+        if (Number(d.exchangeRate) > 0) { rateNum = Number(d.exchangeRate); setExchangeRate(rateNum); }
+        if (d.notes != null) setNotes(d.notes);
+        if (d.termsConditions != null) setTermsConditions(d.termsConditions);
+        if (d.taxPercentage != null) setTaxPercentage(d.taxPercentage);
+        if (d.discountPercentage != null) setDiscountPercentage(d.discountPercentage);
+        draftItems = (Array.isArray(d.items) ? d.items : [])
+          .filter((it) => it && it.product_id && products.some((p) => String(p.id) === String(it.product_id)))
+          .map((it) => ({ ...it, id: newRowId() }));
+      }
+    } catch (_) { /* ignore */ }
 
     try {
-      const raw = localStorage.getItem('purchase_catalogue_items');
-      if (raw) {
-        const picked = JSON.parse(raw);
-        if (Array.isArray(picked) && picked.length > 0) {
-          localStorage.removeItem('purchase_catalogue_items');
-          const firstProd = products.find((p) => String(p.id) === String(picked[0].product_id));
+      const raw = localStorage.getItem(CATALOGUE_ITEMS_KEY);
+      localStorage.removeItem(CATALOGUE_ITEMS_KEY);
+      localStorage.removeItem(CATALOGUE_SELECTION_DRAFT_KEY);
+      const picked = raw ? JSON.parse(raw) : null;
+      if (Array.isArray(picked) && picked.length > 0) {
+        const merged = [...draftItems];
+        picked.forEach((it) => {
+          const p = stockItemForCatalogueProduct(products, it.product_id);
+          if (!p) return;
+          const existing = merged.findIndex((row) => String(row.product_id) === String(p.id));
+          if (existing >= 0) {
+            merged[existing] = { ...merged[existing], quantity: Number(it.quantity) || 1 };
+          } else {
+            merged.push(makeItemFromBase(p.id, it.quantity, productUnitBase(p), rateNum));
+          }
+        });
+        if (!draftSupplier) {
+          const firstProd = stockItemForCatalogueProduct(products, picked[0].product_id);
           if (firstProd?.supplier_id) setSupplierId(String(firstProd.supplier_id));
-          setItems(
-            picked.map((it) => {
-              const p = products.find((x) => String(x.id) === String(it.product_id));
-              return makeItemFromBase(it.product_id, it.quantity, productUnitBase(p), rateNum);
-            }),
-          );
+        }
+        if (merged.length) {
+          setItems(merged);
           applied = true;
         }
       }
     } catch (_) { /* ignore */ }
+
+    if (!applied && draftItems.length) {
+      setItems(draftItems);
+      applied = true;
+    }
 
     if (!applied) {
       const params = new URLSearchParams(window.location.search);
@@ -722,7 +786,6 @@ export default function PurchaseCreate({ data }) {
 
     const seedIds = (initialSelectedVoucherIds || []).map((id) => Number(id)).filter((id) => id > 0);
     if (seedIds.length) {
-      setSelectedVoucherIds(seedIds);
       const firstV = (stockPurchaseVouchers || []).find((v) => Number(v.id) === seedIds[0]);
       if (firstV?.supplier_id) setSupplierId((prev) => prev || String(firstV.supplier_id));
       if (!applied) {
@@ -752,23 +815,6 @@ export default function PurchaseCreate({ data }) {
       document.removeEventListener('keydown', onKey);
     };
   }, [currencyMenuOpen]);
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const visible = entries
-          .filter((e) => e.isIntersecting)
-          .sort((a, b) => b.intersectionRatio - a.intersectionRatio);
-        if (visible[0]) setActiveSection(visible[0].target.id);
-      },
-      { rootMargin: '-40% 0px -50% 0px', threshold: [0, 0.25, 0.5, 1] },
-    );
-    SECTIONS.forEach((s) => {
-      const el = document.getElementById(s.id);
-      if (el) observer.observe(el);
-    });
-    return () => observer.disconnect();
-  }, []);
 
   const updateItemsCurrencyPricing = (rateNum) => {
     setItems((prev) =>
@@ -805,39 +851,36 @@ export default function PurchaseCreate({ data }) {
     if (rateNum > 0) updateItemsCurrencyPricing(rateNum);
   };
 
-  const applyVoucherLines = (voucherIdList) => {
-    const rateNum = Number(exchangeRate) || 1;
-    const lines = [];
-    voucherIdList.forEach((vid) => {
-      const mapped = voucherSalesOrderItemsMap?.[String(vid)] || voucherSalesOrderItemsMap?.[vid];
-      if (Array.isArray(mapped)) lines.push(...mapped);
-    });
-    const mappedItems = mapLinesToItems(lines, rateNum);
-    if (!mappedItems) return;
-    if (itemsHaveProducts(items)) {
-      const ok = window.confirm(
-        'Selected voucher has quotation lines. Replace current order items with those lines?',
-      );
-      if (!ok) return;
-    }
-    setItems(mappedItems);
-  };
-
-  const toggleVoucher = (voucher) => {
-    const vid = Number(voucher.id);
-    if (!vid) return;
-    if (selectedVoucherIds.includes(vid)) {
-      setSelectedVoucherIds((prev) => prev.filter((id) => id !== vid));
-      return;
-    }
-    const nextIds = [...selectedVoucherIds, vid];
-    setSelectedVoucherIds(nextIds);
-    if (voucher.supplier_id) setSupplierId(String(voucher.supplier_id));
-    const lines = voucherSalesOrderItemsMap?.[String(vid)] || voucherSalesOrderItemsMap?.[vid];
-    if (Array.isArray(lines) && lines.length > 0) applyVoucherLines(nextIds);
-  };
-
   const addRow = () => setItems((prev) => [...prev, emptyItem()]);
+
+  const currentDraft = () => ({
+    supplierId,
+    purchaseType,
+    purchaseOrderDate,
+    currencyCode,
+    exchangeRate,
+    notes,
+    termsConditions,
+    taxPercentage,
+    discountPercentage,
+    items: items.filter((row) => row.product_id),
+  });
+
+  useEffect(() => {
+    if (!initialized || hasSeedSource) return;
+    writeFormDraft(currentDraft());
+  }, [initialized, supplierId, purchaseType, purchaseOrderDate, currencyCode, exchangeRate, notes, // eslint-disable-line react-hooks/exhaustive-deps
+    termsConditions, taxPercentage, discountPercentage, items]);
+
+  const openCatalogue = () => {
+    writeFormDraft(currentDraft());
+    try {
+      localStorage.setItem(
+        CATALOGUE_SELECTION_DRAFT_KEY,
+        JSON.stringify(catalogueSelectionFromItems(products, items)),
+      );
+    } catch (_) { /* ignore */ }
+  };
   const removeRow = (id) => setItems((prev) => (prev.length > 1 ? prev.filter((r) => r.id !== id) : prev));
 
   const updateRow = (id, updates) => {
@@ -881,24 +924,21 @@ export default function PurchaseCreate({ data }) {
     ' ' +
     (Number(n) || 0).toLocaleString('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-  const scrollToSection = (id) => {
-    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  };
+  const validItemCount = items.filter((r) => String(r.product_id || '').trim() !== '').length;
 
   const submitLabel = isClassificationEdit
     ? (isSubmitting ? 'Saving...' : 'Save classification')
     : (isSubmitting ? 'Creating...' : 'Create Purchase Order');
 
   return (
-    <div className="pe-shell pe-shell--compact">
+    <div className="pe-shell pe-shell--compact pe-shell--voucher">
       <div className="pe-topbar pe-topbar--actions-only">
         <div className="pe-topbar-actions">
           {catalogueUrl ? (
             <a
-              href={catalogueUrl}
+              href={catalogueUrlWithSelected(catalogueUrl, catalogueSelectionFromItems(products, items))}
+              onClick={openCatalogue}
               className="pe-icon-link"
-              target="_blank"
-              rel="noopener noreferrer"
               title="Catalogue"
               aria-label="Open catalogue"
             >
@@ -942,8 +982,11 @@ export default function PurchaseCreate({ data }) {
         method="POST"
         action={formAction}
         encType="multipart/form-data"
-        onSubmit={() => setIsSubmitting(true)}
-        className="pe-layout"
+        onSubmit={() => {
+          setIsSubmitting(true);
+          clearFormDraft();
+        }}
+        className="pe-layout pe-layout--flat"
       >
         <input type="hidden" name="procurement_journey" value="standard" />
         <input type="hidden" name="payment_voucher_ids" value={paymentVoucherIdsCsv} />
@@ -955,22 +998,34 @@ export default function PurchaseCreate({ data }) {
           </>
         ) : null}
 
-        <nav className="pe-nav" aria-label="Form sections">
-          {SECTIONS.map((s) => (
-            <button
-              key={s.id}
-              type="button"
-              className={`pe-nav-item${activeSection === s.id ? ' is-active' : ''}`}
-              onClick={() => scrollToSection(s.id)}
-            >
-              {s.label}
-            </button>
-          ))}
-        </nav>
-
         <div className="pe-main">
           <section id="pe-supplier" className="pe-section">
-            <div className="pe-row">
+            <header className="pe-section-head">
+              <h2>General Information</h2>
+              <p>Who you are buying from, in which currency, and when.</p>
+            </header>
+            <div className="pe-card">
+            <div className="pe-grid3">
+            <div className="pe-split-col pe-span-2">
+              <label className="pe-label">
+                Supplier <span className="pe-req">*</span>
+              </label>
+              <div className="pe-field">
+                <select
+                  className="pe-select"
+                  name="supplier_id"
+                  required={!selectedVoucherIds.length}
+                  value={supplierId}
+                  onChange={(e) => setSupplierId(e.target.value)}
+                >
+                  <option value="">Select supplier</option>
+                  {suppliers.map((s) => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="pe-split-col">
               <label className="pe-label">Purchase type</label>
               <div className="pe-field">
                 <div className="pe-type-toggle" role="radiogroup" aria-label="Purchase type">
@@ -997,32 +1052,11 @@ export default function PurchaseCreate({ data }) {
                 </div>
               </div>
             </div>
-
-            <div className="pe-row">
-              <label className="pe-label">
-                Supplier <span className="pe-req">*</span>
-              </label>
-              <div className="pe-field">
-                <select
-                  className="pe-select"
-                  name="supplier_id"
-                  required={!selectedVoucherIds.length}
-                  value={supplierId}
-                  onChange={(e) => setSupplierId(e.target.value)}
-                >
-                  <option value="">Select supplier</option>
-                  {suppliers.map((s) => (
-                    <option key={s.id} value={s.id}>{s.name}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div className="pe-row">
+            <div className="pe-split-col">
               <label className="pe-label">
                 PO Date <span className="pe-req">*</span>
               </label>
-              <div className="pe-field pe-field--narrow">
+              <div className="pe-field">
                 <input
                   type="date"
                   name="purchase_order_date"
@@ -1033,10 +1067,9 @@ export default function PurchaseCreate({ data }) {
                 />
               </div>
             </div>
-
-            <div className="pe-row">
+            <div className="pe-split-col">
               <label className="pe-label">Currency</label>
-              <div className="pe-field pe-field--narrow">
+              <div className="pe-field">
                 <input type="hidden" name="currency" value={currencyCode} />
                 <div className={`pe-currency-picker${currencyMenuOpen ? ' is-open' : ''}`} ref={currencyPickerRef}>
                   <button
@@ -1084,10 +1117,9 @@ export default function PurchaseCreate({ data }) {
                 </div>
               </div>
             </div>
-
-            <div className="pe-row">
+            <div className="pe-split-col">
               <label className="pe-label">Exchange Rate</label>
-              <div className="pe-field pe-field--narrow">
+              <div className="pe-field">
                 <input
                   type="number"
                   step="0.0001"
@@ -1100,101 +1132,17 @@ export default function PurchaseCreate({ data }) {
                 />
               </div>
             </div>
-
-            <div className="pe-row">
-              <label className="pe-label">Supplier Invoice #</label>
-              <div className="pe-field pe-field--narrow">
-                <input
-                  type="text"
-                  name="supplier_invoice_no"
-                  className="pe-input"
-                  value={supplierInvoiceNo}
-                  onChange={(e) => setSupplierInvoiceNo(e.target.value)}
-                  placeholder="Optional"
-                />
-              </div>
+            <input type="hidden" name="supplier_invoice_no" value={supplierInvoiceNo} />
             </div>
-          </section>
-
-          <section id="pe-payment" className="pe-section">
-            <div className="pe-row pe-row--top">
-              <label className="pe-label">Payment vouchers</label>
-              <div className="pe-field">
-                <button
-                  type="button"
-                  className={`pe-voucher-trigger${voucherPickerOpen ? ' is-open' : ''}`}
-                  aria-expanded={voucherPickerOpen}
-                  onClick={() => setVoucherPickerOpen((open) => !open)}
-                >
-                  <span className="pe-voucher-trigger-text">
-                    {selectedVoucherIds.length
-                      ? `${selectedVoucherIds.length} voucher${selectedVoucherIds.length === 1 ? '' : 's'} linked`
-                      : 'Link payment vouchers'}
-                  </span>
-                  <HiOutlineChevronDown style={{ width: 16, height: 16 }} />
-                </button>
-
-                {selectedVoucherRows.length && !voucherPickerOpen ? (
-                  <div className="pe-voucher-selected">
-                    {selectedVoucherRows.map((v) => (
-                      <span key={v.id} className="pe-voucher-chip" title={voucherLabel(v)}>
-                        {v.purpose_tag ? `${v.purpose_tag} ` : ''}
-                        {v.voucher_no || v.pv_number || `PV-${v.id}`}
-                      </span>
-                    ))}
-                  </div>
-                ) : null}
-
-                {voucherPickerOpen ? (
-                  <div className="pe-voucher-panel">
-                    {voucherPickerHint ? <p className="pe-voucher-hint">{voucherPickerHint}</p> : null}
-
-                    <div className="pe-voucher-search">
-                      <HiOutlineMagnifyingGlass style={{ width: 16, height: 16 }} />
-                      <input
-                        type="search"
-                        className="pe-input"
-                        value={voucherSearch}
-                        onChange={(e) => setVoucherSearch(e.target.value)}
-                        placeholder="Search vouchers by number, payee, amount..."
-                        aria-label="Search payment vouchers"
-                        autoFocus
-                      />
-                    </div>
-
-                    <div className="pe-voucher-list" role="group" aria-label="Payment vouchers">
-                      {!filteredVouchers.length ? (
-                        <div className="pe-voucher-empty">No vouchers match this search.</div>
-                      ) : (
-                        filteredVouchers.map((v) => {
-                          const vid = Number(v.id);
-                          const checked = selectedVoucherIds.includes(vid);
-                          const hasLines = !!(
-                            voucherSalesOrderItemsMap?.[String(vid)] || voucherSalesOrderItemsMap?.[vid]
-                          )?.length;
-                          return (
-                            <label key={vid} className={`pe-voucher-item${checked ? ' is-selected' : ''}`}>
-                              <input type="checkbox" checked={checked} onChange={() => toggleVoucher(v)} />
-                              <span className="pe-voucher-item-body">
-                                <span className="pe-voucher-item-title">{voucherLabel(v)}</span>
-                                <span className="pe-voucher-item-meta">
-                                  {v.date_created ? String(v.date_created).slice(0, 10) : ''}
-                                  {v.is_paid ? ' | Paid' : ' | Unpaid'}
-                                  {hasLines ? ' | Has quotation lines' : ''}
-                                </span>
-                              </span>
-                            </label>
-                          );
-                        })
-                      )}
-                    </div>
-                  </div>
-                ) : null}
-              </div>
             </div>
           </section>
 
           <section id="pe-items" className="pe-section">
+            <header className="pe-section-head">
+              <h2>Order Items <span className="pe-req">*</span></h2>
+              <p>Products, quantities and unit prices for this order.</p>
+            </header>
+            <div className="pe-card pe-card--items">
             <div className="pe-items">
               <div className="pe-items-head" aria-hidden="true">
                 <span className="pe-items-col pe-items-col--idx" />
@@ -1274,15 +1222,40 @@ export default function PurchaseCreate({ data }) {
               })}
             </div>
 
-            <div style={{ marginTop: 10 }}>
-              <button type="button" className="pe-btn pe-btn--ghost" onClick={addRow}>
-                <HiOutlinePlus style={{ width: 16, height: 16 }} /> Add item
-              </button>
+            <div className="pe-items-foot">
+              <div className="pe-items-foot-actions">
+                <button type="button" className="pe-btn pe-btn--ghost" onClick={addRow}>
+                  <HiOutlinePlus style={{ width: 16, height: 16 }} /> Add item
+                </button>
+                {catalogueUrl ? (
+                  <a
+                    className="pe-catalogue-link"
+                    href={catalogueUrlWithSelected(catalogueUrl, catalogueSelectionFromItems(products, items))}
+                    onClick={openCatalogue}
+                  >
+                    <HiOutlineBookOpen style={{ width: 16, height: 16 }} /> Product catalogue
+                  </a>
+                ) : null}
+              </div>
+              <div className="pe-total">
+                <span>Subtotal ({validItemCount} item{validItemCount === 1 ? '' : 's'})</span>
+                <strong>{formatMoney(subtotal)}</strong>
+              </div>
             </div>
+            </div>
+          </section>
 
-            <div className="pe-row" style={{ marginTop: 24 }}>
+          <div className="pe-section-pair">
+          <section id="pe-totals" className="pe-section">
+            <header className="pe-section-head">
+              <h2>Discount &amp; Tax</h2>
+              <p>Adjust the order total before it goes to the supplier.</p>
+            </header>
+            <div className="pe-card">
+            <div className="pe-row pe-row--split">
+            <div className="pe-split-col">
               <label className="pe-label">Discount (%)</label>
-              <div className="pe-field pe-field--narrow">
+              <div className="pe-field">
                 <input
                   type="number"
                   step="0.01"
@@ -1295,9 +1268,9 @@ export default function PurchaseCreate({ data }) {
                 />
               </div>
             </div>
-            <div className="pe-row">
+            <div className="pe-split-col">
               <label className="pe-label">Tax rate (%)</label>
-              <div className="pe-field pe-field--narrow">
+              <div className="pe-field">
                 <input
                   type="number"
                   step="0.01"
@@ -1309,33 +1282,23 @@ export default function PurchaseCreate({ data }) {
                 />
               </div>
             </div>
-            <div className="pe-row">
-              <label className="pe-label">Subtotal</label>
-              <div className="pe-field pe-field--narrow">
-                <input type="text" className="pe-input pe-input--ro" value={formatMoney(subtotal)} readOnly />
-              </div>
             </div>
-            <div className="pe-row">
-              <label className="pe-label">Discount</label>
-              <div className="pe-field pe-field--narrow">
-                <input type="text" className="pe-input pe-input--ro" value={formatMoney(discountAmt)} readOnly />
-              </div>
-            </div>
-            <div className="pe-row">
-              <label className="pe-label">Tax amount</label>
-              <div className="pe-field pe-field--narrow">
-                <input type="text" className="pe-input pe-input--ro" value={formatMoney(taxAmount)} readOnly />
-              </div>
-            </div>
-            <div className="pe-row">
-              <label className="pe-label">Grand total</label>
-              <div className="pe-field pe-field--narrow">
-                <input type="text" className="pe-input pe-input--ro" value={formatMoney(grandTotal)} readOnly />
-              </div>
+
+            <dl className="pe-summary">
+              <div><dt>Subtotal</dt><dd>{formatMoney(subtotal)}</dd></div>
+              <div><dt>Discount</dt><dd>{discountAmt > 0 ? '- ' : ''}{formatMoney(discountAmt)}</dd></div>
+              <div><dt>Tax amount</dt><dd>{formatMoney(taxAmount)}</dd></div>
+              <div className="is-grand"><dt>Grand total</dt><dd>{formatMoney(grandTotal)}</dd></div>
+            </dl>
             </div>
           </section>
 
           <section id="pe-notes" className="pe-section">
+            <header className="pe-section-head">
+              <h2>Notes &amp; Terms</h2>
+              <p>Internal notes and the terms that apply to this order.</p>
+            </header>
+            <div className="pe-card">
             <div className="pe-notes-split">
               <div className="pe-notes-col">
                 <label className="pe-field-label" htmlFor="pe-notes-input">Notes</label>
@@ -1362,8 +1325,18 @@ export default function PurchaseCreate({ data }) {
                 />
               </div>
             </div>
+            </div>
+          </section>
+          </div>
 
-            <AttachmentsPicker />
+          <section id="pe-attachments" className="pe-section">
+            <header className="pe-section-head">
+              <h2>Attachments</h2>
+              <p>Upload the supplier quotation, proforma or other documents (PDF, images, Office files).</p>
+            </header>
+            <div className="pe-card">
+              <AttachmentsPicker />
+            </div>
 
             <div className="pe-actions">
               <a href={indexUrl} className="pe-btn pe-btn--ghost">Cancel</a>

@@ -69,6 +69,7 @@ if (!function_exists('general_ledger_ensure_accounts_table')) {
             name VARCHAR(255) NOT NULL,
             type VARCHAR(50) NOT NULL DEFAULT 'expense',
             description TEXT NULL,
+            parent_id INT NULL,
             is_system TINYINT(1) NOT NULL DEFAULT 0,
             status VARCHAR(20) DEFAULT 'active',
             created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP

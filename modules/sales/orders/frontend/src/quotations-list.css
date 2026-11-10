@@ -10,6 +10,80 @@ body.page-orders-desk .exp-desk-page-header-search {
   justify-self: center;
 }
 
+body.dashboard.page-orders-desk .layout-main-wrapper,
+body.dashboard.page-orders-desk .layout-main-wrapper > .flex-grow-1,
+body.dashboard.page-orders-desk main.main-content.exp-desk-react-root,
+body.dashboard.page-orders-desk .employee-header.employee-header--page-context {
+  background: #f8fafc !important;
+}
+
+html body.dashboard.page-orders-desk .employee-header.employee-header--page-context {
+  position: static !important;
+  top: auto !important;
+  z-index: auto !important;
+}
+
+@media (min-width: 768px) {
+  html.page-orders-desk-lock:root,
+  html.page-orders-desk-lock body.dashboard.page-orders-desk {
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    overflow: hidden !important;
+    overscroll-behavior: none !important;
+  }
+
+  body.dashboard.page-orders-desk .layout-main-wrapper,
+  body.dashboard.page-orders-desk .layout-main-wrapper.min-vh-100 {
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+    overscroll-behavior: none !important;
+  }
+
+  body.dashboard.page-orders-desk .layout-main-wrapper > .flex-grow-1,
+  body.dashboard.page-orders-desk .flex-grow-1.d-flex.flex-column {
+    flex: 1 1 0 !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    max-height: 100% !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain !important;
+  }
+
+  body.dashboard.page-orders-desk main.main-content.exp-desk-react-root {
+    flex: 0 0 auto !important;
+    height: auto !important;
+    max-height: none !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    overscroll-behavior: auto !important;
+  }
+
+  body.dashboard.page-orders-desk main.main-content.exp-desk-react-root #root,
+  body.dashboard.page-orders-desk main.main-content.exp-desk-react-root .exp-desk-page {
+    flex: 0 0 auto !important;
+    height: auto !important;
+    max-height: none !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    overscroll-behavior: auto !important;
+  }
+
+  body.dashboard.page-orders-desk .qt-quotations-table {
+    flex: 0 0 auto !important;
+    min-height: 0;
+  }
+
+  body.dashboard.page-orders-desk .qt-quotations-table .prod-desk-table-wrap {
+    flex: 0 0 auto !important;
+    overflow-x: auto !important;
+    overflow-y: visible !important;
+    max-height: none !important;
+  }
+}
+
 @container exp-desk (max-width: 1100px) {
   body.page-orders-desk .exp-desk-page-header {
     display: grid;
@@ -298,6 +372,165 @@ body.page-orders-desk .exp-desk-btn-create {
   text-decoration: none;
   cursor: pointer;
   font-family: inherit;
+}
+
+.qt-mobile-cards,
+.qt-mobile-select-all {
+  display: none;
+}
+
+.qt-mobile-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.9rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.qt-mobile-card.is-selected {
+  border-color: #93c5fd;
+  background: #eff6ff;
+}
+
+.qt-mobile-card.is-glow {
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+}
+
+.qt-mobile-card-main {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  min-width: 0;
+}
+
+.qt-mobile-card-main > input,
+.qt-mobile-select-all input {
+  flex: 0 0 auto;
+  margin: 0.2rem 0 0;
+}
+
+.qt-mobile-card-content {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.qt-mobile-card-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.qt-mobile-card-reference {
+  min-width: 0;
+  color: #0f172a;
+  font-size: 0.875rem;
+  font-weight: 800;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+  text-decoration: none;
+}
+
+.qt-mobile-card-reference:hover {
+  color: #4f46e5;
+  text-decoration: underline;
+}
+
+.qt-mobile-card-customer {
+  margin-top: 0.3rem;
+  color: #475569;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.qt-mobile-card-details {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem 0.75rem;
+  margin-top: 0.55rem;
+  color: #64748b;
+  font-size: 0.6875rem;
+}
+
+.qt-mobile-card-salesperson {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  min-width: 0;
+}
+
+.qt-mobile-card-salesperson .qt-salesperson-name {
+  max-width: 8rem;
+}
+
+.qt-mobile-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding-top: 0.6rem;
+  border-top: 1px solid #f1f5f9;
+}
+
+.qt-mobile-card-amount {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.qt-mobile-card-amount > span {
+  color: #94a3b8;
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.qt-mobile-card-amount > strong {
+  color: #0f172a;
+  font-size: 0.8125rem;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.qt-mobile-card-footer .qt-actions-menu {
+  width: auto;
+  flex: 0 0 auto;
+}
+
+.qt-mobile-card-footer .qt-actions-dropdown {
+  top: auto;
+  bottom: calc(100% + 4px);
+}
+
+html[data-theme="dark"] .qt-mobile-card {
+  border-color: #334155;
+  background: #1e293b;
+}
+
+html[data-theme="dark"] .qt-mobile-card.is-selected {
+  border-color: #3b82f6;
+  background: #1e3a5f;
+}
+
+html[data-theme="dark"] .qt-mobile-card-reference,
+html[data-theme="dark"] .qt-mobile-card-amount > strong {
+  color: #f8fafc;
+}
+
+html[data-theme="dark"] .qt-mobile-card-customer {
+  color: #cbd5e1;
+}
+
+html[data-theme="dark"] .qt-mobile-card-footer {
+  border-color: #334155;
 }
 
 /* Legacy qt-table kept for any residual markup */
@@ -1064,6 +1297,96 @@ html[data-theme="dark"] .so-orders-table .exp-desk-amt { color: #f8fafc; }
 }
 
 @media (max-width: 767.98px) {
+  html.page-orders-desk-lock:root {
+    height: auto !important;
+    max-height: none !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+  }
+
+  html.page-orders-desk-lock body.dashboard.page-orders-desk,
+  body.dashboard.page-orders-desk.page-exp-desk {
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    overscroll-behavior: auto !important;
+  }
+
+  body.dashboard.page-orders-desk .layout-main-wrapper,
+  body.dashboard.page-orders-desk .layout-main-wrapper.min-vh-100 {
+    height: auto !important;
+    max-height: none !important;
+    min-height: 100dvh !important;
+    overflow: visible !important;
+    overscroll-behavior: auto !important;
+  }
+
+  body.dashboard.page-orders-desk .layout-main-wrapper > .flex-grow-1,
+  body.dashboard.page-orders-desk .flex-grow-1.d-flex.flex-column {
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    overscroll-behavior: auto !important;
+  }
+
+  body.dashboard.page-orders-desk main.main-content.exp-desk-react-root {
+    height: auto !important;
+    max-height: none !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    overscroll-behavior: auto !important;
+  }
+
+  body.dashboard.page-orders-desk main.main-content.exp-desk-react-root #root,
+  body.dashboard.page-orders-desk main.main-content.exp-desk-react-root .exp-desk-page {
+    height: auto !important;
+    max-height: none !important;
+    min-height: 0 !important;
+    flex: 0 0 auto !important;
+    overflow: visible !important;
+    overscroll-behavior: auto !important;
+  }
+
+  .qt-quotations-table {
+    flex: 0 0 auto !important;
+    min-height: 0;
+  }
+
+  .qt-mobile-cards {
+    display: flex;
+    flex-direction: column;
+    flex: 0 0 auto;
+    gap: 0.65rem;
+    padding: 0.5rem 0.25rem 0.75rem;
+  }
+
+  .qt-quotations-table .prod-desk-table-wrap {
+    display: none !important;
+  }
+
+  .qt-quotations-table .prod-desk-bulk-bar {
+    display: flex !important;
+    flex-wrap: wrap;
+    justify-content: center;
+    max-width: calc(100vw - 1rem);
+  }
+
+  .qt-mobile-select-all {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: #64748b;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  html[data-theme="dark"] .qt-mobile-card-amount > span,
+  html[data-theme="dark"] .qt-mobile-card-details,
+  html[data-theme="dark"] .qt-mobile-select-all {
+    color: #94a3b8;
+  }
+
   .qt-kpi-grid .exp-desk-kpi-value {
     font-size: 0.875rem;
   }

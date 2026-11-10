@@ -951,6 +951,26 @@ function balances_parent_is_payment_wallet_group(array $parent): bool
     );
 }
 
+/**
+ * 'required' for cash/bank/mobile groups, 'optional' for general asset parents
+ * (sub-account may be a wallet or a regular asset), 'none' otherwise.
+ */
+function balances_parent_payment_type_mode(array $parent): string
+{
+    if (balances_parent_is_payment_wallet_group($parent)) {
+        return 'required';
+    }
+    if (strtolower(trim((string) ($parent['type'] ?? ''))) !== 'asset') {
+        return 'none';
+    }
+    $parts = balances_parent_account_label_parts($parent);
+    if (preg_match('/receivable|a\/r\b|prepay|inventory|stock|fixed asset|equipment|depreciation|land|building|vehicle/i', $parts['name'])) {
+        return 'none';
+    }
+
+    return 'optional';
+}
+
 function balances_infer_payment_wallet_type(array $parent): string
 {
     $type = strtolower(trim((string) ($parent['type'] ?? '')));
@@ -972,6 +992,412 @@ function balances_infer_payment_wallet_type(array $parent): string
     }
 
     return 'cash';
+}
+
+/** @return array<string, array{name:string,flag:string}> */
+function balances_currency_catalog(): array
+{
+    return [
+        'TZS' => ['name' => 'Tanzanian Shilling', 'flag' => 'tz'],
+        'USD' => ['name' => 'US Dollar', 'flag' => 'us'],
+        'EUR' => ['name' => 'Euro', 'flag' => 'eu'],
+        'GBP' => ['name' => 'British Pound', 'flag' => 'gb'],
+        'KES' => ['name' => 'Kenyan Shilling', 'flag' => 'ke'],
+        'UGX' => ['name' => 'Ugandan Shilling', 'flag' => 'ug'],
+        'RWF' => ['name' => 'Rwandan Franc', 'flag' => 'rw'],
+        'ZAR' => ['name' => 'South African Rand', 'flag' => 'za'],
+    ];
+}
+
+/**
+ * Banks and mobile money networks with their logo paths: the bundled catalogue (institutions_catalog.php)
+ * followed by the institutions users saved with their own logo (balances_custom_institutions).
+ *
+ * @return array<string, array{slug:string,name:string,type:string,aliases:list<string>,logo:string,custom:bool}>
+ */
+function balances_institutions(?PDO $pdo = null): array
+{
+    static $catalog = null;
+    $root = dirname(__DIR__, 2);
+    if ($catalog === null) {
+        $catalog = [];
+        foreach (require __DIR__ . '/institutions_catalog.php' as $inst) {
+            $logo = 'assets/balances/institutions/' . $inst['slug'] . '.png';
+            $catalog[$inst['slug']] = [
+                'slug' => $inst['slug'],
+                'name' => $inst['name'],
+                'type' => $inst['type'],
+                'aliases' => $inst['aliases'],
+                'logo' => is_file($root . '/' . $logo) ? $logo : '',
+                'custom' => false,
+            ];
+        }
+    }
+    $list = $catalog;
+    if ($pdo === null) {
+        return $list;
+    }
+    try {
+        balances_ensure_custom_institutions_table($pdo);
+        $companyId = function_exists('currentCompanyId') ? (int) (currentCompanyId() ?? 0) : 0;
+        $stmt = $pdo->prepare(
+            'SELECT id, name, type, logo FROM balances_custom_institutions
+             WHERE company_id IS NULL OR company_id = 0 OR company_id = ? ORDER BY name'
+        );
+        $stmt->execute([$companyId]);
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            $logo = (string) $row['logo'];
+            $list['custom-' . $row['id']] = [
+                'slug' => 'custom-' . $row['id'],
+                'name' => (string) $row['name'],
+                'type' => (string) $row['type'],
+                'aliases' => [],
+                'logo' => $logo !== '' && is_file($root . '/' . $logo) ? $logo : '',
+                'custom' => true,
+            ];
+        }
+    } catch (Throwable $e) {
+        error_log('balances_institutions: ' . $e->getMessage());
+    }
+
+    return $list;
+}
+
+function balances_ensure_custom_institutions_table(PDO $pdo): void
+{
+    static $done = false;
+    if ($done) {
+        return;
+    }
+    $pdo->exec(
+        'CREATE TABLE IF NOT EXISTS balances_custom_institutions (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            company_id INT NULL DEFAULT NULL,
+            name VARCHAR(100) NOT NULL,
+            type VARCHAR(20) NOT NULL,
+            logo VARCHAR(500) NOT NULL,
+            created_by INT NULL DEFAULT NULL,
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+            UNIQUE KEY uniq_bci_company_name (company_id, name)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci'
+    );
+    $done = true;
+}
+
+/**
+ * Remember an account name + uploaded logo so it is offered in the sub-account name dropdown next time.
+ * Names that match a bundled institution are skipped; an existing saved name gets its logo and type refreshed.
+ */
+function balances_save_custom_institution(PDO $pdo, string $name, string $type, string $imagePath): void
+{
+    $name = trim(preg_replace('/\s+/', ' ', $name));
+    if ($name === '' || $imagePath === '' || !in_array($type, ['bank', 'mobile', 'cash'], true)) {
+        return;
+    }
+    $needle = mb_strtolower($name);
+    foreach (balances_institutions() as $inst) {
+        if (mb_strtolower($inst['name']) === $needle || in_array($needle, $inst['aliases'], true)) {
+            return;
+        }
+    }
+    $root = dirname(__DIR__, 2);
+    $targetDir = $root . '/uploads/balances/institutions/';
+    if (!is_file($root . '/' . $imagePath) || (!is_dir($targetDir) && !mkdir($targetDir, 0755, true) && !is_dir($targetDir))) {
+        return;
+    }
+    $ext = strtolower(pathinfo($imagePath, PATHINFO_EXTENSION)) ?: 'png';
+    $fileName = 'INST_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
+    if (!copy($root . '/' . $imagePath, $targetDir . $fileName)) {
+        return;
+    }
+    $logo = 'uploads/balances/institutions/' . $fileName;
+    $companyId = function_exists('currentCompanyId') ? (int) (currentCompanyId() ?? 0) : 0;
+    $companyId = $companyId > 0 ? $companyId : null;
+
+    try {
+        balances_ensure_custom_institutions_table($pdo);
+        $find = $pdo->prepare('SELECT id, logo FROM balances_custom_institutions WHERE company_id <=> ? AND name = ? LIMIT 1');
+        $find->execute([$companyId, $name]);
+        $existing = $find->fetch(PDO::FETCH_ASSOC);
+        if ($existing) {
+            $pdo->prepare('UPDATE balances_custom_institutions SET type = ?, logo = ? WHERE id = ?')
+                ->execute([$type, $logo, (int) $existing['id']]);
+            $old = (string) $existing['logo'];
+            if (str_starts_with($old, 'uploads/balances/institutions/')) {
+                @unlink($root . '/' . $old);
+            }
+        } else {
+            $pdo->prepare('INSERT INTO balances_custom_institutions (company_id, name, type, logo, created_by) VALUES (?, ?, ?, ?, ?)')
+                ->execute([$companyId, $name, $type, $logo, isset($_SESSION['user_id']) ? (int) $_SESSION['user_id'] : null]);
+        }
+    } catch (Throwable $e) {
+        @unlink($targetDir . $fileName);
+        error_log('balances_save_custom_institution: ' . $e->getMessage());
+    }
+}
+
+/**
+ * Logo URL for an account row: its own uploaded image, otherwise (bank / mobile money accounts only)
+ * the logo of the institution whose name or alias appears in the account name. Returns '' when none fits.
+ */
+function balances_account_logo_url(array $account, ?PDO $pdo = null): string
+{
+    $image = trim((string) ($account['account_image'] ?? ''));
+    if ($image !== '' && ($url = balancesAccountImageUrl($image)) !== '') {
+        return $url;
+    }
+    $type = balances_normalize_payment_wallet_type((string) ($account['type'] ?? ''));
+    if ($type !== 'bank' && $type !== 'mobile') {
+        return '';
+    }
+    $name = mb_strtolower(trim(preg_replace('/^\s*\d+\s*-\s*/', '', (string) ($account['name'] ?? ''))));
+    if ($name === '') {
+        return '';
+    }
+    static $institutions = null;
+    $institutions ??= balances_institutions($pdo);
+    $best = null;
+    $bestLen = 0;
+    foreach ($institutions as $inst) {
+        if ($inst['logo'] === '') {
+            continue;
+        }
+        foreach (array_merge([mb_strtolower($inst['name'])], $inst['aliases']) as $needle) {
+            $len = mb_strlen($needle);
+            if ($len > $bestLen && preg_match('/(^|[^\p{L}\p{N}])' . preg_quote($needle, '/') . '($|[^\p{L}\p{N}])/u', $name)) {
+                $best = $inst;
+                $bestLen = $len;
+            }
+        }
+    }
+
+    return $best ? balancesAccountImageUrl($best['logo']) : '';
+}
+
+/**
+ * Saved institutions visible to the current company.
+ *
+ * @return list<array{id:int,name:string,type:string,logo:string,created_at:string}>
+ */
+function balances_list_custom_institutions(PDO $pdo): array
+{
+    balances_ensure_custom_institutions_table($pdo);
+    $companyId = function_exists('currentCompanyId') ? (int) (currentCompanyId() ?? 0) : 0;
+    $stmt = $pdo->prepare('SELECT id, name, type, logo, created_at FROM balances_custom_institutions
+                           WHERE company_id IS NULL OR company_id = 0 OR company_id = ? ORDER BY name');
+    $stmt->execute([$companyId]);
+
+    return array_map(static fn ($r) => [
+        'id' => (int) $r['id'],
+        'name' => (string) $r['name'],
+        'type' => (string) $r['type'],
+        'logo' => (string) $r['logo'],
+        'created_at' => (string) $r['created_at'],
+    ], $stmt->fetchAll(PDO::FETCH_ASSOC));
+}
+
+/**
+ * Rename / retype a saved institution and optionally replace its logo with an uploaded file.
+ *
+ * @return array{success:bool,message:string}
+ */
+function balances_update_custom_institution(PDO $pdo, int $id, string $name, string $type, string $newLogo = ''): array
+{
+    $name = trim(preg_replace('/\s+/', ' ', $name));
+    if ($name === '' || mb_strlen($name) > 100) {
+        return ['success' => false, 'message' => 'Name is required (up to 100 characters).'];
+    }
+    if (!in_array($type, ['bank', 'mobile', 'cash'], true)) {
+        return ['success' => false, 'message' => 'Choose Bank, Mobile money or Cash.'];
+    }
+    $row = balances_find_custom_institution($pdo, $id);
+    if (!$row) {
+        return ['success' => false, 'message' => 'Saved logo not found.'];
+    }
+    $dupe = $pdo->prepare('SELECT 1 FROM balances_custom_institutions WHERE company_id <=> ? AND name = ? AND id <> ? LIMIT 1');
+    $dupe->execute([$row['company_id'], $name, $id]);
+    if ($dupe->fetchColumn()) {
+        return ['success' => false, 'message' => '"' . $name . '" is already saved.'];
+    }
+
+    $root = dirname(__DIR__, 2);
+    $logo = (string) $row['logo'];
+    if ($newLogo !== '') {
+        $targetDir = $root . '/uploads/balances/institutions/';
+        if (!is_dir($targetDir) && !mkdir($targetDir, 0755, true) && !is_dir($targetDir)) {
+            return ['success' => false, 'message' => 'Could not save the new logo.'];
+        }
+        $fileName = 'INST_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . (strtolower(pathinfo($newLogo, PATHINFO_EXTENSION)) ?: 'png');
+        if (!rename($root . '/' . $newLogo, $targetDir . $fileName)) {
+            return ['success' => false, 'message' => 'Could not save the new logo.'];
+        }
+        $logo = 'uploads/balances/institutions/' . $fileName;
+    }
+    $pdo->prepare('UPDATE balances_custom_institutions SET name = ?, type = ?, logo = ? WHERE id = ?')->execute([$name, $type, $logo, $id]);
+    if ($logo !== $row['logo'] && str_starts_with((string) $row['logo'], 'uploads/balances/institutions/')) {
+        @unlink($root . '/' . $row['logo']);
+    }
+
+    return ['success' => true, 'message' => 'Saved logo updated.'];
+}
+
+/** Remove a saved institution and its logo file. Accounts that already copied the logo keep their own copy. */
+function balances_delete_custom_institution(PDO $pdo, int $id): bool
+{
+    $row = balances_find_custom_institution($pdo, $id);
+    if (!$row) {
+        return false;
+    }
+    $pdo->prepare('DELETE FROM balances_custom_institutions WHERE id = ?')->execute([$id]);
+    if (str_starts_with((string) $row['logo'], 'uploads/balances/institutions/')) {
+        @unlink(dirname(__DIR__, 2) . '/' . $row['logo']);
+    }
+
+    return true;
+}
+
+/** @return array<string, mixed>|null a saved institution of the current company (or a shared one) */
+function balances_find_custom_institution(PDO $pdo, int $id): ?array
+{
+    balances_ensure_custom_institutions_table($pdo);
+    $companyId = function_exists('currentCompanyId') ? (int) (currentCompanyId() ?? 0) : 0;
+    $stmt = $pdo->prepare('SELECT * FROM balances_custom_institutions WHERE id = ? AND (company_id IS NULL OR company_id = 0 OR company_id = ?) LIMIT 1');
+    $stmt->execute([$id, $companyId]);
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    return $row ?: null;
+}
+
+/** Copy an institution logo into the account images folder; returns the new relative path or ''. */
+function balances_copy_institution_logo(string $slug, ?PDO $pdo = null): string
+{
+    $inst = balances_institutions($pdo)[$slug] ?? null;
+    if (!$inst || $inst['logo'] === '') {
+        return '';
+    }
+    $root = dirname(__DIR__, 2);
+    $targetDir = $root . '/uploads/balances/accounts/';
+    if (!is_dir($targetDir) && !mkdir($targetDir, 0755, true) && !is_dir($targetDir)) {
+        return '';
+    }
+    $ext = strtolower(pathinfo($inst['logo'], PATHINFO_EXTENSION)) ?: 'png';
+    $fileName = 'ACC_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
+
+    return copy($root . '/' . $inst['logo'], $targetDir . $fileName) ? 'uploads/balances/accounts/' . $fileName : '';
+}
+
+/**
+ * Save an uploaded account image from $_FILES[$field]; returns the relative path, or '' when no file was sent.
+ *
+ * @throws RuntimeException on an invalid or failed upload
+ */
+function balances_store_uploaded_account_image(string $field = 'account_image'): string
+{
+    $file = $_FILES[$field] ?? null;
+    if (!is_array($file) || (int) ($file['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) {
+        return '';
+    }
+    if ((int) $file['error'] !== UPLOAD_ERR_OK) {
+        throw new RuntimeException('Account image upload failed. Please try again.');
+    }
+    if ((int) $file['size'] > 2 * 1024 * 1024) {
+        throw new RuntimeException('Account image must be 2MB or smaller.');
+    }
+    $ext = strtolower(pathinfo((string) $file['name'], PATHINFO_EXTENSION));
+    if (!in_array($ext, ['jpg', 'jpeg', 'png', 'webp', 'gif'], true) || @getimagesize((string) $file['tmp_name']) === false) {
+        throw new RuntimeException('Account image must be a JPG, PNG, WEBP, or GIF picture.');
+    }
+    $targetDir = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'balances' . DIRECTORY_SEPARATOR . 'accounts' . DIRECTORY_SEPARATOR;
+    if (!is_dir($targetDir) && !mkdir($targetDir, 0755, true) && !is_dir($targetDir)) {
+        throw new RuntimeException('Could not create upload folder for account image.');
+    }
+    $fileName = 'ACC_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
+    if (!move_uploaded_file((string) $file['tmp_name'], $targetDir . $fileName)) {
+        throw new RuntimeException('Could not save account image.');
+    }
+
+    return 'uploads/balances/accounts/' . $fileName;
+}
+
+/**
+ * Split sub-account rows into Bank / Mobile money / Cash / Other sections by payment type.
+ * Returns one unlabelled group when none of the rows is a payment wallet.
+ *
+ * @param list<array<string, mixed>> $rows
+ * @return list<array{key:string,label:?string,rows:list<array<string, mixed>>,total:float,currency:string}>
+ */
+/**
+ * Sum balances held in different currencies in the ledger base currency, using the latest exchange rates.
+ * Returns [0.0, ''] when the ledger is unavailable or a currency has no rate yet.
+ *
+ * @return array{0:float, 1:string}
+ */
+function balances_total_in_base_currency(array $rows): array
+{
+    global $pdo;
+    if (!($pdo instanceof PDO)) {
+        return [0.0, ''];
+    }
+    if (!function_exists('gl_latest_exchange_rates') && is_file(dirname(__DIR__, 2) . '/includes/gl/gl_core.php')) {
+        require_once dirname(__DIR__, 2) . '/includes/gl/gl_core.php';
+    }
+    if (!function_exists('gl_latest_exchange_rates')) {
+        return [0.0, ''];
+    }
+    $base = gl_base_currency($pdo);
+    $rates = gl_latest_exchange_rates($pdo);
+    $total = 0.0;
+    foreach ($rows as $r) {
+        $cur = strtoupper((string) ($r['currency'] ?? $base));
+        $rate = $cur === $base ? 1.0 : ($rates[$cur]['rate'] ?? null);
+        if ($rate === null) {
+            return [0.0, ''];
+        }
+        $total += (float) ($r['balance'] ?? 0) * $rate;
+    }
+
+    return [round($total, 2), $base];
+}
+
+function balances_group_sub_accounts_by_payment_type(array $rows): array
+{
+    $labels = ['bank' => 'Bank accounts', 'mobile' => 'Mobile money', 'cash' => 'Cash', 'other' => 'Other assets'];
+    $groups = array_fill_keys(array_keys($labels), []);
+    $hasWallet = false;
+    foreach ($rows as $row) {
+        $type = balances_normalize_payment_wallet_type((string) ($row['raw']['type'] ?? ''));
+        $hasWallet = $hasWallet || $type !== null;
+        $groups[$type ?? 'other'][] = $row;
+    }
+    if (!$hasWallet) {
+        return $rows === [] ? [] : [['key' => 'all', 'label' => null, 'rows' => $rows, 'total' => 0.0, 'currency' => '']];
+    }
+
+    $out = [];
+    foreach ($groups as $key => $groupRows) {
+        if ($groupRows === []) {
+            continue;
+        }
+        $currencies = array_unique(array_map(static fn ($r) => (string) ($r['currency'] ?? 'TZS'), $groupRows));
+        $total = array_sum(array_map(static fn ($r) => (float) ($r['balance'] ?? 0), $groupRows));
+        $currency = count($currencies) === 1 ? (string) reset($currencies) : '';
+        $approx = false;
+        if ($currency === '') {
+            [$total, $currency] = balances_total_in_base_currency($groupRows);
+            $approx = $currency !== '';
+        }
+        $out[] = [
+            'key' => $key,
+            'label' => $labels[$key],
+            'rows' => $groupRows,
+            'total' => $total,
+            'currency' => $currency,
+            'approx' => $approx,
+        ];
+    }
+
+    return $out;
 }
 
 /**
@@ -996,7 +1422,10 @@ function balances_resolve_sub_account_wallet_type(array $parent, ?string $reques
  *
  * @return array{success:bool,id?:int,message:string}
  */
-function balances_create_sub_account(PDO $pdo, int $parentId, string $accountName, ?string $paymentWalletType = null): array
+/**
+ * @param array{currency?:string, account_image?:string} $extra
+ */
+function balances_create_sub_account(PDO $pdo, int $parentId, string $accountName, ?string $paymentWalletType = null, float $openingBalance = 0.0, ?string $openingDate = null, array $extra = []): array
 {
     $accountName = trim($accountName);
     if ($parentId <= 0) {
@@ -1036,6 +1465,8 @@ function balances_create_sub_account(PDO $pdo, int $parentId, string $accountNam
             return ['success' => false, 'message' => 'Please select a payment type (Cash, Bank, or Mobile money).'];
         }
         $storedType = $walletType;
+    } elseif (balances_parent_payment_type_mode($parent) === 'optional') {
+        $storedType = balances_normalize_payment_wallet_type($paymentWalletType) ?? $accountType;
     }
     if (function_exists('coa_ensure_account_category')) {
         coa_ensure_account_category(
@@ -1048,7 +1479,14 @@ function balances_create_sub_account(PDO $pdo, int $parentId, string $accountNam
     }
 
     $accountCode = coa_compute_next_account_code($pdo, $accountType);
-    $currency = strtoupper(trim((string) ($parent['currency'] ?? 'TZS')));
+    $currency = strtoupper(trim((string) ($extra['currency'] ?? '')));
+    if (!isset(balances_currency_catalog()[$currency])) {
+        $currency = strtoupper(trim((string) ($parent['currency'] ?? 'TZS'))) ?: 'TZS';
+    }
+    $accountImage = trim((string) ($extra['account_image'] ?? ''));
+    if ($accountImage !== '' && function_exists('columnExists') && !columnExists('financial_accounts', 'account_image', $pdo)) {
+        $pdo->exec('ALTER TABLE financial_accounts ADD COLUMN account_image VARCHAR(500) NULL DEFAULT NULL AFTER status');
+    }
 
     $balanceSide = coa_normal_balance_side_for_account_type($accountType);
     if (coa_find_account_by_name_and_balance_side($pdo, $accountName, $balanceSide) !== null) {
@@ -1057,14 +1495,24 @@ function balances_create_sub_account(PDO $pdo, int $parentId, string $accountNam
 
     $nameToSave = $accountCode . ' - ' . $accountName;
 
+    $openingBalance = round($openingBalance, 2);
+    if (abs($openingBalance) >= 0.005 && balances_normalize_payment_wallet_type($storedType) === null) {
+        return ['success' => false, 'message' => 'Opening balances can only be set on Bank, Mobile money or Cash accounts.'];
+    }
+    if ($openingDate !== null && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $openingDate)) {
+        $openingDate = null;
+    }
+
     $insertRow = [
         'name' => $nameToSave,
         'type' => $storedType,
         'currency' => $currency,
-        'opening_balance' => 0,
-        'current_balance' => 0,
+        'opening_balance' => $openingBalance,
+        'current_balance' => $openingBalance,
+        'opening_date' => abs($openingBalance) >= 0.005 ? ($openingDate ?? date('Y-m-d')) : null,
         'status' => 'active',
         'parent_id' => $parentId,
+        'account_image' => $accountImage !== '' ? $accountImage : null,
     ];
 
     if (function_exists('balancesUseCompanyScope') && balancesUseCompanyScope()) {
@@ -1118,6 +1566,9 @@ function balances_create_sub_account(PDO $pdo, int $parentId, string $accountNam
     }
 
     balances_link_account_to_gl($pdo, $newId);
+    if (abs($openingBalance) >= 0.005) {
+        balancesScheduleLedgerSync($pdo);
+    }
 
     return [
         'success' => true,
@@ -1616,12 +2067,6 @@ function coa_default_accounts_catalog(): array
                     'code' => '1005',
                     'name' => 'Undeposited Funds',
                     'description' => 'Payments received but not yet deposited into a bank account',
-                    'is_system' => 1,
-                ],
-                [
-                    'code' => '1008',
-                    'name' => 'CRDB',
-                    'description' => 'Things your business owns that have value',
                     'is_system' => 1,
                 ],
             ],
@@ -3457,12 +3902,36 @@ function balancesRecordTransaction(
 
         if (!$pdo->inTransaction()) {
             balancesRecalculateAccount($pdo, $accountId, $companyId > 0 ? $companyId : null);
+        } else {
+            // Same unit of work as the insert, so it rolls back with it.
+            $delta = $type === 'credit' ? $amount : -$amount;
+            $pdo->prepare('UPDATE financial_accounts SET current_balance = COALESCE(current_balance, 0) + ? WHERE id = ?')
+                ->execute([$delta, $accountId]);
         }
+
+        balancesScheduleLedgerSync($pdo);
 
         return true;
     } catch (Throwable $e) {
         error_log('balancesRecordTransaction: ' . $e->getMessage());
         return false;
+    }
+}
+
+/**
+ * Queue a post-request sync of new money movements into the double-entry ledger.
+ */
+function balancesScheduleLedgerSync(?PDO $pdo): void
+{
+    $bridge = dirname(__DIR__, 2) . '/includes/gl/gl_bridge.php';
+    if (!is_file($bridge)) {
+        return;
+    }
+    try {
+        require_once $bridge;
+        gl_bridge_schedule_sync($pdo);
+    } catch (Throwable $e) {
+        error_log('balancesScheduleLedgerSync: ' . $e->getMessage());
     }
 }
 
@@ -3758,13 +4227,9 @@ function balances_ensure_system_locked_accounts(PDO $pdo): void
                 'description' => 'Payments received but not yet deposited into a bank account',
                 'type' => 'asset',
             ],
-            [
-                'code' => '1008',
-                'name' => 'CRDB',
-                'description' => 'Things your business owns that have value',
-                'type' => 'asset',
-            ],
         ];
+
+        balances_retire_legacy_crdb_system_account($pdo);
 
         foreach ($systemSubs as $sub) {
             $fullName = $sub['code'] . ' - ' . $sub['name'];
@@ -3784,6 +4249,38 @@ function balances_ensure_system_locked_accounts(PDO $pdo): void
         }
     } catch (Throwable $e) {
         error_log('balances_ensure_system_locked_accounts: ' . $e->getMessage());
+    }
+}
+
+/**
+ * The old "1008 - CRDB" default was seeded (locked in some tenants) but has no system role.
+ * Delete it when unused; otherwise unlock it so its transactions and balance are kept.
+ */
+function balances_retire_legacy_crdb_system_account(PDO $pdo): void
+{
+    try {
+        $stmt = $pdo->prepare(
+            "SELECT id, opening_balance, current_balance FROM financial_accounts
+             WHERE name = '1008 - CRDB'"
+        );
+        $stmt->execute();
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) ?: [] as $row) {
+            $id = (int) $row['id'];
+            $txStmt = $pdo->prepare('SELECT COUNT(*) FROM account_transactions WHERE account_id = ?');
+            $txStmt->execute([$id]);
+            $unused = (int) $txStmt->fetchColumn() === 0
+                && abs((float) $row['opening_balance']) < 0.005
+                && abs((float) $row['current_balance']) < 0.005;
+
+            if ($unused) {
+                $pdo->prepare('UPDATE financial_accounts SET parent_id = NULL WHERE parent_id = ?')->execute([$id]);
+                $pdo->prepare('DELETE FROM financial_accounts WHERE id = ?')->execute([$id]);
+            } else {
+                $pdo->prepare('UPDATE financial_accounts SET is_system = 0 WHERE id = ?')->execute([$id]);
+            }
+        }
+    } catch (Throwable $e) {
+        error_log('balances_retire_legacy_crdb_system_account: ' . $e->getMessage());
     }
 }
 ?>

@@ -1457,3 +1457,288 @@
     gap: 0.3rem;
   }
 }
+
+/* Voucher-style layout (matches employee Create Voucher form) */
+.pe-shell--voucher .pe-layout--flat {
+  display: block;
+}
+
+.pe-shell--voucher .pe-section {
+  padding-bottom: 1.25rem;
+  margin-bottom: 0.75rem;
+  border-bottom: none;
+}
+
+.pe-shell--voucher .pe-section-head {
+  margin-bottom: 14px;
+}
+
+.pe-shell--voucher .pe-section-head h2 {
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.pe-shell--voucher .pe-card {
+  background: var(--pe-surface);
+  border: 1px solid var(--pe-border);
+  border-radius: 12px;
+  padding: 0.85rem 1.1rem 0.55rem;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.pe-shell--voucher .pe-card .pe-row {
+  grid-template-columns: 140px 1fr;
+  gap: 10px 14px;
+  margin-bottom: 10px;
+}
+
+.pe-shell--voucher .pe-card .pe-row--split {
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 16px;
+  align-items: start;
+}
+
+.pe-shell--voucher .pe-split-col {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.pe-shell--voucher .pe-card .pe-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--pe-text-2);
+}
+
+.pe-shell--voucher .pe-card .pe-row--top .pe-label {
+  padding-top: 8px;
+}
+
+.pe-shell--voucher .pe-card .pe-input,
+.pe-shell--voucher .pe-card .pe-select,
+.pe-shell--voucher .pe-card .pe-textarea {
+  padding: 7px 12px;
+  font-size: 13px;
+}
+
+.pe-shell--voucher .pe-item--row {
+  border-radius: 12px;
+  padding: 0.6rem 0.7rem;
+}
+
+.pe-shell--voucher .pe-items-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.pe-shell--voucher .pe-card--items {
+  padding: 0.75rem 0.9rem 0.85rem;
+  overflow-x: auto;
+}
+
+.pe-shell--voucher .pe-card--items .pe-item--row {
+  background: #fbfcfe;
+}
+
+.pe-shell--voucher .pe-card--items .pe-items-foot {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--pe-border);
+}
+
+.pe-shell--voucher .pe-total {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.pe-shell--voucher .pe-total span {
+  font-size: 12px;
+  color: var(--pe-muted);
+}
+
+.pe-shell--voucher .pe-total strong {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--pe-text);
+}
+
+.pe-shell--voucher .pe-summary {
+  margin: 4px 0 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--pe-border);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pe-shell--voucher .pe-summary > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+}
+
+.pe-shell--voucher .pe-summary dt {
+  font-weight: 500;
+  color: var(--pe-muted);
+}
+
+.pe-shell--voucher .pe-summary dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+  color: var(--pe-text-2);
+}
+
+.pe-shell--voucher .pe-summary .is-grand {
+  margin-top: 4px;
+  padding-top: 8px;
+  border-top: 1px solid var(--pe-border);
+}
+
+.pe-shell--voucher .pe-summary .is-grand dt,
+.pe-shell--voucher .pe-summary .is-grand dd {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--pe-text);
+}
+
+.pe-shell--voucher .pe-card .pe-notes-split {
+  margin-bottom: 10px;
+}
+
+.pe-shell--voucher .pe-card .pe-attach {
+  margin: 0 0 10px;
+}
+
+.pe-shell--voucher .pe-grid3 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px 14px;
+  padding-bottom: 0.3rem;
+}
+
+.pe-shell--voucher .pe-grid3 .pe-span-2 {
+  grid-column: span 2;
+}
+
+.pe-shell--voucher .pe-grid3 .pe-span-3 {
+  grid-column: 1 / -1;
+}
+
+.pe-shell--voucher .pe-grid3 .pe-type-option {
+  padding: 0.38rem 0.75rem;
+}
+
+@media (max-width: 900px) {
+  .pe-shell--voucher .pe-grid3 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .pe-shell--voucher .pe-grid3 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .pe-shell--voucher .pe-grid3 .pe-span-2 {
+    grid-column: auto;
+  }
+}
+
+.pe-shell--voucher .pe-card .pe-voucher-trigger {
+  max-width: none;
+  padding: 8px 12px;
+  font-size: 13px;
+}
+
+.pe-shell--voucher .pe-card .pe-attach-head .pe-field-label {
+  display: none;
+}
+
+.pe-shell--voucher .pe-actions {
+  margin-top: 16px;
+}
+
+@media (max-width: 640px) {
+  .pe-shell--voucher .pe-card .pe-row,
+  .pe-shell--voucher .pe-card .pe-row--split {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .pe-shell--voucher .pe-card .pe-row--split .pe-split-col[aria-hidden="true"] {
+    display: none;
+  }
+}
+
+.pe-items-foot-actions { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.pe-catalogue-link { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: #2563eb; text-decoration: none; }
+.pe-catalogue-link:hover { color: #1d4ed8; text-decoration: underline; }
+.pe-shell--voucher .pe-section-pair { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; align-items: stretch; margin-bottom: 0.75rem; }
+.pe-shell--voucher .pe-section-pair > .pe-section { display: flex; flex-direction: column; margin-bottom: 0; padding-bottom: 0; }
+.pe-shell--voucher .pe-section-pair > .pe-section > .pe-card { flex: 1; }
+.pe-shell--voucher .pe-section-pair .pe-notes-split { grid-template-columns: 1fr 1fr; margin-bottom: 0; }
+.pe-shell--voucher .pe-section-pair .pe-textarea { min-height: 150px; }
+@media (max-width: 900px) {
+  .pe-shell--voucher .pe-section-pair { grid-template-columns: 1fr; }
+}
+@media (max-width: 640px) {
+  .pe-shell--voucher .pe-section-pair .pe-notes-split { grid-template-columns: 1fr; }
+}
+@media (min-width: 901px) {
+  .pe-shell--voucher .pe-section-pair > #pe-totals { order: 2; }
+}
+
+.pe-shell--voucher { position: relative; }
+.pe-shell--voucher > .pe-topbar--actions-only { position: absolute; top: 0; right: 0; margin: 0; padding: 0; min-height: 0; border: 0; background: transparent; z-index: 2; }
+.pe-shell--voucher #pe-supplier .pe-section-head { padding-right: 96px; }
+
+html[data-theme="dark"] .pe-shell {
+  --pe-bg: #0b141a;
+  --pe-surface: #111b21;
+  --pe-text: #e9edef;
+  --pe-text-2: #d1d7db;
+  --pe-muted: #8696a0;
+  --pe-border: #2a3942;
+  --pe-divider: #2a3942;
+}
+html[data-theme="dark"] .pe-shell--voucher .pe-card { box-shadow: none; }
+html[data-theme="dark"] .pe-shell--voucher .pe-card--items .pe-item--row,
+html[data-theme="dark"] .pe-shell .pe-item--row { background: #202c33; border-color: #2a3942; }
+html[data-theme="dark"] .pe-shell .pe-input,
+html[data-theme="dark"] .pe-shell .pe-select,
+html[data-theme="dark"] .pe-shell .pe-textarea,
+html[data-theme="dark"] .pe-shell .pe-voucher-trigger {
+  background: #0b141a;
+  border-color: #3b4a54;
+  color: #e9edef;
+}
+html[data-theme="dark"] .pe-shell .pe-input::placeholder,
+html[data-theme="dark"] .pe-shell .pe-textarea::placeholder { color: #8696a0; }
+html[data-theme="dark"] .pe-shell .pe-type-option { background: #202c33; border-color: #3b4a54; color: #d1d7db; }
+html[data-theme="dark"] .pe-shell .pe-type-option.is-active { background: rgba(124, 58, 237, 0.18); border-color: #8b5cf6; color: #e9edef; }
+html[data-theme="dark"] .pe-shell .pe-field-label,
+html[data-theme="dark"] .pe-shell .pe-items-head,
+html[data-theme="dark"] .pe-shell .pe-items-head span { color: #8696a0; }
+html[data-theme="dark"] .pe-shell .pe-currency-picker-trigger,
+html[data-theme="dark"] .pe-shell .pe-currency-picker-trigger:disabled {
+  background-color: #0b141a;
+  border-color: #3b4a54;
+  color: #d1d7db;
+  opacity: 1;
+}
+html[data-theme="dark"] .pe-shell .pe-currency-picker-trigger:disabled { opacity: 0.7; }
+html[data-theme="dark"] .pe-shell .pe-currency-picker-menu { background: #202c33; border-color: #3b4a54; box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45); }
+html[data-theme="dark"] .pe-shell .pe-currency-picker-option:hover,
+html[data-theme="dark"] .pe-shell .pe-currency-picker-option.is-selected { background: #2a3942; }
+html[data-theme="dark"] .pe-catalogue-link { color: #53bdeb; }
+html[data-theme="dark"] .pe-catalogue-link:hover { color: #7fd0f2; }
+html[data-theme="dark"] .pe-shell .pe-btn--ghost { background: #202c33; border-color: #3b4a54; color: #e9edef; }
+html[data-theme="dark"] .pe-shell .pe-item-thumb { background: #202c33; border-color: #3b4a54; color: #8696a0; }

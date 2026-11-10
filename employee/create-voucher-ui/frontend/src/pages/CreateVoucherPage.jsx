@@ -143,6 +143,7 @@ export default function CreateVoucherPage() {
   }, [])
   const [currency, setCurrency] = useState(() => String(draftOr('currency', init.currency || CFG.currencies[0] || 'TZS') || 'TZS'))
   const [dateCreated, setDateCreated] = useState(() => String(draftOr('dateCreated', init.date_created || CFG.today) || CFG.today))
+  const [dueDate, setDueDate] = useState(() => String(draftOr('dueDate', init.due_date || '') || ''))
   const [purpose, setPurpose] = useState(() => String(draftOr('purpose', init.purpose || CFG.defaultPurpose || CFG.purposes[0]?.value || 'general') || 'general'))
   const [isRestricted, setIsRestricted] = useState(() => !!draftOr('isRestricted', !!init.is_restricted))
   const [items, setItems] = useState(initialItems)
@@ -257,6 +258,7 @@ export default function CreateVoucherPage() {
         payeeId,
         currency,
         dateCreated,
+        dueDate,
         purpose,
         isRestricted,
         description,
@@ -278,6 +280,7 @@ export default function CreateVoucherPage() {
     payeeId,
     currency,
     dateCreated,
+    dueDate,
     purpose,
     isRestricted,
     description,
@@ -538,6 +541,8 @@ export default function CreateVoucherPage() {
     )
     if (validItems.length === 0)
       return 'Please add at least one payment item with a payment type, budget type and amount.'
+    if (validItems.some((it) => it.payment_type.toLowerCase() === 'credit') && !dueDate)
+      return 'Please enter a due date for the credit payment.'
     if (!applicant || !departmentManager || !checkedBy)
       return 'Please select Applicant, Department Manager, and Checked By.'
     if (isStockPurchase && !hasLinkedPo)
@@ -607,6 +612,7 @@ export default function CreateVoucherPage() {
   const validItemCount = items.filter(
     (it) => it.payment_type && it.budget_type && (parseFloat(it.amount) || 0) > 0,
   ).length
+  const hasCredit = items.some((it) => it.payment_type.toLowerCase() === 'credit')
   const attachmentCount = existingAttachments.length + files.length
   const fieldsLocked = IS_LIMITED
 
@@ -616,6 +622,7 @@ export default function CreateVoucherPage() {
     date: !!dateCreated,
     description: !!description.trim(),
     items: validItemCount > 0,
+    ...(hasCredit ? { dueDate: !!dueDate } : {}),
     applicant: !!applicant,
     departmentManager: !!departmentManager,
     checkedBy: !!checkedBy,
@@ -902,6 +909,15 @@ export default function CreateVoucherPage() {
             </header>
 
             {fieldErr(filled.items, 'Add at least one item with a payment type, budget type and amount greater than 0.')}
+
+            {hasCredit && (
+              <div className="cv-item-cell">
+                <label htmlFor="voucher-due-date">Payment due date {mark(!!dueDate)}</label>
+                <input id="voucher-due-date" type="date" name="due_date" className={`cv-input${invCls(!!dueDate)}`}
+                  value={dueDate} onChange={(e) => setDueDate(e.target.value)} disabled={fieldsLocked} />
+                {fieldErr(!!dueDate, 'Enter the due date for this credit payment.')}
+              </div>
+            )}
 
             <div className="cv-items">
               {items.map((it, idx) => (

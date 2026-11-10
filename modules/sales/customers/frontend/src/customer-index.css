@@ -1,7 +1,10 @@
 /* Customer index � match orders/quotations exp-desk coloring */
 
 body.page-customer-index-desk .exp-desk-page-header {
+  display: grid;
   grid-template-columns: 1fr minmax(14rem, 24rem) 1fr;
+  align-items: center;
+  gap: 1rem 1.25rem;
 }
 
 body.page-customer-index-desk .exp-desk-page-header-search {
@@ -15,6 +18,78 @@ body.page-customer-index-desk .exp-desk-btn-create {
   gap: 0.4rem;
   border-radius: 9999px !important;
   padding: 0.5rem 1.15rem;
+}
+
+body.dashboard.page-customer-index-desk .layout-main-wrapper,
+body.dashboard.page-customer-index-desk .layout-main-wrapper > .flex-grow-1,
+body.dashboard.page-customer-index-desk .employee-header.employee-header--page-context,
+body.dashboard.page-customer-index-desk main.main-content.exp-desk-react-root {
+  background: #f8fafc !important;
+}
+
+body.dashboard.page-customer-index-desk .employee-header.employee-header--page-context {
+  position: static !important;
+  top: auto !important;
+  z-index: auto !important;
+  flex: 0 0 auto !important;
+}
+
+body.dashboard.page-customer-index-desk .employee-header.employee-header--exp-desk .employee-header-page-title {
+  font-weight: 600 !important;
+}
+
+body.dashboard.page-customer-index-desk #erp-auto-breadcrumb {
+  flex: 0 0 auto;
+}
+
+body.dashboard.page-customer-index-desk .erp-auto-breadcrumb-current {
+  font-weight: 500;
+}
+
+@media (min-width: 768px) {
+  html:has(body.dashboard.page-customer-index-desk),
+  html:has(body.dashboard.page-customer-index-desk) body {
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    overflow: hidden !important;
+    overscroll-behavior: none !important;
+  }
+
+  body.dashboard.page-customer-index-desk .layout-main-wrapper {
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+    overscroll-behavior: none !important;
+  }
+
+  body.dashboard.page-customer-index-desk .layout-main-wrapper > .flex-grow-1 {
+    flex: 1 1 0 !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    max-height: 100% !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain !important;
+  }
+
+  body.dashboard.page-customer-index-desk main.main-content.exp-desk-react-root {
+    flex: 0 0 auto !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    overscroll-behavior: auto !important;
+  }
+
+  body.dashboard.page-customer-index-desk main.main-content.exp-desk-react-root #root,
+  body.dashboard.page-customer-index-desk main.main-content.exp-desk-react-root .exp-desk-page {
+    flex: 0 0 auto !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+    overscroll-behavior: auto !important;
+  }
 }
 
 .exp-desk-flash-success {
@@ -39,48 +114,37 @@ html[data-theme="dark"] .ci-customers-table .exp-desk-table tbody tr.is-selected
   background: rgba(167, 139, 250, 0.16) !important;
 }
 
-/* Ledger table look (matches quotations) */
+/* Desktop table aligned with the Products catalogue */
 .ci-customers-table .exp-desk-table-wrap {
-  border: 1px solid #e7edf3;
-  border-radius: 16px;
-  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.04);
+  overflow: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
   background: #fff;
 }
 
 .ci-customers-table .exp-desk-table {
-  border-collapse: separate;
-  border-spacing: 0;
+  border-collapse: collapse;
 }
 
 .ci-customers-table .exp-desk-table thead th {
-  background: #1e293b;
-  color: #fff;
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  background: #f8fafc;
+  color: #0f172a;
+  font-size: 0.8125rem;
+  font-weight: 600;
   white-space: nowrap;
-  padding-top: 0.72rem;
-  padding-bottom: 0.72rem;
-  border-bottom: 0;
+  padding: 0.75rem 0.85rem;
+  border-bottom: 1px solid #e2e8f0;
 }
 
-.ci-customers-table .exp-desk-table thead th:first-child { border-top-left-radius: 15px; }
-.ci-customers-table .exp-desk-table thead th:last-child { border-top-right-radius: 15px; }
-.ci-customers-table .exp-desk-table tbody tr:last-child td:first-child { border-bottom-left-radius: 15px; }
-.ci-customers-table .exp-desk-table tbody tr:last-child td:last-child { border-bottom-right-radius: 15px; }
-
 .ci-customers-table .exp-desk-table tbody td {
-  padding-top: 0.62rem;
-  padding-bottom: 0.62rem;
-  border-bottom: 1px solid #eef2f6;
-  font-size: 0.875rem;
+  padding: 0.7rem 0.85rem;
+  border-bottom: 1px solid #f1f5f9;
+  font-size: 0.8125rem;
   background: #fff;
 }
 
 .ci-customers-table .exp-desk-table tbody tr:last-child td { border-bottom: 0; }
-.ci-customers-table .exp-desk-table tbody tr:nth-child(even) td { background: #f8fafc; }
-.ci-customers-table .exp-desk-table tbody tr:hover td { background: #eef4ff; }
+.ci-customers-table .exp-desk-table tbody tr:hover td { background: #fafafa; }
 
 .ci-customers-table .exp-desk-table th.ci-col-serial,
 .ci-customers-table .exp-desk-table td.ci-col-serial {
@@ -96,11 +160,15 @@ html[data-theme="dark"] .ci-customers-table .exp-desk-table tbody tr.is-selected
 
 .ci-customers-table .exp-desk-table td .exp-desk-cell-main {
   color: #0f172a;
-  font-weight: 700;
+  font-weight: 600;
+}
+
+.ci-customers-table .exp-desk-table td .exp-desk-ref {
+  font-weight: 600;
 }
 
 html[data-theme="dark"] .ci-customers-table .exp-desk-table-wrap { background: #1e293b; border-color: #334155; }
-html[data-theme="dark"] .ci-customers-table .exp-desk-table thead th { background: #0f172a; }
+html[data-theme="dark"] .ci-customers-table .exp-desk-table thead th { background: #0f172a; color: #f8fafc; border-color: #334155; }
 html[data-theme="dark"] .ci-customers-table .exp-desk-table tbody td,
 html[data-theme="dark"] .ci-customers-table .exp-desk-table tbody tr:nth-child(even) td { background: #1e293b; color: #e2e8f0; border-color: #334155; }
 html[data-theme="dark"] .ci-customers-table .exp-desk-table tbody tr:hover td { background: #334155; }
@@ -373,4 +441,330 @@ html[data-theme="dark"] .ci-customers-table .exp-desk-row-action--danger {
 
 html[data-theme="dark"] .ci-customers-table .exp-desk-row-action--danger:hover {
   background: #450a0a;
+}
+
+.ci-mobile-cta,
+.ci-mobile-cards {
+  display: none;
+}
+
+.ci-results-title {
+  margin: 0;
+  color: #0f172a;
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.ci-customers-table .exp-desk-results-count {
+  font-weight: 500;
+}
+
+.ci-mobile-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.9rem 1rem 0.55rem;
+  border: 1px solid #eef0f4;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 4px 14px rgba(15, 23, 42, 0.03);
+}
+
+.ci-mobile-card.is-selected {
+  border-color: #a78bfa;
+  background: #f5f3ff;
+}
+
+.ci-mobile-card-main {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  color: inherit;
+  text-decoration: none !important;
+}
+
+.ci-mobile-card-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  flex: 0 0 52px;
+  border: 1px solid #f1f5f9;
+  border-radius: 10px;
+  font-size: 0.875rem;
+  font-weight: 800;
+}
+
+.ci-mobile-card-identity {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.ci-mobile-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.ci-mobile-card-code {
+  overflow: hidden;
+  color: #334155;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ci-mobile-card-company {
+  color: #0f172a;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.ci-mobile-card-number {
+  flex: 0 0 auto;
+  color: #94a3b8;
+  font-size: 0.6875rem;
+  font-weight: 600;
+}
+
+.ci-mobile-card-contact {
+  color: #475569;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.ci-mobile-card-phone,
+.ci-mobile-card-email {
+  color: #94a3b8;
+  font-size: 0.75rem;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.ci-mobile-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.15rem;
+}
+
+.ci-mobile-card-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 0.35rem;
+}
+
+.ci-mobile-card-action-label {
+  color: #94a3b8;
+  font-size: 0.75rem;
+}
+
+.ci-mobile-card-actions {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.ci-mobile-card-actions .exp-desk-row-action {
+  justify-content: center;
+  min-height: 2.25rem;
+  padding: 0.35rem 0.55rem;
+  font-size: 0.75rem;
+}
+
+.ci-mobile-cta {
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  min-height: 48px;
+  margin: 0.85rem 0 1rem;
+  border: 0;
+  border-radius: 12px;
+  background: #6f63f0;
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 600;
+  box-shadow: 0 6px 16px rgba(111, 99, 240, 0.28);
+}
+
+.ci-mobile-cta:active {
+  background: #5b4fe0;
+}
+
+html[data-theme="dark"] .ci-mobile-cta {
+  background: #6f63f0;
+  color: #fff;
+}
+
+html[data-theme="dark"] .ci-mobile-card,
+html[data-theme="dark"] .ci-mobile-card-actions .exp-desk-row-action:not(.exp-desk-row-action--danger) {
+  border-color: #334155;
+  background: #1e293b;
+}
+
+html[data-theme="dark"] .ci-mobile-card.is-selected {
+  border-color: #8b5cf6;
+  background: #312e51;
+}
+
+html[data-theme="dark"] .ci-mobile-card-code,
+html[data-theme="dark"] .ci-mobile-card-contact,
+html[data-theme="dark"] .ci-mobile-card-company,
+html[data-theme="dark"] .ci-results-title {
+  color: #f8fafc;
+}
+
+html[data-theme="dark"] .ci-mobile-card-phone,
+html[data-theme="dark"] .ci-mobile-card-email,
+html[data-theme="dark"] .ci-mobile-card-action-label {
+  color: #94a3b8;
+}
+
+html[data-theme="dark"] .ci-mobile-card-avatar {
+  border-color: #334155;
+}
+
+html[data-theme="dark"] .ci-type-badge {
+  background: #0f172a;
+  border-color: #334155;
+  color: #cbd5e1;
+}
+
+@media (max-width: 767.98px) {
+  body.page-customer-index-desk .exp-desk-page-header {
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 0.6rem !important;
+  }
+
+  body.page-customer-index-desk .exp-desk-page-header-search,
+  body.page-customer-index-desk .exp-desk-page-header-search--desktop {
+    display: block !important;
+    grid-column: 1 !important;
+    width: 100%;
+    max-width: none;
+  }
+
+  body.page-customer-index-desk .exp-desk-search-field {
+    min-height: 50px;
+    border: 1px solid #e2e8f0;
+    border-radius: 9999px !important;
+    background: #fff;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 4px 14px rgba(15, 23, 42, 0.04);
+  }
+
+  body.page-customer-index-desk .exp-desk-search-input {
+    font-size: 15px !important;
+  }
+
+  body.page-customer-index-desk .exp-desk-page-header-actions {
+    display: none !important;
+  }
+
+  .ci-mobile-cta {
+    display: flex;
+  }
+
+  .ci-customers-table .exp-desk-results-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin: 0.3rem 0 0.7rem;
+  }
+
+  .ci-customers-table .exp-desk-results-count {
+    color: #94a3b8;
+    font-size: 0.75rem;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+
+  .ci-results-title {
+    font-size: 1.125rem;
+  }
+
+  .ci-mobile-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 0.15rem 0 0.35rem;
+  }
+
+  .ci-customers-table .exp-desk-table-wrap {
+    display: none !important;
+  }
+
+}
+
+@media (max-width: 767.98px) {
+  html:has(body.dashboard.page-customer-index-desk),
+  html:has(body.dashboard.page-customer-index-desk) body {
+    height: auto !important;
+    max-height: none !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    overscroll-behavior: auto !important;
+  }
+
+  body.dashboard.page-customer-index-desk .layout-main-wrapper,
+  body.dashboard.page-customer-index-desk .layout-main-wrapper > .flex-grow-1 {
+    height: auto !important;
+    max-height: none !important;
+    min-height: 100dvh !important;
+    overflow: visible !important;
+    overscroll-behavior: auto !important;
+  }
+
+  body.dashboard.page-customer-index-desk .layout-main-wrapper > .flex-grow-1 {
+    flex: 0 0 100% !important;
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  body.dashboard.page-customer-index-desk main.main-content.exp-desk-react-root {
+    flex: 0 0 auto !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    min-width: 0 !important;
+    overflow: visible !important;
+    overscroll-behavior: auto !important;
+  }
+
+  body.dashboard.page-customer-index-desk main.main-content.exp-desk-react-root #root,
+  body.dashboard.page-customer-index-desk main.main-content.exp-desk-react-root .exp-desk-page {
+    flex: 0 0 auto !important;
+    height: auto !important;
+    min-height: 0 !important;
+    min-width: 0 !important;
+    max-height: none !important;
+    width: 100% !important;
+    overflow: visible !important;
+    overscroll-behavior: auto !important;
+  }
+
+  .ci-mobile-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 0.15rem 0 0.35rem;
+  }
+
+  .ci-customers-table .exp-desk-table-wrap {
+    display: none !important;
+  }
 }

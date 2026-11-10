@@ -312,6 +312,7 @@ function revenue_payment_process(PDO $pdo, array $post, ?array $files = null): a
 
         $stmt = $pdo->prepare('UPDATE revenue_entries SET total_paid = ?, payment_status = ?, payment_mode = ? WHERE id = ?');
         $stmt->execute([$newTotalPaid, $newStatus, $paymentMethod, $entryId]);
+        syncOutstandingRevenueBalance($pdo, $entryId);
 
         $descriptionParts = [
             "Debt Payment: {$entry['voucher_number']}",

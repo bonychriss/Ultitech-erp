@@ -183,6 +183,14 @@ if (empty($GLOBALS['_erp_header_style_linked']) && function_exists('app_url')) {
         </div>
     </div>
 </header>
+<?php
+require_once __DIR__ . '/partials/erp_breadcrumbs.php';
+erp_header_breadcrumbs(
+    !empty($hideErpBreadcrumbs) || $hideSidebar,
+    (string) ($employeeHeaderSubtitle ?? '') . (string) ($employeeHeaderCenterHtml ?? ''),
+    [$employeeHeaderTitle ?? null, $page_title ?? null, $pageTitle ?? null]
+);
+?>
 
 <div id="notif-backdrop" class="notif-backdrop" onclick="closeNotif()" aria-hidden="true"></div>
 <script>

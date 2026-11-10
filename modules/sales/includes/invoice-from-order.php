@@ -117,6 +117,9 @@ function sales_convert_order_to_invoice(int $orderId, string $module = 'sales', 
         ];
     }
 
+    require_once dirname(__DIR__, 3) . '/includes/invoice_gl_posting.php';
+    invoice_gl_require_stock_accounts($salesDb);
+
     $blockedInvoiceStatuses = ['cancelled', 'canceled', 'delivered'];
     if (in_array($orderStatus, $blockedInvoiceStatuses, true)) {
         throw new RuntimeException(

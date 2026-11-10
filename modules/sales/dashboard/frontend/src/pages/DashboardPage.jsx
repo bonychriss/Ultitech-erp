@@ -1,6 +1,5 @@
 import {
   AlertTriangle,
-  ArrowDown,
   ArrowRight,
   ArrowUp,
   Clock,
@@ -19,7 +18,7 @@ import {
 } from '../utils/dashboardFormat.js';
 import OutgoingProductsShowcase from '../components/OutgoingProductsShowcase.jsx';
 import KpiSummaryModal from '../components/KpiSummaryModal.jsx';
-import AlternatingGrowthCharts from '../components/AlternatingGrowthCharts.jsx';
+import GrowthChart from '../components/GrowthChart.jsx';
 
 function FlashAlerts({ flash }) {
   if (!flash?.success && !flash?.error) return null;
@@ -88,28 +87,35 @@ function RecentActivity({ activities }) {
   }
 
   return (
-    <div className="activity-list">
-      {activities.map((act) => {
-        const isOrder = act.type === 'order';
-        const iconClass = isOrder ? 'blue' : 'green';
-        return (
-          <div className="activity-item" key={`${act.type}-${act.ref_number}-${act.created_at}`}>
-            <div className={`activity-icon ${iconClass}`}>
-              <i className={`fas ${isOrder ? 'fa-file-invoice' : 'fa-file-invoice-dollar'}`} />
-            </div>
-            <div className="activity-content">
-              <div className="activity-text">
-                <a href={act.url}>{act.ref_number}</a>
-                {' - '}
-                {act.customer_name}
-                {' - '}
-                {formatMoney(act.total_amount)}
-              </div>
-              <div className="activity-time">{timeAgo(act.created_at)}</div>
-            </div>
-          </div>
-        );
-      })}
+    <div className="sd-activity-table-wrap">
+      <table className="sd-activity-table">
+        <thead>
+          <tr>
+            <th>Document</th>
+            <th>Customer</th>
+            <th>Amount</th>
+            <th>Date</th>
+          </tr>
+        </thead>
+        <tbody>
+          {activities.map((act) => {
+            const isOrder = act.type === 'order';
+            return (
+              <tr key={`${act.type}-${act.ref_number}-${act.created_at}`}>
+                <td>
+                  <span className={`sd-activity-icon${isOrder ? ' is-order' : ''}`}>
+                    <i className={`fas ${isOrder ? 'fa-file-invoice' : 'fa-file-invoice-dollar'}`} />
+                  </span>
+                  <a className="sd-activity-ref" href={act.url}>{act.ref_number}</a>
+                </td>
+                <td className="sd-activity-customer">{act.customer_name}</td>
+                <td className="sd-activity-amount">{formatMoney(act.total_amount)}</td>
+                <td className="sd-activity-date">{timeAgo(act.created_at)}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
     </div>
   );
 }
@@ -210,6 +216,7 @@ function YearlyTarget({ yearly }) {
   const sales = Number(yearly?.sales || 0);
   const percent = Number(yearly?.percent || 0);
   const hitTarget = target > 0 && sales >= target;
+  const progress = Math.min(100, Math.max(0, percent));
 
   return (
     <div className={`dash-card flex-shrink-0 sd-yearly-card${hitTarget ? ' sd-yearly-card--target-hit' : ''}`}>
@@ -221,7 +228,7 @@ function YearlyTarget({ yearly }) {
         </>
       ) : null}
       <div className="sd-yearly-card-head">
-        <h3 className="dash-card-title mb-2">Yearly Target</h3>
+        <h3 className="dash-card-title mb-2">Yearly Sales Target</h3>
         {hitTarget ? (
           <span className="yearly-congrats-badge">
             <Trophy size={13} strokeWidth={2.5} aria-hidden="true" />
@@ -229,37 +236,29 @@ function YearlyTarget({ yearly }) {
           </span>
         ) : null}
       </div>
-      <div className="d-flex justify-content-between align-items-end mb-1">
-        <div>
-          <div className="text-muted small">Achieved</div>
-          <div className={`fw-bold${hitTarget ? ' yearly-achieved-value' : ' text-primary'}`}>
-            {formatMoney(sales)}
+      <div className="sd-yearly-summary">
+        <div
+          className={`sd-yearly-ring${hitTarget ? ' is-complete' : ''}`}
+          style={{ '--yearly-progress': `${progress}%` }}
+          role="img"
+          aria-label={`${formatPercent(progress)} percent of yearly sales target achieved`}
+        >
+          <span>{formatPercent(progress)}%</span>
+        </div>
+        <div className="sd-yearly-values">
+          <div className="sd-yearly-value-row">
+            <span>Achieved</span>
+            <strong>{formatMoney(sales)}</strong>
+          </div>
+          <div className="sd-yearly-value-row">
+            <span>Target</span>
+            <strong>{formatMoney(target)}</strong>
+          </div>
+          <div className="sd-yearly-value-row sd-yearly-remaining">
+            <span>Remaining</span>
+            <strong>{formatMoney(Math.max(0, target - sales))}</strong>
           </div>
         </div>
-        <div className="text-end">
-          <div className="text-muted small">Target</div>
-          <div className="fw-bold">{formatMoney(target)}</div>
-        </div>
-      </div>
-      <div className={`progress yearly-progress${hitTarget ? ' yearly-progress--complete' : ''}`} style={{ height: '8px' }}>
-        <div
-          className={`progress-bar${hitTarget ? ' yearly-progress-bar--complete' : ' bg-primary'}`}
-          role="progressbar"
-          style={{ width: `${percent}%` }}
-        />
-      </div>
-      <div className={`text-center mt-2 small${hitTarget ? ' yearly-complete-text' : ' text-muted'}`}>
-        {hitTarget ? (
-          <>
-            <Trophy size={14} strokeWidth={2.5} className="me-1" aria-hidden="true" />
-            Congratulations! Annual target achieved.
-          </>
-        ) : (
-          <>
-            {formatPercent(percent)}
-            % Completed
-          </>
-        )}
       </div>
     </div>
   );
@@ -309,8 +308,6 @@ export default function DashboardPage() {
   if (!data) return null;
 
   const metrics = data.metrics || {};
-  const salesTrend = Number(metrics.sales_trend) || 0;
-  const trendUp = salesTrend >= 0;
   const summaries = data.kpi_summaries || {};
   const activeSummary = activeKpiKey ? summaries[activeKpiKey] : null;
 
@@ -320,23 +317,20 @@ export default function DashboardPage() {
 
       <div className="kpi-overview">
         <KpiCard
+          icon={<Handshake size={14} />}
+          iconClass="green"
+          title={data.user?.is_admin ? 'Total Monthly Sales' : 'Monthly Sales'}
+          value={formatMoney(metrics.monthly_sales_display)}
+          onClick={() => setActiveKpiKey('monthly_sales_scope')}
+          subtext={data.user?.is_admin ? 'All sales this month' : 'Your sales this month'}
+        />
+        <KpiCard
           icon={<DollarSign size={14} />}
           iconClass="blue"
-          title="Monthly Sales"
-          value={formatMoney(metrics.sales_total)}
-          trend={trendUp ? <ArrowUp size={12} /> : <ArrowDown size={12} />}
-          trendClass={trendUp ? 'text-success' : 'text-danger'}
-          onClick={() => setActiveKpiKey('monthly_sales')}
-          subtext={(
-            <>
-              <span className={trendUp ? 'text-success' : 'text-danger'} style={{ fontWeight: 700 }}>
-                {Math.abs(salesTrend)}
-                %
-              </span>
-              {' '}
-              from last month
-            </>
-          )}
+          title="Quotation Value"
+          value={formatMoney(metrics.quotation_value)}
+          onClick={() => setActiveKpiKey('quotation_value')}
+          subtext="This month"
         />
         <KpiCard
           icon={<Clock size={14} />}
@@ -367,16 +361,6 @@ export default function DashboardPage() {
           onClick={() => setActiveKpiKey('overdue_invoices')}
           subtext={<span className="text-danger">Action required</span>}
         />
-        <KpiCard
-          icon={<Handshake size={14} />}
-          iconClass="green"
-          title={data.user?.is_admin ? 'Total Monthly Sales' : 'Monthly Sales'}
-          value={formatMoney(metrics.monthly_sales_display)}
-          trend={<ArrowUp size={12} />}
-          trendClass="text-success"
-          onClick={() => setActiveKpiKey('monthly_sales_scope')}
-          subtext={data.user?.is_admin ? 'All sales this month' : 'Your sales this month'}
-        />
       </div>
 
       <KpiSummaryModal
@@ -384,46 +368,66 @@ export default function DashboardPage() {
         onClose={() => setActiveKpiKey(null)}
       />
 
-      <div className="row g-3 mb-3">
+      <div className="row g-3 mb-3 sd-dashboard-main-row">
         <div className="col-xl-8 col-lg-7">
           <div className="dash-card sd-revenue-growth-card">
-            <AlternatingGrowthCharts
-              revenueSeries={data.revenue_growth || {}}
-              quoteSeries={data.quote_growth || {}}
+            <GrowthChart
+              title="Sales Growth"
+              series={data.revenue_growth || {}}
+              comparisonSeries={data.quote_growth || {}}
+              seriesLabel="Sales Revenue"
+              comparisonLabel="Quotation Value"
+              theme="quote"
+              ariaLabel="Sales revenue compared with quotation value"
             />
           </div>
         </div>
         <div className="col-xl-4 col-lg-5">
-          <div className="dash-card sd-card-scroll sd-recent-activity-card">
-            <h3 className="dash-card-title">Recent Activity</h3>
+          <YearlyTarget yearly={data.yearly || {}} />
+        </div>
+      </div>
+
+      <div className="row g-3 sd-dashboard-bottom-row align-items-stretch">
+        <div className="col-xl-7 col-lg-7">
+          <div className="dash-card sd-recent-activity-card">
+            <div className="sd-section-card-head">
+              <h3 className="dash-card-title">
+                <i className="fas fa-clock-rotate-left me-2" aria-hidden="true" />
+                Recent Activity
+              </h3>
+              {data.urls?.orders ? (
+                <a className="sd-activity-view-all" href={data.urls.orders}>
+                  View all <ArrowRight size={14} />
+                </a>
+              ) : null}
+            </div>
             <RecentActivity activities={data.recent_activities} />
+          </div>
+        </div>
+        <div className="col-xl-5 col-lg-5">
+          <div className="dash-card sd-leaderboard-card sd-card-scroll">
+            <div className="leaderboard-header">
+              <h3 className="dash-card-title">Leaderboard</h3>
+              <span className="leaderboard-subtitle">Total Sales</span>
+            </div>
+            <Leaderboard rows={data.leaderboard} />
           </div>
         </div>
       </div>
 
-      <div className="row g-3 sd-dashboard-bottom-row align-items-start">
-        <div className="col-xl-6 col-lg-6">
+      <div className="row g-3 sd-dashboard-products-row">
+        <div className="col-12">
           <OutgoingProductsShowcase
             products={data.most_outgoing_products}
-            title={data.is_roadmaster ? 'Most Outgoing Trucks & Spares' : 'Most Outgoing Products'}
+            title="Most Outgoing Products"
             lookbackDays={data.most_sold_lookback_days}
             emptyMessage={data.is_roadmaster ? 'No truck or spare sales yet' : 'No product data yet'}
             placeholderIcon="fa-box"
-            viewAllUrl={data.urls?.catalogue || ''}
+            viewAllUrl={data.urls?.statistics || ''}
             productViewUrl={data.urls?.product_view || ''}
+            compact
+            maxFanProducts={0}
           />
-        </div>
-        <div className="col-xl-6 col-lg-6">
-          <div className="sd-sidebar-cards d-flex flex-column gap-3">
-            <div className="dash-card sd-leaderboard-card sd-card-scroll">
-              <div className="leaderboard-header">
-                <h3 className="dash-card-title">Leaderboard</h3>
-                <span className="leaderboard-subtitle">Total Sales</span>
-              </div>
-              <Leaderboard rows={data.leaderboard} />
-            </div>
-            <YearlyTarget yearly={data.yearly || {}} />
-          </div>
         </div>
       </div>
     </>

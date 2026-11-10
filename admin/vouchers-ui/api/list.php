@@ -365,6 +365,7 @@ try {
         'prefix_options' => $prefixList,
         'can_finance' => $isFinanceUser,
         'csrf_token' => function_exists('csrf_token') ? csrf_token() : '',
+        'payables_url' => app_url('/view-voucher-ui/api/voucher/send-to-payables.php'),
     ], JSON_UNESCAPED_SLASHES);
 } catch (Throwable $e) {
     error_log('vouchers-ui/api/list.php failed: ' . $e->getMessage());

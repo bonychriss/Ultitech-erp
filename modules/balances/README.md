@@ -158,7 +158,7 @@ Always keep `?module=balances` so the sidebar stays on Balances.
 | Accounts | `/modules/balances/accounts.php?module=balances` |
 | Reconciliation (Accounting UI) | `/accounting/reconciliation.php?module=balances` |
 | COA create / edit | `coa_create.php`, `coa_edit.php` |
-| Categories / types | `account_categories.php`, `account_types.php`, … |
+| Categories / types | `account_categories.php`, `account_types.php`, ï¿½ |
 
 **Local company slug:**
 
@@ -212,8 +212,8 @@ balancesRecordTransaction($pdo, $accountId, 'debit', $amount, $description, $ref
 | **Payment vouchers** | mark-paid flows | `payment_voucher` | debit pay account |
 | **Stock / supplier payments** | finance / stock purchase payment desks | purchase/payment refs | debit bank/cash |
 | **Internal transfer** | `transfer-ui` | `transfer_out` / `transfer_in` | debit + credit |
-| **Payroll** | no direct Balances call; pays via vouchers when used | — | — |
-| **Petty cash / Cash Book** | separate module tables | — | not via `recordTransaction` |
+| **Payroll** | no direct Balances call; pays via vouchers when used | ï¿½ | ï¿½ |
+| **Petty cash / Cash Book** | separate module tables | ï¿½ | not via `recordTransaction` |
 
 Deposit account pickers use `balancesFetchDepositAccounts()`.
 
@@ -223,7 +223,7 @@ Deposit account pickers use `balancesFetchDepositAccounts()`.
 
 | Table | Role |
 |-------|------|
-| **`financial_accounts`** | COA + balances (`opening_balance`, `current_balance`, `type`, `currency`, `status`, optional `company_id`, `parent_id`, `gl_account_id`, …) |
+| **`financial_accounts`** | COA + balances (`opening_balance`, `current_balance`, `type`, `currency`, `status`, optional `company_id`, `parent_id`, `gl_account_id`, ï¿½) |
 | **`account_transactions`** | Ledger movements (`type` credit/debit, `reference_type`/`reference_id`, `created_by`, optional `company_id`) |
 | **`financial_account_types`** | Type catalog + code ranges |
 | **`financial_account_categories`** | Reporting categories |

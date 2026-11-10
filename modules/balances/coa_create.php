@@ -208,6 +208,11 @@ if ($parentId > 0) {
     $isSubAccount = true;
 }
 
+if (!$isSubAccount && !isAdmin()) {
+    $_SESSION['error'] = 'Only admins can add main accounts. Add a sub-account under an existing account instead.';
+    redirect('accounts.php');
+}
+
 $page_title = $isSubAccount ? 'Add Sub-account' : 'Add New Account';
 $accountsBackUrl = 'accounts.php';
 if (!empty($_GET['module'])) {

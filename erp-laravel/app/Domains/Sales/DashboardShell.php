@@ -9,7 +9,7 @@ final class DashboardShell
 {
     /**
      * @param array<string,mixed> $cfg
-     * @return array{pageTitle:string,bodyClass:string,headMarkup:string,footerScripts:string}|null
+     * @return array{pageTitle:string,bodyClass:string,headMarkup:string,footerScripts:string,hideErpBreadcrumbs:bool}|null
      */
     public function viewData(array $cfg = []): ?array
     {
@@ -81,7 +81,8 @@ final class DashboardShell
             'bodyClass' => 'page-exp-desk exp-dashboard-page sales-dashboard page-sales-dashboard-desk page-sales-laravel page-erp-laravel',
             'headMarkup' => $headMarkup,
             'footerScripts' => $footerScripts,
-            'employeeHeaderTitle' => 'Sales Dashboard',
+            'employeeHeaderTitle' => '',
+            'hideErpBreadcrumbs' => false,
             'hideHeaderCompanyBranding' => true,
             'employeeHeaderExtraClass' => 'employee-header--exp-desk',
             'mainRootClass' => 'exp-desk-react-root',

@@ -1095,6 +1095,9 @@ function vv_load_view_payload(PDO $pdo, int $voucherId, array $opts = []): array
             'permissions' => [
                 'isAdmin' => isAdmin(),
                 'isFinance' => isFinance(),
+                'canSendToPayables' => !$isPaid && !$isPosted && empty($voucher['is_draft'])
+                    && !$isDraftDerived && !in_array($statusLower, ['rejected', 'draft', 'paid', 'posted', 'cancelled', 'canceled', 'void'], true)
+                    && in_array(strtoupper(trim((string) ($voucher['currency'] ?? 'TZS'))), ['', 'TZS'], true),
                 'canMarkPaid' => $canMarkPaid,
                 'canPost' => $canPost,
                 'canEdit' => $vvShowEdit,
@@ -1105,6 +1108,8 @@ function vv_load_view_payload(PDO $pdo, int $voucherId, array $opts = []): array
                 'blockFinalApproveOnConfirming' => $statusLower === 'confirming',
             ],
             'actions' => [
+                'sendToPayablesUrl' => app_url('/view-voucher-ui/api/voucher/send-to-payables.php'),
+                'csrfToken' => csrf_token(),
                 'backUrl' => $backLink,
                 'backLabel' => $fromPurchases ? 'Back to Purchases' : 'Back',
                 'fromPurchases' => $fromPurchases,

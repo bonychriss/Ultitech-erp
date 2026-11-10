@@ -225,10 +225,11 @@ $search = trim((string) ($_GET['q'] ?? ''));
 if (strlen($search) > 80) {
     $search = substr($search, 0, 80);
 }
-$sortKey = strtolower(trim((string) ($_GET['sort'] ?? 'date')));
+$defaultSort = $activeTab === 'payables' ? 'recent' : 'date';
+$sortKey = strtolower(trim((string) ($_GET['sort'] ?? $defaultSort)));
 $sortDir = strtolower(trim((string) ($_GET['dir'] ?? 'desc')));
-if (!in_array($sortKey, ['date', 'name', 'number', 'amount'], true)) {
-    $sortKey = 'date';
+if (!in_array($sortKey, ['date', 'name', 'number', 'amount', 'recent'], true) || ($sortKey === 'recent' && $activeTab !== 'payables')) {
+    $sortKey = $defaultSort;
 }
 if (!in_array($sortDir, ['asc', 'desc'], true)) {
     $sortDir = 'desc';
@@ -247,7 +248,9 @@ if ($search !== '') {
         return str_contains($hay, $needle);
     }));
 }
-if ($sortKey !== 'date' || $sortDir !== 'desc') {
+if ($sortKey === 'recent') {
+    usort($displayRows, static fn(array $a, array $b): int => (int) $b['id'] <=> (int) $a['id']);
+} elseif ($sortKey !== 'date' || $sortDir !== 'desc') {
     $mult = $sortDir === 'asc' ? 1 : -1;
     usort($displayRows, static function (array $a, array $b) use ($sortKey, $mult): int {
         switch ($sortKey) {
@@ -613,6 +616,7 @@ $entityLabel = $activeTab === 'receivables' ? 'Customer' : 'Supplier';
             flex-direction: column;
             gap: 0.55rem;
             width: 100%;
+            min-width: 0;
             padding: 0.7rem 0.8rem;
             border: 1px solid #e2e8f0;
             border-radius: 15px !important;
@@ -625,8 +629,8 @@ $entityLabel = $activeTab === 'receivables' ? 'Customer' : 'Supplier';
             -webkit-appearance: none;
         }
         .oi-mobile-invoice-card:focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }
-        .oi-mobile-invoice-card-top { display: flex; align-items: center; justify-content: space-between; gap: 0.65rem; min-width: 0; }
-        .oi-mobile-invoice-party { display: flex; align-items: center; gap: 0.55rem; min-width: 0; }
+        .oi-mobile-invoice-card-top { display: flex; align-items: center; gap: 0.65rem; width: 100%; min-width: 0; }
+        .oi-mobile-invoice-party { display: flex; flex: 1 1 0; align-items: center; gap: 0.55rem; min-width: 0; }
         .oi-mobile-invoice-avatar {
             display: inline-flex;
             align-items: center;
@@ -670,7 +674,6 @@ $entityLabel = $activeTab === 'receivables' ? 'Customer' : 'Supplier';
             text-overflow: ellipsis;
             white-space: nowrap;
         }
-        .oi-mobile-invoice-chevron { width: 0.9rem; height: 0.9rem; flex: 0 0 auto; margin-left: auto; color: #94a3b8; }
         html[data-theme="dark"] body.page-outstanding-invoices .oi-mobile-invoice-card { background: #111b21; border-color: #2a3942; color: #e9edef; }
         html[data-theme="dark"] body.page-outstanding-invoices .oi-mobile-invoice-number,
         html[data-theme="dark"] body.page-outstanding-invoices .oi-mobile-invoice-amount { color: #e9edef !important; }
@@ -780,7 +783,7 @@ $entityLabel = $activeTab === 'receivables' ? 'Customer' : 'Supplier';
             .oi-pager { flex-direction: column; align-items: flex-start; }
         }
         @media (max-width: 767.98px) {
-            .oi-mobile-invoice-list { display: grid; gap: 0.55rem; }
+            .oi-mobile-invoice-list { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0.55rem; }
             .oi-mobile-invoice-list > .oi-row-actions { justify-self: end; }
             .oi-table-wrap { display: none; }
         }
@@ -1100,7 +1103,6 @@ $entityLabel = $activeTab === 'receivables' ? 'Customer' : 'Supplier';
                                 <span class="oi-mobile-invoice-amount">TZS <?= number_format((float) $inv['amount'], 2) ?></span>
                                 <span class="oi-mobile-invoice-status oi-status-badge"><?= !empty($inv['partially_paid']) ? 'Partially paid' : 'Outstanding' ?></span>
                             </span>
-                            <svg class="oi-mobile-invoice-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg>
                         </span>
                         <span class="oi-mobile-invoice-details">
                             <span class="oi-mobile-invoice-fact oi-mobile-invoice-date">

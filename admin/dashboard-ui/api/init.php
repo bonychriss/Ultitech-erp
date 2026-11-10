@@ -319,6 +319,8 @@ try {
         'top_payees' => $topPayees,
         'accounts' => $accounts,
         'approval_rate' => $approvalRate,
+        'payables_url' => app_url('/view-voucher-ui/api/voucher/send-to-payables.php'),
+        'csrf_token' => csrf_token(),
         'role' => 'admin',
     ], JSON_UNESCAPED_SLASHES);
 } catch (Throwable $e) {

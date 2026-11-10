@@ -286,6 +286,8 @@ try {
         'recent' => $recent,
         'top_payees' => $topPayees,
         'approval_rate' => $approvalRate,
+        'payables_url' => app_url('/view-voucher-ui/api/voucher/send-to-payables.php'),
+        'csrf_token' => csrf_token(),
     ], JSON_UNESCAPED_SLASHES);
 } catch (Throwable $e) {
     error_log('employee/dashboard-ui/api/init.php failed: ' . $e->getMessage());

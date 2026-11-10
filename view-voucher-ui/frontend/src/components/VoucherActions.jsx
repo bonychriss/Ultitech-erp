@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { downloadVoucherPdf, printVoucher } from '../utils/pdf.js'
 import { CFG } from '../config.js'
+import { showPayablesNotification } from '../payables-notification.js'
 
 export default function VoucherActions({
   data,
@@ -12,9 +13,34 @@ export default function VoucherActions({
   const [open, setOpen] = useState(false)
   const [dlState, setDlState] = useState('idle')
   const [notifyState, setNotifyState] = useState('idle')
+  const [sendingPayable, setSendingPayable] = useState(false)
   const menuRef = useRef(null)
 
   const { voucher, permissions, actions, userPendingApprovals, pendingCount, notifyTarget, shareUrl } = data
+
+  const handleSendToPayables = useCallback(async () => {
+    if (sendingPayable) return
+    setSendingPayable(true)
+    try {
+      const body = new URLSearchParams({ voucher_id: String(voucher.id), csrf_token: actions.csrfToken })
+      const response = await fetch(actions.sendToPayablesUrl, { method: 'POST', credentials: 'same-origin', headers: { Accept: 'application/json' }, body })
+      if (!response.headers.get('content-type')?.includes('application/json')) {
+        throw new Error('The server returned an unexpected response. Refresh the page and try again.')
+      }
+      const result = await response.json()
+      if (!response.ok || !result.ok || !result.message) {
+        throw new Error(result.error || result.message || 'Could not send this voucher to Payables.')
+      }
+      setOpen(false)
+      showPayablesNotification(result.message)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Could not send this voucher to Payables.'
+      if (window.Swal) window.Swal.fire('Send to Payables', message, 'error')
+      else window.alert(message)
+    } finally {
+      setSendingPayable(false)
+    }
+  }, [actions.csrfToken, actions.sendToPayablesUrl, sendingPayable, voucher.id])
 
   useEffect(() => {
     function onDocClick(e) {
@@ -159,6 +185,12 @@ export default function VoucherActions({
             <a href={actions.editHref} className="dropdown-item">
               <i className="fas fa-edit" aria-hidden="true" /> Edit
             </a>
+          )}
+
+          {permissions.canSendToPayables && (
+            <button type="button" className="dropdown-item" onClick={handleSendToPayables} disabled={sendingPayable}>
+              <i className="fas fa-file-invoice-dollar" aria-hidden="true" /> {sendingPayable ? 'Sending...' : 'Send to Payables'}
+            </button>
           )}
 
           {permissions.canMarkPaid && (

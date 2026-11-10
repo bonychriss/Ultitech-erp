@@ -26,6 +26,7 @@ import ExportMenu from '../components/ExportMenu.jsx'
 import ExportRangeModal from '../components/ExportRangeModal.jsx'
 import MarkPaidModal from '../components/MarkPaidModal.jsx'
 import { exportVouchersExcel, exportVouchersPdf, filterVouchersByDateRange } from '../utils/exportVouchers.js'
+import { showPayablesNotification } from '../../../../../view-voucher-ui/frontend/src/payables-notification.js'
 
 function WhatsAppIcon({ size = 16 }) {
   return (
@@ -183,6 +184,25 @@ function quickApprove(id, action) {
   submitForm(URLS.approve, { voucher_id: id, action })
 }
 
+async function sendToPayables(id, url, token) {
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { Accept: 'application/json' },
+      body: new URLSearchParams({ voucher_id: String(id), csrf_token: token }),
+    })
+    if (!response.headers.get('content-type')?.includes('application/json')) {
+      throw new Error('The server returned an unexpected response. Refresh the page and try again.')
+    }
+    const result = await response.json()
+    if (!response.ok || !result.ok || !result.message) throw new Error(result.error || result.message || 'Could not send this voucher to Payables.')
+    showPayablesNotification(result.message)
+  } catch (error) {
+    window.alert(error instanceof Error ? error.message : 'Could not send this voucher to Payables.')
+  }
+}
+
 function RowActionsMenu({
   voucher: r,
   open,
@@ -191,6 +211,8 @@ function RowActionsMenu({
   togglingRef,
   onToggleReference,
   onMarkPaid,
+  payablesUrl,
+  csrfToken,
 }) {
   const btnRef = useRef(null)
   const menuRef = useRef(null)
@@ -273,6 +295,16 @@ function RowActionsMenu({
       label: 'Edit',
       icon: <Pencil size={14} aria-hidden="true" />,
       href: `${URLS.edit}?id=${r.id}${APPEND_MODULE}`,
+    })
+  }
+  if (payablesUrl && csrfToken && !r.is_paid && !r.is_posted
+      && !['draft', 'rejected', 'paid', 'posted', 'cancelled', 'canceled', 'void'].includes(String(r.display_status_key || r.status || '').toLowerCase())
+      && ['', 'TZS'].includes(String(r.currency || '').trim().toUpperCase())) {
+    items.push({
+      key: 'send-payables',
+      label: 'Send to Payables',
+      icon: <FileText size={14} aria-hidden="true" />,
+      onClick: () => { sendToPayables(r.id, payablesUrl, csrfToken); onClose() },
     })
   }
   if (SHARE_ENABLED && r.can_view !== false) {
@@ -1280,6 +1312,8 @@ export default function DashboardPage() {
                             togglingRef={togglingRef}
                             onToggleReference={handleToggleReference}
                             onMarkPaid={setPayVoucher}
+                            payablesUrl={data?.payables_url}
+                            csrfToken={data?.csrf_token}
                           />
                         ) : null}
                       </td>

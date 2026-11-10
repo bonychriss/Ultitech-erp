@@ -29,6 +29,7 @@ import PaymentModal from '../components/PaymentModal.jsx'
 import ExportMenu from '../components/ExportMenu.jsx'
 import ExportRangeModal from '../components/ExportRangeModal.jsx'
 import { exportVouchersExcel, exportVouchersPdf } from '../utils/exportVouchers.js'
+import { showPayablesNotification } from '../../../../../view-voucher-ui/frontend/src/payables-notification.js'
 
 const MODULE = getModule()
 const APPEND_MODULE = MODULE ? `&module=${encodeURIComponent(MODULE)}` : ''
@@ -298,6 +299,8 @@ function RowActionsMenu({
   onMarkPosted,
   canEdit,
   canDelete,
+  payablesUrl,
+  csrfToken,
 }) {
   const btnRef = useRef(null)
   const menuRef = useRef(null)
@@ -427,6 +430,34 @@ function RowActionsMenu({
       onClick: () => { onMarkPosted(v.id); onClose() },
     })
   }
+  if (payablesUrl && csrfToken && !v.is_paid && !v.is_posted && !v.looks_draft
+      && !['draft', 'rejected', 'paid', 'posted', 'cancelled', 'canceled', 'void'].includes(String(v.status || '').toLowerCase())
+      && ['', 'TZS'].includes(String(v.currency || '').trim().toUpperCase())) {
+    items.push({
+      key: 'send-payables',
+      label: 'Send to Payables',
+      icon: <CreditCard size={14} aria-hidden="true" />,
+      onClick: async () => {
+        onClose()
+        try {
+          const response = await fetch(payablesUrl, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { Accept: 'application/json' },
+            body: new URLSearchParams({ voucher_id: String(v.id), csrf_token: csrfToken }),
+          })
+          if (!response.headers.get('content-type')?.includes('application/json')) {
+            throw new Error('The server returned an unexpected response. Refresh the page and try again.')
+          }
+          const result = await response.json()
+          if (!response.ok || !result.ok || !result.message) throw new Error(result.error || result.message || 'Could not send this voucher to Payables.')
+          showPayablesNotification(result.message)
+        } catch (error) {
+          window.alert(error instanceof Error ? error.message : 'Could not send this voucher to Payables.')
+        }
+      },
+    })
+  }
   if (canDelete) {
     items.push({
       key: 'delete',
@@ -543,6 +574,7 @@ export default function VouchersDeskPage() {
   const [filterPanelStyle, setFilterPanelStyle] = useState(null)
 
   const [payModal, setPayModal] = useState(null)
+  const [payablesAction, setPayablesAction] = useState(null)
   const [togglingRef, setTogglingRef] = useState(null)
   const [openMenuId, setOpenMenuId] = useState(null)
   const [headerSearchSlot, setHeaderSearchSlot] = useState(null)
@@ -565,6 +597,7 @@ export default function VouchersDeskPage() {
     setError('')
     try {
       const data = await fetchVouchers(activeFilters)
+      setPayablesAction({ url: data.payables_url, token: data.csrf_token })
       setVouchers(Array.isArray(data.vouchers) ? data.vouchers : [])
       setPagination(data.pagination || { page: 1, total_pages: 1, total_records: 0, per_page: 100 })
       setPrefixOptions(Array.isArray(data.prefix_options) ? data.prefix_options : [])
@@ -1460,6 +1493,8 @@ export default function VouchersDeskPage() {
                             onMarkPosted={markPosted}
                             canEdit={canEdit}
                             canDelete={canDelete}
+                            payablesUrl={payablesAction?.url}
+                            csrfToken={payablesAction?.token}
                           />
                         ) : null}
                       </td>

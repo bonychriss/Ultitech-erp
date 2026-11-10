@@ -62,9 +62,13 @@ const ACT = {
 
 const emptyFilters = {
   search: '',
+  payee: '',
   status: '',
   from_date: '',
   to_date: '',
+  purpose: '',
+  payment_type: '',
+  budget_type: '',
   prefix: 'all',
   sort: 'newest',
   page: 1,
@@ -97,9 +101,13 @@ function filtersFromUrl() {
   return {
     ...emptyFilters,
     search: String(usp.get('search') || usp.get('q') || ''),
+    payee: String(usp.get('payee') || ''),
     status: ALLOWED_STATUS.has(statusRaw) ? statusRaw : '',
     from_date: String(usp.get('from_date') || ''),
     to_date: String(usp.get('to_date') || ''),
+    purpose: String(usp.get('purpose') || ''),
+    payment_type: String(usp.get('payment_type') || ''),
+    budget_type: String(usp.get('budget_type') || ''),
     prefix: prefixRaw || 'all',
     sort: ['newest', 'asc', 'voucher_no'].includes(sortRaw) ? sortRaw : 'newest',
     page: Number.isFinite(pageRaw) && pageRaw > 0 ? Math.floor(pageRaw) : 1,
@@ -133,9 +141,13 @@ function writeFiltersToUrl(f) {
   }
   url.searchParams.delete('q')
   setOrDelete('search', String(f.search || '').trim())
+  setOrDelete('payee', String(f.payee || '').trim())
   setOrDelete('status', f.status)
   setOrDelete('from_date', f.from_date)
   setOrDelete('to_date', f.to_date)
+  setOrDelete('purpose', f.purpose)
+  setOrDelete('payment_type', f.payment_type)
+  setOrDelete('budget_type', f.budget_type)
   setOrDelete('prefix', f.prefix && f.prefix !== 'all' ? f.prefix : '')
   setOrDelete('sort', f.sort && f.sort !== 'newest' ? f.sort : '')
   setOrDelete('page', Number(f.page) > 1 ? Math.floor(Number(f.page)) : '')
@@ -283,6 +295,10 @@ function hasAdvancedFilters(f) {
     f.status
       || f.from_date
       || f.to_date
+      || String(f.payee || '').trim()
+      || f.purpose
+      || f.payment_type
+      || f.budget_type
       || (f.prefix && f.prefix !== 'all' && f.prefix !== '')
       || (f.sort && f.sort !== 'newest'),
   )
@@ -541,6 +557,8 @@ export default function VouchersDeskPage() {
   const [selectedVoucherIds, setSelectedVoucherIds] = useState(() => new Set())
   const [pagination, setPagination] = useState({ page: 1, total_pages: 1, total_records: 0, per_page: 100 })
   const [prefixOptions, setPrefixOptions] = useState([])
+  const [paymentTypeOptions, setPaymentTypeOptions] = useState([])
+  const [budgetTypeOptions, setBudgetTypeOptions] = useState([])
   const [payAccounts, setPayAccounts] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -601,6 +619,8 @@ export default function VouchersDeskPage() {
       setVouchers(Array.isArray(data.vouchers) ? data.vouchers : [])
       setPagination(data.pagination || { page: 1, total_pages: 1, total_records: 0, per_page: 100 })
       setPrefixOptions(Array.isArray(data.prefix_options) ? data.prefix_options : [])
+      setPaymentTypeOptions(Array.isArray(data.payment_type_options) ? data.payment_type_options : [])
+      setBudgetTypeOptions(Array.isArray(data.budget_type_options) ? data.budget_type_options : [])
       if (Array.isArray(data.pay_accounts)) setPayAccounts(data.pay_accounts)
       // Do not auto-apply the server's default (current) prefix; default to All Prefixes.
     } catch (err) {
@@ -823,6 +843,10 @@ export default function VouchersDeskPage() {
       status: draftFilters.status,
       from_date: draftFilters.from_date,
       to_date: draftFilters.to_date,
+      payee: draftFilters.payee,
+      purpose: draftFilters.purpose,
+      payment_type: draftFilters.payment_type,
+      budget_type: draftFilters.budget_type,
       prefix: draftFilters.prefix,
       sort: draftFilters.sort,
       page: 1,
@@ -832,12 +856,33 @@ export default function VouchersDeskPage() {
 
   function resetDraftFilters() {
     prefixTouchedRef.current = true
-    setDraftFilters((cur) => ({ ...cur, status: '', from_date: '', to_date: '', prefix: 'all', sort: 'newest' }))
+    setDraftFilters((cur) => ({
+      ...cur,
+      payee: '',
+      status: '',
+      from_date: '',
+      to_date: '',
+      purpose: '',
+      payment_type: '',
+      budget_type: '',
+      prefix: 'all',
+      sort: 'newest',
+    }))
   }
 
   function resetFilters() {
     prefixTouchedRef.current = true
-    const cleared = { status: '', from_date: '', to_date: '', prefix: 'all', sort: 'newest' }
+    const cleared = {
+      payee: '',
+      status: '',
+      from_date: '',
+      to_date: '',
+      purpose: '',
+      payment_type: '',
+      budget_type: '',
+      prefix: 'all',
+      sort: 'newest',
+    }
     setDraftFilters((cur) => ({ ...cur, ...cleared }))
     setFilters((cur) => ({ ...cur, ...cleared, page: 1 }))
     setFiltersOpen(false)
@@ -872,9 +917,13 @@ export default function VouchersDeskPage() {
   async function fetchVouchersForExport(range) {
     const base = {
       search: filters.search || '',
+      payee: filters.payee || '',
       status: filters.status || '',
       prefix: filters.prefix,
       sort: filters.sort || 'newest',
+      purpose: filters.purpose || '',
+      payment_type: filters.payment_type || '',
+      budget_type: filters.budget_type || '',
       from_date: range.allTime ? '' : (range.startDate || ''),
       to_date: range.allTime ? '' : (range.endDate || ''),
       per_page: 500,
@@ -997,8 +1046,20 @@ export default function VouchersDeskPage() {
 
   function buildActiveFilterChips(f) {
     const chips = []
+    if (String(f.payee || '').trim()) {
+      chips.push({ key: 'payee', label: `Payee: ${String(f.payee).trim()}` })
+    }
     if (f.status) {
       chips.push({ key: 'status', label: `Status: ${STATUS_LABELS[f.status] || f.status}` })
+    }
+    if (f.purpose) {
+      chips.push({ key: 'purpose', label: `Purpose: ${f.purpose === 'stock_purchase' ? 'Stock purchase' : 'General'}` })
+    }
+    if (f.payment_type) {
+      chips.push({ key: 'payment_type', label: `Payment type: ${f.payment_type}` })
+    }
+    if (f.budget_type) {
+      chips.push({ key: 'budget_type', label: `Budget type: ${f.budget_type}` })
     }
     if (f.prefix && f.prefix !== 'all' && f.prefix !== '') {
       const opt = prefixOptions.find((o) => o.value === f.prefix)
@@ -1046,7 +1107,7 @@ export default function VouchersDeskPage() {
         <div className="pv-filters-head">
           <div>
             <h2 className="pv-filters-title">Filters</h2>
-            <p className="pv-filters-sub">Narrow the list by prefix, date, status, and order.</p>
+            <p className="pv-filters-sub">Narrow the list by payee, payment details, prefix, date, and status.</p>
           </div>
           <button type="button" className="pv-filters-close" onClick={() => setFiltersOpen(false)} aria-label="Close filters">
             <X size={16} aria-hidden="true" />
@@ -1054,6 +1115,68 @@ export default function VouchersDeskPage() {
         </div>
 
         <div className="pv-filters-body">
+          <div className="pv-filters-section">
+            <div className="pv-filters-section-label">Payee</div>
+            <div className="pv-field">
+              <label htmlFor="pvFilterPayee">Payee name</label>
+              <input
+                id="pvFilterPayee"
+                className="pv-filter-payee-input"
+                type="search"
+                value={draftFilters.payee || ''}
+                placeholder="Search by payee name"
+                autoComplete="off"
+                onChange={(e) => updateDraft('payee', e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div className="pv-filters-section">
+            <div className="pv-filters-section-label">Payment purpose</div>
+            <div className="pv-field">
+              <label htmlFor="pvFilterPurpose">Payment purpose</label>
+              <select
+                id="pvFilterPurpose"
+                value={draftFilters.purpose || ''}
+                onChange={(e) => updateDraft('purpose', e.target.value)}
+              >
+                <option value="">All purposes</option>
+                <option value="general">General</option>
+                <option value="stock_purchase">Stock purchase</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="pv-filters-section">
+            <div className="pv-filters-section-label">Payment type</div>
+            <div className="pv-field">
+              <label htmlFor="pvFilterPaymentType">Payment type</label>
+              <select
+                id="pvFilterPaymentType"
+                value={draftFilters.payment_type || ''}
+                onChange={(e) => updateDraft('payment_type', e.target.value)}
+              >
+                <option value="">All payment types</option>
+                {paymentTypeOptions.map((option) => <option key={option} value={option}>{option}</option>)}
+              </select>
+            </div>
+          </div>
+
+          <div className="pv-filters-section">
+            <div className="pv-filters-section-label">Budget type</div>
+            <div className="pv-field">
+              <label htmlFor="pvFilterBudgetType">Budget type</label>
+              <select
+                id="pvFilterBudgetType"
+                value={draftFilters.budget_type || ''}
+                onChange={(e) => updateDraft('budget_type', e.target.value)}
+              >
+                <option value="">All budget types</option>
+                {budgetTypeOptions.map((option) => <option key={option} value={option}>{option}</option>)}
+              </select>
+            </div>
+          </div>
+
           <div className="pv-filters-section">
             <div className="pv-filters-section-label">Date range</div>
             <div className="pv-date-presets" role="group" aria-label="Quick date ranges">

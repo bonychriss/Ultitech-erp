@@ -46,8 +46,27 @@ try {
 
     $status_filter = isset($_GET['status']) && $_GET['status'] !== 'all' ? (string) $_GET['status'] : '';
     $search = isset($_GET['search']) ? trim((string) $_GET['search']) : '';
+    $payee_filter = isset($_GET['payee']) ? trim((string) $_GET['payee']) : '';
     $from_date = isset($_GET['from_date']) ? (string) $_GET['from_date'] : '';
     $to_date = isset($_GET['to_date']) ? (string) $_GET['to_date'] : '';
+    $purpose_filter = isset($_GET['purpose']) ? strtolower(trim((string) $_GET['purpose'])) : '';
+    $payment_type_filter = isset($_GET['payment_type']) ? trim((string) $_GET['payment_type']) : '';
+    $budget_type_filter = isset($_GET['budget_type']) ? trim((string) $_GET['budget_type']) : '';
+    if (!in_array($purpose_filter, ['', 'general', 'stock_purchase'], true)) {
+        $purpose_filter = '';
+    }
+
+    $purposeColumns = [];
+    foreach (['purpose', 'payment_purpose', 'voucher_purpose'] as $purposeColumn) {
+        if (function_exists('columnExists') && columnExists('payment_vouchers', $purposeColumn, $pdo)) {
+            $purposeColumns[] = $purposeColumn;
+        }
+    }
+    $hasVoucherItemsTable = function_exists('tableExists') && tableExists('voucher_items', $pdo);
+    $hasPaymentTypeColumn = $hasVoucherItemsTable
+        && function_exists('columnExists') && columnExists('voucher_items', 'payment_type', $pdo);
+    $hasBudgetTypeColumn = $hasVoucherItemsTable
+        && function_exists('columnExists') && columnExists('voucher_items', 'budget_type', $pdo);
 
     $companyIdForFilters = (int) (currentCompanyId() ?? 0);
     $prefix_options = ($pdo instanceof PDO && function_exists('fetchPaymentVoucherPrefixFilterOptions'))
@@ -115,6 +134,41 @@ try {
         }
     }
 
+    if ($payee_filter !== '') {
+        $where_conditions[] = 'pv.payee_name LIKE ?';
+        $params[] = '%' . $payee_filter . '%';
+    }
+
+    if ($purpose_filter !== '') {
+        $purposeParts = array_map(
+            static fn($column) => "NULLIF(TRIM(pv.`{$column}`), '')",
+            $purposeColumns
+        );
+        $purposeExpression = $purposeParts !== [] ? 'COALESCE(' . implode(', ', $purposeParts) . ", '')" : "''";
+        $normalizedPurpose = "LOWER(REPLACE(REPLACE({$purposeExpression}, ' ', '_'), '-', '_'))";
+        $isStockPurchase = "({$normalizedPurpose} = 'stockpurchase' OR ({$normalizedPurpose} LIKE '%stock%' AND {$normalizedPurpose} LIKE '%purchase%'))";
+        $where_conditions[] = $purpose_filter === 'stock_purchase' ? $isStockPurchase : "NOT {$isStockPurchase}";
+    }
+
+    foreach ([
+        ['value' => $payment_type_filter, 'column' => 'payment_type', 'available' => $hasPaymentTypeColumn],
+        ['value' => $budget_type_filter, 'column' => 'budget_type', 'available' => $hasBudgetTypeColumn],
+    ] as $itemFilter) {
+        if ($itemFilter['value'] === '') {
+            continue;
+        }
+        if (!$itemFilter['available']) {
+            $where_conditions[] = '1 = 0';
+            continue;
+        }
+        $where_conditions[] = "EXISTS (
+            SELECT 1 FROM voucher_items vi
+            WHERE vi.voucher_id = pv.id
+              AND LOWER(TRIM(COALESCE(vi.`{$itemFilter['column']}`, ''))) = LOWER(?)
+        )";
+        $params[] = $itemFilter['value'];
+    }
+
     if ($from_date) {
         $where_conditions[] = 'DATE(pv.date_created) >= ?';
         $params[] = $from_date;
@@ -155,6 +209,52 @@ try {
     if ($page > $total_pages) {
         $page = $total_pages;
         $offset = ($page - 1) * $per_page;
+    }
+
+    $classificationOptions = ['payment_type_options' => [], 'budget_type_options' => []];
+    if ($hasVoucherItemsTable && ($hasPaymentTypeColumn || $hasBudgetTypeColumn)) {
+        $optionWhere = [];
+        $optionParams = [];
+        if (function_exists('companyScopeSql')) {
+            list($optionScopeFrag, $optionScopeParams) = companyScopeSql('payment_vouchers', 'pv');
+            if ($optionScopeFrag !== '') {
+                $optionWhere[] = ltrim($optionScopeFrag, " \t\n\r\0\x0BAND");
+                $optionParams = array_merge($optionParams, $optionScopeParams);
+            }
+        } else {
+            $optionScopeSql = getCompanySql('pv');
+            if ($optionScopeSql !== '') {
+                $optionWhere[] = str_replace(' AND ', '', $optionScopeSql);
+                $optionParams = array_merge($optionParams, getCompanyParam());
+            }
+        }
+        if (function_exists('paymentVoucherHideOthersPrivateDraftsSql')) {
+            $optionDraftSql = paymentVoucherHideOthersPrivateDraftsSql('pv', $optionParams);
+            if ($optionDraftSql !== '') {
+                $optionWhere[] = ltrim($optionDraftSql, " \t\n\r\0\x0BAND");
+            }
+        }
+        foreach ([
+            ['column' => 'payment_type', 'available' => $hasPaymentTypeColumn, 'key' => 'payment_type_options'],
+            ['column' => 'budget_type', 'available' => $hasBudgetTypeColumn, 'key' => 'budget_type_options'],
+        ] as $option) {
+            if (!$option['available']) {
+                continue;
+            }
+            $optionConditions = $optionWhere;
+            $optionConditions[] = "NULLIF(TRIM(vi.`{$option['column']}`), '') IS NOT NULL";
+            $optionSql = 'SELECT DISTINCT vi.`' . $option['column'] . '` AS value
+                FROM voucher_items vi
+                INNER JOIN payment_vouchers pv ON pv.id = vi.voucher_id
+                WHERE ' . implode(' AND ', $optionConditions) . '
+                ORDER BY value';
+            $optionStmt = $pdo->prepare($optionSql);
+            $optionStmt->execute($optionParams);
+            $classificationOptions[$option['key']] = array_values(array_filter(array_map(
+                static fn($row) => trim((string) ($row['value'] ?? '')),
+                $optionStmt->fetchAll(PDO::FETCH_ASSOC)
+            ), static fn($value) => $value !== ''));
+        }
     }
 
     $sql = "
@@ -357,12 +457,18 @@ try {
         'filters' => [
             'status' => $status_filter,
             'search' => $search,
+            'payee' => $payee_filter,
             'from_date' => $from_date,
             'to_date' => $to_date,
+            'purpose' => $purpose_filter,
+            'payment_type' => $payment_type_filter,
+            'budget_type' => $budget_type_filter,
             'prefix' => $prefix_filter,
             'sort' => $sort,
         ],
         'prefix_options' => $prefixList,
+        'payment_type_options' => $classificationOptions['payment_type_options'],
+        'budget_type_options' => $classificationOptions['budget_type_options'],
         'can_finance' => $isFinanceUser,
         'csrf_token' => function_exists('csrf_token') ? csrf_token() : '',
         'payables_url' => app_url('/view-voucher-ui/api/voucher/send-to-payables.php'),

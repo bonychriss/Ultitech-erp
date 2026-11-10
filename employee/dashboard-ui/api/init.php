@@ -89,6 +89,12 @@ try {
     $attachmentCountSql = $hasAttachmentsTable
         ? '(SELECT COUNT(*) FROM voucher_attachments va WHERE va.voucher_id = pv.id) AS attachment_count'
         : '0 AS attachment_count';
+    $purposeSelectSql = '';
+    foreach (['purpose', 'payment_purpose', 'voucher_purpose'] as $purposeColumn) {
+        if (function_exists('columnExists') && columnExists('payment_vouchers', $purposeColumn, $pdo)) {
+            $purposeSelectSql .= ", pv.`{$purposeColumn}`";
+        }
+    }
 
     $listScopeSql = '';
     $listScopeParams = [];
@@ -122,7 +128,8 @@ try {
                 IFNULL(pv.is_reference,0) AS is_reference,
                 IFNULL(pv.is_draft,0) AS is_draft,
                 (SELECT COUNT(*) FROM voucher_items vi WHERE vi.voucher_id = pv.id) AS item_count,
-                $attachmentCountSql,
+                $attachmentCountSql
+                $purposeSelectSql,
                 u.full_name AS creator_name, u.department
             FROM payment_vouchers pv
             LEFT JOIN users u ON pv.created_by = u.id
@@ -133,6 +140,41 @@ try {
     $stmt = $pdo->prepare($sql);
     $stmt->execute(array_merge($listScopeParams, $listOwnerParams, $listPrivateDraftParams));
     $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    $classificationsByVoucher = [];
+    $voucherIds = array_values(array_filter(array_map(
+        static fn($row) => (int) ($row['id'] ?? 0),
+        $rows
+    )));
+    if ($voucherIds !== [] && function_exists('tableExists') && tableExists('voucher_items', $pdo)) {
+        $itemColumns = [];
+        foreach (['payment_type', 'budget_type'] as $column) {
+            $itemColumns[] = function_exists('columnExists') && columnExists('voucher_items', $column, $pdo)
+                ? "vi.`{$column}`"
+                : "'' AS `{$column}`";
+        }
+        foreach (array_chunk($voucherIds, 500) as $voucherIdChunk) {
+            $placeholders = implode(',', array_fill(0, count($voucherIdChunk), '?'));
+            $itemStmt = $pdo->prepare(
+                'SELECT vi.voucher_id, ' . implode(', ', $itemColumns)
+                . " FROM voucher_items vi WHERE vi.voucher_id IN ({$placeholders})"
+            );
+            $itemStmt->execute($voucherIdChunk);
+            foreach ($itemStmt->fetchAll(PDO::FETCH_ASSOC) as $item) {
+                $voucherId = (int) ($item['voucher_id'] ?? 0);
+                if ($voucherId <= 0) {
+                    continue;
+                }
+                $classificationsByVoucher[$voucherId] ??= ['payment_types' => [], 'budget_types' => []];
+                foreach (['payment_type' => 'payment_types', 'budget_type' => 'budget_types'] as $column => $key) {
+                    $value = trim((string) ($item[$column] ?? ''));
+                    if ($value !== '' && !in_array($value, $classificationsByVoucher[$voucherId][$key], true)) {
+                        $classificationsByVoucher[$voucherId][$key][] = $value;
+                    }
+                }
+            }
+        }
+    }
 
     $myId = $userId;
     $uDept = strtolower(trim((string) ($_SESSION['department'] ?? '')));
@@ -258,6 +300,11 @@ try {
             'can_view' => $canView,
             'can_edit' => $canView && $canEdit,
             'can_delete' => $canView && $canDelete,
+            'purpose' => $canView && function_exists('resolvePaymentVoucherPurposeFromRow')
+                ? resolvePaymentVoucherPurposeFromRow($v)
+                : '',
+            'payment_types' => $canView ? ($classificationsByVoucher[$vid]['payment_types'] ?? []) : [],
+            'budget_types' => $canView ? ($classificationsByVoucher[$vid]['budget_types'] ?? []) : [],
         ];
     }
 

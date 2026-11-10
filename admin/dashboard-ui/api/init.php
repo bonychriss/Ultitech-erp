@@ -150,6 +150,41 @@ try {
     $stmt->execute(array_merge($companyParams, $privateDraftParams));
     $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+    $classificationsByVoucher = [];
+    $voucherIds = array_values(array_filter(array_map(
+        static fn($row) => (int) ($row['id'] ?? 0),
+        $rows
+    )));
+    if ($voucherIds !== [] && function_exists('tableExists') && tableExists('voucher_items', $pdo)) {
+        $itemColumns = [];
+        foreach (['payment_type', 'budget_type'] as $column) {
+            $itemColumns[] = function_exists('columnExists') && columnExists('voucher_items', $column, $pdo)
+                ? "vi.`{$column}`"
+                : "'' AS `{$column}`";
+        }
+        foreach (array_chunk($voucherIds, 500) as $voucherIdChunk) {
+            $placeholders = implode(',', array_fill(0, count($voucherIdChunk), '?'));
+            $itemStmt = $pdo->prepare(
+                'SELECT vi.voucher_id, ' . implode(', ', $itemColumns)
+                . " FROM voucher_items vi WHERE vi.voucher_id IN ({$placeholders})"
+            );
+            $itemStmt->execute($voucherIdChunk);
+            foreach ($itemStmt->fetchAll(PDO::FETCH_ASSOC) as $item) {
+                $voucherId = (int) ($item['voucher_id'] ?? 0);
+                if ($voucherId <= 0) {
+                    continue;
+                }
+                $classificationsByVoucher[$voucherId] ??= ['payment_types' => [], 'budget_types' => []];
+                foreach (['payment_type' => 'payment_types', 'budget_type' => 'budget_types'] as $column => $key) {
+                    $value = trim((string) ($item[$column] ?? ''));
+                    if ($value !== '' && !in_array($value, $classificationsByVoucher[$voucherId][$key], true)) {
+                        $classificationsByVoucher[$voucherId][$key][] = $value;
+                    }
+                }
+            }
+        }
+    }
+
     $statusApproved = defined('STATUS_APPROVED') ? STATUS_APPROVED : 'approved';
     $statusPending = defined('STATUS_PENDING') ? STATUS_PENDING : 'pending';
     $statusDraft = defined('STATUS_DRAFT') ? STATUS_DRAFT : 'draft';
@@ -223,6 +258,8 @@ try {
             'purpose' => function_exists('resolvePaymentVoucherPurposeFromRow')
                 ? resolvePaymentVoucherPurposeFromRow($v)
                 : 'general',
+            'payment_types' => $classificationsByVoucher[$vid]['payment_types'] ?? [],
+            'budget_types' => $classificationsByVoucher[$vid]['budget_types'] ?? [],
             'paid_so_far' => 0.0,
         ];
     }

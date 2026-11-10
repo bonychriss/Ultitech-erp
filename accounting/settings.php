@@ -358,22 +358,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_general'])) {
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['save_general']) && !isset($_POST['fetch_rates']) && !isset($_POST['year_close'])) {
     $posted = (array) ($_POST['gl'] ?? []);
     $failed = [];
-    foreach ($glRoles as $role => $def) {
-        $selected = (int) ($posted[$role] ?? 0);
-        if ($selected <= 0) {
-            if (!empty($def['optional'])) {
-                accounting_clear_gl_role_account_id($pdo, $role);
-            } else {
+    $enableStockGuard = !empty($_POST['invoice_stock_mapping_guard']);
+    if ($enableStockGuard) {
+        foreach (['cogs', 'inventory'] as $stockRole) {
+            $options = accounting_gl_role_options($pdo, $stockRole);
+            $selected = (int) ($posted[$stockRole] ?? 0);
+            if (!$options['filtered'] || !in_array($selected, array_column($options['options'], 'id'), true)) {
+                $failed[] = $glRoles[$stockRole]['label'] . ' requires a dedicated account';
+            }
+        }
+    }
+    if (!$failed) {
+        foreach ($glRoles as $role => $def) {
+            $selected = (int) ($posted[$role] ?? 0);
+            if ($selected <= 0) {
+                if (!empty($def['optional'])) {
+                    accounting_clear_gl_role_account_id($pdo, $role);
+                } else {
+                    $failed[] = $def['label'];
+                }
+                continue;
+            }
+            $ok = $role === 'revenue'
+                ? accounting_set_default_sales_revenue_gl_account_id($pdo, $selected)
+                : accounting_set_gl_role_account_id($pdo, $role, $selected);
+            if (!$ok) {
                 $failed[] = $def['label'];
             }
-            continue;
         }
-        $ok = $role === 'revenue'
-            ? accounting_set_default_sales_revenue_gl_account_id($pdo, $selected)
-            : accounting_set_gl_role_account_id($pdo, $role, $selected);
-        if (!$ok) {
-            $failed[] = $def['label'];
-        }
+    }
+    if (!$failed && !accounting_settings_set($pdo, 'invoice_stock_mapping_guard', $enableStockGuard ? '1' : '0')) {
+        $failed[] = 'invoice stock mapping protection';
     }
     if ($failed) {
         $error = 'Could not save: ' . implode(', ', $failed) . '. Pick one of the accounts listed for it.';
@@ -1114,6 +1129,12 @@ $selectArrow = "background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csv
                             </div>
                             <?php endforeach; ?>
                         </div>
+                        <?php if ($group['id'] === 'as-stock'): ?>
+                        <label class="as-switch">
+                            <input type="checkbox" name="invoice_stock_mapping_guard" value="1" id="invoiceStockMappingGuard"<?= accounting_settings_get($pdo, 'invoice_stock_mapping_guard') === '1' ? ' checked' : '' ?>>
+                            <span>Require dedicated cost of goods sold and inventory accounts before creating invoices</span>
+                        </label>
+                        <?php endif; ?>
                         <?php if ($isAuto || $wrapAdv): ?></details><?php endif; ?>
                         <div class="ps-details-actions">
                             <button type="submit" class="btn-save ps-details-save as-save"<?= $hasAuto ? '' : ' disabled' ?>><i class="fas fa-floppy-disk"></i> Save changes</button>
@@ -1263,7 +1284,8 @@ $selectArrow = "background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csv
                             <li><i class="fas fa-rotate-left"></i><span>Reversal</span><b id="jdRev"></b></li>
                             <li><i class="fas fa-user-check"></i><span>Approval</span><b id="jdAppr"></b></li>
                             <li><i class="fas fa-money-bill-wave"></i><span>Affects cash</span><b id="jdCash"></b></li>
-                            <li><i class="fas fa-file-lines"></i><span>Posted entries</span><b id="jdEntries"></b></li><i class="fas fa-building-columns"></i><span>Posts to account</span><b id="jdAcct"></b></li>
+                            <li><i class="fas fa-file-lines"></i><span>Posted entries</span><b id="jdEntries"></b></li>
+                            <li id="jdAcctWrap"><i class="fas fa-building-columns"></i><span>Posts to account</span><b id="jdAcct"></b></li>
                         </ul>
                         <p class="as-row-sub" id="jdDesc" style="margin-top:.6rem"></p>
                         <div id="jdLogWrap" hidden style="margin-top:.7rem"><b style="font-size:.78rem;color:#6b7280">Change log</b><ul id="jdLog" class="as-row-sub" style="margin:.25rem 0 0;padding-left:1rem"></ul></div></div>
@@ -1429,6 +1451,8 @@ $selectArrow = "background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csv
     var saves = Array.prototype.slice.call(document.querySelectorAll('.as-save'));
     var selects = Array.prototype.slice.call(form.querySelectorAll('select[data-role]'));
     var original = selects.map(function (s) { return s.value; }).join('|');
+    var stockGuard = document.getElementById('invoiceStockMappingGuard');
+    var originalStockGuard = stockGuard ? stockGuard.checked : false;
     var hasAuto = <?= $hasAuto ? 'true' : 'false' ?>;
     function labelFor(role) {
         var s = form.querySelector('select[data-role="' + role + '"]');
@@ -1439,10 +1463,11 @@ $selectArrow = "background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csv
         document.querySelectorAll('[data-show]').forEach(function (el) { el.textContent = labelFor(el.getAttribute('data-show')); });
         var now = selects.map(function (s) { return s.value; });
         var invalid = selects.some(function (s) { var o = s.options[s.selectedIndex]; return o && o.getAttribute('data-invalid') === '1'; });
-        var off = invalid || selects.some(function (s) { return s.value === '' && !s.hasAttribute('data-optional'); }) || (!hasAuto && now.join('|') === original);
+        var off = invalid || selects.some(function (s) { return s.value === '' && !s.hasAttribute('data-optional'); }) || (!hasAuto && now.join('|') === original && (!stockGuard || stockGuard.checked === originalStockGuard));
         saves.forEach(function (b) { b.disabled = off; });
     }
     selects.forEach(function (s) { s.addEventListener('change', sync); });
+    if (stockGuard) stockGuard.addEventListener('change', sync);
     sync();
 
     var curBox = document.getElementById('asCur');

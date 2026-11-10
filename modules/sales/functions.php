@@ -1,6 +1,107 @@
 <?php
 // modules/sales/functions.php
 
+if (!function_exists('sales_product_document_fields_sql')) {
+    /**
+     * Select optional truck attributes needed to build a quote/invoice description.
+     *
+     * @param array<int, string> $productColumns
+     */
+    function sales_product_document_fields_sql(array $productColumns): string
+    {
+        $fields = [
+            'brand',
+            'model_number',
+            'truck_type',
+            'drive_configuration',
+            'cab_details',
+            'engine_model',
+            'transmission_model',
+            'fuel_type',
+            'model_year',
+            'mileage',
+            'tire_model',
+            'curb_weight_kg',
+            'vin',
+            'chassis_number',
+            'engine_number',
+            'color',
+        ];
+        $select = [];
+        foreach ($fields as $field) {
+            $select[] = in_array($field, $productColumns, true)
+                ? "p.`{$field}` AS `{$field}`"
+                : "NULL AS `{$field}`";
+        }
+        $select[] = in_array('use_description_on_documents', $productColumns, true)
+            ? 'p.`use_description_on_documents` AS `use_description_on_documents`'
+            : '1 AS `use_description_on_documents`';
+
+        return implode(', ', $select);
+    }
+}
+
+if (!function_exists('sales_product_document_description')) {
+    /**
+     * Use the saved description override, or compose one from truck form details.
+     *
+     * @param array<string, mixed> $product
+     */
+    function sales_product_document_description(array $product): string
+    {
+        $description = trim((string) ($product['description'] ?? ''));
+        $itemType = strtolower(trim((string) ($product['item_type'] ?? '')));
+        $useDescription = (int) ($product['use_description_on_documents'] ?? 1) !== 0;
+        if ($useDescription || !in_array($itemType, ['vehicle', 'truck'], true)) {
+            return $description;
+        }
+
+        $details = [];
+        $append = static function (string $label, $value, string $suffix = '') use (&$details): void {
+            $text = trim((string) ($value ?? ''));
+            if ($text !== '') {
+                $details[] = $label . ': ' . $text . $suffix;
+            }
+        };
+        $append('Make', $product['brand'] ?? '');
+        $append('Model', $product['model_number'] ?? '');
+        $append('Truck type', $product['truck_type'] ?? '');
+        $append('Drive', $product['drive_configuration'] ?? '');
+        $append('Cabin', $product['cab_details'] ?? '');
+        $append('Engine', $product['engine_model'] ?? '');
+        $append('Transmission', $product['transmission_model'] ?? '');
+        $append('Fuel', $product['fuel_type'] ?? '');
+        $append('Year', $product['model_year'] ?? '');
+        $append('Mileage', $product['mileage'] ?? '', ' km');
+        $append('Tyre', $product['tire_model'] ?? '');
+        $append('Curb weight', $product['curb_weight_kg'] ?? '', ' kg');
+        $append('VIN', $product['vin'] ?? '');
+        $append('Chassis', $product['chassis_number'] ?? '');
+        $append('Engine no.', $product['engine_number'] ?? '');
+        $append('Color', $product['color'] ?? '');
+
+        return $details ? implode(' | ', $details) : $description;
+    }
+}
+
+if (!function_exists('sales_apply_product_document_descriptions')) {
+    /**
+     * Replace product descriptions with the selected quote/invoice description.
+     *
+     * @param array<int, array<string, mixed>> $products
+     * @return array<int, array<string, mixed>>
+     */
+    function sales_apply_product_document_descriptions(array $products): array
+    {
+        foreach ($products as &$product) {
+            $product['description'] = sales_product_document_description($product);
+        }
+        unset($product);
+
+        return $products;
+    }
+}
+
 if (!function_exists('clean_input')) {
     function clean_input($data) {
         $data = trim($data);
@@ -1867,13 +1968,33 @@ function getGlobalYearlySales($year) {
  * @param int $limit Max number of products to return
  * @param int $days Look back period in days (default 30)
  * @param string|null $category 'truck', 'spare', or null/all for every product
+ * @param string|null $dateFrom Inclusive start date in YYYY-MM-DD format
+ * @param string|null $dateTo Inclusive end date in YYYY-MM-DD format
+ * @param bool $throwOnError Throw query errors instead of returning an empty list
  * @return array<int, array<string, mixed>>
  */
-function getMostOutgoingProducts($limit = 5, $days = 30, $category = null)
+function getMostOutgoingProducts($limit = 5, $days = 30, $category = null, ?string $dateFrom = null, ?string $dateTo = null, bool $throwOnError = false)
 {
     $pdo = sales_pdo();
     $limit = max(1, (int) $limit);
     $days = max(1, (int) $days);
+    if (($dateFrom === null) !== ($dateTo === null)) {
+        throw new InvalidArgumentException('Both product statistics date boundaries are required.');
+    }
+    if ($dateFrom !== null) {
+        foreach ([$dateFrom, $dateTo] as $date) {
+            if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', (string) $date)) {
+                throw new InvalidArgumentException('Product statistics dates must use YYYY-MM-DD format.');
+            }
+            [$year, $month, $day] = array_map('intval', explode('-', (string) $date));
+            if (!checkdate($month, $day, $year)) {
+                throw new InvalidArgumentException('Product statistics date is invalid.');
+            }
+        }
+        if ($dateFrom > $dateTo) {
+            throw new InvalidArgumentException('Product statistics start date must not be after the end date.');
+        }
+    }
     $category = $category !== null ? strtolower(trim((string) $category)) : 'all';
     if (!in_array($category, ['all', 'truck', 'spare'], true)) {
         $category = 'all';
@@ -1891,6 +2012,9 @@ function getMostOutgoingProducts($limit = 5, $days = 30, $category = null)
             $invCols = $pdo->query('SHOW COLUMNS FROM invoices')->fetchAll(PDO::FETCH_COLUMN) ?: [];
         }
     } catch (Throwable $e) {
+        if ($throwOnError) {
+            throw $e;
+        }
         return [];
     }
 
@@ -1932,6 +2056,13 @@ function getMostOutgoingProducts($limit = 5, $days = 30, $category = null)
     $dateExpr = $hasInvoices
         ? 'COALESCE(i.invoice_date, i.created_at, so.created_at)'
         : 'so.created_at';
+    $invoiceDateFilter = $dateFrom !== null
+        ? "DATE({$dateExpr}) BETWEEN ? AND ?"
+        : "DATE({$dateExpr}) >= DATE_SUB(CURDATE(), INTERVAL ? DAY)";
+    $orderDateFilter = $dateFrom !== null
+        ? 'DATE(so.created_at) BETWEEN ? AND ?'
+        : 'DATE(so.created_at) >= DATE_SUB(CURDATE(), INTERVAL ? DAY)';
+    $dateParams = $dateFrom !== null ? [$dateFrom, $dateTo] : [$days];
     $lineTextCols = [];
     if (in_array('description', $soiCols, true)) {
         $lineTextCols[] = 'soi.description';
@@ -1949,6 +2080,7 @@ function getMostOutgoingProducts($limit = 5, $days = 30, $category = null)
         $lineFilter = "(($lineFilter) OR {$lineTextExpr} != '')";
     }
 
+    $lastQueryError = null;
     foreach ($scopeAttempts as $scope) {
         $scopeSql = $scope[0];
         $scopeParams = $scope[1];
@@ -1970,13 +2102,13 @@ function getMostOutgoingProducts($limit = 5, $days = 30, $category = null)
                 JOIN customers c ON c.id = COALESCE(i.customer_id, so.customer_id)
                 LEFT JOIN products p ON p.id = soi.product_id AND soi.product_id > 0
                 WHERE {$lineFilter}
-                  AND DATE({$dateExpr}) >= DATE_SUB(CURDATE(), INTERVAL ? DAY)
+                  AND {$invoiceDateFilter}
                   {$scopeSql}
                   {$categoryFilter}
                 GROUP BY {$lineKeyExpr}, {$lineNameExpr}, COALESCE(p.main_image, p.image)
                 ORDER BY outgoing_count DESC, total_qty DESC
                 LIMIT {$limit}";
-            $params = array_merge($scopeParams, [$days]);
+            $params = array_merge($dateParams, $scopeParams);
         } else {
             $sql = "SELECT {$lineKeyExpr} AS product_id,
                     {$lineNameExpr} AS product_name,
@@ -1994,13 +2126,13 @@ function getMostOutgoingProducts($limit = 5, $days = 30, $category = null)
                 LEFT JOIN products p ON p.id = soi.product_id AND soi.product_id > 0
                 WHERE {$lineFilter}
                   AND so.status IN ('confirmed','invoiced','shipped','paid','delivered')
-                  AND DATE(so.created_at) >= DATE_SUB(CURDATE(), INTERVAL ? DAY)
+                  AND {$orderDateFilter}
                   {$scopeSql}
                   {$categoryFilter}
                 GROUP BY {$lineKeyExpr}, {$lineNameExpr}, COALESCE(p.main_image, p.image)
                 ORDER BY outgoing_count DESC, total_qty DESC
                 LIMIT {$limit}";
-            $params = array_merge($scopeParams, [$days]);
+            $params = array_merge($dateParams, $scopeParams);
         }
 
         try {
@@ -2011,8 +2143,13 @@ function getMostOutgoingProducts($limit = 5, $days = 30, $category = null)
                 return $rows;
             }
         } catch (Throwable $e) {
+            $lastQueryError = $e;
             error_log('getMostOutgoingProducts: ' . $e->getMessage());
         }
+    }
+
+    if ($throwOnError && $lastQueryError !== null) {
+        throw $lastQueryError;
     }
 
     return [];
@@ -2548,6 +2685,7 @@ function sales_module_url(string $relativePath, array $query = []): string
         'dashboard/index.php' => 'sales',
         'dashboard/' => 'sales',
         'dashboard' => 'sales',
+        'statistics' => 'sales/statistics',
         'invoices/index.php' => 'sales/invoices',
         'invoices/corrections.php' => 'sales/wrong-invoices',
         'invoices/' => 'sales/invoices',

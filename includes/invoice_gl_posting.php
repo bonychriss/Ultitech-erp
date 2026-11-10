@@ -187,6 +187,30 @@ if (!function_exists('invoice_gl_post_balanced_entry')) {
     }
 }
 
+if (!function_exists('invoice_gl_require_stock_accounts')) {
+    /** @return array{cogs:int,inventory:int}|null */
+    function invoice_gl_require_stock_accounts(PDO $pdo): ?array
+    {
+        if (accounting_settings_get($pdo, 'invoice_stock_mapping_guard') !== '1') {
+            return null;
+        }
+        $accounts = [];
+        foreach (['cogs', 'inventory'] as $role) {
+            $id = accounting_get_gl_role_account_id($pdo, $role);
+            $options = accounting_gl_role_options($pdo, $role);
+            $allowed = array_column($options['options'], 'id');
+            if (!$id || !$options['filtered'] || !in_array($id, $allowed, true)) {
+                throw new RuntimeException(
+                    'Invoice posting requires dedicated Cost of Goods Sold and Inventory accounts. '
+                    . 'Ask an administrator to configure both in Accounting Settings before creating an invoice.'
+                );
+            }
+            $accounts[$role] = $id;
+        }
+        return $accounts;
+    }
+}
+
 if (!function_exists('invoice_gl_ensure_invoice_recognition')) {
     /** Dr AR / Cr Revenue (+ Tax). Idempotent per invoice. */
     function invoice_gl_ensure_invoice_recognition(PDO $pdo, int $invoiceId): int
@@ -228,11 +252,16 @@ if (!function_exists('invoice_gl_ensure_invoice_recognition')) {
             $items[1]['credit'] = round($amounts['total'], 2);
         }
 
-        // Automated Cost of Goods Sold (COGS) Recognition
-        $cogsId = accounting_resolve_gl_role_account_id($pdo, 'cogs');
-        $invId = accounting_resolve_gl_role_account_id($pdo, 'inventory');
-        if ($cogsId && $invId) {
-            $cogsTotal = 0.0;
+        $stockAccounts = invoice_gl_require_stock_accounts($pdo);
+        if ($stockAccounts === null) {
+            $cogsId = accounting_resolve_gl_role_account_id($pdo, 'cogs');
+            $inventoryId = accounting_resolve_gl_role_account_id($pdo, 'inventory');
+            $stockAccounts = $cogsId && $inventoryId
+                ? ['cogs' => $cogsId, 'inventory' => $inventoryId]
+                : null;
+        }
+        $cogsTotal = 0.0;
+        if ($stockAccounts !== null) {
             try {
                 $stmtCogs = $pdo->prepare("
                     SELECT soi.quantity, COALESCE(p.buying_price, p.cost_price, 0) AS cost
@@ -243,15 +272,14 @@ if (!function_exists('invoice_gl_ensure_invoice_recognition')) {
                 ");
                 $stmtCogs->execute([$invoiceId]);
                 while ($cogsItem = $stmtCogs->fetch(PDO::FETCH_ASSOC)) {
-                    $cogsTotal += (float)$cogsItem['quantity'] * (float)$cogsItem['cost'];
+                    $cogsTotal += (float) $cogsItem['quantity'] * (float) $cogsItem['cost'];
                 }
             } catch (Throwable $e) {
                 error_log('COGS calculation failed: ' . $e->getMessage());
             }
-
             if ($cogsTotal > 0.00001) {
-                $items[] = ['account_id' => $cogsId, 'debit' => round($cogsTotal, 2), 'credit' => 0];
-                $items[] = ['account_id' => $invId, 'debit' => 0, 'credit' => round($cogsTotal, 2)];
+                $items[] = ['account_id' => $stockAccounts['cogs'], 'debit' => round($cogsTotal, 2), 'credit' => 0];
+                $items[] = ['account_id' => $stockAccounts['inventory'], 'debit' => 0, 'credit' => round($cogsTotal, 2)];
             }
         }
 

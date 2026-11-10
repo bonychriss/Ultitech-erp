@@ -163,6 +163,7 @@ $productPayload = [
     'product_code' => (string) ($product['product_code'] ?? ''),
     'name' => (string) ($product['name'] ?? ''),
     'description' => (string) ($product['description'] ?? ''),
+    'use_description_on_documents' => (int) ($product['use_description_on_documents'] ?? 1),
     'category_id' => isset($product['category_id']) ? (int) $product['category_id'] : null,
     'supplier_id' => isset($product['supplier_id']) ? (int) $product['supplier_id'] : null,
     'brand' => (string) ($product['brand'] ?? ''),

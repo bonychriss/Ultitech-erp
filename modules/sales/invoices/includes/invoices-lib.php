@@ -325,12 +325,13 @@ function sales_invoice_create_init_data(): array
             $imgSelect = 'p.image AS main_image';
         }
         $itemTypeSelect = in_array('item_type', $prodCols, true) ? 'p.item_type' : "'' AS item_type";
+        $truckDocumentFields = sales_product_document_fields_sql($prodCols);
         $hasProductCompanyId = in_array('company_id', $prodCols, true);
         $whereCompanySql = ($company_id > 0 && $hasProductCompanyId) ? (' WHERE p.company_id = ' . (int) $company_id . ' ') : ' ';
         $stockUploadsBase = function_exists('app_url') ? app_url('/stock/uploads/products') : '/stock/uploads/products';
 
         $sql = "
-            SELECT p.id, p.product_code, p.name, p.description, p.unit_price as selling_price, $itemTypeSelect, $imgSelect,
+            SELECT p.id, p.product_code, p.name, p.description, p.unit_price as selling_price, $itemTypeSelect, $truckDocumentFields, $imgSelect,
                    (
                        COALESCE((SELECT SUM(quantity) FROM stock WHERE product_id = p.id), 0) -
                        COALESCE((
@@ -351,6 +352,7 @@ function sales_invoice_create_init_data(): array
         if ($products === [] && $whereCompanySql !== ' ') {
             $products = $salesDb->query(str_replace($whereCompanySql, ' ', $sql))->fetchAll(PDO::FETCH_ASSOC) ?: [];
         }
+        $products = sales_apply_product_document_descriptions($products);
         foreach ($products as $pIdx => $productRow) {
             $pId = (int) ($productRow['id'] ?? 0);
             if ($pId < 1) {

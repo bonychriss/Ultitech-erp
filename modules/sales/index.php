@@ -1,8 +1,8 @@
 <?php
 // modules/sales/invoices/index.php
-require_once __DIR__ . '/../../../includes/config.php';
-require_once __DIR__ . '/../../../includes/functions.php';
-require_once __DIR__ . '/../functions.php';
+require_once dirname(__DIR__, 2) . '/includes/config.php';
+require_once dirname(__DIR__, 2) . '/includes/functions.php';
+require_once __DIR__ . '/functions.php';
 
 requireLogin();
 
@@ -114,7 +114,8 @@ try {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Invoices | Sales Module</title>
     <script>
-        tailwind.config = { corePlugins: { preflight: false } };
+        window.tailwind = window.tailwind || {};
+        window.tailwind.config = { corePlugins: { preflight: false } };
     </script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -233,7 +234,7 @@ try {
     </style>
 </head>
 <body class="page-sales-invoices">
-    <?php include '../../../includes/header_employee.php'; ?>
+    <?php include dirname(__DIR__, 2) . '/includes/header_employee.php'; ?>
 
     <div class="main-content sales-invoices-shell" id="react-root"></div>
 
@@ -1156,4 +1157,3 @@ try {
     </script>
 </body>
 </html>
-

@@ -146,6 +146,12 @@ stock_products_api_ensure_column($pdo, 'shelf_life_value', 'INT NULL');
 stock_products_api_ensure_column($pdo, 'shelf_life_unit', "VARCHAR(16) NULL DEFAULT 'months'");
 
 if ($isTruckCreate) {
+    stock_products_api_ensure_column($pdo, 'use_description_on_documents', 'TINYINT(1) NOT NULL DEFAULT 1');
+    if (!stock_products_api_has_column($pdo, 'use_description_on_documents')) {
+        http_response_code(500);
+        echo json_encode(['ok' => false, 'error' => 'Could not enable the truck quote and invoice description setting.']);
+        exit;
+    }
     stock_products_api_ensure_column($pdo, 'drive_configuration', 'VARCHAR(50) NULL');
     stock_products_api_ensure_column($pdo, 'fuel_type', 'VARCHAR(40) NULL');
     stock_products_api_ensure_column($pdo, 'cab_details', 'TEXT NULL');
@@ -299,6 +305,7 @@ try {
         'shelf_life_value' => $shelf_life_value,
         'shelf_life_unit' => $shelf_life_unit,
         'item_type' => $item_type,
+        'use_description_on_documents' => !empty($_POST['use_description_on_documents']) ? 1 : 0,
         'oem_number' => ($oem_number !== '' ? $oem_number : null),
         'status' => 'active',
     ];

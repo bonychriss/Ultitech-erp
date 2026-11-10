@@ -78,7 +78,8 @@ function salesUiRenderReactShell(array $cfg): void
     }
 
     $page_title = 'Sales Dashboard';
-    $employeeHeaderTitle = 'Sales Dashboard';
+    $employeeHeaderTitle = '';
+    $hideErpBreadcrumbs = false;
     $hideHeaderCompanyBranding = true;
     $employeeHeaderExtraClass = 'employee-header--exp-desk';
 

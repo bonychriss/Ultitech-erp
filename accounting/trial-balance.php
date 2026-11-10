@@ -5,8 +5,47 @@ requireLogin();
 global $pdo;
 
 require_once __DIR__ . '/../includes/gl/gl_reports.php';
-if (gl_report_source($pdo) === 'ledger' && !isset($_GET['legacy'])) {
+if (!isset($_GET['legacy'])) {
     define('GL_VIEW', true);
+    if (gl_report_source($pdo) === 'ledger') {
+        require __DIR__ . '/gl-views/trial-balance.php';
+        exit;
+    }
+
+    require_once __DIR__ . '/../includes/gl/gl_view_helpers.php';
+    [$trialFrom, $trialTo] = gl_period_params();
+    $legacyStmt = $pdo->prepare(
+        "SELECT a.id, COALESCE(a.code, '') AS code, a.name, a.type,
+                COALESCE(SUM(CASE WHEN je.date < ? THEN ji.debit - ji.credit ELSE 0 END), 0) AS opening,
+                COALESCE(SUM(CASE WHEN je.date BETWEEN ? AND ? THEN ji.debit ELSE 0 END), 0) AS debit,
+                COALESCE(SUM(CASE WHEN je.date BETWEEN ? AND ? THEN ji.credit ELSE 0 END), 0) AS credit
+         FROM erp_accounts a
+         LEFT JOIN erp_journal_items ji ON a.id = ji.account_id
+         LEFT JOIN erp_journal_entries je ON ji.journal_id = je.id
+         WHERE je.date IS NULL OR je.date <= ?
+         GROUP BY a.id, a.code, a.name, a.type
+         ORDER BY CAST(a.code AS UNSIGNED) ASC, a.code ASC, a.name ASC"
+    );
+    $legacyStmt->execute([$trialFrom, $trialFrom, $trialTo, $trialFrom, $trialTo, $trialTo]);
+    $trialBalanceRows = [];
+    foreach ($legacyStmt->fetchAll(PDO::FETCH_ASSOC) ?: [] as $account) {
+        $opening = round((float) $account['opening'], 2);
+        $debit = round((float) $account['debit'], 2);
+        $credit = round((float) $account['credit'], 2);
+        if (abs($opening) < 0.005 && $debit < 0.005 && $credit < 0.005) {
+            continue;
+        }
+        $trialBalanceRows[] = [
+            'id' => (int) $account['id'],
+            'code' => (string) $account['code'],
+            'name' => (string) $account['name'],
+            'type' => gl_normal_type((string) $account['type']),
+            'opening' => $opening,
+            'debit' => $debit,
+            'credit' => $credit,
+            'closing' => round($opening + $debit - $credit, 2),
+        ];
+    }
     require __DIR__ . '/gl-views/trial-balance.php';
     exit;
 }

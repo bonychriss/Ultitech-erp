@@ -9,14 +9,13 @@ const RANGES = [
 
 const CHART = {
   width: 640,
-  height: 260,
+  height: 250,
   padLeft: 52,
   padRight: 16,
-  padTop: 24,
-  padBottom: 36,
+  padTop: 16,
+  padBottom: 34,
 };
 
-/** Sensible TZS chart ceiling when data is flat or empty. */
 const EMPTY_SCALE_MAX = 1_000_000;
 
 function niceMax(value) {
@@ -39,91 +38,86 @@ function buildSmoothPath(points) {
   return d;
 }
 
-function buildAreaPath(points, baselineY) {
-  if (!points.length) return '';
-  const line = buildSmoothPath(points);
-  const last = points[points.length - 1];
-  const first = points[0];
-  return `${line} L ${last.x} ${baselineY} L ${first.x} ${baselineY} Z`;
-}
-
 export default function GrowthChart({
   title,
   series = {},
-  tooltipLabel = 'Total :',
+  comparisonSeries = {},
+  seriesLabel = 'Sales Revenue',
+  comparisonLabel = 'Quotation Value',
   range,
   onRangeChange,
-  theme = 'revenue',
-  gradientId = 'growth-area-gradient',
+  theme = 'quote',
   ariaLabel = 'Growth chart',
-  autoCycle = false,
 }) {
   const [activeIndex, setActiveIndex] = useState(null);
-  const points = series[range] || [];
+  const [internalRange, setInternalRange] = useState('monthly');
+  const activeRange = range || internalRange;
+  const points = series[activeRange] || [];
+  const comparisonPoints = comparisonSeries[activeRange] || [];
+  const seriesTotal = points.reduce((total, point) => total + (Number(point.value) || 0), 0);
+  const comparisonTotal = comparisonPoints.reduce((total, point) => total + (Number(point.value) || 0), 0);
 
   const chart = useMemo(() => {
-    const values = points.map((p) => Number(p.value) || 0);
-    const dataMax = Math.max(...values, 0);
-    const maxVal = dataMax > 0 ? niceMax(dataMax) : EMPTY_SCALE_MAX;
+    const values = points.map((point) => Number(point.value) || 0);
+    const comparisonValues = comparisonPoints.map((point) => Number(point.value) || 0);
+    const maxVal = niceMax(Math.max(...values, ...comparisonValues, 0));
     const plotW = CHART.width - CHART.padLeft - CHART.padRight;
     const plotH = CHART.height - CHART.padTop - CHART.padBottom;
     const step = points.length > 1 ? plotW / (points.length - 1) : plotW;
-    const barW = Math.min(14, step * 0.24);
-
     const coords = points.map((point, index) => {
       const value = Number(point.value) || 0;
-      const x = CHART.padLeft + (points.length > 1 ? index * step : plotW / 2);
-      const y = CHART.padTop + plotH - (value / maxVal) * plotH;
-      const barH = (value / maxVal) * plotH;
       return {
         label: point.label,
         value,
-        x,
-        y,
-        barX: x - barW / 2,
-        barY: CHART.padTop + plotH - barH,
-        barW,
-        barH,
+        x: CHART.padLeft + (points.length > 1 ? index * step : plotW / 2),
+        y: CHART.padTop + plotH - (value / maxVal) * plotH,
       };
     });
-
+    const comparisonCoords = comparisonPoints.map((point, index) => {
+      const value = Number(point.value) || 0;
+      return {
+        label: point.label,
+        value,
+        x: CHART.padLeft + (comparisonPoints.length > 1 ? index * plotW / (comparisonPoints.length - 1) : plotW / 2),
+        y: CHART.padTop + plotH - (value / maxVal) * plotH,
+      };
+    });
     const yTicks = [0, 0.2, 0.4, 0.6, 0.8, 1].map((ratio) => ({
       value: maxVal * ratio,
       y: CHART.padTop + plotH - ratio * plotH,
     }));
 
-    const baselineY = CHART.padTop + plotH;
-
     return {
       coords,
+      comparisonCoords,
       yTicks,
-      maxVal,
-      baselineY,
+      plotW,
+      plotH,
       linePath: buildSmoothPath(coords),
-      areaPath: buildAreaPath(coords, baselineY),
+      comparisonLinePath: buildSmoothPath(comparisonCoords),
     };
-  }, [points]);
+  }, [points, comparisonPoints]);
 
-  const activePoint = activeIndex != null ? chart.coords[activeIndex] : null;
+  const activePoint = activeIndex == null ? null : chart.coords[activeIndex];
+  const activeComparisonPoint = activeIndex == null ? null : chart.comparisonCoords[activeIndex];
 
   return (
     <div className={`growth-chart growth-chart--${theme}`}>
       <div className="growth-chart__header">
-        <h3 className="growth-chart__title">{title}</h3>
-        <div
-          className={`growth-chart__period${autoCycle ? ' growth-chart__period--autocycle' : ''}`}
-          role="tablist"
-          aria-label={`${title} period`}
-        >
-          {RANGES.map((item, index) => (
+        <h3 className="growth-chart__title">
+          <i className="fas fa-chart-line" aria-hidden="true" />
+          {title}
+        </h3>
+        <div className="growth-chart__period" role="tablist" aria-label={`${title} period`}>
+          {RANGES.map((item) => (
             <span key={item.key} className="growth-chart__period-item-wrap">
-              {index > 0 ? <span className="growth-chart__period-sep" aria-hidden="true" /> : null}
               <button
                 type="button"
                 role="tab"
-                aria-selected={range === item.key}
-                className={`growth-chart__period-item${range === item.key ? ' is-active' : ''}`}
+                aria-selected={activeRange === item.key}
+                className={`growth-chart__period-item${activeRange === item.key ? ' is-active' : ''}`}
                 onClick={() => {
+                  setInternalRange(item.key);
                   onRangeChange?.(item.key);
                   setActiveIndex(null);
                 }}
@@ -135,20 +129,31 @@ export default function GrowthChart({
         </div>
       </div>
 
+      <div className="growth-chart__summary" aria-live="polite">
+        <div className="growth-chart__summary-total">
+          <div className="growth-chart__metric">
+            <span className="growth-chart__metric-label">{seriesLabel}</span>
+            <strong>{formatMoney(seriesTotal)}</strong>
+          </div>
+          <div className="growth-chart__metric is-comparison">
+            <span className="growth-chart__metric-label">{comparisonLabel}</span>
+            <strong>{formatMoney(comparisonTotal)}</strong>
+          </div>
+        </div>
+        <div className="growth-chart__legend" aria-label="Chart legend">
+          <span><i className="growth-chart__legend-dot is-current" />{seriesLabel}</span>
+          <span><i className="growth-chart__legend-dot is-previous" />{comparisonLabel}</span>
+        </div>
+      </div>
+
       <div className="growth-chart__canvas-wrap">
         <svg
           className="growth-chart__svg"
           viewBox={`0 0 ${CHART.width} ${CHART.height}`}
           role="img"
           aria-label={ariaLabel}
+          onPointerLeave={() => setActiveIndex(null)}
         >
-          <defs>
-            <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="var(--growth-line)" stopOpacity="0.28" />
-              <stop offset="100%" stopColor="var(--growth-line)" stopOpacity="0.02" />
-            </linearGradient>
-          </defs>
-
           {chart.yTicks.map((tick) => (
             <g key={tick.value}>
               <line
@@ -165,39 +170,59 @@ export default function GrowthChart({
           ))}
 
           {chart.coords.map((point, index) => (
-            <rect
-              key={`bar-${point.label}-${index}`}
-              x={point.barX}
-              y={point.barY}
-              width={point.barW}
-              height={point.barH}
-              rx={point.barW / 2}
-              className="growth-chart__bar"
-              onMouseEnter={() => setActiveIndex(index)}
-              onMouseLeave={() => setActiveIndex(null)}
+            <line
+              key={`v-grid-${point.label}-${index}`}
+              x1={point.x}
+              y1={CHART.padTop}
+              x2={point.x}
+              y2={CHART.height - CHART.padBottom}
+              className="growth-chart__vertical-grid"
             />
           ))}
 
-          <path d={chart.areaPath} fill={`url(#${gradientId})`} />
+          {activePoint ? (
+            <line
+              x1={activePoint.x}
+              y1={CHART.padTop}
+              x2={activePoint.x}
+              y2={CHART.height - CHART.padBottom}
+              className="growth-chart__active-guide"
+            />
+          ) : null}
+
+          <path d={chart.comparisonLinePath} className="growth-chart__comparison-line" fill="none" />
           <path d={chart.linePath} className="growth-chart__line" fill="none" />
 
-          {chart.coords.map((point, index) => (
-            <circle
-              key={`dot-${point.label}-${index}`}
-              cx={point.x}
-              cy={point.y}
-              r={activeIndex === index ? 6 : 4}
-              className={`growth-chart__dot${activeIndex === index ? ' is-active' : ''}`}
-              onMouseEnter={() => setActiveIndex(index)}
-              onMouseLeave={() => setActiveIndex(null)}
-            />
-          ))}
+          {activePoint && activeComparisonPoint ? (
+            <>
+              <circle cx={activeComparisonPoint.x} cy={activeComparisonPoint.y} r="4" className="growth-chart__comparison-dot is-active" />
+              <circle cx={activePoint.x} cy={activePoint.y} r="4.5" className="growth-chart__dot is-active" />
+            </>
+          ) : null}
+
+          {chart.coords.map((point, index) => {
+            const left = index === 0 ? CHART.padLeft : (chart.coords[index - 1].x + point.x) / 2;
+            const right = index === chart.coords.length - 1
+              ? CHART.width - CHART.padRight
+              : (point.x + chart.coords[index + 1].x) / 2;
+            return (
+              <rect
+                key={`hit-${point.label}-${index}`}
+                x={left}
+                y={CHART.padTop}
+                width={Math.max(1, right - left)}
+                height={chart.plotH}
+                fill="transparent"
+                onPointerEnter={() => setActiveIndex(index)}
+              />
+            );
+          })}
 
           {chart.coords.map((point, index) => (
             <text
               key={`x-${point.label}-${index}`}
               x={point.x}
-              y={CHART.height - 10}
+              y={CHART.height - 8}
               className="growth-chart__x-label"
             >
               {point.label}
@@ -205,16 +230,23 @@ export default function GrowthChart({
           ))}
         </svg>
 
-        {activePoint ? (
+        {activePoint && activeComparisonPoint ? (
           <div
             className="growth-chart__tooltip"
             style={{
               left: `${(activePoint.x / CHART.width) * 100}%`,
-              top: `${(activePoint.y / CHART.height) * 100}%`,
+              top: `${(Math.min(activePoint.y, activeComparisonPoint.y) / CHART.height) * 100}%`,
             }}
           >
-            <div className="growth-chart__tooltip-label">{tooltipLabel}</div>
-            <div className="growth-chart__tooltip-value">{formatMoney(activePoint.value)}</div>
+            <div className="growth-chart__tooltip-date">{activePoint.label}</div>
+            <div className="growth-chart__tooltip-row">
+              <span>{seriesLabel}</span>
+              <strong>{formatMoney(activePoint.value)}</strong>
+            </div>
+            <div className="growth-chart__tooltip-row is-previous">
+              <span>{comparisonLabel}</span>
+              <strong>{formatMoney(activeComparisonPoint.value)}</strong>
+            </div>
           </div>
         ) : null}
       </div>

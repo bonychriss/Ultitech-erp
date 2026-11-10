@@ -95,6 +95,72 @@ a.prod-create-btn-back:hover {
   margin-bottom: 6px;
 }
 
+.prod-create-document-description-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin: 0.15rem 0 0.7rem;
+  color: #334155;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.prod-create-document-description-toggle input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.prod-create-document-description-switch {
+  position: relative;
+  width: 2.1rem;
+  height: 1.2rem;
+  flex: 0 0 2.1rem;
+  border-radius: 9999px;
+  background: #cbd5e1;
+  transition: background 0.15s ease;
+}
+
+.prod-create-document-description-switch::after {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #fff;
+  content: '';
+  transition: transform 0.15s ease;
+}
+
+.prod-create-document-description-toggle input:checked + .prod-create-document-description-switch {
+  background: #7c3aed;
+}
+
+.prod-create-document-description-toggle input:checked + .prod-create-document-description-switch::after {
+  transform: translateX(14px);
+}
+
+.prod-create-document-description-toggle input:focus-visible + .prod-create-document-description-switch {
+  outline: 2px solid #a78bfa;
+  outline-offset: 2px;
+}
+
+.prod-create-document-description-toggle input:disabled + .prod-create-document-description-switch {
+  opacity: 0.6;
+}
+
+.prod-create-document-description-toggle input + .prod-create-document-description-switch {
+  margin: 0;
+}
+
+.prod-create-document-description-toggle input {
+  margin: 0;
+}
+
 .prod-create-section-header h2 {
   margin: 0;
   font-size: 0.9375rem;

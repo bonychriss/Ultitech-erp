@@ -96,6 +96,9 @@ if ($order_id && $_SERVER['REQUEST_METHOD'] === 'GET') {
             exit;
         }
 
+        require_once __DIR__ . '/../../includes/invoice_gl_posting.php';
+        invoice_gl_require_stock_accounts($pdo);
+
         // 2. Generate Invoice Number
         if (function_exists('nextDocumentNumber')) {
             $invoice_number = nextDocumentNumber('invoice', 'INV');
@@ -169,14 +172,17 @@ if ($order_id && $_SERVER['REQUEST_METHOD'] === 'GET') {
         header("Location: view.php?id=" . $invoice_id . "&msg=created");
         exit;
 
-    } catch (PDOException $e) {
-        die("Error creating invoice: " . $e->getMessage());
+    } catch (Throwable $e) {
+        http_response_code(400);
+        die('Error creating invoice: ' . htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8'));
     }
 }
 
 // === MODE 2: Direct Creation (Form Handling) ===
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
+        require_once __DIR__ . '/../../includes/invoice_gl_posting.php';
+        invoice_gl_require_stock_accounts($pdo);
         ensureCustomerColumnsExist();
         $pdo->beginTransaction();
         
@@ -391,7 +397,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit();
 
     } catch (Exception $e) {
-        $pdo->rollBack();
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
         $error = "Error creating invoice: " . $e->getMessage();
     }
 }
@@ -418,12 +426,13 @@ try {
     }
 
     $itemTypeSelect = in_array('item_type', $prodCols, true) ? 'p.item_type' : "'' AS item_type";
+    $truckDocumentFields = sales_product_document_fields_sql($prodCols);
     $hasProductCompanyId = in_array('company_id', $prodCols, true);
     $whereCompanySql = ($company_id > 0 && $hasProductCompanyId) ? (' WHERE p.company_id = ' . (int) $company_id . ' ') : ' ';
 
     // Keep product loading schema-safe: some installs miss company_id in one or more tables.
     $products = $salesDb->query("
-        SELECT p.id, p.product_code, p.name, p.description, p.unit_price as selling_price, $itemTypeSelect, $imgSelect,
+        SELECT p.id, p.product_code, p.name, p.description, p.unit_price as selling_price, $itemTypeSelect, $truckDocumentFields, $imgSelect,
                (
                    COALESCE((SELECT SUM(quantity) FROM stock WHERE product_id = p.id), 0) -
                    COALESCE((
@@ -444,7 +453,7 @@ try {
     // Fallback: if company-scoped query returns nothing, retry without company filter.
     if ($products === [] && $whereCompanySql !== ' ') {
         $products = $salesDb->query("
-            SELECT p.id, p.product_code, p.name, p.description, p.unit_price as selling_price, $itemTypeSelect, $imgSelect,
+            SELECT p.id, p.product_code, p.name, p.description, p.unit_price as selling_price, $itemTypeSelect, $truckDocumentFields, $imgSelect,
                    (
                        COALESCE((SELECT SUM(quantity) FROM stock WHERE product_id = p.id), 0) -
                        COALESCE((
@@ -461,6 +470,7 @@ try {
             ORDER BY p.name
         ")->fetchAll(PDO::FETCH_ASSOC);
     }
+    $products = sales_apply_product_document_descriptions($products);
 } catch (Throwable $e) {
     $products = [];
 }

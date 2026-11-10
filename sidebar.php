@@ -575,6 +575,7 @@ switch ($active_module) {
             addItem($menuItems, 'ai_assistant', 'AI Assistant', 'stars', $prefix . 'employee/ai_assistant.php?module=sales');
         }
         addItem($menuItems, 'dashboard', 'Dashboard', 'layout-wtf', $prefix . 'modules/sales/dashboard/index.php?module=sales');
+        addItem($menuItems, 'statistics', 'Statistics', 'bar-chart-line', $prefix . 'sales/statistics?module=sales');
         addItem($menuItems, 'my-sales', 'My Sales', 'person-lines-fill', $prefix . 'modules/sales/my-sales/index.php?module=sales');
         addItem($menuItems, 'pricelist', 'Pricelist', 'tags', $prefix . 'modules/sales/pricelist.php?module=sales');
         addItem($menuItems, 'customers', 'Customers', 'people', $prefix . 'modules/sales/customers/index.php?module=sales');
@@ -1973,6 +1974,14 @@ if (!isset($_GET['print'])) {
                     if (strpos($persPath, '/employee/personalization/') !== false) {
                         $isActive = 'active';
                     }
+                }
+            }
+            if ($active_module === 'sales' && in_array($item['id'], ['dashboard', 'statistics'], true)) {
+                $salesDesk = strtolower(trim((string) ($_GET['desk'] ?? '')));
+                if ($item['id'] === 'statistics') {
+                    $isActive = $salesDesk === 'statistics' ? 'active' : '';
+                } elseif ($salesDesk === 'statistics') {
+                    $isActive = '';
                 }
             }
             if ($active_module === 'crm' && in_array($item['id'], ['dashboard', 'my-customers', 'new-leads', 'crm-market'], true)) {

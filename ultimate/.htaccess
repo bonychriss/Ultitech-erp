@@ -10,6 +10,9 @@ RewriteRule ^webrtc_call\.php$ ../webrtc_call.php [L,QSA]
 RewriteRule ^chatbot_call_users\.php$ ../chatbot_call_users.php [L,QSA]
 RewriteRule ^chatbot_api\.php$ ../chatbot_api.php [L,QSA]
 
+# Sales Statistics → the sales dashboard React statistics view
+RewriteRule ^sales/statistics/?$ sales.php?company_slug=ultimate&desk=statistics&module=sales [L,QSA,NC]
+
 RewriteRule ^login/?$ login.php [L,QSA,NC]
 RewriteRule ^register/?$ register.php [L,QSA,NC]
 RewriteRule ^select-module/?$ select-module.php [L,QSA,NC]

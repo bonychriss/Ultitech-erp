@@ -611,6 +611,7 @@
       const LEFT_WING_FRONT_Z = BUNGALOW_FRONT_Z - 1.1;
       const PATCH = { x1: -5.9, z0: -14.0, z1: LEFT_WING_FRONT_Z + 0.8 };
       const BED_END_Z = BUNGALOW_FRONT_Z + 1.05;
+      const HOUSE_RIGHT_X = W_RIGHT - WALL_T / 2 - 1.3;
 
       const ground = new THREE.Mesh(new THREE.PlaneGeometry(800, 800), material("#66714a"));
       ground.rotation.x = -Math.PI / 2;
@@ -628,7 +629,8 @@
       surface(site, "pavers beside the office end", [W_LEFT, PATCH.x1], [PATCH.z0, OFFICE_Z[0]], 0.045, "paver", 2.4);
       surface(site, "pavers behind the lawn patch", [W_LEFT, PATCH.x1], [LEFT_WING_FRONT_Z, PATCH.z1], 0.045, "paver", 2.4);
       pbrSurface(site, "white gravel bed", [DRIVE[1] + CURB_W, W_RIGHT], [BED_END_Z, 15.7], 0.06, gravelMat);
-      surface(site, "pavers beside the house", [DRIVE[1], W_RIGHT], [W_REAR, BED_END_Z], 0.045, "paver", 2.4);
+      surface(site, "pavers beside the house", [DRIVE[1], HOUSE_RIGHT_X], [W_REAR, BED_END_Z], 0.045, "paver", 2.4);
+      pbrSurface(site, "brushed concrete side path", [HOUSE_RIGHT_X, W_RIGHT], [W_REAR, BED_END_Z], 0.05, concreteMat);
       for (const x of [0.62, 2.57]) {
         surface(site, "red paver stripe", [x - 0.25, x + 0.25], [BUNGALOW_FRONT_Z, W_FRONT], 0.05, "paverRed", 2.4, 0.03);
       }
@@ -1041,7 +1043,7 @@
       const BF = BUNGALOW_FRONT_Z;
       const LEFT_WING = { x0: wallFace + 0.55, x1: -5.6, front: LEFT_WING_FRONT_Z };
       const PORCH = { x0: -5.6, x1: -1.0, back: BF - 2.6, columnZ: BF - 0.25 };
-      const WING = { x0: -1.0, x1: W_RIGHT - WALL_T / 2 - 1.3 };
+      const WING = { x0: -1.0, x1: HOUSE_RIGHT_X };
 
       function houseBlock(name, x0, x1, front, height) {
         const w = x1 - x0;

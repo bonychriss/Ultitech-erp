@@ -201,6 +201,10 @@
         .view-controls { right: 10px; bottom: calc(10px + env(safe-area-inset-bottom)); left: 10px; gap: 4px; padding: 5px; }
         .view-controls button { flex: 1; padding: 0 6px; }
         .hint { right: 10px; bottom: calc(66px + env(safe-area-inset-bottom)); left: 10px; text-align: center; }
+        .stair-picker { top: auto; right: 10px; bottom: calc(112px + env(safe-area-inset-bottom)); left: 10px; padding: 5px; }
+        .stair-picker .eyebrow { display: none; }
+        .stair-options { grid-template-columns: repeat(4, 1fr); gap: 4px; }
+        .stair-options button { padding: 0 4px; font-size: 10.5px; }
         .mouse-hint { display: none; }
         .touch-hint { display: inline; }
       }
@@ -1693,6 +1697,12 @@
       document.querySelector("#gateView").addEventListener("click", () => setView([1.6, 1.7, 14.2], [-1.2, 1.6, -18]));
       document.querySelector("#topView").addEventListener("click", () => setView([-2, 70, -6.4], [-2, 0, -6.5]));
       document.querySelector("#resetView").addEventListener("click", () => setView(initialCamera.toArray(), initialTarget.toArray()));
+      for (const button of document.querySelectorAll("[data-stair]")) {
+        button.addEventListener("click", () => {
+          buildStair(button.dataset.stair);
+          document.querySelectorAll("[data-stair]").forEach((b) => b.classList.toggle("active", b === button));
+        });
+      }
 
       loading.remove();
       renderer.setAnimationLoop(() => {

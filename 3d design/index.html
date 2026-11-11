@@ -609,7 +609,7 @@
       const PORCH_CURB_Z = -13.15;
       const BUNGALOW_FRONT_Z = PORCH_CURB_Z - 3.15;
       const PATCH = { x1: -5.9, z0: -14.0, z1: -16.6 };
-      const BED_END_Z = BUNGALOW_FRONT_Z - 0.25;
+      const BED_END_Z = BUNGALOW_FRONT_Z;
 
       const ground = new THREE.Mesh(new THREE.PlaneGeometry(800, 800), material("#66714a"));
       ground.rotation.x = -Math.PI / 2;
@@ -1038,9 +1038,9 @@
       const houseMat = mats.house;
       const BZ_BACK = -28.5;
       const BF = BUNGALOW_FRONT_Z;
-      const LEFT_WING = { x0: wallFace + 0.25, x1: -5.6, front: -17.4 };
+      const LEFT_WING = { x0: wallFace + 0.55, x1: -5.6, front: -17.4 };
       const PORCH = { x0: -5.6, x1: -1.0, back: BF - 2.6, columnZ: BF - 0.25 };
-      const WING = { x0: -1.0, x1: 1.4 };
+      const WING = { x0: -1.0, x1: W_RIGHT - WALL_T / 2 - 1.3 };
 
       function houseBlock(name, x0, x1, front, height) {
         const w = x1 - x0;
@@ -1128,7 +1128,7 @@
       const roofs = [
         { name: "porch block hip roof", x0: PORCH.x0 - 0.3, x1: PORCH.x1 + 0.3, z0: BF + 0.3, y: 3.43, rise: 2.2 },
         { name: "arched-window wing hip roof", x0: WING.x0 - 0.25, x1: WING.x1 + 0.3, z0: BF + 0.3, y: 3.36, rise: 1.5 },
-        { name: "left wing hip roof", x0: wallFace + 0.05, x1: LEFT_WING.x1 + 0.25, z0: LEFT_WING.front + 0.3, y: 3.1, rise: 1.3 },
+        { name: "left wing hip roof", x0: LEFT_WING.x0 - 0.25, x1: LEFT_WING.x1 + 0.25, z0: LEFT_WING.front + 0.3, y: 3.1, rise: 1.3 },
       ];
       for (const r of roofs) {
         const w = r.x1 - r.x0;

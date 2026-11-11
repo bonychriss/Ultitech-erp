@@ -238,9 +238,9 @@
       const loading = document.querySelector("#loading");
       const scene = new THREE.Scene();
       scene.background = new THREE.Color("#cdd9e2");
-      scene.fog = new THREE.Fog("#cfd9e0", 110, 260);
+      scene.fog = new THREE.Fog("#b8c5cf", 170, 420);
 
-      const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 400);
+      const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 600);
       const initialCamera = new THREE.Vector3(30, 27, 38);
       const initialTarget = new THREE.Vector3(-2, 1, -6);
       camera.position.copy(initialCamera);
@@ -251,7 +251,7 @@
       renderer.shadowMap.type = THREE.PCFSoftShadowMap;
       renderer.outputColorSpace = THREE.SRGBColorSpace;
       renderer.toneMapping = THREE.ACESFilmicToneMapping;
-      renderer.toneMappingExposure = 0.95;
+      renderer.toneMappingExposure = 0.82;
       mount.appendChild(renderer.domElement);
       const maxAniso = renderer.capabilities.getMaxAnisotropy();
 
@@ -261,8 +261,8 @@
         hdr.mapping = THREE.EquirectangularReflectionMapping;
         scene.environment = pmrem.fromEquirectangular(hdr).texture;
         scene.background = hdr;
-        scene.backgroundIntensity = 0.85;
-        scene.environmentIntensity = 0.75;
+        scene.backgroundIntensity = 0.8;
+        scene.environmentIntensity = 0.55;
       });
 
       const controls = new OrbitControls(camera, renderer.domElement);
@@ -273,8 +273,8 @@
       controls.minDistance = 2;
       controls.maxDistance = 120;
 
-      scene.add(new THREE.HemisphereLight("#eef4f8", "#7a7f6c", 0.45));
-      const sun = new THREE.DirectionalLight("#fff1d6", 3.4);
+      scene.add(new THREE.HemisphereLight("#e4edf3", "#5f6650", 0.3));
+      const sun = new THREE.DirectionalLight("#ffeccc", 3.0);
       sun.position.set(-22, 38, 26);
       sun.castShadow = true;
       sun.shadow.mapSize.set(4096, 4096);
@@ -320,7 +320,7 @@
       }
 
       const palette = {
-        soil: "#8b8670",
+        soil: "#6e6855",
         concrete: "#a9a69c",
         wall: "#cfd9d3",
         wallTrim: "#eef0ea",
@@ -480,7 +480,7 @@
         sand: speckleCanvas("#d8c9a6", ["#c9b78f", "#e6dabd", "#b9a780", "#cfc6b0"], 4200, 3),
         gravel: speckleCanvas("#ecebe6", ["#ffffff", "#cfcfc9", "#dcdbd5", "#b9b9b3"], 5200, 4),
         concrete: speckleCanvas("#a9a69c", ["#9b988e", "#b8b5ab", "#8f8c84", "#c2bfb5"], 2600, 5),
-        soil: speckleCanvas("#8b8670", ["#7b765f", "#9c977f", "#6f6a55"], 2600, 3),
+        soil: speckleCanvas("#6e6855", ["#5f5a48", "#7d7762", "#544f40"], 2600, 3),
       };
 
       // Height map of the paver joints → normal map, so the joints read as real grooves.
@@ -610,7 +610,7 @@
       const BUNGALOW_FRONT_Z = PORCH_CURB_Z - 3.15;
       const PATCH = { x1: -5.9, z0: -14.0, z1: -16.6 };
 
-      const ground = new THREE.Mesh(new THREE.PlaneGeometry(400, 400), material("#a3aa8f"));
+      const ground = new THREE.Mesh(new THREE.PlaneGeometry(800, 800), material("#66714a"));
       ground.rotation.x = -Math.PI / 2;
       ground.position.y = -0.05;
       ground.receiveShadow = true;

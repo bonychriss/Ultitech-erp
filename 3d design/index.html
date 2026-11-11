@@ -609,6 +609,7 @@
       const PORCH_CURB_Z = -13.15;
       const BUNGALOW_FRONT_Z = PORCH_CURB_Z - 3.15;
       const PATCH = { x1: -5.9, z0: -14.0, z1: -16.6 };
+      const BED_END_Z = BUNGALOW_FRONT_Z - 0.25;
 
       const ground = new THREE.Mesh(new THREE.PlaneGeometry(800, 800), material("#66714a"));
       ground.rotation.x = -Math.PI / 2;
@@ -625,7 +626,8 @@
       surface(site, "forecourt pavers", [PATCH.x1, 0], [-17.4, OFFICE_Z[0]], 0.045, "paver", 2.4);
       surface(site, "pavers beside the office end", [W_LEFT, PATCH.x1], [PATCH.z0, OFFICE_Z[0]], 0.045, "paver", 2.4);
       surface(site, "pavers behind the lawn patch", [W_LEFT, PATCH.x1], [-17.4, PATCH.z1], 0.045, "paver", 2.4);
-      pbrSurface(site, "white gravel bed", [DRIVE[1] + CURB_W, W_RIGHT], [W_REAR, 15.7], 0.06, gravelMat);
+      pbrSurface(site, "white gravel bed", [DRIVE[1] + CURB_W, W_RIGHT], [BED_END_Z, 15.7], 0.06, gravelMat);
+      surface(site, "pavers beside the house", [DRIVE[1], W_RIGHT], [W_REAR, BED_END_Z], 0.045, "paver", 2.4);
       for (const x of [0.62, 2.57]) {
         surface(site, "red paver stripe", [x - 0.25, x + 0.25], [BUNGALOW_FRONT_Z, W_FRONT], 0.05, "paverRed", 2.4, 0.03);
       }
@@ -645,7 +647,8 @@
       const zebra = [curbRed, mats.darkBase];
       const wallFace = W_LEFT + WALL_T / 2;
       curbLine("red/black driveway curb", CURB_LEFT, W_FRONT - 0.6, CURB_LEFT, -13.2, zebra);
-      curbLine("red/black gravel-bed curb", CURB_RIGHT, 15.6, CURB_RIGHT, W_REAR + 0.2, zebra);
+      curbLine("red/black gravel-bed curb", CURB_RIGHT, 15.6, CURB_RIGHT, BED_END_Z, zebra);
+      curbLine("red/black gravel-bed end curb", CURB_RIGHT - CURB_W / 2, BED_END_Z + CURB_W / 2, W_RIGHT - WALL_T / 2, BED_END_Z + CURB_W / 2, zebra);
       curbLine("red/black porch band curb", wallFace + 0.15, PORCH_CURB_Z, -0.3, PORCH_CURB_Z, zebra, 0.2);
       curbLine("red/black lawn patch curb", wallFace + 0.15, PATCH.z0, PATCH.x1, PATCH.z0, zebra, 0.2, 0.26, 0.8);
       curbLine("red/black lawn patch curb", PATCH.x1, PATCH.z0, PATCH.x1, PATCH.z1, zebra, 0.2, 0.26, 0.8);
@@ -1401,10 +1404,10 @@
       }
 
       // Palm and Norfolk pine row on the white gravel bed along the right wall.
-      [[14.2, 11.5], [8.6, 12.5], [3.0, 11.8], [-3.0, 12.6], [-9.0, 11.6], [-15.5, 12.2], [-21.5, 11.4]].forEach(([z, h], i) =>
+      [[14.2, 11.5], [8.6, 12.5], [3.0, 11.8], [-3.0, 12.6], [-9.0, 11.6], [-15.0, 12.2]].forEach(([z, h], i) =>
         addPalm(DRIVE[1] + CURB_W + 0.45 + (i % 2) * 0.25, z, h, (i % 2 ? -0.12 : 0.12), 0.08, 1.05)
       );
-      [11.4, 5.8, 0.0, -6.0, -12.2, -18.4, -24.5].forEach((z) => addNorfolkPine(DRIVE[1] + CURB_W + 0.6, z, 6.5));
+      [11.4, 5.8, 0.0, -6.0, -12.0].forEach((z) => addNorfolkPine(DRIVE[1] + CURB_W + 0.6, z, 6.5));
 
       // Soft planting along the curbs.
       for (const [x, z, s] of [[-0.9, 3.5, 0.5], [-1.6, 3.9, 0.42], [-0.7, 2.5, 0.38], [4.0, 15.2, 0.32]]) {

@@ -610,7 +610,7 @@
       const BUNGALOW_FRONT_Z = PORCH_CURB_Z - 3.15 - 1.0;
       const LEFT_WING_FRONT_Z = BUNGALOW_FRONT_Z - 1.1;
       const PATCH = { x1: -5.9, z0: -14.0, z1: LEFT_WING_FRONT_Z + 0.8 };
-      const BED_END_Z = BUNGALOW_FRONT_Z;
+      const BED_END_Z = BUNGALOW_FRONT_Z + 1.05;
 
       const ground = new THREE.Mesh(new THREE.PlaneGeometry(800, 800), material("#66714a"));
       ground.rotation.x = -Math.PI / 2;

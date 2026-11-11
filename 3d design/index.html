@@ -145,16 +145,38 @@
       }
       .loading.error { color: #9f3939; }
 
+      .side-panel summary { display: block; list-style: none; cursor: pointer; }
+      .side-panel summary::-webkit-details-marker { display: none; }
+      .panel-toggle { display: none; }
+      .touch-hint { display: none; }
+
       @media (max-width: 640px) {
-        .app { grid-template-rows: 64px minmax(0, 1fr); }
-        header { padding: 0 16px; }
-        .header-note { display: none; }
-        .side-panel { top: 12px; left: 12px; width: min(226px, calc(100vw - 24px)); padding: 15px; }
-        .legend { gap: 8px; }
+        .app { grid-template-rows: 58px minmax(0, 1fr); height: 100dvh; }
+        header { padding: 0 14px; }
+        .brand { gap: 10px; min-width: 0; }
+        .brand > div:last-child { min-width: 0; }
+        .brand-mark { width: 32px; height: 32px; border-radius: 10px; }
+        .brand-mark svg { width: 17px; height: 17px; }
+        .eyebrow { font-size: 9px; }
+        h1 { overflow: hidden; font-size: 14px; white-space: nowrap; text-overflow: ellipsis; }
+
+        .side-panel { top: 10px; left: 10px; width: min(260px, calc(100vw - 20px)); max-height: calc(100% - 90px); padding: 0; overflow: auto; border-radius: 13px; }
+        .side-panel summary { display: flex; align-items: center; gap: 8px; padding: 10px 13px; }
+        .side-panel summary .eyebrow { display: none; }
+        .side-panel summary .panel-title { margin: 0; font-size: 13px; }
+        .panel-toggle { display: block; width: 14px; height: 14px; margin-left: auto; color: var(--muted); transition: transform .2s; }
+        .side-panel[open] .panel-toggle { transform: rotate(180deg); }
+        .panel-body { padding: 0 13px 13px; }
+        .side-panel:not([open]) { width: auto; }
+        .panel-subtitle { margin-bottom: 12px; }
+        .legend { gap: 7px; }
         .divider { margin: 12px 0 10px; }
-        .view-controls { right: 12px; bottom: 12px; }
-        .view-controls button { padding: 0 9px; }
-        .hint { right: 12px; bottom: 68px; }
+
+        .view-controls { right: 10px; bottom: calc(10px + env(safe-area-inset-bottom)); left: 10px; gap: 4px; padding: 5px; }
+        .view-controls button { flex: 1; padding: 0 6px; }
+        .hint { right: 10px; bottom: calc(66px + env(safe-area-inset-bottom)); left: 10px; text-align: center; }
+        .mouse-hint { display: none; }
+        .touch-hint { display: inline; }
       }
     </style>
     <script type="importmap">
@@ -185,9 +207,13 @@
       <main>
         <div id="scene" aria-label="Interactive 3D compound model"></div>
         <div class="loading" id="loading">Preparing your compound model…</div>
-        <aside class="side-panel">
-          <p class="eyebrow">Existing site</p>
-          <p class="panel-title">Compound overview</p>
+        <details class="side-panel" id="legendPanel" open>
+          <summary>
+            <p class="eyebrow">Existing site</p>
+            <p class="panel-title">Compound overview</p>
+            <svg class="panel-toggle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
+          </summary>
+          <div class="panel-body">
           <p class="panel-subtitle">Gate, paved driveway, bungalow, container office, yard and gardens, recreated from 13 photos.</p>
           <ul class="legend">
             <li><span class="swatch" style="background:#f1f0ea"></span>Bungalow with porch</li>
@@ -204,8 +230,9 @@
           </ul>
           <div class="divider"></div>
           <p class="model-note">Driveway, curbs, offices and bungalow placed from site measurements; other parts are approximate. Sky, textures and AC unit are CC0 assets from Poly Haven. The apartment block beyond the left wall belongs to the neighbouring plot.</p>
-        </aside>
-        <div class="hint">Drag to orbit · Scroll to zoom · Right-drag to pan</div>
+          </div>
+        </details>
+        <div class="hint"><span class="mouse-hint">Drag to orbit · Scroll to zoom · Right-drag to pan</span><span class="touch-hint">Drag to orbit · Pinch to zoom · Two-finger drag to pan</span></div>
         <div class="view-controls">
           <button type="button" id="gateView" aria-label="View from the gate">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z" /><circle cx="12" cy="12" r="3" /></svg>
@@ -233,6 +260,9 @@
       import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
 
       const ASSETS = "assets/";
+      const isPhone = window.matchMedia("(max-width: 640px)").matches;
+      if (isPhone) document.querySelector("#legendPanel").open = false;
+      document.querySelector("#scene").addEventListener("pointerdown", () => document.querySelector(".hint").remove(), { once: true });
       const mount = document.querySelector("#scene");
       const loading = document.querySelector("#loading");
       const scene = new THREE.Scene();
@@ -245,7 +275,7 @@
       camera.position.copy(initialCamera);
 
       const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, isPhone ? 1.5 : 2));
       renderer.shadowMap.enabled = true;
       renderer.shadowMap.type = THREE.PCFSoftShadowMap;
       renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -276,7 +306,7 @@
       const sun = new THREE.DirectionalLight("#ffeccc", 3.0);
       sun.position.set(-22, 38, 26);
       sun.castShadow = true;
-      sun.shadow.mapSize.set(4096, 4096);
+      sun.shadow.mapSize.setScalar(isPhone ? 2048 : 4096);
       sun.shadow.camera.left = -40;
       sun.shadow.camera.right = 40;
       sun.shadow.camera.top = 40;
@@ -1520,7 +1550,7 @@
       const composer = new EffectComposer(renderer, new THREE.WebGLRenderTarget(1, 1, { samples: 4, type: THREE.HalfFloatType }));
       composer.addPass(new RenderPass(scene, camera));
       const aoPass = new GTAOPass(scene, camera, 1, 1);
-      aoPass.updateGtaoMaterial({ radius: 0.6, distanceExponent: 1.5, thickness: 1.5, scale: 1.1, samples: 16 });
+      aoPass.updateGtaoMaterial({ radius: 0.6, distanceExponent: 1.5, thickness: 1.5, scale: 1.1, samples: isPhone ? 8 : 16 });
       aoPass.blendIntensity = 0.85;
       composer.addPass(aoPass);
       composer.addPass(new OutputPass());
@@ -1529,6 +1559,7 @@
         const { width, height } = mount.getBoundingClientRect();
         if (!width || !height) return;
         camera.aspect = width / height;
+        camera.fov = camera.aspect < 1 ? 58 : 38;
         camera.updateProjectionMatrix();
         renderer.setSize(width, height);
         composer.setPixelRatio(renderer.getPixelRatio());

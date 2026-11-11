@@ -204,7 +204,7 @@
             <li><span class="swatch" style="background:#cfd9d3"></span>Boundary walls</li>
           </ul>
           <div class="divider"></div>
-          <p class="model-note">Approximate proportions only; no measurements were provided. The apartment block beyond the left wall belongs to the neighbouring plot.</p>
+          <p class="model-note">Driveway, curbs, offices and bungalow placed from site measurements; other parts are approximate. Sky, textures and AC unit are CC0 assets from Poly Haven. The apartment block beyond the left wall belongs to the neighbouring plot.</p>
         </aside>
         <div class="hint">Drag to orbit · Scroll to zoom · Right-drag to pan</div>
         <div class="view-controls">
@@ -292,22 +292,20 @@
       // Boxes built with a metric material get UVs in metres, so one material tiles evenly on any size.
       const texLoader = new THREE.TextureLoader();
       const baseTextures = {};
-      function loadMap(file, srgb) {
-        if (!baseTextures[file]) {
+      function loadMap(file, srgb, tileSize) {
+        const key = `${file}@${tileSize}`;
+        if (!baseTextures[key]) {
           const t = texLoader.load(`${ASSETS}${file}`);
           t.wrapS = t.wrapT = THREE.RepeatWrapping;
           t.anisotropy = maxAniso;
+          t.repeat.set(1 / tileSize, 1 / tileSize);
           if (srgb) t.colorSpace = THREE.SRGBColorSpace;
-          baseTextures[file] = t;
+          baseTextures[key] = t;
         }
-        return baseTextures[file];
+        return baseTextures[key];
       }
       function pbr(id, tileSize, { color = "#ffffff", diffuse = true, normalScale = 1, roughness = 1, extra = {} } = {}) {
-        const tiled = (file, srgb) => {
-          const t = loadMap(file, srgb).clone();
-          t.repeat.set(1 / tileSize, 1 / tileSize);
-          return t;
-        };
+        const tiled = (file, srgb) => loadMap(file, srgb, tileSize);
         const mat = new THREE.MeshStandardMaterial({
           color,
           map: diffuse ? tiled(`${id}_diff.jpg`, true) : null,
@@ -340,7 +338,7 @@
 
       const material = (color, roughness = 0.86, extra = {}) => new THREE.MeshStandardMaterial({ color, roughness, ...extra });
       const mats = Object.fromEntries(Object.entries(palette).map(([key, color]) => [key, material(color)]));
-      const plaster = (color) => pbr("plastered_wall_02", 2.4, { color, normalScale: 0.8 });
+      const plaster = (color) => pbr("plastered_wall_04", 2.0, { color, diffuse: false, normalScale: 0.6, roughness: 0.95 });
       Object.assign(mats, {
         wall: plaster("#cfdbd4"),
         whiteWall: plaster("#f1f2ed"),
@@ -350,11 +348,11 @@
         blue: material("#1f4fb0", 0.5, { metalness: 0.25 }),
       });
       const blueSheetMat = pbr("corrugated_iron_02", 1.0, { color: "#2a5cc0", diffuse: false, normalScale: 1.2, roughness: 0.7, extra: { metalness: 0.35 } });
-      const concreteMat = pbr("concrete_floor_02", 3, { color: "#e4e1d9" });
-      const basinMat = pbr("concrete_floor_02", 1.5, { color: "#ece8de" });
+      const concreteMat = pbr("brushed_concrete", 2.5, { color: "#d9d6cf" });
+      const basinMat = pbr("brushed_concrete", 1.2, { color: "#e3dfd5" });
       const sandMat = pbr("coast_sand_01", 2.5, { color: "#f6ead2" });
       const gravelMat = pbr("clean_pebbles", 0.7, { color: "#f1f0ea", diffuse: false, normalScale: 1.6 });
-      const roofTileMat = pbr("clay_roof_tiles", 1.8, { color: "#a5705f", extra: { side: THREE.DoubleSide } });
+      const roofTileMat = pbr("clay_roof_tiles", 1.8, { color: "#7a5045", extra: { side: THREE.DoubleSide } });
 
       function metricBoxGeometry(w, h, d) {
         const geometry = new THREE.BoxGeometry(w, h, d);
@@ -476,8 +474,8 @@
       }
 
       const canvases = {
-        paver: paverCanvas("#c8bcaa", "#8f8475"),
-        paverRed: paverCanvas("#a4564a", "#6e3a33"),
+        paver: paverCanvas("#a99f90", "#6f665a"),
+        paverRed: paverCanvas("#93483d", "#5a2e28"),
         grass: speckleCanvas("#7da35f", ["#6a9150", "#93b56f", "#5f8546", "#a5bf7a"], 5200, 3),
         sand: speckleCanvas("#d8c9a6", ["#c9b78f", "#e6dabd", "#b9a780", "#cfc6b0"], 4200, 3),
         gravel: speckleCanvas("#ecebe6", ["#ffffff", "#cfcfc9", "#dcdbd5", "#b9b9b3"], 5200, 4),
@@ -1213,10 +1211,10 @@
         g.stroke();
         return canvas;
       }
-      const palmFrondMat = alphaCardMaterial(frondCanvas({ leafletColors: ["#4f7d33", "#5d8c3b", "#467230", "#6b9944", "#3f692b"] }));
-      const palmFrondDryMat = alphaCardMaterial(frondCanvas({ leafletColors: ["#a08a4a", "#b49b58", "#8f7a3f", "#c2aa66"], stem: "#8b7442" }));
+      const palmFrondMat = alphaCardMaterial(frondCanvas({ leafletColors: ["#4f7d33", "#5d8c3b", "#467230", "#6b9944", "#3f692b"], leaflet: 200, spacing: 7, width: 6 }));
+      const palmFrondDryMat = alphaCardMaterial(frondCanvas({ leafletColors: ["#a08a4a", "#b49b58", "#8f7a3f", "#c2aa66"], stem: "#8b7442", leaflet: 170, spacing: 8, width: 5 }));
       const pineNeedleMat = alphaCardMaterial(
-        frondCanvas({ leafletColors: ["#2f5a2c", "#3a6b35", "#284f26", "#44783d"], stem: "#4b4632", leaflet: 34, spacing: 3, width: 2.2 }),
+        frondCanvas({ leafletColors: ["#2f5a2c", "#3a6b35", "#284f26", "#44783d"], stem: "#4b4632", leaflet: 150, spacing: 4, width: 3.2 }),
         "#ffffff",
         0.85
       );
@@ -1254,7 +1252,7 @@
         }
         return canvas;
       }
-      const palmTrunkMat = new THREE.MeshStandardMaterial({ map: textureFrom(ringCanvas("#9a948a", "#6f685d"), 2, 6), roughness: 0.95 });
+      const palmTrunkMat = new THREE.MeshStandardMaterial({ map: textureFrom(ringCanvas("#8f8a80", "#7a746a"), 2, 6), roughness: 0.95 });
       const crownshaftMat = material("#7f9455", 0.7);
 
       function addPalm(x, z, height, leanX = 0, leanZ = 0, crown = 1) {
@@ -1280,7 +1278,7 @@
           const hanging = i % 7 === 3;
           pitch.rotation.z = hanging ? -0.9 : -0.25 + Math.random() * 0.8;
           const frond = cardMesh(hanging ? hangingFrondGeo : frondGeos[i % frondGeos.length], hanging ? palmFrondDryMat : palmFrondMat);
-          frond.scale.set(length * (0.85 + Math.random() * 0.25), length, length * 0.62);
+          frond.scale.set(length * (0.85 + Math.random() * 0.25), length, length * 0.55);
           pitch.add(frond);
           yaw.add(pitch);
           top.add(yaw);
@@ -1301,7 +1299,7 @@
             yaw.rotation.y = (k / arms) * Math.PI * 2 + whorl * 0.5;
             const branch = cardMesh(pineBranchGeo, pineNeedleMat);
             branch.rotation.z = 0.12;
-            branch.scale.set(length, length, length * 0.42);
+            branch.scale.set(length, length, length * 0.5);
             yaw.add(branch);
             site.add(yaw);
           }

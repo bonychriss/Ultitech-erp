@@ -31,8 +31,13 @@ RewriteRule ^([A-Za-z0-9-]+)/(debug_[a-zA-Z0-9_.-]+\.php)$ $2?company_slug=$1 [Q
 RewriteCond %{REQUEST_URI} !^/home/ [NC]
 RewriteRule ^([A-Za-z0-9-]+)/employee/pending-voucher-tasks\.php$ employee/pending-voucher-tasks.php?company_slug=$1 [QSA,L,NC]
 
+# /{company_slug}/attendance/api/*.php → shared Attendance API
+RewriteCond %{REQUEST_URI} !^/home/ [NC]
+RewriteRule ^([A-Za-z0-9-]+)/attendance/api/([^/]+\.php)$ attendance/api/$2?company_slug=$1 [QSA,L,NC]
+
 # /{company_slug}/api/*.php → root api (physical /{slug}/ folder blocks the generic proxy)
 RewriteCond %{REQUEST_URI} !^/home/ [NC]
+RewriteCond %{REQUEST_FILENAME} !-f
 RewriteRule ^([A-Za-z0-9-]+)/api/([^/]+\.php)$ api/$2?company_slug=$1 [QSA,L,NC]
 
 # Company slug routing (single codebase, no subdomains)

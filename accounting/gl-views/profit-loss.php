@@ -30,7 +30,7 @@ $section = static function (string $title, array $rows, float $total, string $to
   <?php if (!$rows): ?><tr class="muted"><td colspan="3">None in this period</td></tr><?php endif; ?>
   <?php foreach ($rows as $r): ?>
     <tr><td><?= gl_h($r['code'] !== '' ? $r['code'] : '-') ?></td>
-        <td><a href="ledger.php?account_id=<?= (int) $r['id'] ?>&from_date=<?= gl_h($from) ?>&to_date=<?= gl_h($to) ?>"><?= gl_h($r['name']) ?></a></td>
+        <td><a href="ledger.php?account_id=<?= (int) $r['id'] ?>&from_date=<?= gl_h($from) ?>&to_date=<?= gl_h($to) ?>&start_date=<?= gl_h($from) ?>&end_date=<?= gl_h($to) ?>"><?= gl_h($r['name']) ?></a></td>
         <td class="n"><?= gl_fmt($r['amount']) ?></td></tr>
   <?php endforeach; ?>
   <tr class="tot"><td colspan="2"><?= gl_h($totalLabel) ?></td><td class="n"><?= gl_fmt($total) ?></td></tr>

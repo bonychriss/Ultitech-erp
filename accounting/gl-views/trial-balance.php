@@ -393,6 +393,8 @@ html[data-theme="dark"] .glr-trial-detail-grid b,html[data-theme="dark"] .glr-tr
                   'account_id' => $accountId,
                   'from_date' => $from,
                   'to_date' => $to,
+                  'start_date' => $from,
+                  'end_date' => $to,
               ]);
           ?>
             <tr class="glr-trial-row" data-account-row

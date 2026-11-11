@@ -155,9 +155,9 @@ if (!function_exists('attendanceAdminFetchPayload')) {
         $exportBase = function_exists('company_url')
             ? company_url('admin/export-attendance.php')
             : (function_exists('app_url') ? app_url('/admin/export-attendance.php') : '/admin/export-attendance.php');
-        $apiUrl = function_exists('app_url')
-            ? app_url('/attendance/api/admin-list.php')
-            : '/attendance/api/admin-list.php';
+        $apiUrl = function_exists('company_url')
+            ? company_url('attendance/api/admin-list.php')
+            : (function_exists('app_url') ? app_url('/attendance/api/admin-list.php') : '/attendance/api/admin-list.php');
 
         return [
             'records' => $records,
@@ -275,9 +275,9 @@ if (!function_exists('attendanceSettingsFetchPayload')) {
         $settingsUrl = function_exists('company_url')
             ? company_url('attendance/settings.php?module=attendance')
             : (function_exists('app_url') ? app_url('/attendance/settings.php?module=attendance') : '/attendance/settings.php');
-        $apiUrl = function_exists('app_url')
-            ? app_url('/attendance/api/admin-settings.php')
-            : '/attendance/api/admin-settings.php';
+        $apiUrl = function_exists('company_url')
+            ? company_url('attendance/api/admin-settings.php')
+            : (function_exists('app_url') ? app_url('/attendance/api/admin-settings.php') : '/attendance/api/admin-settings.php');
 
         return [
             'settings' => [
@@ -380,7 +380,7 @@ if (!function_exists('attendanceSettingsSave')) {
                         return ['success' => false, 'message' => 'Failed to update settings.'];
                     }
                 }
-                // rowCount 0 with existing row usually means values were unchanged — still success.
+                // Unchanged values still count as success.
             }
         } catch (Throwable $e) {
             error_log('attendanceSettingsSave: ' . $e->getMessage());

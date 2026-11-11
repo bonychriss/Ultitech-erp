@@ -113,9 +113,14 @@ if ($action === 'analytics') {
         $rangeStart !== '' ? $rangeStart : null,
         $rangeEnd !== '' ? $rangeEnd : null
     );
-    $data['apiUrl'] = function_exists('app_url')
-        ? rtrim((string) app_url('/attendance'), '/') . '/api/action.php'
-        : '/attendance/api/action.php';
+    $companySlug = trim((string) ($_SESSION['company_slug'] ?? ($_GET['company_slug'] ?? '')));
+    $data['apiUrl'] = function_exists('company_url')
+        ? (string) company_url('attendance/api/action.php', $companySlug !== '' ? $companySlug : null)
+        : (function_exists('app_url')
+            ? (string) app_url(($companySlug !== '' ? '/' . rawurlencode($companySlug) : '')
+                . '/attendance/api/action.php')
+            : (($companySlug !== '' ? '/' . rawurlencode($companySlug) : '')
+                . '/attendance/api/action.php'));
     echo json_encode([
         'success' => true,
         'message' => '',

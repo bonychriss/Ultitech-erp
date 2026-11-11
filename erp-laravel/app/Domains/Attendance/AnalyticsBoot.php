@@ -43,11 +43,44 @@ final class AnalyticsBoot
         $rangeEnd = isset($_GET['end']) ? trim((string) $_GET['end']) : null;
         $userId = (int) ($erp['user_id'] ?? ($_SESSION['user_id'] ?? 0));
 
-        $apiUrl = function_exists('app_url')
-            ? rtrim((string) app_url('/attendance'), '/') . '/api/action.php'
-            : '/attendance/api/action.php';
-
-        $companySlug = trim((string) ($erp['company_slug'] ?? ($_SESSION['company_slug'] ?? '')));
+        $slugCandidates = [
+            (string) ($erp['company_slug'] ?? ''),
+            (string) ($_SESSION['company_slug'] ?? ''),
+            (string) ($_GET['company_slug'] ?? ''),
+            (string) ($GLOBALS['ERP_ATTENDANCE_CONTEXT']['company_slug'] ?? ''),
+        ];
+        if (function_exists('getRequestedCompanySlug')) {
+            $slugCandidates[] = (string) getRequestedCompanySlug();
+        }
+        $companySlug = '';
+        foreach ($slugCandidates as $candidate) {
+            $candidate = trim($candidate);
+            if ($candidate !== '') {
+                $companySlug = $candidate;
+                break;
+            }
+        }
+        if ($companySlug === '') {
+            $requestPaths = [
+                (string) ($_SERVER['REQUEST_URI'] ?? ''),
+                (string) ($_SERVER['SCRIPT_NAME'] ?? ''),
+                (string) ($GLOBALS['ERP_ATTENDANCE_CONTEXT']['attendance_url'] ?? ''),
+            ];
+            foreach ($requestPaths as $requestPath) {
+                $requestPath = (string) (parse_url($requestPath, PHP_URL_PATH) ?? '');
+                if (preg_match('#^/([A-Za-z0-9-]+)/attendance(?:/|$)#i', $requestPath, $matches)) {
+                    $companySlug = strtolower($matches[1]);
+                    break;
+                }
+            }
+        }
+        $apiUrl = function_exists('company_url')
+            ? (string) company_url('attendance/api/action.php', $companySlug !== '' ? $companySlug : null)
+            : (function_exists('app_url')
+                ? (string) app_url(($companySlug !== '' ? '/' . rawurlencode($companySlug) : '')
+                    . '/attendance/api/action.php')
+                : (($companySlug !== '' ? '/' . rawurlencode($companySlug) : '')
+                    . '/attendance/api/action.php'));
         $route = static function (string $path) use ($companySlug): string {
             if (function_exists('company_url') && $companySlug !== '') {
                 return (string) company_url($path, $companySlug);

@@ -57,7 +57,7 @@ final class ClockBoot
                     'clockInSuccess' => null,
                     'clockOutSuccess' => null,
                     'user' => ['id' => 0, 'name' => '', 'signatureUrl' => ''],
-                    'apiUrl' => $this->apiUrl(),
+                    'apiUrl' => $this->apiUrl((string) ($erp['company_slug'] ?? '')),
                     'links' => $this->links(),
                     'wallpapers' => $this->wallpapers(),
                     'engine' => 'erp-laravel Domains/Attendance',
@@ -127,7 +127,7 @@ final class ClockBoot
                     'name' => (string) ($user['full_name'] ?? $user['username'] ?? ''),
                     'signatureUrl' => $signatureUrl,
                 ],
-                'apiUrl' => $this->apiUrl(),
+                'apiUrl' => $this->apiUrl((string) ($erp['company_slug'] ?? '')),
                 'links' => $this->links(),
                 'wallpapers' => $this->wallpapers(),
                 'engine' => 'erp-laravel Domains/Attendance',
@@ -147,13 +147,51 @@ final class ClockBoot
         return '/wallpapers/' . $wallpaperFile;
     }
 
-    private function apiUrl(): string
+    private function apiUrl(string $companySlug = ''): string
     {
-        if (function_exists('app_url')) {
-            return rtrim((string) app_url('/attendance'), '/') . '/api/action.php';
+        $companySlug = trim($companySlug);
+        if ($companySlug === '') {
+            $slugCandidates = [
+                (string) ($_SESSION['company_slug'] ?? ''),
+                (string) ($_GET['company_slug'] ?? ''),
+                (string) ($GLOBALS['ERP_ATTENDANCE_CONTEXT']['company_slug'] ?? ''),
+            ];
+            if (function_exists('getRequestedCompanySlug')) {
+                $slugCandidates[] = (string) getRequestedCompanySlug();
+            }
+            foreach ($slugCandidates as $candidate) {
+                $candidate = trim($candidate);
+                if ($candidate !== '') {
+                    $companySlug = $candidate;
+                    break;
+                }
+            }
+        }
+        if ($companySlug === '') {
+            $requestPaths = [
+                (string) ($_SERVER['REQUEST_URI'] ?? ''),
+                (string) ($_SERVER['SCRIPT_NAME'] ?? ''),
+                (string) ($GLOBALS['ERP_ATTENDANCE_CONTEXT']['attendance_url'] ?? ''),
+            ];
+            foreach ($requestPaths as $requestPath) {
+                $requestPath = (string) (parse_url($requestPath, PHP_URL_PATH) ?? '');
+                if (preg_match('#^/([A-Za-z0-9-]+)/attendance(?:/|$)#i', $requestPath, $matches)) {
+                    $companySlug = strtolower($matches[1]);
+                    break;
+                }
+            }
         }
 
-        return '/attendance/api/action.php';
+        if (function_exists('company_url')) {
+            return (string) company_url(
+                'attendance/api/action.php',
+                $companySlug !== '' ? $companySlug : null
+            );
+        }
+
+        $path = ($companySlug !== '' ? '/' . rawurlencode($companySlug) : '')
+            . '/attendance/api/action.php';
+        return function_exists('app_url') ? (string) app_url($path) : $path;
     }
 
     /**

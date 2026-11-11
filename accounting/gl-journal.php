@@ -260,7 +260,7 @@ $accountOptions = static function (int $selected) use ($accounts, $typeLabels): 
           <?php $sd = 0; $sc = 0; foreach ($lines as $l): $sd += (float) $l['debit']; $sc += (float) $l['credit']; ?>
             <tr>
               <td><?= (int) $l['line_no'] ?></td>
-              <td><a href="ledger.php?account_id=<?= (int) $l['account_id'] ?>&from_date=<?= gl_h(date('Y-01-01', strtotime($entry['entry_date']))) ?>&to_date=<?= gl_h($entry['entry_date']) ?>"><?= gl_h(gl_account_label(['code' => $l['code'], 'name' => $l['account_name']])) ?></a></td>
+              <td><a href="ledger.php?account_id=<?= (int) $l['account_id'] ?>&from_date=<?= gl_h(date('Y-01-01', strtotime($entry['entry_date']))) ?>&to_date=<?= gl_h($entry['entry_date']) ?>&start_date=<?= gl_h(date('Y-01-01', strtotime($entry['entry_date']))) ?>&end_date=<?= gl_h($entry['entry_date']) ?>"><?= gl_h(gl_account_label(['code' => $l['code'], 'name' => $l['account_name']])) ?></a></td>
               <td><?= gl_h($l['fa_name'] ?? '') ?></td>
               <td class="wrap"><?= gl_h($l['memo']) ?></td>
               <td class="n"><?= (float) $l['debit'] > 0 ? number_format((float) $l['debit'], 2) : '' ?></td>

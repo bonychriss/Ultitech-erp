@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import LetterheadDocument from '../components/LetterheadDocument.jsx';
 import ShareLetterModal from '../components/ShareLetterModal.jsx';
+import { showPayablesNotification } from '../../../../../view-voucher-ui/frontend/src/payables-notification.js';
 import {
   approveLetterOnServer,
   createLetterId,
@@ -98,6 +99,7 @@ export default function ComposeLetterPage() {
     let approverName = '';
     let approverTitle = '';
     let approverSignatureUrl = '';
+    let authorId = Number(cfg.user?.id || 0) || 0;
     if (id) {
       const existing = getLetter(id, cfg);
       if (existing?.form) {
@@ -108,6 +110,7 @@ export default function ComposeLetterPage() {
         approverName = String(existing.approverName || '');
         approverTitle = String(existing.approverTitle || '');
         approverSignatureUrl = String(existing.approverSignatureUrl || '');
+        authorId = Number(existing.authorId || authorId) || 0;
       }
     } else {
       id = createLetterId();
@@ -121,6 +124,7 @@ export default function ComposeLetterPage() {
       approverName,
       approverTitle,
       approverSignatureUrl,
+      authorId,
     };
   }, [cfg, defaults]);
 
@@ -132,6 +136,8 @@ export default function ComposeLetterPage() {
   const [approverName, setApproverName] = useState(boot.approverName);
   const [approverTitle, setApproverTitle] = useState(boot.approverTitle);
   const [approverSignatureUrl, setApproverSignatureUrl] = useState(boot.approverSignatureUrl);
+  const [authorId, setAuthorId] = useState(boot.authorId);
+  const [letterLoaded, setLetterLoaded] = useState(false);
   const [saveState, setSaveState] = useState('idle');
   const [downloading, setDownloading] = useState(false);
   const [busyAction, setBusyAction] = useState('');
@@ -149,11 +155,12 @@ export default function ComposeLetterPage() {
   statusRef.current = status;
 
   const accent = branding.accentColor || '#FBC51C';
-  const isAuthor = Number(user.id || 0) === Number(getLetter(letterId, cfg)?.authorId || user.id || 0)
-    || !getLetter(letterId, cfg)?.authorId;
+  const isAuthor = Number(user.id || 0) > 0 && Number(user.id || 0) === authorId;
+  const canEdit = letterLoaded && !busyAction && status !== 'approved' && (isAuthor || isAdmin);
 
   const applyServerLetter = (letter) => {
     if (!letter) return;
+    setAuthorId(Number(letter.authorId || 0));
     if (letter.form && typeof letter.form === 'object') {
       setForm({ ...defaults, ...letter.form });
       formRef.current = { ...defaults, ...letter.form };
@@ -181,11 +188,11 @@ export default function ComposeLetterPage() {
         visibility: nextVisibility,
         status: nextStatus,
         authorName: String(nextForm.signName || user.name || '').trim(),
-        authorId: Number(user.id || 0) || 0,
+        authorId,
         approverName,
         approverTitle,
         approverSignatureUrl,
-        skipServer: nextStatus !== 'draft',
+        skipServer: nextStatus === 'approved',
       },
       cfg
     );
@@ -193,10 +200,16 @@ export default function ComposeLetterPage() {
 
   useEffect(() => {
     ensureLetterIdInUrl(letterId);
-    persist(formRef.current);
+    let active = true;
     fetchLetterFromServer(letterId, cfg).then((letter) => {
+      if (!active) return;
       if (letter) applyServerLetter(letter);
+      else persist(formRef.current);
+      setLetterLoaded(true);
     });
+    return () => {
+      active = false;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [letterId]);
 
@@ -248,7 +261,7 @@ export default function ComposeLetterPage() {
 
   useEffect(() => {
     const flush = () => {
-      persist(formRef.current);
+      if (letterLoaded) persist(formRef.current);
     };
     const onHide = () => {
       if (document.visibilityState === 'hidden') flush();
@@ -261,17 +274,10 @@ export default function ComposeLetterPage() {
       flush();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [letterId, createdAt, cfg]);
+  }, [letterId, createdAt, cfg, letterLoaded]);
 
   const onChange = (key, value) => {
-    if (statusRef.current === 'approved' && !isAdmin) {
-      // Editing approved letter demotes to draft until re-approved.
-      setStatus('draft');
-      statusRef.current = 'draft';
-      setApproverName('');
-      setApproverTitle('');
-      setApproverSignatureUrl('');
-    }
+    if (!canEdit) return;
     setForm((prev) => {
       const next = { ...prev, [key]: value };
       persist(next, visibilityRef.current, statusRef.current);
@@ -317,13 +323,37 @@ export default function ComposeLetterPage() {
               ? 'Rejected'
               : '';
 
-  const handleSaveLetter = () => {
-    const ok = persist(formRef.current);
+  const handleSaveLetter = async () => {
+    if (!canEdit || busyAction) return;
+    setActionsOpen(false);
+    setBusyAction('save');
     if (savedTimerRef.current) {
       window.clearTimeout(savedTimerRef.current);
     }
-    setSaveState(ok ? 'saved' : 'idle');
-    setActionsOpen(false);
+    try {
+      const payload = {
+        id: letterId,
+        form: formRef.current,
+        createdAt,
+        title: letterDisplayTitle(formRef.current),
+        visibility: visibilityRef.current,
+        authorName: String(formRef.current.signName || user.name || '').trim(),
+        authorId,
+        status: statusRef.current,
+      };
+      const letter = await saveLetterToServer(payload, {}, cfg);
+      if (letter) {
+        applyServerLetter(letter);
+      } else if (!persist(formRef.current)) {
+        throw new Error('Could not save letter.');
+      }
+      setSaveState('saved');
+      showPayablesNotification('Letter saved successfully.', 'Letter updated');
+    } catch (err) {
+      window.alert(err?.message || 'Could not save letter.');
+    } finally {
+      setBusyAction('');
+    }
   };
 
   const handleSetVisibility = (nextVisibility) => {
@@ -342,7 +372,7 @@ export default function ComposeLetterPage() {
   };
 
   const handleSubmitForApproval = async () => {
-    if (busyAction) return;
+    if (busyAction || !isAuthor || status === 'approved') return;
     setActionsOpen(false);
     setBusyAction('submit');
     try {
@@ -438,8 +468,8 @@ export default function ComposeLetterPage() {
     }
   };
 
-  const canSubmit = !isAdmin && status !== 'pending' && status !== 'approved';
-  const canApprove = isAdmin && (status === 'pending' || status === 'draft');
+  const canSubmit = letterLoaded && !isAdmin && isAuthor && status !== 'pending' && status !== 'approved';
+  const canApprove = letterLoaded && isAdmin && (status === 'pending' || status === 'draft');
 
   return (
     <div className="letter-workspace" style={{ '--lh-accent': accent }}>
@@ -494,6 +524,7 @@ export default function ComposeLetterPage() {
             className={`letter-btn letter-btn-primary letter-btn--pill${actionsOpen ? ' is-open' : ''}`}
             aria-haspopup="menu"
             aria-expanded={actionsOpen}
+            disabled={!letterLoaded}
             onClick={() => setActionsOpen((open) => !open)}
           >
             Actions
@@ -505,10 +536,11 @@ export default function ComposeLetterPage() {
                 type="button"
                 className="letter-actions-item"
                 role="menuitem"
-                onClick={handleSaveLetter}
+                onClick={() => void handleSaveLetter()}
+                disabled={!canEdit || Boolean(busyAction)}
               >
                 <Save size={16} />
-                Save letter
+                {busyAction === 'save' ? 'Saving letter…' : 'Save letter'}
               </button>
               {canSubmit && isAuthor ? (
                 <button
@@ -592,7 +624,9 @@ export default function ComposeLetterPage() {
 
       <section className="letter-preview-pane">
         <div className="letter-preview-label">
-          {status === 'approved'
+          {!letterLoaded
+            ? 'Loading letter…'
+            : status === 'approved'
             ? 'Approved — company stamp applied'
             : status === 'pending'
               ? 'Awaiting admin approval — stamp appears after approval'
@@ -600,7 +634,7 @@ export default function ComposeLetterPage() {
         </div>
         <LetterheadDocument
           doc={doc}
-          editable={status !== 'approved' || isAdmin}
+          editable={canEdit}
           onChange={onChange}
         />
       </section>

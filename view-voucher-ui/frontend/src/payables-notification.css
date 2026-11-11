@@ -1,0 +1,51 @@
+.payables-notification {
+  position: fixed;
+  z-index: 2147483000;
+  top: 20px;
+  right: 20px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  width: min(360px, calc(100vw - 32px));
+  box-sizing: border-box;
+  padding: 16px 14px;
+  border: 1px solid #dfe4e9;
+  border-left: 5px solid #168a4b;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, .16);
+  color: #1f2937;
+  font: 14px/1.35 system-ui, -apple-system, sans-serif;
+}
+
+.payables-notification__icon { flex: 0 0 23px; color: #168a4b; }
+.payables-notification__icon svg { display: block; width: 23px; height: 23px; }
+.payables-notification__content { flex: 1; min-width: 0; }
+.payables-notification__label { color: #168a4b; font-weight: 600; }
+.payables-notification__title { display: block; margin-top: 3px; font-size: 15px; }
+.payables-notification__detail { margin-top: 3px; color: #52606d; overflow-wrap: anywhere; }
+.payables-notification .payables-notification__close {
+  flex: 0 0 24px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #52606d;
+  font: 24px/24px system-ui, sans-serif;
+  cursor: pointer;
+}
+.payables-notification .payables-notification__close:hover { color: #111827; }
+.payables-notification .payables-notification__close:focus-visible { outline: 2px solid #168a4b; outline-offset: 2px; }
+html[data-theme="dark"] .payables-notification {
+  border-color: #444a52;
+  border-left-color: #59cb8b;
+  background: #1d2228;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, .28);
+  color: #f3f4f6;
+}
+html[data-theme="dark"] .payables-notification__icon,
+html[data-theme="dark"] .payables-notification__label { color: #59cb8b; }
+html[data-theme="dark"] .payables-notification__detail,
+html[data-theme="dark"] .payables-notification .payables-notification__close { color: #b4bac2; }
+html[data-theme="dark"] .payables-notification .payables-notification__close:hover { color: #fff; }
+html[data-theme="dark"] .payables-notification .payables-notification__close:focus-visible { outline-color: #59cb8b; }
+@media (max-width: 480px) { .payables-notification { top: 12px; right: 16px; } }

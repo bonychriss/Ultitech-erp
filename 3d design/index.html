@@ -200,7 +200,7 @@
             <li><span class="swatch" style="background:#7da35f"></span>Lawn</li>
             <li><span class="swatch" style="background:#d8c9a6"></span>Sand yard</li>
             <li><span class="swatch" style="background:#a9a69c"></span>Concrete pad &amp; basin</li>
-            <li><span class="swatch" style="background:#ecebe6"></span>Gravel bed, palms &amp; pines</li>
+            <li><span class="swatch" style="background:#ecebe6"></span>Gravel bed, royal palms &amp; pines</li>
             <li><span class="swatch" style="background:#cfd9d3"></span>Boundary walls</li>
           </ul>
           <div class="divider"></div>
@@ -1211,8 +1211,11 @@
         g.stroke();
         return canvas;
       }
-      const palmFrondMat = alphaCardMaterial(frondCanvas({ leafletColors: ["#4f7d33", "#5d8c3b", "#467230", "#6b9944", "#3f692b"], leaflet: 200, spacing: 7, width: 6 }));
-      const palmFrondDryMat = alphaCardMaterial(frondCanvas({ leafletColors: ["#a08a4a", "#b49b58", "#8f7a3f", "#c2aa66"], stem: "#8b7442", leaflet: 170, spacing: 8, width: 5 }));
+      const palmFrondMat = alphaCardMaterial(
+        frondCanvas({ leafletColors: ["#3d7029", "#4a7f31", "#355f24", "#58903a", "#2f5a22"], stem: "#7d8a45", leaflet: 205, spacing: 7, width: 7.5 }),
+        "#ffffff",
+        0.55
+      );
       const pineNeedleMat = alphaCardMaterial(
         frondCanvas({ leafletColors: ["#2f5a2c", "#3a6b35", "#284f26", "#44783d"], stem: "#4b4632", leaflet: 150, spacing: 4, width: 3.2 }),
         "#ffffff",
@@ -1234,55 +1237,89 @@
         geometry.computeVertexNormals();
         return geometry;
       }
-      const frondGeos = [0.25, 0.45, 0.7, 1.0].map((d) => frondGeometry(d));
-      const hangingFrondGeo = frondGeometry(1.4, 0.05, 0.1);
       const pineBranchGeo = frondGeometry(0.12, 0.08, 0.05);
 
-      function ringCanvas(base, ring) {
+      // Royal palm (Roystonea regia) trunk: smooth pale grey "concrete column" with faint leaf-scar rings.
+      function royalTrunkCanvas() {
         const [canvas, g] = makeCanvas(128);
-        g.fillStyle = base;
+        g.fillStyle = "#bdb9b0";
         g.fillRect(0, 0, 128, 128);
-        for (let y = 0; y < 128; y += 16) {
-          g.fillStyle = ring;
-          g.fillRect(0, y + Math.random() * 2, 128, 2 + Math.random() * 2);
-          for (let k = 0; k < 40; k++) {
-            g.fillStyle = `rgba(0,0,0,${Math.random() * 0.08})`;
-            g.fillRect(Math.random() * 128, y + Math.random() * 16, 6, 1);
-          }
+        for (let k = 0; k < 900; k++) {
+          const v = 150 + Math.random() * 50;
+          g.fillStyle = `rgba(${v},${v - 3},${v - 10},0.18)`;
+          g.fillRect(Math.random() * 128, Math.random() * 128, 2 + Math.random() * 5, 1);
+        }
+        for (let y = 0; y < 128; y += 8) {
+          g.fillStyle = `rgba(95,90,80,${0.12 + Math.random() * 0.1})`;
+          g.fillRect(0, y + Math.random(), 128, 1);
         }
         return canvas;
       }
-      const palmTrunkMat = new THREE.MeshStandardMaterial({ map: textureFrom(ringCanvas("#8f8a80", "#7a746a"), 2, 6), roughness: 0.95 });
-      const crownshaftMat = material("#7f9455", 0.7);
+      const palmTrunkMat = new THREE.MeshStandardMaterial({ map: textureFrom(royalTrunkCanvas(), 2, 9), roughness: 0.85 });
+      const crownshaftMat = material("#4f8a34", 0.38);
+
+      function latheAlong(profile, length, segments, bend = () => [0, 0]) {
+        const points = profile.map(([t, r]) => new THREE.Vector2(r, t * length));
+        const geometry = new THREE.LatheGeometry(points, segments);
+        const pos = geometry.attributes.position;
+        for (let i = 0; i < pos.count; i++) {
+          const [dx, dz] = bend(pos.getY(i) / length);
+          pos.setX(i, pos.getX(i) + dx);
+          pos.setZ(i, pos.getZ(i) + dz);
+        }
+        geometry.computeVertexNormals();
+        return geometry;
+      }
+      const royalTrunkProfile = Array.from({ length: 25 }, (_, i) => {
+        const t = i / 24;
+        const flare = 0.1 * Math.exp(-t * 16);
+        const swell = 0.05 * Math.sin(Math.PI * Math.min(1, Math.max(0, (t - 0.2) / 0.6)));
+        return [t, 0.21 + flare + swell - 0.03 * t];
+      });
+      const crownshaftProfile = [[0, 0.19], [0.12, 0.235], [0.35, 0.235], [0.7, 0.2], [0.92, 0.16], [1, 0.13]];
+      const royalFrondGeos = [0.55, 0.8, 1.05].map((d) => frondGeometry(d, 0.42, 0.18));
+      const spearGeo = frondGeometry(0.05, 0.05, 0.05);
 
       function addPalm(x, z, height, leanX = 0, leanZ = 0, crown = 1) {
-        let prev = [x, 0, z];
-        const segments = 9;
-        for (let i = 1; i <= segments; i++) {
-          const t = i / segments;
-          const next = [x + leanX * t * t, height * t, z + leanZ * t * t];
-          cylinderBetween(site, prev, next, 0.24 - 0.07 * t, palmTrunkMat, 10, 0.95);
-          prev = next;
-        }
-        const [tx, ty, tz] = prev;
-        cylinderBetween(site, [tx, ty - 0.1, tz], [tx, ty + 1.1, tz], 0.17, crownshaftMat, 10, 0.75);
+        const bend = (t) => [leanX * t * t, leanZ * t * t];
+        const trunk = new THREE.Mesh(latheAlong(royalTrunkProfile, height, 20, bend), palmTrunkMat);
+        trunk.position.set(x, 0, z);
+        trunk.castShadow = trunk.receiveShadow = true;
+        site.add(trunk);
+
+        const shaftLength = 1.9 * crown;
+        const shaft = new THREE.Mesh(latheAlong(crownshaftProfile, shaftLength, 16), crownshaftMat);
+        shaft.position.set(x + leanX, height - 0.05, z + leanZ);
+        shaft.castShadow = shaft.receiveShadow = true;
+        site.add(shaft);
+
         const top = new THREE.Group();
-        top.position.set(tx, ty + 1.05, tz);
+        top.position.set(x + leanX, height + shaftLength - 0.1, z + leanZ);
         site.add(top);
-        const length = 3.6 * crown;
-        const count = 16;
+        const length = 3.9 * crown;
+        const count = 15;
         for (let i = 0; i < count; i++) {
           const yaw = new THREE.Group();
-          yaw.rotation.y = (i / count) * Math.PI * 2 + (Math.random() - 0.5) * 0.35;
+          yaw.rotation.y = i * 2.4 + Math.random() * 0.2;
           const pitch = new THREE.Group();
-          const hanging = i % 7 === 3;
-          pitch.rotation.z = hanging ? -0.9 : -0.25 + Math.random() * 0.8;
-          const frond = cardMesh(hanging ? hangingFrondGeo : frondGeos[i % frondGeos.length], hanging ? palmFrondDryMat : palmFrondMat);
-          frond.scale.set(length * (0.85 + Math.random() * 0.25), length, length * 0.55);
-          pitch.add(frond);
+          const tier = i / count;
+          pitch.rotation.z = 1.0 - tier * 1.35 + (Math.random() - 0.5) * 0.2;
+          const scale = length * (0.85 + Math.random() * 0.2) * (tier < 0.2 ? 0.8 : 1);
+          const geo = royalFrondGeos[Math.min(2, Math.floor(tier * 3))];
+          // Leaflets leave the rachis in several planes, giving the plumed royal-palm look.
+          for (const roll of [-0.55, 0.55]) {
+            const frond = cardMesh(geo, palmFrondMat);
+            frond.rotation.x = roll;
+            frond.scale.set(scale, scale, scale * 0.42);
+            pitch.add(frond);
+          }
           yaw.add(pitch);
           top.add(yaw);
         }
+        const spear = cardMesh(spearGeo, palmFrondMat);
+        spear.rotation.z = Math.PI / 2 - 0.08;
+        spear.scale.set(length * 0.55, length * 0.55, length * 0.12);
+        top.add(spear);
       }
 
       // Norfolk Island pine: straight trunk with whorls of horizontal needle branches.
@@ -1365,7 +1402,7 @@
 
       // Palm and Norfolk pine row on the white gravel bed along the right wall.
       [[14.2, 11.5], [8.6, 12.5], [3.0, 11.8], [-3.0, 12.6], [-9.0, 11.6], [-15.5, 12.2], [-21.5, 11.4]].forEach(([z, h], i) =>
-        addPalm(DRIVE[1] + CURB_W + 0.45 + (i % 2) * 0.25, z, h, (i % 2 ? -0.4 : 0.4), 0.3, 1.05)
+        addPalm(DRIVE[1] + CURB_W + 0.45 + (i % 2) * 0.25, z, h, (i % 2 ? -0.12 : 0.12), 0.08, 1.05)
       );
       [11.4, 5.8, 0.0, -6.0, -12.2, -18.4, -24.5].forEach((z) => addNorfolkPine(DRIVE[1] + CURB_W + 0.6, z, 6.5));
 
@@ -1446,10 +1483,10 @@
       addTree(-32, -20, 8, 3.6);
       addTree(18, -14, 9, 3.4);
       addTree(20, 6, 7.5, 2.8);
-      addPalm(-20, 20, 12, 0.6, 0.2, 1.1);
-      addPalm(-33, 31, 13, -0.4, 0, 1.1);
-      addPalm(-36, -2, 11, 0.3, 0.4, 1.0);
-      addPalm(14, -30, 12, 0.5, -0.2, 1.0);
+      addPalm(-20, 20, 12, 0.2, 0.1, 1.1);
+      addPalm(-33, 31, 13, -0.15, 0, 1.1);
+      addPalm(-36, -2, 11, 0.1, 0.15, 1.0);
+      addPalm(14, -30, 12, 0.15, -0.1, 1.0);
 
       // Utility poles and overhead lines along the street.
       const poleMat = material("#b9b5aa", 0.8);

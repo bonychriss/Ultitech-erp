@@ -275,7 +275,7 @@
       camera.position.copy(initialCamera);
 
       const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio, isPhone ? 1.5 : 2));
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, isPhone ? 3 : 2));
       renderer.shadowMap.enabled = true;
       renderer.shadowMap.type = THREE.PCFSoftShadowMap;
       renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -306,7 +306,7 @@
       const sun = new THREE.DirectionalLight("#ffeccc", 3.0);
       sun.position.set(-22, 38, 26);
       sun.castShadow = true;
-      sun.shadow.mapSize.setScalar(isPhone ? 2048 : 4096);
+      sun.shadow.mapSize.setScalar(Math.min(4096, renderer.capabilities.maxTextureSize));
       sun.shadow.camera.left = -40;
       sun.shadow.camera.right = 40;
       sun.shadow.camera.top = 40;
@@ -1550,7 +1550,7 @@
       const composer = new EffectComposer(renderer, new THREE.WebGLRenderTarget(1, 1, { samples: 4, type: THREE.HalfFloatType }));
       composer.addPass(new RenderPass(scene, camera));
       const aoPass = new GTAOPass(scene, camera, 1, 1);
-      aoPass.updateGtaoMaterial({ radius: 0.6, distanceExponent: 1.5, thickness: 1.5, scale: 1.1, samples: isPhone ? 8 : 16 });
+      aoPass.updateGtaoMaterial({ radius: 0.6, distanceExponent: 1.5, thickness: 1.5, scale: 1.1, samples: isPhone ? 12 : 16 });
       aoPass.blendIntensity = 0.85;
       composer.addPass(aoPass);
       composer.addPass(new OutputPass());

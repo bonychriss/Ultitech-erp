@@ -70,6 +70,7 @@ function validUntilIso(days = 7) {
 
 const CATALOGUE_ITEMS_KEY = 'sales_catalogue_items';
 const CATALOGUE_SELECTION_DRAFT_KEY = 'sales_catalogue_items_draft';
+const LEGACY_QUOTE_FORM_DRAFT_KEY = 'sales_quote_form_draft';
 
 function writeCatalogueSelectionDraft(rows) {
   try {
@@ -137,7 +138,7 @@ function mergeCatalogueLines(prev, mapped, emptyLineFn) {
 }
 
 function formDraftKey(isQuote) {
-  return isQuote ? 'sales_quote_form_draft' : 'sales_invoice_form_draft';
+  return isQuote ? 'sales_quote_form_draft_v2' : 'sales_invoice_form_draft';
 }
 
 function sanitizeDraftItems(items) {
@@ -176,6 +177,7 @@ function writeFormDraft(isQuote, payload) {
 function clearFormDraft(isQuote) {
   try {
     localStorage.removeItem(formDraftKey(isQuote));
+    if (isQuote) localStorage.removeItem(LEGACY_QUOTE_FORM_DRAFT_KEY);
   } catch {
     // ignore
   }
@@ -290,6 +292,7 @@ export default function InvoiceCreatePage({ mode = 'create' }) {
   const [rateHint, setRateHint] = useState('Select one or more currencies. BOT rates load automatically for non-TZS codes.');
   const [rateLoadingCodes, setRateLoadingCodes] = useState([]);
   const rateFetchToken = useRef(0);
+  const successfulSubmitRef = useRef(false);
   const currencyRef = useRef(null);
   const productSearchRefs = useRef(new Map());
   const [productDropdownStyle, setProductDropdownStyle] = useState(null);
@@ -402,6 +405,13 @@ export default function InvoiceCreatePage({ mode = 'create' }) {
       const docIsQuote = (data.document_type || 'invoice') === 'quote';
       const pageParams = new URLSearchParams(window.location.search);
       const websiteQuote = pageParams.get('website_quote') || '';
+      if (docIsQuote) {
+        try {
+          localStorage.removeItem(LEGACY_QUOTE_FORM_DRAFT_KEY);
+        } catch {
+          // ignore
+        }
+      }
       const draft = websiteQuote ? null : readFormDraft(docIsQuote);
       if (websiteQuote) {
         setWebsiteQuoteNumber(websiteQuote);
@@ -522,7 +532,7 @@ export default function InvoiceCreatePage({ mode = 'create' }) {
   useEffect(() => { loadInit(); }, [loadInit]);
 
   const persistFormDraft = useCallback(() => {
-    if (isEditMode || !init || loading) return;
+    if (isEditMode || successfulSubmitRef.current || !init || loading) return;
     const hasLines = items.some((line) => Number(line.product_id) > 0);
     if (!hasLines && !customerId) return;
     writeFormDraft(isQuote, {
@@ -906,6 +916,7 @@ export default function InvoiceCreatePage({ mode = 'create' }) {
           : (isQuote
             ? await submitCreateQuote(buildFormData())
             : await submitCreateInvoice(buildFormData())));
+      successfulSubmitRef.current = true;
       clearCatalogueSelectionDraft();
       clearFormDraft(isQuote);
       window.location.href = result.redirect || indexUrl;

@@ -1,0 +1,1177 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#f6f3ec" />
+    <title>Ultimate General Trading &mdash; 3D Showroom</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        color: #1d1d1b;
+        background: #f6f3ec;
+        font-synthesis: none;
+        text-rendering: optimizeLegibility;
+        -webkit-font-smoothing: antialiased;
+        --muted: #77756e;
+        --line: #e7e2d6;
+        --ink: #1d1d1b;
+        --accent: #e6d9b8;
+        --accent-strong: #a8884c;
+      }
+
+      * { box-sizing: border-box; }
+      body { min-width: 320px; min-height: 100vh; margin: 0; overflow: hidden; }
+      button, input { font: inherit; }
+
+      .app { display: grid; grid-template-rows: 76px minmax(0, 1fr); width: 100vw; height: 100vh; }
+
+      header {
+        z-index: 2;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 30px;
+        background: rgba(255, 255, 253, 0.95);
+        border-bottom: 1px solid var(--line);
+      }
+      .brand { display: flex; align-items: center; gap: 13px; }
+      .brand-mark { display: grid; width: 38px; height: 38px; place-items: center; background: var(--ink); border-radius: 12px; }
+      .brand-mark span { display: block; width: 14px; height: 18px; background: var(--accent); box-shadow: 7px 4px 0 -2px var(--ink), 9px 4px 0 -2px var(--accent); }
+      .eyebrow { margin: 0 0 3px; color: var(--muted); font-size: 10px; font-weight: 700; letter-spacing: .15em; text-transform: uppercase; }
+      h1 { margin: 0; font-size: 16px; font-weight: 650; letter-spacing: -.02em; }
+      .header-note { color: var(--muted); font-size: 12px; }
+
+      main { position: relative; min-height: 0; }
+      #scene { position: absolute; inset: 0; }
+      #scene canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+
+      .side-panel {
+        position: absolute;
+        top: 24px;
+        left: 24px;
+        display: flex;
+        flex-direction: column;
+        width: 264px;
+        max-height: calc(100% - 48px);
+        padding: 19px;
+        background: rgba(255, 255, 253, .94);
+        border: 1px solid rgba(231, 226, 214, .9);
+        border-radius: 16px;
+        box-shadow: 0 12px 36px rgba(37, 33, 24, .08);
+        backdrop-filter: blur(12px);
+      }
+      .side-panel summary { display: block; list-style: none; cursor: pointer; }
+      .side-panel summary::-webkit-details-marker { display: none; }
+      .panel-toggle { display: none; }
+      .panel-body { display: flex; flex-direction: column; min-height: 0; }
+      .panel-title { margin: 0 0 5px; font-size: 14px; font-weight: 700; }
+      .panel-subtitle { margin: 0 0 14px; color: var(--muted); font-size: 11px; line-height: 1.5; }
+
+      .search { position: relative; margin-bottom: 12px; }
+      .search input {
+        width: 100%;
+        height: 36px;
+        padding: 0 12px 0 32px;
+        color: var(--ink);
+        background: #f4f1ea;
+        border: 1px solid transparent;
+        border-radius: 9px;
+        outline: none;
+        font-size: 12px;
+      }
+      .search input:focus { background: #fff; border-color: var(--accent-strong); }
+      .search svg { position: absolute; top: 11px; left: 11px; width: 14px; height: 14px; color: var(--muted); }
+      .results { display: grid; gap: 2px; margin: -4px 0 12px; padding: 0; list-style: none; }
+      .results:empty { display: none; }
+      .results button, .legend button {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        width: 100%;
+        padding: 6px 7px;
+        color: #45433d;
+        text-align: left;
+        background: transparent;
+        border: 0;
+        border-radius: 7px;
+        cursor: pointer;
+        font-size: 11.5px;
+      }
+      .results button:hover, .legend button:hover { color: var(--ink); background: #f4f1ea; }
+      .results img { width: 28px; height: 28px; flex: 0 0 auto; object-fit: cover; border-radius: 5px; }
+      .results span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+      .results .empty { padding: 6px 7px; color: var(--muted); font-size: 11px; }
+
+      .legend-wrap { min-height: 0; margin: 0 -7px; padding: 0 7px; overflow-y: auto; }
+      .legend { display: grid; gap: 1px; margin: 0; padding: 0; list-style: none; }
+      .swatch { width: 10px; height: 10px; border-radius: 3px; flex: 0 0 auto; }
+      .legend .count { margin-left: auto; color: var(--muted); font-size: 10.5px; font-variant-numeric: tabular-nums; }
+      .divider { height: 1px; margin: 14px 0 12px; background: var(--line); flex: 0 0 auto; }
+      .model-note { margin: 0; color: var(--muted); font-size: 10px; line-height: 1.55; }
+
+      .product-card {
+        position: absolute;
+        top: 24px;
+        right: 24px;
+        width: 300px;
+        max-height: calc(100% - 110px);
+        padding: 14px 16px 16px;
+        overflow-y: auto;
+        background: rgba(255, 255, 253, .97);
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        box-shadow: 0 16px 40px rgba(37, 33, 24, .12);
+      }
+      .product-card[hidden] { display: none; }
+      .card-close {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        display: grid;
+        width: 30px;
+        height: 30px;
+        place-items: center;
+        color: var(--muted);
+        background: #fff;
+        border: 1px solid var(--line);
+        border-radius: 50%;
+        cursor: pointer;
+      }
+      .card-close:hover { color: var(--ink); }
+      .card-close svg { width: 14px; height: 14px; }
+      .card-image { margin: 0 0 12px; aspect-ratio: 1; overflow: hidden; background: #fff; border-radius: 11px; }
+      .card-image img { display: block; width: 100%; height: 100%; object-fit: contain; }
+      .product-card h2 { margin: 0 0 4px; font-size: 15px; font-weight: 700; line-height: 1.3; letter-spacing: -.01em; }
+      .card-sku { margin: 0 0 12px; color: var(--muted); font-size: 11px; }
+      .card-meta { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+      .price { font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; }
+      .badge { padding: 4px 8px; font-size: 10px; font-weight: 700; letter-spacing: .04em; border-radius: 99px; }
+      .badge.in { color: #1f6b3a; background: #e3f2e7; }
+      .badge.order { color: #8a5a12; background: #f7ecd5; }
+      .card-desc { margin: 0 0 14px; color: #55534c; font-size: 12px; line-height: 1.55; }
+      .card-desc:empty { display: none; }
+      .card-cta {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 40px;
+        color: var(--accent);
+        text-decoration: none;
+        background: var(--ink);
+        border-radius: 10px;
+        font-size: 12.5px;
+        font-weight: 650;
+      }
+      .card-cta:hover { background: #33322e; }
+      .card-cta[hidden] { display: none; }
+
+      .view-controls {
+        position: absolute;
+        right: 24px;
+        bottom: 24px;
+        display: flex;
+        gap: 8px;
+        padding: 7px;
+        background: rgba(255, 255, 253, .95);
+        border: 1px solid var(--line);
+        border-radius: 13px;
+        box-shadow: 0 8px 26px rgba(37, 33, 24, .08);
+      }
+      .view-controls button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 7px;
+        min-height: 36px;
+        padding: 0 12px;
+        color: #4b4943;
+        background: transparent;
+        border: 0;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 11px;
+        font-weight: 600;
+      }
+      .view-controls button:hover { color: var(--ink); background: #f4f1ea; }
+      .view-controls svg { width: 15px; height: 15px; }
+
+      .hint {
+        position: absolute;
+        right: 24px;
+        bottom: 83px;
+        padding: 9px 12px;
+        color: #5c5a53;
+        background: rgba(255, 255, 253, .86);
+        border: 1px solid rgba(231, 226, 214, .85);
+        border-radius: 9px;
+        font-size: 10px;
+        pointer-events: none;
+      }
+      .touch-hint { display: none; }
+
+      .tooltip {
+        position: absolute;
+        z-index: 3;
+        max-width: 240px;
+        padding: 7px 10px;
+        color: #fff;
+        background: rgba(29, 29, 27, .92);
+        border-radius: 8px;
+        font-size: 11px;
+        line-height: 1.4;
+        pointer-events: none;
+        transform: translate(14px, 14px);
+      }
+      .tooltip[hidden] { display: none; }
+      .tooltip strong { display: block; font-weight: 650; }
+      .tooltip span { color: var(--accent); }
+
+      .loading { position: absolute; inset: 0; display: grid; place-items: center; padding: 24px; color: var(--muted); text-align: center; background: #f6f3ec; font-size: 13px; }
+      .loading.error { color: #9f3939; }
+
+      @media (max-width: 640px) {
+        .app { grid-template-rows: 58px minmax(0, 1fr); height: 100dvh; }
+        header { padding: 0 14px; }
+        .header-note { display: none; }
+        .brand { gap: 10px; min-width: 0; }
+        .brand-mark { width: 32px; height: 32px; border-radius: 10px; }
+        .eyebrow { font-size: 9px; }
+        h1 { overflow: hidden; font-size: 14px; white-space: nowrap; text-overflow: ellipsis; }
+
+        .side-panel { top: 10px; left: 10px; width: min(270px, calc(100vw - 20px)); max-height: calc(100% - 90px); padding: 0; border-radius: 13px; }
+        .side-panel summary { display: flex; align-items: center; gap: 8px; padding: 10px 13px; }
+        .side-panel summary .eyebrow { display: none; }
+        .side-panel summary .panel-title { margin: 0; font-size: 13px; }
+        .panel-toggle { display: block; width: 14px; height: 14px; margin-left: auto; color: var(--muted); transition: transform .2s; }
+        .side-panel[open] .panel-toggle { transform: rotate(180deg); }
+        .panel-body { padding: 0 13px 13px; }
+        .side-panel:not([open]) { width: auto; }
+
+        .product-card { top: auto; right: 10px; bottom: calc(66px + env(safe-area-inset-bottom)); left: 10px; width: auto; max-height: 58%; }
+        .card-image { width: 120px; float: left; margin: 0 12px 6px 0; }
+        .view-controls { right: 10px; bottom: calc(10px + env(safe-area-inset-bottom)); left: 10px; gap: 4px; padding: 5px; }
+        .view-controls button { flex: 1; padding: 0 6px; }
+        .hint { right: 10px; bottom: calc(66px + env(safe-area-inset-bottom)); left: 10px; text-align: center; }
+        .mouse-hint { display: none; }
+        .touch-hint { display: inline; }
+      }
+    </style>
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+          "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <div class="app">
+      <header>
+        <div class="brand">
+          <div class="brand-mark" aria-hidden="true"><span></span></div>
+          <div>
+            <p class="eyebrow">Ultimate General Trading &middot; 3D showroom</p>
+            <h1>Safety &amp; industrial supplies showroom</h1>
+          </div>
+        </div>
+        <p class="header-note" id="headerNote"></p>
+      </header>
+      <main>
+        <div id="scene" aria-label="Interactive 3D showroom with Ultimate General Trading products"></div>
+        <div class="loading" id="loading">Setting up the showroom&hellip;</div>
+        <details class="side-panel" id="sidePanel" open>
+          <summary>
+            <p class="eyebrow">Browse</p>
+            <p class="panel-title">Showroom aisles</p>
+            <svg class="panel-toggle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
+          </summary>
+          <div class="panel-body">
+            <p class="panel-subtitle" id="panelSubtitle">Click a product on the shelves for details, or jump to a category.</p>
+            <label class="search">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+              <input id="search" type="search" placeholder="Search products" autocomplete="off" aria-label="Search products" />
+            </label>
+            <ul class="results" id="results"></ul>
+            <div class="legend-wrap"><ul class="legend" id="legend"></ul></div>
+            <div class="divider"></div>
+            <p class="model-note" id="modelNote">Products, photos and prices come from the UltiTech catalogue.</p>
+          </div>
+        </details>
+        <aside class="product-card" id="productCard" hidden aria-live="polite">
+          <button type="button" class="card-close" id="cardClose" aria-label="Close product details">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18" /></svg>
+          </button>
+          <div class="card-image"><img id="cardImage" alt="" /></div>
+          <p class="eyebrow" id="cardCategory"></p>
+          <h2 id="cardName"></h2>
+          <p class="card-sku" id="cardSku"></p>
+          <div class="card-meta"><span class="price" id="cardPrice"></span><span class="badge" id="cardStock"></span></div>
+          <p class="card-desc" id="cardDesc"></p>
+          <a class="card-cta" id="cardQuote" target="_blank" rel="noopener" hidden>Request a quote</a>
+        </aside>
+        <div class="tooltip" id="tooltip" hidden></div>
+        <div class="hint"><span class="mouse-hint">Drag to look around &middot; Scroll to zoom &middot; Click a product</span><span class="touch-hint">Drag to look around &middot; Pinch to zoom &middot; Tap a product</span></div>
+        <div class="view-controls">
+          <button type="button" id="entranceView" aria-label="View from the entrance">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z" /><circle cx="12" cy="12" r="3" /></svg>
+            Entrance
+          </button>
+          <button type="button" id="topView" aria-label="Switch to top view">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7 12 3l9 4-9 4zM3 12l9 4 9-4M3 17l9 4 9-4" /></svg>
+            Top view
+          </button>
+          <button type="button" id="resetView" aria-label="Reset camera view">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 2.64-6.36L3 8" /><path d="M3 3v5h5" /></svg>
+            Reset
+          </button>
+        </div>
+      </main>
+    </div>
+    <script type="module">
+      import * as THREE from "three";
+      import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+      import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
+
+      // Site settings. quoteUrl may use {id}, {sku} and {name}, e.g. "https://ultimate.co.tz/contact?product={name}".
+      const CONFIG = {
+        dataUrl: "products.json",
+        quoteUrl: "",
+        showPrices: true,
+      };
+
+      const ASSETS = "assets/";
+      const BRAND = { ink: "#1d1d1b", accent: "#e6d9b8", accentStrong: "#a8884c", paper: "#fbfaf6" };
+      const CATEGORY_COLORS = {
+        "HEAD PROTECTIONS": "#f2b705",
+        "FACE & EYE PROTECTIONS": "#2aa198",
+        "RESPIRATORY PROTECTIONS": "#5b84c4",
+        "HEARING PROTECTIONS": "#c94f7c",
+        "HAND PROTECTIONS": "#2f7dd1",
+        "FOOT PROTECTIONS": "#7a4b2a",
+        "BODY PROTECTIONS": "#f26b1d",
+        "INDUSTRIAL WORKWEAR": "#2e5aa8",
+        "OFFICIAL WEAR": "#4b4f58",
+        "FIRE PROTECTIONS": "#d62828",
+        "EMERGENCY PROTECTIONS": "#e5484d",
+        "FALL PROTECTIONS": "#e9a23b",
+        "SAFETY SIGNS": "#1f9d55",
+        "SECURITY EQUIPMENT": "#334155",
+        "ELECTRICAL EQUIPMENT": "#f59e0b",
+        "INDUSTRIAL EQUIPMENT": "#64748b",
+        "WELDING MATERIALS": "#9a3412",
+        "CAR ACCESSORIES": "#0f766e",
+        "CLEANING MATERIAL": "#0ea5e9",
+      };
+      // Flat items (signs, clothing) stand as display cards; everything else is boxed stock.
+      const CARD_CATEGORIES = new Set(["SAFETY SIGNS", "BODY PROTECTIONS", "INDUSTRIAL WORKWEAR", "OFFICIAL WEAR"]);
+      const HERO_CATEGORIES = ["HEAD PROTECTIONS", "FOOT PROTECTIONS", "FIRE PROTECTIONS"];
+
+      const ROOM = { w: 24, d: 16, h: 3.6 };
+      const BAY = { w: 2.3, h: 2.45, d: 0.5, shelfTops: [1.275, 0.695, 1.855, 0.1], colGap: 0.56, perShelf: 4 };
+
+      const isPhone = window.matchMedia("(max-width: 640px)").matches;
+      const $ = (sel) => document.querySelector(sel);
+      if (isPhone) $("#sidePanel").open = false;
+
+      const mount = $("#scene");
+      const loading = $("#loading");
+      $("#scene").addEventListener("pointerdown", () => $(".hint")?.remove(), { once: true });
+
+      const scene = new THREE.Scene();
+      scene.background = new THREE.Color("#e9e5dc");
+      scene.fog = new THREE.Fog("#e9e5dc", 45, 90);
+
+      const camera = new THREE.PerspectiveCamera(40, 1, 0.05, 200);
+      const VIEWS = {
+        reset: { pos: new THREE.Vector3(0, 13.5, 17), target: new THREE.Vector3(0, 0.4, -0.6) },
+        entrance: { pos: new THREE.Vector3(0, 1.75, 10.8), target: new THREE.Vector3(0, 1.25, 0) },
+        top: { pos: new THREE.Vector3(0, 27, 0.6), target: new THREE.Vector3(0, 0, 0) },
+      };
+      camera.position.copy(VIEWS.reset.pos);
+
+      const renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      renderer.outputColorSpace = THREE.SRGBColorSpace;
+      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      renderer.toneMappingExposure = 1.0;
+      mount.appendChild(renderer.domElement);
+      const maxAniso = renderer.capabilities.getMaxAnisotropy();
+
+      const pmrem = new THREE.PMREMGenerator(renderer);
+      scene.environment = pmrem.fromScene(new RoomEnvironment(renderer), 0.04).texture;
+
+      const controls = new OrbitControls(camera, renderer.domElement);
+      controls.target.copy(VIEWS.reset.target);
+      controls.enableDamping = true;
+      controls.dampingFactor = 0.07;
+      controls.maxPolarAngle = Math.PI * 0.495;
+      controls.minDistance = 0.8;
+      controls.maxDistance = 42;
+
+      scene.add(new THREE.HemisphereLight("#fffaf0", "#8f877a", 0.55));
+      const key = new THREE.DirectionalLight("#fff6e8", 1.5);
+      key.position.set(7, 16, 11);
+      key.castShadow = true;
+      key.shadow.mapSize.setScalar(Math.min(4096, renderer.capabilities.maxTextureSize));
+      Object.assign(key.shadow.camera, { left: -15, right: 15, top: 13, bottom: -13, far: 50 });
+      key.shadow.bias = -0.0002;
+      key.shadow.normalBias = 0.02;
+      key.shadow.radius = 4;
+      scene.add(key);
+      const fill = new THREE.DirectionalLight("#e8eef7", 0.35);
+      fill.position.set(-10, 8, -6);
+      scene.add(fill);
+
+      // ---------- Materials ----------
+      const texLoader = new THREE.TextureLoader();
+      const tiledCache = {};
+      function tiled(file, srgb, tileSize) {
+        const k = `${file}@${tileSize}`;
+        if (!tiledCache[k]) {
+          const t = texLoader.load(`${ASSETS}${file}`);
+          t.wrapS = t.wrapT = THREE.RepeatWrapping;
+          t.anisotropy = maxAniso;
+          t.repeat.set(1 / tileSize, 1 / tileSize);
+          if (srgb) t.colorSpace = THREE.SRGBColorSpace;
+          tiledCache[k] = t;
+        }
+        return tiledCache[k];
+      }
+      function pbr(id, tileSize, { color = "#ffffff", diffuse = true, normalScale = 1, roughness = 1, extra = {} } = {}) {
+        const mat = new THREE.MeshStandardMaterial({
+          color,
+          map: diffuse ? tiled(`${id}_diff.jpg`, true, tileSize) : null,
+          normalMap: tiled(`${id}_nor.jpg`, false, tileSize),
+          normalScale: new THREE.Vector2(normalScale, normalScale),
+          roughnessMap: tiled(`${id}_rough.jpg`, false, tileSize),
+          roughness,
+          ...extra,
+        });
+        mat.userData.metric = true;
+        return mat;
+      }
+      const material = (color, roughness = 0.8, extra = {}) => new THREE.MeshStandardMaterial({ color, roughness, ...extra });
+
+      const mats = {
+        floor: pbr("brushed_concrete", 3, { color: "#d9d5cd", normalScale: 0.5, roughness: 0.55 }),
+        wall: pbr("plastered_wall_04", 2, { color: "#f4f1ea", diffuse: false, normalScale: 0.5, roughness: 0.95 }),
+        outside: material("#cfc9bd", 0.95),
+        paving: pbr("brushed_concrete", 1.2, { color: "#c6c0b4", normalScale: 0.8 }),
+        ink: material(BRAND.ink, 0.55),
+        accent: material(BRAND.accent, 0.6),
+        paper: material(BRAND.paper, 0.7),
+        metal: material("#2c2c2a", 0.42, { metalness: 0.55 }),
+        steel: material("#b9bcbe", 0.3, { metalness: 0.85 }),
+        shelf: material("#f6f5f1", 0.5),
+        bayBack: material("#efebe2", 0.85),
+        glass: new THREE.MeshStandardMaterial({ color: "#cfe0e4", roughness: 0.05, metalness: 0.1, transparent: true, opacity: 0.18, depthWrite: false }),
+        led: new THREE.MeshStandardMaterial({ color: "#fff8e6", emissive: "#fff2d0", emissiveIntensity: 1.4 }),
+        boxSide: material("#f7f5f0", 0.65),
+        wood: material("#a77b52", 0.6),
+        leaf: material("#3f7a45", 0.75),
+        pot: material("#d8d2c4", 0.7),
+        fabric: material("#3d3f44", 0.95),
+        rubber: material("#151515", 0.9),
+        skin: material("#e4e0d8", 0.45),
+      };
+      const categoryMats = {};
+      const colorFor = (cat) => {
+        const k = cat.toUpperCase();
+        if (CATEGORY_COLORS[k]) return CATEGORY_COLORS[k];
+        let h = 0;
+        for (const c of k) h = (h * 31 + c.charCodeAt(0)) % 360;
+        return `hsl(${h}, 55%, 45%)`;
+      };
+      const categoryMat = (cat) => (categoryMats[cat] ||= material(colorFor(cat), 0.5));
+
+      function metricBoxGeometry(w, h, d) {
+        const geometry = new THREE.BoxGeometry(w, h, d);
+        const uv = geometry.attributes.uv;
+        const faceDims = [[d, h], [d, h], [w, d], [w, d], [w, h], [w, h]];
+        for (let f = 0; f < 6; f++) {
+          for (let v = 0; v < 4; v++) {
+            const i = f * 4 + v;
+            uv.setXY(i, uv.getX(i) * faceDims[f][0], uv.getY(i) * faceDims[f][1]);
+          }
+        }
+        return geometry;
+      }
+      function box(parent, size, position, mat, { cast = true, receive = true } = {}) {
+        const metric = !Array.isArray(mat) && mat.userData?.metric;
+        const mesh = new THREE.Mesh(metric ? metricBoxGeometry(...size) : new THREE.BoxGeometry(...size), mat);
+        mesh.position.set(...position);
+        mesh.castShadow = cast;
+        mesh.receiveShadow = receive;
+        parent.add(mesh);
+        return mesh;
+      }
+      function cylinder(parent, rTop, rBottom, h, position, mat, segments = 24) {
+        const mesh = new THREE.Mesh(new THREE.CylinderGeometry(rTop, rBottom, h, segments), mat);
+        mesh.position.set(...position);
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+        parent.add(mesh);
+        return mesh;
+      }
+
+      function textTexture(draw, w = 1024, h = 128) {
+        const canvas = document.createElement("canvas");
+        canvas.width = w;
+        canvas.height = h;
+        draw(canvas.getContext("2d"), w, h);
+        const t = new THREE.CanvasTexture(canvas);
+        t.colorSpace = THREE.SRGBColorSpace;
+        t.anisotropy = maxAniso;
+        return t;
+      }
+      function fitText(ctx, text, maxWidth, size, weight = 700) {
+        let s = size;
+        do {
+          ctx.font = `${weight} ${s}px Inter, "Segoe UI", Arial, sans-serif`;
+          s -= 2;
+        } while (ctx.measureText(text).width > maxWidth && s > 12);
+      }
+      const titleCase = (s) => s.toLowerCase().replace(/(^|[\s&/-])(\p{L})/gu, (m, a, b) => a + b.toUpperCase());
+
+      // ---------- Room shell ----------
+      const room = new THREE.Group();
+      scene.add(room);
+
+      const ground = new THREE.Mesh(new THREE.PlaneGeometry(140, 140), mats.outside);
+      ground.rotation.x = -Math.PI / 2;
+      ground.position.y = -0.02;
+      ground.receiveShadow = true;
+      scene.add(ground);
+      box(room, [ROOM.w + 4, 0.04, 5], [0, -0.0, ROOM.d / 2 + 2.6], mats.paving, { cast: false });
+      box(room, [ROOM.w + 0.4, 0.06, ROOM.d + 0.4], [0, -0.03, 0], mats.floor, { cast: false });
+
+      const walls = {
+        back: box(room, [ROOM.w + 0.4, ROOM.h, 0.2], [0, ROOM.h / 2, -ROOM.d / 2 - 0.1], mats.wall),
+        left: box(room, [0.2, ROOM.h, ROOM.d + 0.4], [-ROOM.w / 2 - 0.1, ROOM.h / 2, 0], mats.wall),
+        right: box(room, [0.2, ROOM.h, ROOM.d + 0.4], [ROOM.w / 2 + 0.1, ROOM.h / 2, 0], mats.wall),
+      };
+      // Skirting
+      box(room, [ROOM.w, 0.1, 0.02], [0, 0.05, -ROOM.d / 2 + 0.01], mats.ink, { cast: false });
+      box(room, [0.02, 0.1, ROOM.d], [-ROOM.w / 2 + 0.01, 0.05, 0], mats.ink, { cast: false });
+      box(room, [0.02, 0.1, ROOM.d], [ROOM.w / 2 - 0.01, 0.05, 0], mats.ink, { cast: false });
+
+      // Glass shopfront with a centre entrance
+      const front = new THREE.Group();
+      room.add(front);
+      const fz = ROOM.d / 2 + 0.05;
+      const door = 1.7;
+      for (const side of [-1, 1]) {
+        const x0 = side * door;
+        const x1 = side * (ROOM.w / 2);
+        const len = Math.abs(x1 - x0);
+        box(front, [len, 2.85, 0.03], [(x0 + x1) / 2, 1.5, fz], mats.glass, { cast: false, receive: false });
+        const panels = Math.round(len / 2.1);
+        for (let i = 0; i <= panels; i++) {
+          const x = x0 + (x1 - x0) * (i / panels);
+          box(front, [0.08, 2.95, 0.1], [x, 1.47, fz], mats.ink);
+        }
+        box(front, [len, 0.08, 0.1], [(x0 + x1) / 2, 0.04, fz], mats.ink);
+        box(front, [len, 0.08, 0.1], [(x0 + x1) / 2, 2.94, fz], mats.ink);
+        // Sliding door leaf parked open
+        box(front, [door - 0.2, 2.7, 0.04], [side * (door + 0.55), 1.4, fz + 0.12], mats.glass, { cast: false, receive: false });
+        box(front, [0.05, 2.7, 0.06], [side * (door * 2 - 0.12), 1.4, fz + 0.12], mats.ink);
+      }
+      // Fascia with signage
+      const fascia = box(front, [ROOM.w + 0.4, 0.66, 0.24], [0, ROOM.h - 0.33, fz], mats.ink);
+      const fasciaTex = textTexture((ctx, w, h) => {
+        ctx.fillStyle = BRAND.ink;
+        ctx.fillRect(0, 0, w, h);
+        ctx.fillStyle = BRAND.accent;
+        ctx.fillRect(w * 0.31, h * 0.28, h * 0.32, h * 0.44);
+        ctx.fillStyle = BRAND.accent;
+        fitText(ctx, "ULTIMATE GENERAL TRADING", w * 0.5, 70, 800);
+        ctx.textBaseline = "middle";
+        ctx.fillText("ULTIMATE GENERAL TRADING", w * 0.345, h * 0.5);
+      }, 2048, 112);
+      const fasciaSign = new THREE.Mesh(new THREE.PlaneGeometry(ROOM.w * 0.98, 0.54), new THREE.MeshStandardMaterial({ map: fasciaTex, roughness: 0.5, emissive: "#ffffff", emissiveMap: fasciaTex, emissiveIntensity: 0.25 }));
+      fasciaSign.position.set(0, ROOM.h - 0.33, fz + 0.125);
+      front.add(fasciaSign);
+      box(front, [ROOM.w + 0.4, 0.06, 1.4], [0, 3.0, fz + 0.65], mats.ink); // entrance canopy
+
+      // Doormat
+      const mat = box(room, [3, 0.012, 1.3], [0, 0.006, ROOM.d / 2 - 0.85], material("#2a2926", 0.95), { cast: false });
+      mat.receiveShadow = true;
+
+      // ---------- Brand wall + reception ----------
+      const logoTex = texLoader.load(`${ASSETS}logo.png`);
+      logoTex.colorSpace = THREE.SRGBColorSpace;
+      logoTex.anisotropy = maxAniso;
+      logoTex.repeat.set(0.78, 0.29);
+      logoTex.offset.set(0.05, 0.44);
+      const brandWall = new THREE.Group();
+      brandWall.position.set(0, 0, -ROOM.d / 2);
+      room.add(brandWall);
+      box(brandWall, [9, 3.1, 0.08], [0, 1.75, 0.04], mats.paper);
+      box(brandWall, [9, 0.12, 0.1], [0, 3.32, 0.05], mats.ink);
+      box(brandWall, [0.12, 3.1, 0.1], [-4.5, 1.75, 0.05], mats.ink);
+      box(brandWall, [0.12, 3.1, 0.1], [4.5, 1.75, 0.05], mats.ink);
+      const logo = new THREE.Mesh(new THREE.PlaneGeometry(5.6, 2.08), new THREE.MeshStandardMaterial({ map: logoTex, transparent: true, roughness: 0.6 }));
+      logo.position.set(0, 2.25, 0.09);
+      brandWall.add(logo);
+      const taglineTex = textTexture((ctx, w, h) => {
+        ctx.fillStyle = BRAND.paper;
+        ctx.fillRect(0, 0, w, h);
+        ctx.fillStyle = "#6b6860";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        fitText(ctx, "SAFETY  \u00B7  INDUSTRIAL  \u00B7  WORKWEAR  \u00B7  SIGNAGE", w * 0.94, 52, 600);
+        ctx.fillText("SAFETY  \u00B7  INDUSTRIAL  \u00B7  WORKWEAR  \u00B7  SIGNAGE", w / 2, h / 2);
+      });
+      const tagline = new THREE.Mesh(new THREE.PlaneGeometry(5.2, 0.32), new THREE.MeshStandardMaterial({ map: taglineTex, roughness: 0.7 }));
+      tagline.position.set(0, 1.12, 0.09);
+      brandWall.add(tagline);
+
+      const reception = new THREE.Group();
+      reception.position.set(0, 0, -5.1);
+      room.add(reception);
+      box(reception, [3.4, 1.0, 0.7], [0, 0.5, 0], mats.ink);
+      box(reception, [3.4, 0.14, 0.02], [0, 0.62, 0.36], mats.accent);
+      box(reception, [3.55, 0.05, 0.85], [0, 1.025, -0.05], mats.paper);
+      box(reception, [0.6, 0.38, 0.03], [-0.7, 1.28, -0.2], mats.rubber);
+      box(reception, [0.08, 0.2, 0.08], [-0.7, 1.1, -0.22], mats.metal);
+      box(reception, [0.42, 0.02, 0.15], [0.4, 1.06, 0.05], mats.metal);
+      cylinder(reception, 0.26, 0.26, 0.08, [0.2, 0.52, -0.85], mats.fabric);
+      cylinder(reception, 0.03, 0.03, 0.46, [0.2, 0.25, -0.85], mats.metal, 8);
+      box(reception, [0.48, 0.5, 0.08], [0.2, 0.82, -1.08], mats.fabric);
+
+      // ---------- Decorative props ----------
+      function plant(x, z, scale = 1) {
+        const g = new THREE.Group();
+        g.position.set(x, 0, z);
+        g.scale.setScalar(scale);
+        cylinder(g, 0.26, 0.2, 0.55, [0, 0.275, 0], mats.pot);
+        for (let i = 0; i < 9; i++) {
+          const leaf = new THREE.Mesh(new THREE.SphereGeometry(0.22, 12, 8), mats.leaf);
+          const a = (i / 9) * Math.PI * 2;
+          const r = i % 3 === 0 ? 0 : 0.18;
+          leaf.position.set(Math.cos(a) * r, 0.85 + (i % 3) * 0.28, Math.sin(a) * r);
+          leaf.scale.set(1, 1.5, 1);
+          leaf.castShadow = true;
+          g.add(leaf);
+        }
+        room.add(g);
+      }
+      plant(-11.3, 7.2, 1.1);
+      plant(-5.2, -7.3);
+      plant(5.2, -7.3);
+      plant(11.3, -7.3, 0.9);
+
+      function cone(x, z) {
+        const g = new THREE.Group();
+        g.position.set(x, 0, z);
+        box(g, [0.42, 0.04, 0.42], [0, 0.02, 0], material("#ff5a1f", 0.6));
+        cylinder(g, 0.035, 0.17, 0.7, [0, 0.39, 0], material("#ff5a1f", 0.55), 20);
+        cylinder(g, 0.085, 0.115, 0.12, [0, 0.42, 0], material("#f2f2f2", 0.3), 20);
+        room.add(g);
+      }
+      cone(-2.3, 9.0);
+      cone(2.3, 9.0);
+
+      function extinguisher(x, z) {
+        const g = new THREE.Group();
+        g.position.set(x, 0, z);
+        cylinder(g, 0.09, 0.09, 0.56, [0, 0.36, 0], material("#c8161d", 0.35, { metalness: 0.2 }), 20);
+        cylinder(g, 0.09, 0.05, 0.08, [0, 0.68, 0], material("#c8161d", 0.35), 20);
+        cylinder(g, 0.025, 0.025, 0.1, [0, 0.75, 0], mats.rubber, 10);
+        box(g, [0.14, 0.02, 0.04], [0.04, 0.8, 0], mats.rubber);
+        box(g, [0.26, 0.08, 0.26], [0, 0.04, 0], mats.ink);
+        room.add(g);
+      }
+      extinguisher(-11.55, 6.3);
+      extinguisher(11.55, 5.95);
+
+      function mannequin(x, z, rotY, vestColor, helmetColor, trouser) {
+        const g = new THREE.Group();
+        g.position.set(x, 0, z);
+        g.rotation.y = rotY;
+        cylinder(g, 0.28, 0.3, 0.05, [0, 0.025, 0], mats.ink, 32);
+        cylinder(g, 0.025, 0.025, 0.25, [0, 0.15, -0.05], mats.steel, 8);
+        const legMat = material(trouser, 0.85);
+        for (const s of [-1, 1]) {
+          cylinder(g, 0.075, 0.06, 0.8, [s * 0.1, 0.62, 0], legMat, 16);
+          box(g, [0.13, 0.12, 0.28], [s * 0.1, 0.11, 0.05], mats.rubber);
+          const arm = cylinder(g, 0.05, 0.045, 0.62, [s * 0.27, 1.23, 0], legMat, 12);
+          arm.rotation.z = s * 0.12;
+        }
+        const torso = new THREE.Mesh(new THREE.CapsuleGeometry(0.2, 0.42, 6, 20), legMat);
+        torso.position.y = 1.28;
+        torso.scale.set(1.05, 1, 0.68);
+        torso.castShadow = true;
+        g.add(torso);
+        const vest = new THREE.Mesh(new THREE.CylinderGeometry(0.225, 0.215, 0.56, 24, 1, true), material(vestColor, 0.6, { side: THREE.DoubleSide }));
+        vest.position.y = 1.27;
+        vest.scale.set(1.05, 1, 0.7);
+        vest.castShadow = true;
+        g.add(vest);
+        for (const y of [1.12, 1.3]) {
+          const band = new THREE.Mesh(new THREE.CylinderGeometry(0.228, 0.226, 0.045, 24, 1, true), material("#d9dde0", 0.2, { metalness: 0.7 }));
+          band.position.y = y;
+          band.scale.set(1.05, 1, 0.71);
+          g.add(band);
+        }
+        cylinder(g, 0.05, 0.06, 0.1, [0, 1.6, 0], mats.skin, 12);
+        const head = new THREE.Mesh(new THREE.SphereGeometry(0.115, 20, 16), mats.skin);
+        head.position.y = 1.74;
+        head.scale.set(0.9, 1.1, 1);
+        head.castShadow = true;
+        g.add(head);
+        const hatMat = material(helmetColor, 0.35);
+        const hat = new THREE.Mesh(new THREE.SphereGeometry(0.135, 20, 12, 0, Math.PI * 2, 0, Math.PI / 2), hatMat);
+        hat.position.y = 1.79;
+        hat.castShadow = true;
+        g.add(hat);
+        const brim = cylinder(g, 0.165, 0.165, 0.015, [0, 1.79, 0.03], hatMat, 24);
+        brim.scale.set(1, 1, 1.15);
+        room.add(g);
+      }
+      mannequin(-2.6, 5.7, 0.35, "#d4f21b", "#f2b705", "#2b3a55");
+      mannequin(2.6, 5.7, -0.35, "#ff7a1a", "#f4f4f2", "#30343a");
+
+      // Customer lounge (front right)
+      const lounge = new THREE.Group();
+      lounge.position.set(10.9, 0, 6.85);
+      room.add(lounge);
+      box(lounge, [0.85, 0.42, 1.9], [0, 0.21, 0], mats.fabric);
+      box(lounge, [0.22, 0.8, 1.9], [0.32, 0.4, 0], mats.fabric);
+      box(lounge, [0.85, 0.6, 0.18], [0, 0.3, 0.95], mats.fabric);
+      box(lounge, [0.85, 0.6, 0.18], [0, 0.3, -0.95], mats.fabric);
+      box(lounge, [0.7, 0.04, 1.0], [-1.1, 0.42, 0], mats.wood);
+      for (const [dx, dz] of [[-0.3, -0.45], [0.3, -0.45], [-0.3, 0.45], [0.3, 0.45]]) box(lounge, [0.04, 0.4, 0.04], [-1.1 + dx, 0.2, dz], mats.metal);
+
+      // ---------- Product display ----------
+      const backZ = -ROOM.d / 2 + 0.02;
+      const sideX = ROOM.w / 2 - 0.02;
+      const bayStep = BAY.w + 0.05;
+      const SLOTS = [
+        ...[-10.45, -8.1, -5.75, 5.75, 8.1, 10.45].map((x) => ({ x, z: backZ, rot: 0 })),
+        ...[-4.5, 4.5].flatMap((gx) => [-0.2, -0.2 + bayStep].flatMap((z) => [
+          { x: gx, z, rot: -Math.PI / 2, gondola: true },
+          { x: gx, z, rot: Math.PI / 2, gondola: true },
+        ])),
+        ...[-5.4, -3.05, -0.7, 1.65, 4.0].map((z) => ({ x: -sideX, z, rot: Math.PI / 2 })),
+        ...[-5.4, -3.05, -0.7, 1.65, 4.0].map((z) => ({ x: sideX, z, rot: -Math.PI / 2 })),
+      ];
+
+      const pickables = [];
+      const bays = {};
+      const productMeshes = new Map();
+      const boxGeo = new THREE.BoxGeometry(0.44, 0.44, 0.28);
+      const cardGeo = new THREE.BoxGeometry(0.46, 0.46, 0.022);
+      const heroGeo = new THREE.BoxGeometry(0.5, 0.5, 0.5);
+
+      function productTexture(product) {
+        const t = texLoader.load(product.image, undefined, undefined, () => {
+          const fallback = textTexture((ctx, w, h) => {
+            ctx.fillStyle = "#ffffff";
+            ctx.fillRect(0, 0, w, h);
+            ctx.fillStyle = BRAND.ink;
+            ctx.textAlign = "center";
+            fitText(ctx, product.name, w * 0.9, 34, 700);
+            ctx.fillText(product.name, w / 2, h / 2);
+          }, 512, 512);
+          t.image = fallback.image;
+          t.needsUpdate = true;
+        });
+        t.colorSpace = THREE.SRGBColorSpace;
+        t.anisotropy = maxAniso;
+        return t;
+      }
+      const faceMaterial = (product) => new THREE.MeshStandardMaterial({ map: productTexture(product), roughness: 0.55 });
+
+      function makeProductMesh(product, isCard) {
+        const front = faceMaterial(product);
+        const side = isCard ? mats.ink : mats.boxSide;
+        const mesh = new THREE.Mesh(isCard ? cardGeo : boxGeo, [side, side, side, side, front, side]);
+        mesh.castShadow = true;
+        mesh.userData = { product, front };
+        pickables.push(mesh);
+        productMeshes.set(product.id, mesh);
+        return mesh;
+      }
+
+      function headerTexture(category, count) {
+        const color = colorFor(category);
+        return textTexture((ctx, w, h) => {
+          ctx.fillStyle = BRAND.ink;
+          ctx.fillRect(0, 0, w, h);
+          ctx.fillStyle = color;
+          ctx.fillRect(0, 0, 18, h);
+          ctx.fillStyle = BRAND.accent;
+          ctx.textBaseline = "middle";
+          const label = category.toUpperCase();
+          fitText(ctx, label, w * 0.72, 54, 800);
+          ctx.fillText(label, 50, h / 2 + 2);
+          ctx.font = `600 30px Inter, "Segoe UI", Arial, sans-serif`;
+          ctx.fillStyle = "#a9a59a";
+          ctx.textAlign = "right";
+          ctx.fillText(`${count} ${count === 1 ? "item" : "items"}`, w - 34, h / 2 + 2);
+        });
+      }
+
+      function buildBay(slot, category, items) {
+        const g = new THREE.Group();
+        g.position.set(slot.x, 0, slot.z);
+        g.rotation.y = slot.rot;
+        room.add(g);
+        const half = BAY.w / 2;
+        box(g, [BAY.w, BAY.h, 0.04], [0, BAY.h / 2, 0.02], mats.bayBack);
+        for (const s of [-1, 1]) box(g, [0.05, BAY.h, BAY.d], [s * (half - 0.025), BAY.h / 2, BAY.d / 2], mats.metal);
+        box(g, [BAY.w, 0.1, BAY.d], [0, 0.05, BAY.d / 2], mats.metal);
+        const accent = categoryMat(category);
+        for (const top of BAY.shelfTops) {
+          if (top > 0.2) box(g, [BAY.w - 0.1, 0.03, BAY.d - 0.04], [0, top - 0.015, BAY.d / 2 + 0.01], mats.shelf);
+          box(g, [BAY.w - 0.1, 0.045, 0.012], [0, top - 0.025, BAY.d + 0.01], accent, { cast: false });
+        }
+        const sign = new THREE.Mesh(new THREE.BoxGeometry(BAY.w, 0.34, 0.05), [mats.ink, mats.ink, mats.ink, mats.ink, new THREE.MeshStandardMaterial({ map: headerTexture(category, items.length), roughness: 0.5 }), mats.ink]);
+        sign.position.set(0, BAY.h + 0.19, 0.05);
+        sign.castShadow = true;
+        g.add(sign);
+        box(g, [BAY.w - 0.12, 0.02, 0.03], [0, BAY.h - 0.02, BAY.d - 0.05], mats.led, { cast: false, receive: false });
+
+        const isCard = CARD_CATEGORIES.has(category.toUpperCase());
+        items.forEach((product, i) => {
+          const shelf = Math.floor(i / BAY.perShelf);
+          if (shelf >= BAY.shelfTops.length) return;
+          const inRow = Math.min(BAY.perShelf, items.length - shelf * BAY.perShelf);
+          const col = i % BAY.perShelf;
+          const x = (col - (inRow - 1) / 2) * BAY.colGap;
+          const top = BAY.shelfTops[shelf];
+          const mesh = makeProductMesh(product, isCard);
+          if (isCard) {
+            mesh.position.set(x, top + 0.245, 0.26);
+            mesh.rotation.x = -0.1;
+            box(g, [0.22, 0.03, 0.12], [x, top + 0.015, 0.25], mats.ink, { cast: false });
+          } else {
+            mesh.position.set(x, top + 0.22, 0.27);
+          }
+          mesh.userData.restY = mesh.position.y;
+          g.add(mesh);
+        });
+        bays[category] = { group: g, slot };
+      }
+
+      function buildBlankGondolaSide(slot) {
+        const g = new THREE.Group();
+        g.position.set(slot.x, 0, slot.z);
+        g.rotation.y = slot.rot;
+        room.add(g);
+        box(g, [BAY.w, BAY.h, 0.04], [0, BAY.h / 2, 0.02], mats.paper);
+        box(g, [BAY.w, 0.1, 0.06], [0, 0.05, 0.05], mats.ink);
+        const panel = new THREE.Mesh(new THREE.PlaneGeometry(1.9, 0.7), new THREE.MeshStandardMaterial({ map: logoTex, transparent: true, roughness: 0.6 }));
+        panel.position.set(0, 1.5, 0.045);
+        g.add(panel);
+      }
+
+      const heroes = [];
+      function buildPodium(x, z, product) {
+        const g = new THREE.Group();
+        g.position.set(x, 0, z);
+        room.add(g);
+        cylinder(g, 0.46, 0.5, 0.85, [0, 0.425, 0], mats.paper, 40);
+        cylinder(g, 0.47, 0.47, 0.03, [0, 0.865, 0], mats.ink, 40);
+        cylinder(g, 0.505, 0.505, 0.06, [0, 0.03, 0], categoryMat(product.category), 40);
+        const front = faceMaterial(product);
+        const mesh = new THREE.Mesh(heroGeo, [front, front, mats.boxSide, mats.boxSide, front, front]);
+        mesh.position.set(0, 1.18, 0);
+        mesh.castShadow = true;
+        mesh.userData = { product, front, restY: 1.18, spin: true };
+        pickables.push(mesh);
+        if (!productMeshes.has(product.id)) productMeshes.set(product.id, mesh);
+        g.add(mesh);
+        heroes.push(mesh);
+      }
+
+      // ---------- Interaction ----------
+      const raycaster = new THREE.Raycaster();
+      const pointer = new THREE.Vector2();
+      const tooltip = $("#tooltip");
+      let hovered = null;
+      let selected = null;
+      const money = (p) => `${p.currency || "TZS"} ${Number(p.price || 0).toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
+
+      function pick(event) {
+        const rect = renderer.domElement.getBoundingClientRect();
+        pointer.set(((event.clientX - rect.left) / rect.width) * 2 - 1, -((event.clientY - rect.top) / rect.height) * 2 + 1);
+        raycaster.setFromCamera(pointer, camera);
+        const hit = raycaster.intersectObjects(pickables, false)[0];
+        return hit ? hit.object : null;
+      }
+      function setHover(mesh, event) {
+        if (hovered && hovered !== mesh && hovered !== selected) hovered.userData.front.emissive.set(0x000000);
+        hovered = mesh;
+        renderer.domElement.style.cursor = mesh ? "pointer" : "";
+        if (!mesh) {
+          tooltip.hidden = true;
+          return;
+        }
+        if (mesh !== selected) mesh.userData.front.emissive.set("#3a3222");
+        const p = mesh.userData.product;
+        tooltip.innerHTML = `<strong></strong>${CONFIG.showPrices ? "<span></span>" : ""}`;
+        tooltip.querySelector("strong").textContent = p.name;
+        if (CONFIG.showPrices) tooltip.querySelector("span").textContent = money(p);
+        const rect = mount.getBoundingClientRect();
+        tooltip.style.left = `${event.clientX - rect.left}px`;
+        tooltip.style.top = `${event.clientY - rect.top}px`;
+        tooltip.hidden = false;
+      }
+
+      let downAt = null;
+      renderer.domElement.addEventListener("pointerdown", (e) => { downAt = [e.clientX, e.clientY]; });
+      renderer.domElement.addEventListener("pointermove", (e) => {
+        if (e.pointerType !== "mouse") return;
+        setHover(e.buttons ? null : pick(e), e);
+      });
+      renderer.domElement.addEventListener("pointerleave", () => setHover(null));
+      renderer.domElement.addEventListener("pointerup", (e) => {
+        if (!downAt || Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) > 6) return;
+        const mesh = pick(e);
+        if (mesh) selectProduct(mesh.userData.product, true);
+      });
+
+      const card = $("#productCard");
+      function selectProduct(product, fly) {
+        const mesh = productMeshes.get(product.id);
+        if (selected && selected !== mesh) selected.userData.front.emissive.set(0x000000);
+        selected = mesh || null;
+        if (mesh) mesh.userData.front.emissive.set("#5a4a2a");
+        $("#cardImage").src = product.image;
+        $("#cardImage").alt = product.name;
+        $("#cardCategory").textContent = titleCase(product.category);
+        $("#cardName").textContent = product.name;
+        $("#cardSku").textContent = [product.sku && `Code ${product.sku}`, product.brand].filter(Boolean).join(" \u00B7 ");
+        $("#cardPrice").textContent = CONFIG.showPrices ? money(product) : "";
+        const stock = $("#cardStock");
+        stock.textContent = product.in_stock ? "In stock" : "Available to order";
+        stock.className = `badge ${product.in_stock ? "in" : "order"}`;
+        $("#cardDesc").textContent = product.description || "";
+        const quote = $("#cardQuote");
+        if (CONFIG.quoteUrl) {
+          quote.href = CONFIG.quoteUrl
+            .replaceAll("{id}", encodeURIComponent(product.id))
+            .replaceAll("{sku}", encodeURIComponent(product.sku || ""))
+            .replaceAll("{name}", encodeURIComponent(product.name));
+          quote.hidden = false;
+        } else {
+          quote.hidden = true;
+        }
+        card.hidden = false;
+        card.scrollTop = 0;
+        if (fly && mesh) flyToMesh(mesh);
+        const url = new URL(window.location.href);
+        url.searchParams.set("product", product.id);
+        history.replaceState(null, "", url);
+      }
+      function closeCard() {
+        card.hidden = true;
+        if (selected) selected.userData.front.emissive.set(0x000000);
+        selected = null;
+        const url = new URL(window.location.href);
+        url.searchParams.delete("product");
+        history.replaceState(null, "", url);
+      }
+      $("#cardClose").addEventListener("click", closeCard);
+      window.addEventListener("keydown", (e) => { if (e.key === "Escape") closeCard(); });
+
+      // ---------- Camera moves ----------
+      let flight = null;
+      const ease = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+      function flyTo(pos, target, ms = 1100) {
+        flight = { fromPos: camera.position.clone(), fromTarget: controls.target.clone(), pos: pos.clone(), target: target.clone(), start: performance.now(), ms };
+      }
+      function flyToMesh(mesh) {
+        const p = mesh.getWorldPosition(new THREE.Vector3());
+        const normal = new THREE.Vector3(0, 0, 1).applyQuaternion(mesh.parent.getWorldQuaternion(new THREE.Quaternion()));
+        if (mesh.userData.spin) normal.set(0, 0, 1);
+        normal.y = 0;
+        normal.normalize();
+        const distance = isPhone ? 3.4 : 2.7;
+        // On phones the details sheet covers the lower half, so aim below the product to lift it on screen.
+        const aim = p.clone().add(new THREE.Vector3(0, isPhone ? -0.45 : 0, 0));
+        flyTo(aim.clone().addScaledVector(normal, distance).add(new THREE.Vector3(0, 0.35, 0)), aim);
+      }
+      function flyToBay(category) {
+        const bay = bays[category];
+        if (!bay) return;
+        const g = bay.group;
+        const normal = new THREE.Vector3(0, 0, 1).applyQuaternion(g.quaternion);
+        const center = g.position.clone().addScaledVector(normal, 0.3).setY(1.4);
+        flyTo(center.clone().addScaledVector(normal, isPhone ? 6.4 : 5.0).setY(1.9), center);
+      }
+      $("#entranceView").addEventListener("click", () => flyTo(VIEWS.entrance.pos, VIEWS.entrance.target));
+      $("#topView").addEventListener("click", () => flyTo(VIEWS.top.pos, VIEWS.top.target));
+      $("#resetView").addEventListener("click", () => flyTo(VIEWS.reset.pos, VIEWS.reset.target));
+
+      // ---------- Panel ----------
+      function renderLegend(categories) {
+        const list = $("#legend");
+        list.replaceChildren(...categories.map((c) => {
+          const li = document.createElement("li");
+          const b = document.createElement("button");
+          b.type = "button";
+          b.innerHTML = `<span class="swatch"></span><span class="name"></span><span class="count"></span>`;
+          b.querySelector(".swatch").style.background = colorFor(c.name);
+          b.querySelector(".name").textContent = titleCase(c.name);
+          b.querySelector(".count").textContent = c.count;
+          b.addEventListener("click", () => {
+            flyToBay(c.name);
+            if (isPhone) $("#sidePanel").open = false;
+          });
+          li.appendChild(b);
+          return li;
+        }));
+      }
+      function bindSearch(products) {
+        const input = $("#search");
+        const results = $("#results");
+        input.addEventListener("input", () => {
+          const q = input.value.trim().toLowerCase();
+          if (!q) {
+            results.replaceChildren();
+            return;
+          }
+          const terms = q.split(/\s+/);
+          const matches = products.filter((p) => {
+            const hay = `${p.name} ${p.sku} ${p.category} ${p.brand}`.toLowerCase();
+            return terms.every((t) => hay.includes(t));
+          }).slice(0, 8);
+          if (!matches.length) {
+            const li = document.createElement("li");
+            li.className = "empty";
+            li.textContent = "No products match.";
+            results.replaceChildren(li);
+            return;
+          }
+          results.replaceChildren(...matches.map((p) => {
+            const li = document.createElement("li");
+            const b = document.createElement("button");
+            b.type = "button";
+            const img = document.createElement("img");
+            img.src = p.image;
+            img.alt = "";
+            img.loading = "lazy";
+            const span = document.createElement("span");
+            span.textContent = p.name;
+            b.append(img, span);
+            b.addEventListener("click", () => {
+              selectProduct(p, true);
+              if (isPhone) $("#sidePanel").open = false;
+            });
+            li.appendChild(b);
+            return li;
+          }));
+        });
+      }
+
+      // ---------- Load products and build ----------
+      async function init() {
+        let data;
+        try {
+          const res = await fetch(CONFIG.dataUrl, { cache: "no-cache" });
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          data = await res.json();
+        } catch (err) {
+          loading.classList.add("error");
+          loading.textContent = `Could not load the product list (${err.message}). Run tools/export-products.php to create products.json.`;
+          return;
+        }
+        const products = (data.products || []).filter((p) => p && p.id && p.image);
+        const byCategory = new Map();
+        for (const p of products) {
+          if (!byCategory.has(p.category)) byCategory.set(p.category, []);
+          byCategory.get(p.category).push(p);
+        }
+        const categories = (data.categories?.length ? data.categories.map((c) => c.name) : [...byCategory.keys()]).filter((c) => byCategory.has(c));
+        const maxPerBay = BAY.shelfTops.length * BAY.perShelf;
+        const used = new Set();
+        categories.slice(0, SLOTS.length).forEach((cat, i) => {
+          buildBay(SLOTS[i], cat, byCategory.get(cat).slice(0, maxPerBay));
+          used.add(i);
+        });
+        SLOTS.forEach((slot, i) => { if (slot.gondola && !used.has(i)) buildBlankGondolaSide(slot); });
+
+        const heroPicks = [];
+        for (const cat of [...HERO_CATEGORIES, ...categories]) {
+          const match = [...byCategory.keys()].find((k) => k.toUpperCase() === cat.toUpperCase());
+          const list = match ? byCategory.get(match) : null;
+          if (!list || heroPicks.some((p) => p.category === match)) continue;
+          heroPicks.push(list.find((p) => p.in_stock) || list[0]);
+          if (heroPicks.length === 3) break;
+        }
+        heroPicks.forEach((p, i) => buildPodium((i - (heroPicks.length - 1) / 2) * 1.9, 3.2, p));
+
+        const shown = categories.slice(0, SLOTS.length).map((name) => ({ name, count: Math.min(byCategory.get(name).length, maxPerBay) }));
+        renderLegend(shown);
+        bindSearch(products);
+        const total = shown.reduce((n, c) => n + c.count, 0);
+        $("#panelSubtitle").textContent = `${total} products in ${shown.length} categories. Click a product on the shelves for details, or jump to a category.`;
+        $("#headerNote").textContent = `${total} products on display`;
+        if (data.generated_at) {
+          const d = new Date(data.generated_at);
+          if (!Number.isNaN(d.getTime())) {
+            $("#modelNote").textContent = `Products, photos and prices come from the UltiTech catalogue, updated ${d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}. Prices may change; ask us for a quote.`;
+          }
+        }
+
+        loading.remove();
+        const deepLink = Number(new URLSearchParams(window.location.search).get("product"));
+        const linked = deepLink && products.find((p) => p.id === deepLink);
+        if (linked && productMeshes.has(linked.id)) selectProduct(linked, true);
+      }
+
+      // ---------- Loop ----------
+      function resize() {
+        const { clientWidth: w, clientHeight: h } = mount;
+        renderer.setSize(w, h, false);
+        camera.aspect = w / h;
+        camera.updateProjectionMatrix();
+      }
+      window.addEventListener("resize", resize);
+      resize();
+
+      const clock = new THREE.Clock();
+      renderer.setAnimationLoop(() => {
+        const t = clock.getElapsedTime();
+        if (flight) {
+          const k = Math.min(1, (performance.now() - flight.start) / flight.ms);
+          const e = ease(k);
+          camera.position.lerpVectors(flight.fromPos, flight.pos, e);
+          controls.target.lerpVectors(flight.fromTarget, flight.target, e);
+          if (k >= 1) flight = null;
+        }
+        controls.target.x = THREE.MathUtils.clamp(controls.target.x, -ROOM.w / 2 - 2, ROOM.w / 2 + 2);
+        controls.target.y = THREE.MathUtils.clamp(controls.target.y, 0, 3);
+        controls.target.z = THREE.MathUtils.clamp(controls.target.z, -ROOM.d / 2 - 2, ROOM.d / 2 + 4);
+        controls.update();
+
+        // Cut away walls between the camera and the room.
+        walls.back.visible = camera.position.z > -ROOM.d / 2;
+        walls.left.visible = camera.position.x > -ROOM.w / 2;
+        walls.right.visible = camera.position.x < ROOM.w / 2;
+
+        for (const hero of heroes) {
+          hero.rotation.y = t * 0.45;
+          hero.position.y = hero.userData.restY + Math.sin(t * 1.4) * 0.025;
+        }
+        for (const mesh of [hovered, selected]) {
+          if (mesh && !mesh.userData.spin) mesh.position.y = mesh.userData.restY + 0.025;
+        }
+        for (const mesh of pickables) {
+          if (mesh !== hovered && mesh !== selected && !mesh.userData.spin && mesh.position.y !== mesh.userData.restY) mesh.position.y = mesh.userData.restY;
+        }
+        renderer.render(scene, camera);
+      });
+
+      init();
+    </script>
+  </body>
+</html>

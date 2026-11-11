@@ -944,25 +944,32 @@
       });
 
       // New two-storey office (two stacked containers) on the sand yard.
-      // It starts 4.25 m from the single office so the chambers between them stay clear.
-      // Runs up to the front wall bays, leaving only a small gap.
-      const STACK_LEN = W_FRONT - 0.95 - 0.2 - STACK_START_Z;
+      // Turned across the plot so its windows face the bungalow; it starts 4.25 m from the
+      // single office so the chambers between them stay clear, with the stair at the driveway end.
       const STACK_H = 2.9;
+      const STACK_X0 = wallFace + 0.2;
+      const STAIR_W = 1.1;
+      const STACK_X1 = LAWN_EDGE_X - 0.2 - STAIR_W;
+      const STACK_LEN = STACK_X1 - STACK_X0;
+      const walkZ0 = STACK_START_Z + 0.1;
+      const walkZ1 = walkZ0 + 1.15;
+      const STACK_FRONT_Z = walkZ1 + 0.15;
       const stack = new THREE.Group();
       stack.name = "two-storey container office";
-      stack.position.set(CONTAINER_X, 0, STACK_START_Z + STACK_LEN / 2);
-      stack.rotation.y = Math.PI / 2;
+      stack.position.set((STACK_X0 + STACK_X1) / 2, 0, STACK_FRONT_Z + CONTAINER_DEPTH / 2);
+      stack.rotation.y = Math.PI;
       site.add(stack);
-      const stackWindows = [-4.0, -1.6, 0.8].map((center) => ({ center, width: 1.4, bottom: 0.8, top: 2.05 }));
+      const doorCenter = -STACK_LEN / 2 + 0.85;
+      const stackWindows = [-0.35, 1.85].map((center) => ({ center, width: 1.4, bottom: 0.8, top: 2.05 }));
       buildContainer(stack, {
         name: "lower container",
         length: STACK_LEN,
         depth: CONTAINER_DEPTH,
         height: STACK_H,
         windows: stackWindows,
-        door: { center: 3.9, width: 1.1 },
+        door: { center: doorCenter, width: 1.1 },
         roof: false,
-        wallLightX: 1.8,
+        wallLightX: doorCenter + 0.9,
       });
       const upperY = STACK_H + 0.12;
       buildContainer(stack, {
@@ -972,27 +979,22 @@
         height: STACK_H,
         y: upperY,
         windows: stackWindows,
-        door: { center: 3.9, width: 1.1 },
-        downpipeX: 4.9,
-        wallLightX: 1.8,
+        door: { center: doorCenter, width: 1.1 },
+        downpipeX: STACK_LEN / 2 - 0.35,
+        wallLightX: doorCenter + 0.9,
       });
 
-      // Steel walkway along the upper facade, with a landing and stair down to the yard.
+      // Steel walkway along the upper facade (facing the bungalow), landing at the driveway end
+      // and a straight stair down towards the gate.
       const steelMat = material("#3b4245", 0.5, { metalness: 0.4 });
       const deckTop = upperY + 0.14;
-      const stackZ0 = STACK_START_Z;
-      const stackZ1 = STACK_START_Z + STACK_LEN;
-      const walkX0 = CONTAINER_FRONT_X + 0.15;
-      const walkX1 = walkX0 + 1.15;
-      box(site, "upper walkway deck", [walkX1 - walkX0, 0.1, STACK_LEN], [(walkX0 + walkX1) / 2, deckTop - 0.05, (stackZ0 + stackZ1) / 2], steelMat);
-      const landing = { x0: walkX1, x1: walkX1 + 1.1, z0: stackZ0 + 2.8, z1: stackZ0 + 3.8 };
+      box(site, "upper walkway deck", [STACK_LEN, 0.1, walkZ1 - walkZ0], [(STACK_X0 + STACK_X1) / 2, deckTop - 0.05, (walkZ0 + walkZ1) / 2], steelMat);
+      const landing = { x0: STACK_X1, x1: STACK_X1 + STAIR_W, z0: walkZ0, z1: walkZ1 + 0.15 };
       box(site, "stair landing", [landing.x1 - landing.x0, 0.1, landing.z1 - landing.z0], [(landing.x0 + landing.x1) / 2, deckTop - 0.05, (landing.z0 + landing.z1) / 2], steelMat);
-      for (const z of [stackZ0 + 0.15, landing.z0, stackZ0 + 5.3, stackZ0 + 8.0, stackZ1 - 0.15]) {
-        box(site, "walkway post", [0.09, deckTop, 0.09], [walkX1 - 0.05, deckTop / 2, z], steelMat);
+      for (const x of [STACK_X0 + 0.15, STACK_X0 + STACK_LEN / 3, STACK_X0 + (2 * STACK_LEN) / 3, landing.x1 - 0.05]) {
+        box(site, "walkway post", [0.09, deckTop, 0.09], [x, deckTop / 2, walkZ0 + 0.05], steelMat);
       }
-      for (const z of [landing.z0 + 0.05, landing.z1 - 0.05]) {
-        box(site, "landing post", [0.09, deckTop, 0.09], [landing.x1 - 0.05, deckTop / 2, z], steelMat);
-      }
+      box(site, "landing post", [0.09, deckTop, 0.09], [landing.x1 - 0.05, deckTop / 2, landing.z1 - 0.05], steelMat);
 
       function railing(x1, z1, x2, z2, y0, y1 = y0) {
         cylinderBetween(site, [x1, y0 + 1.0, z1], [x2, y1 + 1.0, z2], 0.03, steelMat, 6, 1);
@@ -1005,25 +1007,22 @@
           cylinderBetween(site, [x1 + (x2 - x1) * t, yb, z1 + (z2 - z1) * t], [x1 + (x2 - x1) * t, yb + 1.0, z1 + (z2 - z1) * t], 0.02, steelMat, 6, 1);
         }
       }
-      railing(walkX1, stackZ0, walkX1, landing.z0, deckTop);
-      railing(walkX1, landing.z1, walkX1, stackZ1, deckTop);
-      railing(walkX0, stackZ0, walkX1, stackZ0, deckTop);
-      railing(walkX0, stackZ1, walkX1, stackZ1, deckTop);
-      railing(walkX1, landing.z0, landing.x1, landing.z0, deckTop);
-      railing(landing.x1, landing.z0, landing.x1, landing.z1, deckTop);
+      railing(STACK_X0, walkZ0, landing.x1, walkZ0, deckTop);
+      railing(STACK_X0, walkZ0, STACK_X0, walkZ1, deckTop);
+      railing(landing.x1, walkZ0, landing.x1, landing.z1, deckTop);
 
-      // Straight stair from the landing down towards the gate.
+      // Straight stair from the landing down towards the gate, beside the container end wall.
       const stairSteps = 14;
       const stairRise = deckTop / stairSteps;
       const stairRun = 0.28;
-      const stairX = (landing.x0 + landing.x1) / 2;
-      const stairWidth = landing.x1 - landing.x0 - 0.1;
+      const stairX = (landing.x0 + landing.x1) / 2 + 0.05;
+      const stairWidth = landing.x1 - landing.x0 - 0.2;
       for (let i = 0; i < stairSteps - 1; i++) {
         const y = deckTop - (i + 1) * stairRise;
         box(site, "stair tread", [stairWidth, 0.05, stairRun + 0.02], [stairX, y - 0.025, landing.z1 + (i + 0.5) * stairRun], steelMat);
       }
       const stairEndZ = landing.z1 + (stairSteps - 1) * stairRun;
-      for (const x of [landing.x0 + 0.05, landing.x1 - 0.05]) {
+      for (const x of [stairX - stairWidth / 2, stairX + stairWidth / 2]) {
         cylinderBetween(site, [x, deckTop - 0.1, landing.z1], [x, 0, stairEndZ], 0.05, steelMat, 6, 1);
       }
       railing(landing.x1 - 0.03, landing.z1, landing.x1 - 0.03, stairEndZ, deckTop, 0);

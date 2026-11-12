@@ -5,70 +5,540 @@ if (!defined('GL_VIEW')) {
 }
 require_once __DIR__ . '/../../includes/gl/gl_view_helpers.php';
 
-[$from, $to] = gl_period_params();
-$pl = gl_profit_and_loss($pdo, $from, $to);
-
-if (($_GET['export'] ?? '') === 'csv') {
-    $csv = [];
-    foreach ($pl['revenue'] as $r) {
-        $csv[] = ['Revenue', $r['code'], $r['name'], $r['amount']];
-    }
-    $csv[] = ['Total revenue', '', '', $pl['total_revenue']];
-    foreach ($pl['expense'] as $r) {
-        $csv[] = ['Expenses', $r['code'], $r['name'], $r['amount']];
-    }
-    $csv[] = ['Total expenses', '', '', $pl['total_expense']];
-    $csv[] = ['Net profit', '', '', $pl['net']];
-    gl_send_csv("profit-and-loss-{$from}-to-{$to}.csv", ['Section', 'Code', 'Account', 'Amount'], $csv);
+$periodPresets = [
+    'this_month' => 'This month',
+    'last_month' => 'Last month',
+    'this_quarter' => 'This quarter',
+    'last_quarter' => 'Last quarter',
+    'this_year' => 'This year',
+    'last_year' => 'Last year',
+];
+$period = (string) ($_GET['period'] ?? '');
+if (isset($periodPresets[$period])) {
+    $today = new DateTimeImmutable('today');
+    $quarterStart = $today->setDate((int) $today->format('Y'), (int) (floor(((int) $today->format('n') - 1) / 3) * 3) + 1, 1);
+    [$presetFrom, $presetTo] = match ($period) {
+        'this_month' => [$today->modify('first day of this month'), $today],
+        'last_month' => [$today->modify('first day of last month'), $today->modify('last day of last month')],
+        'this_quarter' => [$quarterStart, $today],
+        'last_quarter' => [$quarterStart->modify('-3 months'), $quarterStart->modify('-1 day')],
+        'this_year' => [$today->setDate((int) $today->format('Y'), 1, 1), $today],
+        'last_year' => [$today->setDate((int) $today->format('Y') - 1, 1, 1), $today->setDate((int) $today->format('Y') - 1, 12, 31)],
+    };
+    $_GET['from_date'] = $presetFrom->format('Y-m-d');
+    $_GET['to_date'] = $presetTo->format('Y-m-d');
+} else {
+    $period = 'custom';
 }
+[$from, $to] = gl_period_params();
+
+$compareModes = ['none' => 'No comparison', 'previous' => 'Previous period', 'last_year' => 'Same period last year'];
+$compare = (string) ($_GET['compare'] ?? 'none');
+if (!isset($compareModes[$compare])) {
+    $compare = 'none';
+}
+$cmpFrom = $cmpTo = null;
+if ($compare === 'previous') {
+    $days = (int) (new DateTimeImmutable($from))->diff(new DateTimeImmutable($to))->days + 1;
+    $cmpTo = (new DateTimeImmutable($from))->modify('-1 day')->format('Y-m-d');
+    $cmpFrom = (new DateTimeImmutable($cmpTo))->modify('-' . ($days - 1) . ' days')->format('Y-m-d');
+} elseif ($compare === 'last_year') {
+    $cmpFrom = (new DateTimeImmutable($from))->modify('-1 year')->format('Y-m-d');
+    $cmpTo = (new DateTimeImmutable($to))->modify('-1 year')->format('Y-m-d');
+}
+$hasCompare = $cmpFrom !== null;
+
+$loadPl = isset($plLoader) && is_callable($plLoader)
+    ? $plLoader
+    : static fn (string $f, string $t): array => gl_profit_and_loss($pdo, $f, $t);
+$pl = $loadPl($from, $to);
+$plCmp = $hasCompare ? $loadPl($cmpFrom, $cmpTo) : null;
+
+$isCostOfSales = static fn (array $a): bool => (bool) preg_match('/cost of (goods|sales)|\bcogs\b|cost of sale/i', (string) $a['name']);
+$sections = ['revenue' => [], 'cogs' => [], 'expense' => []];
+$accounts = [];
+foreach ($pl['revenue'] as $a) {
+    $accounts[(int) $a['id']] = ['section' => 'revenue'] + $a;
+}
+foreach ($pl['expense'] as $a) {
+    $accounts[(int) $a['id']] = ['section' => $isCostOfSales($a) ? 'cogs' : 'expense'] + $a;
+}
+if ($plCmp) {
+    foreach (['revenue' => $plCmp['revenue'], 'expense' => $plCmp['expense']] as $kind => $list) {
+        foreach ($list as $a) {
+            $id = (int) $a['id'];
+            if (!isset($accounts[$id])) {
+                $accounts[$id] = [
+                    'section' => $kind === 'revenue' ? 'revenue' : ($isCostOfSales($a) ? 'cogs' : 'expense'),
+                    'amount' => 0.0, 'opening' => 0.0, 'debit' => 0.0, 'credit' => 0.0, 'closing' => 0.0,
+                ] + $a;
+            }
+            $accounts[$id]['compare'] = (float) $a['amount'];
+        }
+    }
+}
+foreach ($accounts as $a) {
+    $a['compare'] = (float) ($a['compare'] ?? 0);
+    $sections[$a['section']][] = $a;
+}
+foreach ($sections as &$list) {
+    usort($list, static fn ($x, $y) => strnatcasecmp($x['code'] . ' ' . $x['name'], $y['code'] . ' ' . $y['name']));
+}
+unset($list);
+
+$sum = static fn (array $rows, string $key): float => round(array_sum(array_map(static fn ($r) => (float) $r[$key], $rows)), 2);
+$tot = [];
+foreach (['amount', 'compare'] as $k) {
+    $tot[$k] = [
+        'revenue' => $sum($sections['revenue'], $k),
+        'cogs' => $sum($sections['cogs'], $k),
+        'expense' => $sum($sections['expense'], $k),
+    ];
+    $tot[$k]['gross'] = round($tot[$k]['revenue'] - $tot[$k]['cogs'], 2);
+    $tot[$k]['net'] = round($tot[$k]['gross'] - $tot[$k]['expense'], 2);
+}
+$cur = $tot['amount'];
+$prev = $tot['compare'];
+$pctOfRevenue = static fn (float $v): string => abs($cur['revenue']) < 0.005 ? '' : number_format($v / $cur['revenue'] * 100, 1) . '%';
+$change = static fn (float $now, float $before): float => round($now - $before, 2);
+$changePct = static fn (float $now, float $before): string => abs($before) < 0.005 ? '' : number_format(($now - $before) / abs($before) * 100, 1) . '%';
+$module = (string) ($_GET['module'] ?? 'accounting');
+$sectionTitles = ['revenue' => 'Income', 'cogs' => 'Cost of Sales', 'expense' => 'Operating Expenses'];
+$periodText = date('d M Y', strtotime($from)) . ' – ' . date('d M Y', strtotime($to));
+$compareText = $hasCompare ? date('d M Y', strtotime($cmpFrom)) . ' – ' . date('d M Y', strtotime($cmpTo)) : '';
+
+/* Statement lines shared by the CSV and PDF exports. */
+$lines = [];
+foreach (['revenue', 'cogs', 'expense'] as $key) {
+    if ($key === 'cogs' && !$sections['cogs'] && abs($prev['cogs']) < 0.005) {
+        continue;
+    }
+    $lines[] = ['kind' => 'section', 'label' => $sectionTitles[$key]];
+    foreach ($sections[$key] as $a) {
+        $lines[] = ['kind' => 'account', 'section' => $sectionTitles[$key], 'code' => $a['code'], 'label' => $a['name'], 'amount' => (float) $a['amount'], 'compare' => (float) $a['compare']];
+    }
+    $lines[] = ['kind' => 'total', 'label' => 'Total ' . strtolower($sectionTitles[$key]), 'amount' => $cur[$key], 'compare' => $prev[$key]];
+    if ($key === 'cogs' || ($key === 'revenue' && !$sections['cogs'] && abs($prev['cogs']) < 0.005)) {
+        $lines[] = ['kind' => 'result', 'label' => 'Gross profit', 'amount' => $cur['gross'], 'compare' => $prev['gross']];
+    }
+}
+$lines[] = ['kind' => 'result', 'label' => $cur['net'] >= 0 ? 'Net profit' : 'Net loss', 'amount' => $cur['net'], 'compare' => $prev['net']];
+
+$export = (string) ($_GET['export'] ?? '');
+if ($export === 'csv') {
+    $header = ['Section', 'Code', 'Account', 'Amount'];
+    if ($hasCompare) {
+        array_push($header, 'Comparison', 'Change');
+    }
+    $header[] = '% of revenue';
+    $csv = [];
+    foreach ($lines as $l) {
+        if ($l['kind'] === 'section') {
+            continue;
+        }
+        $row = [$l['section'] ?? '', $l['code'] ?? '', $l['label'], $l['amount']];
+        if ($hasCompare) {
+            array_push($row, $l['compare'], $change($l['amount'], $l['compare']));
+        }
+        $row[] = $pctOfRevenue($l['amount']);
+        $csv[] = $row;
+    }
+    gl_send_csv("profit-and-loss-{$from}-to-{$to}.csv", $header, $csv);
+}
+
+if ($export === 'pdf') {
+    $logo = gl_pdf_logo();
+    $pages = [];
+    $chunks = array_chunk($lines, 30) ?: [[]];
+    foreach ($chunks as $pageIndex => $pageLines) {
+        $c = '';
+        if ($logo !== null) {
+            $lw = 72.0;
+            $lh = $lw * $logo['height'] / max(1, $logo['width']);
+            $c .= sprintf("q %.2F 0 0 %.2F 32 %.2F cm /Logo Do Q\n", $lw, $lh, 536 + (32 - $lh) / 2);
+        }
+        $tx = $logo !== null ? 120.0 : 32.0;
+        $c .= gl_pdf_text($tx, 558, 15, 'Profit & Loss', false, true);
+        $c .= gl_pdf_text($tx, 540, 9, 'Period: ' . $from . ' to ' . $to . ($hasCompare ? '   Compared with: ' . $cmpFrom . ' to ' . $cmpTo : ''));
+        $c .= gl_pdf_text(810, 540, 8, 'Generated: ' . date('Y-m-d H:i'), true);
+        $c .= "0.75 w 32 528 m 810 528 l S\n";
+        $cols = $hasCompare ? ['Amount' => 520, 'Comparison' => 620, 'Change' => 720, '% of revenue' => 810] : ['Amount' => 680, '% of revenue' => 810];
+        $c .= gl_pdf_text(32, 512, 7.5, 'Account', false, true);
+        foreach ($cols as $title => $x) {
+            $c .= gl_pdf_text((float) $x, 512, 7.5, $title, true, true);
+        }
+        $c .= "0.5 w 32 504 m 810 504 l S\n";
+        $y = 489;
+        foreach ($pageLines as $l) {
+            $bold = $l['kind'] !== 'account';
+            $label = $l['kind'] === 'account' ? '    ' . trim(($l['code'] !== '' ? $l['code'] . '  ' : '') . $l['label']) : strtoupper($l['label']);
+            $c .= gl_pdf_text(32, $y, 7.5, substr(gl_pdf_ascii($label), 0, 70), false, $bold);
+            if ($l['kind'] !== 'section') {
+                $values = $hasCompare
+                    ? [gl_fmt($l['amount']), gl_fmt($l['compare']), gl_fmt($change($l['amount'], $l['compare'])), $pctOfRevenue($l['amount'])]
+                    : [gl_fmt($l['amount']), $pctOfRevenue($l['amount'])];
+                foreach (array_values($cols) as $i => $x) {
+                    $c .= gl_pdf_text((float) $x, $y, 7.5, $values[$i], true, $bold);
+                }
+            }
+            if ($l['kind'] === 'result') {
+                $c .= '0.5 w 32 ' . ($y + 10) . ' m 810 ' . ($y + 10) . " l S\n";
+            }
+            $c .= '0.25 w 32 ' . ($y - 4) . ' m 810 ' . ($y - 4) . " l S\n";
+            $y -= 14;
+        }
+        $c .= gl_pdf_text(810, 18, 7, 'Page ' . ($pageIndex + 1) . ' of ' . count($chunks), true);
+        $pages[] = $c;
+    }
+    gl_pdf_send("profit-and-loss-{$from}-to-{$to}.pdf", $pages, $logo);
+}
+
+$exportUrl = static function (string $format): string {
+    $q = $_GET;
+    $q['export'] = $format;
+    return '?' . http_build_query($q);
+};
 
 $page_title = 'Profit & Loss';
 include __DIR__ . '/../../modules/balances/includes/header.php';
 include __DIR__ . '/../../includes/gl/gl_page_style.php';
-$section = static function (string $title, array $rows, float $total, string $totalLabel) use ($from, $to): void { ?>
-  <tr class="sub"><td colspan="3"><?= gl_h($title) ?></td></tr>
-  <?php if (!$rows): ?><tr class="muted"><td colspan="3">None in this period</td></tr><?php endif; ?>
-  <?php foreach ($rows as $r): ?>
-    <tr><td><?= gl_h($r['code'] !== '' ? $r['code'] : '-') ?></td>
-        <td><a href="ledger.php?account_id=<?= (int) $r['id'] ?>&from_date=<?= gl_h($from) ?>&to_date=<?= gl_h($to) ?>&start_date=<?= gl_h($from) ?>&end_date=<?= gl_h($to) ?>"><?= gl_h($r['name']) ?></a></td>
-        <td class="n"><?= gl_fmt($r['amount']) ?></td></tr>
-  <?php endforeach; ?>
-  <tr class="tot"><td colspan="2"><?= gl_h($totalLabel) ?></td><td class="n"><?= gl_fmt($total) ?></td></tr>
-<?php };
 ?>
-<main class="main-content glr">
+<style>
+.main-content.glr.glr-pl{padding-top:8px!important;background:#f4f5f7}
+.glr-pl .glr-wrap{width:100%;max-width:none;padding:0 10px}
+.glr-pl-breadcrumb{display:flex;align-items:center;gap:9px;min-height:42px;padding:0 12px;margin-bottom:8px;color:#94a3b8;font-size:13px}
+.glr-pl-breadcrumb a{color:#8290a2;text-decoration:none}
+.glr-pl-breadcrumb a:hover{color:#2563eb}
+.glr-pl-breadcrumb .separator{color:#c3cad3}
+.glr-pl-breadcrumb [aria-current="page"]{color:#334155;font-weight:650}
+.glr-pl-head{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:44px;padding:8px 12px;background:#fff;border:1px solid #e6e8eb;border-bottom:0}
+.glr-pl-title{display:flex;align-items:center;gap:8px;margin:0;font-size:15px;font-weight:700;color:#334155}
+.glr-pl-title i{color:#64748b;font-size:14px}
+.glr-pl-date{font-size:11px;color:#7b8490;white-space:nowrap;text-align:right}
+.glr-pl-date small{display:block;color:#98a1ac}
+.glr-pl-filter{min-height:60px;padding:9px 12px;border:1px solid #e6e8eb;border-bottom:0;background:#fff}
+.glr-pl-filter .glr-form{padding:0;gap:9px}
+.glr-pl-filter label{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:600;color:#64748b}
+.glr-pl-filter input,.glr-pl-filter select{height:36px;font-size:12px}
+.glr-pl-filter button.glr-btn[type="submit"]{width:38px;height:36px;padding:0;justify-content:center;background:transparent;color:#2563eb;border-color:transparent}
+.glr-pl-filter button.glr-btn[type="submit"]:hover{background:#eff6ff}
+.glr-pl-filter button.glr-btn[type="submit"]:focus-visible{outline:2px solid #2563eb;outline-offset:2px}
+.glr-pl-download{position:relative}
+.glr-pl-download summary{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:36px;padding:0 9px;border-radius:4px;color:#2563eb;cursor:pointer;list-style:none;font-size:12px;font-weight:600;white-space:nowrap}
+.glr-pl-download summary::-webkit-details-marker{display:none}
+.glr-pl-download summary:hover,.glr-pl-download[open] summary{background:#eff6ff}
+.glr-pl-download summary:focus-visible{outline:2px solid #2563eb;outline-offset:2px}
+.glr-pl-download.is-downloading .fa-download{animation:glr-pl-pulse .7s ease-in-out infinite alternate}
+@keyframes glr-pl-pulse{from{transform:translateY(-2px);opacity:.55}to{transform:translateY(2px);opacity:1}}
+@media(prefers-reduced-motion:reduce){.glr-pl-download.is-downloading .fa-download{animation:none}}
+.glr-pl-download-menu{position:absolute;top:calc(100% + 3px);right:0;z-index:5;min-width:145px;padding:4px;background:#fff;border:1px solid #e0e5eb;border-radius:5px;box-shadow:0 5px 16px rgba(15,23,42,.14)}
+.glr-pl-download-menu a,.glr-pl-download-menu button{display:flex;align-items:center;gap:8px;width:100%;padding:8px 10px;border:0;border-radius:3px;background:transparent;color:#344054;text-decoration:none;font-size:12px;cursor:pointer;text-align:left}
+.glr-pl-download-menu a:hover,.glr-pl-download-menu button:hover{background:#f1f5f9}
+.glr-pl-download-menu .fa-file-csv{color:#16803c}
+.glr-pl-download-menu .fa-file-pdf{color:#c62828}
+.glr-pl-download-menu .fa-print{color:#475569}
+.glr-pl-search{height:36px!important;min-width:170px;width:min(308px,30vw);margin-left:auto;border:1px solid #dfe3e8;border-radius:4px;padding:0 12px;font-size:12px}
+.glr-pl-table-card{background:#fff;border:1px solid #e6e8eb;overflow:hidden}
+.glr-pl-table-wrap{max-height:min(68vh,720px);min-height:320px;overflow:auto}
+.glr-pl-table{width:100%;border-collapse:collapse;font-size:11px}
+.glr-pl-table th,.glr-pl-table td{height:34px;padding:5px 12px;border-bottom:1px solid #eceef0;white-space:nowrap}
+.glr-pl-table thead th{position:sticky;top:0;z-index:2;height:32px;background:#fff;color:#606a76;font-size:10px;font-weight:600;text-align:left}
+.glr-pl-table .glr-pl-num{text-align:right;font-variant-numeric:tabular-nums}
+.glr-pl-nominal{width:46%;min-width:250px}
+.glr-pl-expand{width:22px;height:22px;margin-right:5px;padding:0;border:0;background:transparent;color:#89929d;cursor:pointer}
+.glr-pl-expand:hover{color:#2563eb}
+.glr-pl-account a{color:#3f4a56;text-decoration:none}
+.glr-pl-account a:hover{color:#2563eb;text-decoration:underline}
+.glr-pl-account-code{margin-right:5px;color:#697380}
+.glr-pl-row:hover td{background:#f8fafc}
+.glr-pl-section td{height:30px;background:#f8fafb;color:#334155;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+.glr-pl-subtotal td{font-weight:700;color:#334155;border-bottom-color:#dfe3e8}
+.glr-pl-result td{font-weight:750;color:#1e3a8a;background:#f5f8ff;border-bottom-color:#dbe4f5}
+.glr-pl-muted td{color:#98a1ac;font-style:italic}
+.glr-pl-up{color:#15803d}.glr-pl-down{color:#b42318}
+.glr-pl-detail td{height:auto;padding:0 14px 9px 48px;background:#fafbfc;white-space:normal}
+.glr-pl-detail[hidden]{display:none}
+.glr-pl-detail-grid{display:flex;flex-wrap:wrap;gap:8px 26px;padding:9px 0 2px;color:#66717d;font-size:10px}
+.glr-pl-detail-grid span{display:inline-flex;gap:5px}
+.glr-pl-detail-grid b{color:#334155;font-weight:650}
+.glr-pl-table tfoot td{position:sticky;bottom:0;background:#f8fafb;font-weight:700;border-top:1px solid #dfe3e8}
+.glr-pl-table tfoot .is-loss{color:#b42318}
+.glr-pl-nomatch{padding:24px 12px!important;color:#77818c;text-align:center!important}
+.glr-pl-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin-top:7px}
+.glr-pl-stat{padding:8px 10px 10px;background:#fff;border:1px solid #e6e8eb}
+.glr-pl-stat-label{font-size:10px;color:#66717d}
+.glr-pl-stat-value{padding-top:4px;text-align:center;font-size:15px;font-weight:750;color:#354052;font-variant-numeric:tabular-nums}
+.glr-pl-stat-value.is-loss{color:#b42318}
+.glr-pl-stat-note{text-align:center;font-size:10px;color:#8a939e;margin-top:2px}
+html[data-theme="dark"] .main-content.glr.glr-pl{background:#111827}
+html[data-theme="dark"] .glr-pl-breadcrumb [aria-current="page"]{color:#dbe4ed}
+html[data-theme="dark"] .glr-pl-head,html[data-theme="dark"] .glr-pl-filter,
+html[data-theme="dark"] .glr-pl-table-card,html[data-theme="dark"] .glr-pl-stat{background:#17212b;border-color:#334155}
+html[data-theme="dark"] .glr-pl-title,html[data-theme="dark"] .glr-pl-table td,
+html[data-theme="dark"] .glr-pl-account a{color:#dbe4ed}
+html[data-theme="dark"] .glr-pl-table thead th,html[data-theme="dark"] .glr-pl-table tfoot td,
+html[data-theme="dark"] .glr-pl-section td{background:#17212b;color:#cbd5e1}
+html[data-theme="dark"] .glr-pl-result td{background:#1b2a44;color:#c7d7fe}
+html[data-theme="dark"] .glr-pl-detail td,html[data-theme="dark"] .glr-pl-row:hover td{background:#1d2935}
+html[data-theme="dark"] .glr-pl-search,html[data-theme="dark"] .glr-pl-filter input,html[data-theme="dark"] .glr-pl-filter select{background:#111a23;color:#e2e8f0;border-color:#334155}
+html[data-theme="dark"] .glr-pl-download-menu{background:#17212b;border-color:#334155}
+html[data-theme="dark"] .glr-pl-download-menu a,html[data-theme="dark"] .glr-pl-download-menu button{color:#dbe4ed}
+html[data-theme="dark"] .glr-pl-download-menu a:hover,html[data-theme="dark"] .glr-pl-download-menu button:hover{background:#1d2935}
+html[data-theme="dark"] .glr-pl-detail-grid b,html[data-theme="dark"] .glr-pl-stat-value{color:#e2e8f0}
+@media(max-width:900px){.glr-pl-summary{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:680px){
+  .glr-pl .glr-wrap{padding:0 6px}
+  .glr-pl-breadcrumb{min-height:36px;padding:0 8px;font-size:12px}
+  .glr-pl-head{align-items:flex-start;flex-wrap:wrap}
+  .glr-pl-filter .glr-form{flex-wrap:wrap}
+  .glr-pl-search{width:100%;margin-left:0}
+  .glr-pl-table{min-width:640px}
+}
+@media print{
+  .glr-pl-filter,.glr-pl-expand{display:none!important}
+  .glr-pl .glr-wrap{padding:0}
+  .glr-pl-table-wrap{max-height:none;overflow:visible}
+  .glr-pl-table thead th,.glr-pl-table tfoot td{position:static}
+}
+</style>
+
+<main class="main-content glr glr-pl">
   <div class="glr-wrap">
-    <?php $glNavActive = 'pl'; include __DIR__ . '/../../includes/gl/gl_page_nav.php'; ?>
-    <div class="glr-top">
-      <div>
-        <h1>Profit &amp; Loss</h1>
-        <p><?= gl_h(date('d M Y', strtotime($from))) ?> to <?= gl_h(date('d M Y', strtotime($to))) ?> (accrual basis: revenue when invoiced, costs when paid or classified).</p>
+    <nav class="glr-pl-breadcrumb" aria-label="Breadcrumb">
+      <a href="../">Home</a>
+      <span class="separator" aria-hidden="true">/</span>
+      <a href="../modules/accounting/index.php?module=<?= rawurlencode($module) ?>#financial-statements">Accounting</a>
+      <span class="separator" aria-hidden="true">/</span>
+      <span aria-current="page">Profit &amp; Loss</span>
+    </nav>
+    <header class="glr-pl-head">
+      <h1 class="glr-pl-title"><i class="fas fa-chart-line" aria-hidden="true"></i>Profit &amp; Loss</h1>
+      <div class="glr-pl-date"><?= gl_h($periodText) ?><?php if ($hasCompare): ?><small>Compared with <?= gl_h($compareText) ?></small><?php endif; ?></div>
+    </header>
+
+    <section class="glr-pl-filter" aria-label="Profit and loss filters">
+      <form method="get" class="glr-form" id="glrPlForm">
+        <input type="hidden" name="module" value="<?= gl_h($module) ?>">
+        <label>Period
+          <select name="period" id="glrPlPeriod">
+            <option value="custom"<?= $period === 'custom' ? ' selected' : '' ?>>Custom dates</option>
+            <?php foreach ($periodPresets as $value => $text): ?>
+              <option value="<?= gl_h($value) ?>"<?= $period === $value ? ' selected' : '' ?>><?= gl_h($text) ?></option>
+            <?php endforeach; ?>
+          </select>
+        </label>
+        <label>From <input type="date" name="from_date" id="glrPlFrom" value="<?= gl_h($from) ?>"></label>
+        <label>To <input type="date" name="to_date" id="glrPlTo" value="<?= gl_h($to) ?>"></label>
+        <label>Compare
+          <select name="compare" id="glrPlCompare">
+            <?php foreach ($compareModes as $value => $text): ?>
+              <option value="<?= gl_h($value) ?>"<?= $compare === $value ? ' selected' : '' ?>><?= gl_h($text) ?></option>
+            <?php endforeach; ?>
+          </select>
+        </label>
+        <button class="glr-btn" type="submit" aria-label="View profit and loss" title="View profit and loss"><i class="fas fa-magnifying-glass" aria-hidden="true"></i></button>
+        <details class="glr-pl-download">
+          <summary aria-label="Download Profit and Loss" title="Download Profit and Loss"><i class="fas fa-download" aria-hidden="true"></i><span>Download</span></summary>
+          <div class="glr-pl-download-menu">
+            <a href="<?= gl_h($exportUrl('csv')) ?>" data-export-format="csv"><i class="fas fa-file-csv" aria-hidden="true"></i>Download CSV</a>
+            <a href="<?= gl_h($exportUrl('pdf')) ?>" data-export-format="pdf"><i class="fas fa-file-pdf" aria-hidden="true"></i>Download PDF</a>
+            <button type="button" id="glrPlPrint"><i class="fas fa-print" aria-hidden="true"></i>Print</button>
+          </div>
+        </details>
+        <input class="glr-pl-search" id="glrPlSearch" type="search" placeholder="Search accounts" aria-label="Search accounts">
+      </form>
+    </section>
+
+    <section class="glr-pl-table-card" aria-label="Profit and loss statement">
+      <div class="glr-pl-table-wrap">
+        <table class="glr-pl-table">
+          <thead>
+            <tr>
+              <th class="glr-pl-nominal">Nominal</th>
+              <th class="glr-pl-num">Amount</th>
+              <?php if ($hasCompare): ?>
+                <th class="glr-pl-num">Comparison</th>
+                <th class="glr-pl-num">Change</th>
+                <th class="glr-pl-num">Change %</th>
+              <?php endif; ?>
+              <th class="glr-pl-num">% of Revenue</th>
+            </tr>
+          </thead>
+          <tbody id="glrPlRows">
+          <?php
+            $colspan = $hasCompare ? 6 : 3;
+            $valueCells = static function (float $amount, float $compareAmount, bool $higherIsBetter) use ($hasCompare, $change, $changePct, $pctOfRevenue): void {
+                echo '<td class="glr-pl-num">' . gl_fmt($amount) . '</td>';
+                if ($hasCompare) {
+                    $diff = $change($amount, $compareAmount);
+                    $cls = abs($diff) < 0.005 ? '' : (($diff > 0) === $higherIsBetter ? ' glr-pl-up' : ' glr-pl-down');
+                    echo '<td class="glr-pl-num">' . gl_fmt($compareAmount) . '</td>';
+                    echo '<td class="glr-pl-num' . $cls . '">' . gl_fmt($diff) . '</td>';
+                    echo '<td class="glr-pl-num' . $cls . '">' . gl_h($changePct($amount, $compareAmount)) . '</td>';
+                }
+                echo '<td class="glr-pl-num">' . gl_h($pctOfRevenue($amount)) . '</td>';
+            };
+            $showCogs = $sections['cogs'] || abs($prev['cogs']) >= 0.005;
+          ?>
+          <?php foreach (['revenue', 'cogs', 'expense'] as $key):
+              if ($key === 'cogs' && !$showCogs) {
+                  continue;
+              }
+              $higherIsBetter = $key === 'revenue';
+          ?>
+            <tr class="glr-pl-section"><td colspan="<?= $colspan ?>"><?= gl_h($sectionTitles[$key]) ?></td></tr>
+            <?php if (!$sections[$key]): ?>
+              <tr class="glr-pl-muted"><td colspan="<?= $colspan ?>">None in this period</td></tr>
+            <?php endif; ?>
+            <?php foreach ($sections[$key] as $a):
+                $accountId = (int) $a['id'];
+                $ledgerUrl = 'ledger.php?' . http_build_query([
+                    'module' => $module, 'account_id' => $accountId,
+                    'from_date' => $from, 'to_date' => $to, 'start_date' => $from, 'end_date' => $to,
+                ]);
+                $searchText = strtolower(trim($a['code'] . ' ' . $a['name'] . ' ' . $sectionTitles[$key]));
+            ?>
+              <tr class="glr-pl-row" data-account-row data-search="<?= gl_h($searchText) ?>">
+                <td class="glr-pl-account">
+                  <button class="glr-pl-expand" type="button" aria-expanded="false" aria-label="Show period details for <?= gl_h($a['code'] . ' ' . $a['name']) ?>" aria-controls="glr-pl-detail-<?= $accountId ?>"><i class="fas fa-chevron-right" aria-hidden="true"></i></button>
+                  <a href="<?= gl_h($ledgerUrl) ?>"><span class="glr-pl-account-code"><?= gl_h($a['code'] !== '' ? $a['code'] : '-') ?></span><?= gl_h($a['name']) ?></a>
+                </td>
+                <?php $valueCells((float) $a['amount'], (float) $a['compare'], $higherIsBetter); ?>
+              </tr>
+              <tr class="glr-pl-detail" id="glr-pl-detail-<?= $accountId ?>" data-detail-row hidden>
+                <td colspan="<?= $colspan ?>">
+                  <div class="glr-pl-detail-grid">
+                    <span>Period debits <b><?= number_format((float) $a['debit'], 2) ?></b></span>
+                    <span>Period credits <b><?= number_format((float) $a['credit'], 2) ?></b></span>
+                    <span>Net for period <b><?= gl_fmt((float) $a['amount']) ?></b></span>
+                    <?php if ($hasCompare): ?><span>Comparison period <b><?= gl_fmt((float) $a['compare']) ?></b></span><?php endif; ?>
+                    <span>Account type <b><?= gl_h(ucfirst((string) $a['type'])) ?></b></span>
+                    <span><a href="<?= gl_h($ledgerUrl) ?>">Open in General Ledger</a></span>
+                  </div>
+                </td>
+              </tr>
+            <?php endforeach; ?>
+            <tr class="glr-pl-subtotal"><td>Total <?= gl_h(strtolower($sectionTitles[$key])) ?></td><?php $valueCells($cur[$key], $prev[$key], $higherIsBetter); ?></tr>
+            <?php if ($key === 'cogs' || ($key === 'revenue' && !$showCogs)): ?>
+              <tr class="glr-pl-result"><td>Gross profit</td><?php $valueCells($cur['gross'], $prev['gross'], true); ?></tr>
+            <?php endif; ?>
+          <?php endforeach; ?>
+            <tr class="glr-pl-muted" id="glrPlNoMatch" hidden><td class="glr-pl-nomatch" colspan="<?= $colspan ?>">No accounts match your search.</td></tr>
+          </tbody>
+          <tfoot>
+            <tr>
+              <td><?= $cur['net'] >= 0 ? 'Net profit' : 'Net loss' ?></td>
+              <td class="glr-pl-num<?= $cur['net'] < 0 ? ' is-loss' : '' ?>"><?= gl_fmt($cur['net']) ?></td>
+              <?php if ($hasCompare): $netDiff = $change($cur['net'], $prev['net']); ?>
+                <td class="glr-pl-num<?= $prev['net'] < 0 ? ' is-loss' : '' ?>"><?= gl_fmt($prev['net']) ?></td>
+                <td class="glr-pl-num <?= $netDiff >= 0 ? 'glr-pl-up' : 'glr-pl-down' ?>"><?= gl_fmt($netDiff) ?></td>
+                <td class="glr-pl-num <?= $netDiff >= 0 ? 'glr-pl-up' : 'glr-pl-down' ?>"><?= gl_h($changePct($cur['net'], $prev['net'])) ?></td>
+              <?php endif; ?>
+              <td class="glr-pl-num"><?= gl_h($pctOfRevenue($cur['net'])) ?></td>
+            </tr>
+          </tfoot>
+        </table>
       </div>
-      <div style="display:flex;gap:8px">
-        <a class="glr-btn secondary" href="<?= gl_h(gl_export_url()) ?>">Export CSV</a>
-        <button class="glr-btn secondary" type="button" onclick="window.print()">Print</button>
+    </section>
+
+    <section class="glr-pl-summary" aria-label="Profit and loss summary">
+      <div class="glr-pl-stat">
+        <div class="glr-pl-stat-label">Total Revenue</div>
+        <div class="glr-pl-stat-value"><?= gl_fmt($cur['revenue']) ?></div>
+        <div class="glr-pl-stat-note"><?= $hasCompare ? gl_h('vs ' . gl_fmt($prev['revenue'])) : '&nbsp;' ?></div>
       </div>
-    </div>
-    <form method="get" class="glr-sec glr-form">
-      <label>From <input type="date" name="from_date" value="<?= gl_h($from) ?>"></label>
-      <label>To <input type="date" name="to_date" value="<?= gl_h($to) ?>"></label>
-      <button class="glr-btn" type="submit">View</button>
-    </form>
-    <div class="glr-cards">
-      <div class="glr-card"><div class="k">Revenue</div><div class="v"><?= gl_fmt($pl['total_revenue']) ?></div></div>
-      <div class="glr-card"><div class="k">Expenses</div><div class="v"><?= gl_fmt($pl['total_expense']) ?></div></div>
-      <div class="glr-card"><div class="k"><?= $pl['net'] >= 0 ? 'Net profit' : 'Net loss' ?></div><div class="v <?= $pl['net'] >= 0 ? 'ok-t' : 'bad-t' ?>"><?= gl_fmt($pl['net']) ?></div></div>
-    </div>
-    <section class="glr-sec">
-      <div class="glr-tw"><table class="glr-t">
-        <thead><tr><th>Code</th><th>Account</th><th class="n">Amount (TZS)</th></tr></thead>
-        <tbody>
-          <?php $section('Revenue', $pl['revenue'], $pl['total_revenue'], 'Total revenue'); ?>
-          <?php $section('Expenses', $pl['expense'], $pl['total_expense'], 'Total expenses'); ?>
-          <tr class="tot"><td colspan="2"><?= $pl['net'] >= 0 ? 'Net profit' : 'Net loss' ?></td><td class="n"><?= gl_fmt($pl['net']) ?></td></tr>
-        </tbody>
-      </table></div>
+      <div class="glr-pl-stat">
+        <div class="glr-pl-stat-label">Gross Profit</div>
+        <div class="glr-pl-stat-value<?= $cur['gross'] < 0 ? ' is-loss' : '' ?>"><?= gl_fmt($cur['gross']) ?></div>
+        <div class="glr-pl-stat-note"><?= $pctOfRevenue($cur['gross']) !== '' ? gl_h($pctOfRevenue($cur['gross']) . ' margin') : '&nbsp;' ?></div>
+      </div>
+      <div class="glr-pl-stat">
+        <div class="glr-pl-stat-label">Total Expenses</div>
+        <div class="glr-pl-stat-value"><?= gl_fmt($cur['cogs'] + $cur['expense']) ?></div>
+        <div class="glr-pl-stat-note"><?= $pctOfRevenue($cur['cogs'] + $cur['expense']) !== '' ? gl_h($pctOfRevenue($cur['cogs'] + $cur['expense']) . ' of revenue') : '&nbsp;' ?></div>
+      </div>
+      <div class="glr-pl-stat">
+        <div class="glr-pl-stat-label"><?= $cur['net'] >= 0 ? 'Net Profit' : 'Net Loss' ?></div>
+        <div class="glr-pl-stat-value<?= $cur['net'] < 0 ? ' is-loss' : '' ?>"><?= gl_fmt($cur['net']) ?></div>
+        <div class="glr-pl-stat-note"><?= $pctOfRevenue($cur['net']) !== '' ? gl_h($pctOfRevenue($cur['net']) . ' margin') : '&nbsp;' ?></div>
+      </div>
     </section>
   </div>
 </main>
+<script>
+(function () {
+  var periodSelect = document.getElementById('glrPlPeriod');
+  var fromInput = document.getElementById('glrPlFrom');
+  var toInput = document.getElementById('glrPlTo');
+  var form = document.getElementById('glrPlForm');
+  if (periodSelect && form) {
+    periodSelect.addEventListener('change', function () {
+      if (periodSelect.value !== 'custom') form.submit();
+    });
+    [fromInput, toInput].forEach(function (input) {
+      if (input) input.addEventListener('change', function () { periodSelect.value = 'custom'; });
+    });
+    var compareSelect = document.getElementById('glrPlCompare');
+    if (compareSelect) compareSelect.addEventListener('change', function () { form.submit(); });
+  }
+
+  var downloadMenu = document.querySelector('.glr-pl-download');
+  if (downloadMenu) {
+    var label = downloadMenu.querySelector('summary span');
+    var timer;
+    document.addEventListener('click', function (event) {
+      if (!downloadMenu.contains(event.target)) downloadMenu.open = false;
+    });
+    document.addEventListener('keydown', function (event) {
+      if (event.key === 'Escape') downloadMenu.open = false;
+    });
+    downloadMenu.addEventListener('click', function (event) {
+      var link = event.target.closest('.glr-pl-download-menu a');
+      if (!link || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey || event.button !== 0) return;
+      window.clearTimeout(timer);
+      downloadMenu.classList.add('is-downloading');
+      downloadMenu.setAttribute('aria-busy', 'true');
+      if (label) label.textContent = 'Preparing…';
+      downloadMenu.open = false;
+      timer = window.setTimeout(function () {
+        downloadMenu.classList.remove('is-downloading');
+        downloadMenu.removeAttribute('aria-busy');
+        if (label) label.textContent = 'Download';
+      }, 2400);
+    });
+    var printButton = document.getElementById('glrPlPrint');
+    if (printButton) printButton.addEventListener('click', function () { downloadMenu.open = false; window.print(); });
+  }
+
+  var body = document.getElementById('glrPlRows');
+  var search = document.getElementById('glrPlSearch');
+  var noMatch = document.getElementById('glrPlNoMatch');
+  if (!body || !search) return;
+  var rows = Array.prototype.slice.call(body.querySelectorAll('[data-account-row]'));
+
+  body.addEventListener('click', function (event) {
+    var button = event.target.closest('.glr-pl-expand');
+    if (!button) return;
+    var expanded = button.getAttribute('aria-expanded') !== 'true';
+    button.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+    button.innerHTML = '<i class="fas fa-chevron-' + (expanded ? 'down' : 'right') + '" aria-hidden="true"></i>';
+    var detail = button.closest('[data-account-row]').nextElementSibling;
+    if (detail) detail.hidden = !expanded;
+  });
+
+  search.addEventListener('input', function () {
+    var query = search.value.trim().toLowerCase();
+    var shown = 0;
+    rows.forEach(function (row) {
+      var match = !query || (row.getAttribute('data-search') || '').indexOf(query) !== -1;
+      row.hidden = !match;
+      if (match) shown++;
+      var detail = row.nextElementSibling;
+      var button = row.querySelector('.glr-pl-expand');
+      if (detail) detail.hidden = !match || !button || button.getAttribute('aria-expanded') !== 'true';
+    });
+    if (noMatch) noMatch.hidden = shown > 0 || !query;
+  });
+})();
+</script>
 <?php include __DIR__ . '/../../modules/balances/includes/footer.php'; ?>

@@ -51,23 +51,8 @@ if ($export === 'csv') {
 }
 
 if ($export === 'pdf') {
-    $pdfAscii = static function (string $text): string {
-        $converted = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $text);
-        if ($converted === false) {
-            return '';
-        }
-        return preg_replace('/[^\x20-\x7E]/', '', $converted) ?? '';
-    };
-    $pdfEscape = static function (string $text) use ($pdfAscii): string {
-        return str_replace(["\\", "(", ")"], ["\\\\", "\\(", "\\)"], $pdfAscii($text));
-    };
-    $pdfText = static function (float $x, float $y, float $size, string $text, bool $rightAligned = false) use ($pdfEscape, $pdfAscii): string {
-        $plain = $pdfAscii($text);
-        if ($rightAligned) {
-            $x -= strlen($plain) * $size * 0.52;
-        }
-        return sprintf("BT /F1 %.1F Tf %.2F %.2F Td (%s) Tj ET\n", $size, $x, $y, $pdfEscape($plain));
-    };
+    $pdfAscii = 'gl_pdf_ascii';
+    $pdfText = static fn (float $x, float $y, float $size, string $text, bool $rightAligned = false): string => gl_pdf_text($x, $y, $size, $text, $rightAligned);
 
     $pdfRows = [];
     foreach ($rows as $row) {
@@ -84,56 +69,7 @@ if ($export === 'pdf') {
         ];
     }
 
-    $pdfLogo = null;
-    if (function_exists('getCompanyLogoUrl') && function_exists('imagecreatefromstring')) {
-        $logoUrl = getCompanyLogoUrl();
-        $logoPath = parse_url($logoUrl, PHP_URL_PATH);
-        $logoHost = parse_url($logoUrl, PHP_URL_HOST);
-        $requestHost = preg_replace('/:\d+$/', '', (string) ($_SERVER['HTTP_HOST'] ?? ''));
-        if (is_string($logoPath) && $logoPath !== '' && ($logoHost === null || strcasecmp((string) $logoHost, $requestHost) === 0)) {
-            $appBasePath = '/' . trim((string) (defined('APP_BASE_PATH') ? APP_BASE_PATH : ''), '/');
-            if ($appBasePath !== '/' && str_starts_with($logoPath, $appBasePath . '/')) {
-                $logoPath = substr($logoPath, strlen($appBasePath) + 1);
-            } else {
-                $logoPath = ltrim($logoPath, '/');
-            }
-            $appRoot = realpath(dirname(__DIR__, 2));
-            $logoFile = $appRoot !== false
-                ? $appRoot . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, rawurldecode($logoPath))
-                : '';
-            $resolvedLogoFile = $logoFile !== '' ? realpath($logoFile) : false;
-            if ($appRoot !== false
-                && $resolvedLogoFile !== false
-                && str_starts_with($resolvedLogoFile, $appRoot . DIRECTORY_SEPARATOR)
-                && is_file($resolvedLogoFile)
-            ) {
-                $imageInfo = @getimagesize($resolvedLogoFile);
-                $imageBytes = @file_get_contents($resolvedLogoFile);
-                if ($imageInfo && is_string($imageBytes) && $imageBytes !== '') {
-                    $sourceImage = @imagecreatefromstring($imageBytes);
-                    if ($sourceImage !== false) {
-                        $sourceWidth = imagesx($sourceImage);
-                        $sourceHeight = imagesy($sourceImage);
-                        $scale = min(1, 180 / max(1, $sourceWidth), 54 / max(1, $sourceHeight));
-                        $logoWidth = max(1, (int) round($sourceWidth * $scale));
-                        $logoHeight = max(1, (int) round($sourceHeight * $scale));
-                        $canvas = imagecreatetruecolor($logoWidth, $logoHeight);
-                        $white = imagecolorallocate($canvas, 255, 255, 255);
-                        imagefill($canvas, 0, 0, $white);
-                        imagecopyresampled($canvas, $sourceImage, 0, 0, 0, 0, $logoWidth, $logoHeight, $sourceWidth, $sourceHeight);
-                        ob_start();
-                        $jpegCreated = imagejpeg($canvas, null, 88);
-                        $jpegBytes = ob_get_clean();
-                        if ($jpegCreated && is_string($jpegBytes) && $jpegBytes !== '') {
-                            $pdfLogo = ['bytes' => $jpegBytes, 'width' => $logoWidth, 'height' => $logoHeight];
-                        }
-                        imagedestroy($canvas);
-                        imagedestroy($sourceImage);
-                    }
-                }
-            }
-        }
-    }
+    $pdfLogo = gl_pdf_logo();
 
     $pdfPages = [];
     $pdfRowPages = array_chunk($pdfRows, 32);
@@ -186,49 +122,7 @@ if ($export === 'pdf') {
         $pdfPages[] = $content;
     }
 
-    $objects = [
-        1 => '<< /Type /Catalog /Pages 2 0 R >>',
-        3 => '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>',
-    ];
-    $pageReferences = [];
-    foreach ($pdfPages as $index => $content) {
-        $pageObject = 4 + $index * 2;
-        $contentObject = $pageObject + 1;
-        $pageReferences[] = "{$pageObject} 0 R";
-        $xObjectResource = '';
-        if ($pdfLogo !== null) {
-            $logoObject = 4 + count($pdfPages) * 2;
-            $xObjectResource = " /XObject << /Logo {$logoObject} 0 R >>";
-        }
-        $objects[$pageObject] = "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 842 595] /Resources << /Font << /F1 3 0 R >>{$xObjectResource} >> /Contents {$contentObject} 0 R >>";
-        $objects[$contentObject] = "<< /Length " . strlen($content) . " >>\nstream\n{$content}endstream";
-    }
-    if ($pdfLogo !== null) {
-        $logoObject = 4 + count($pdfPages) * 2;
-        $objects[$logoObject] = "<< /Type /XObject /Subtype /Image /Width {$pdfLogo['width']} /Height {$pdfLogo['height']} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length " . strlen($pdfLogo['bytes']) . " >>\nstream\n{$pdfLogo['bytes']}\nendstream";
-    }
-    $objects[2] = '<< /Type /Pages /Kids [' . implode(' ', $pageReferences) . '] /Count ' . count($pdfPages) . ' >>';
-    ksort($objects);
-
-    $document = "%PDF-1.4\n";
-    $offsets = [0];
-    foreach ($objects as $objectNumber => $objectBody) {
-        $offsets[$objectNumber] = strlen($document);
-        $document .= "{$objectNumber} 0 obj\n{$objectBody}\nendobj\n";
-    }
-    $xrefOffset = strlen($document);
-    $objectCount = max(array_keys($objects)) + 1;
-    $document .= "xref\n0 {$objectCount}\n0000000000 65535 f \n";
-    for ($number = 1; $number < $objectCount; $number++) {
-        $document .= sprintf("%010d 00000 n \n", $offsets[$number] ?? 0);
-    }
-    $document .= "trailer\n<< /Size {$objectCount} /Root 1 0 R >>\nstartxref\n{$xrefOffset}\n%%EOF";
-
-    header('Content-Type: application/pdf');
-    header('Content-Disposition: attachment; filename="trial-balance-' . $to . '.pdf"');
-    header('Content-Length: ' . strlen($document));
-    echo $document;
-    exit;
+    gl_pdf_send('trial-balance-' . $to . '.pdf', $pdfPages, $pdfLogo);
 }
 
 $csvQuery = $_GET;

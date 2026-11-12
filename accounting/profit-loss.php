@@ -11,8 +11,47 @@ requireLogin();
 global $pdo;
 
 require_once __DIR__ . '/../includes/gl/gl_reports.php';
-if (gl_report_source($pdo) === 'ledger' && !isset($_GET['legacy'])) {
+if (!isset($_GET['legacy'])) {
     define('GL_VIEW', true);
+    if (gl_report_source($pdo) !== 'ledger') {
+        $plLoader = static function (string $from, string $to) use ($pdo): array {
+            $st = $pdo->prepare(
+                "SELECT a.id, COALESCE(a.code, '') AS code, a.name, a.type,
+                        COALESCE(SUM(ji.debit), 0) AS debit, COALESCE(SUM(ji.credit), 0) AS credit
+                 FROM erp_accounts a
+                 JOIN erp_journal_items ji ON ji.account_id = a.id
+                 JOIN erp_journal_entries je ON je.id = ji.journal_id
+                 WHERE je.date BETWEEN ? AND ?
+                 GROUP BY a.id, a.code, a.name, a.type"
+            );
+            try {
+                $st->execute([$from, $to]);
+            } catch (PDOException $e) {
+                return gl_profit_and_loss($pdo, $from, $to);
+            }
+            $rev = [];
+            $exp = [];
+            foreach ($st->fetchAll(PDO::FETCH_ASSOC) ?: [] as $a) {
+                $type = gl_normal_type((string) $a['type']);
+                $debit = round((float) $a['debit'], 2);
+                $credit = round((float) $a['credit'], 2);
+                $period = round($debit - $credit, 2);
+                if (abs($period) < 0.005 || !in_array($type, ['revenue', 'expense'], true)) {
+                    continue;
+                }
+                $row = ['id' => (int) $a['id'], 'code' => (string) $a['code'], 'name' => (string) $a['name'], 'type' => $type,
+                        'opening' => 0.0, 'debit' => $debit, 'credit' => $credit, 'closing' => $period];
+                if ($type === 'revenue') {
+                    $rev[] = $row + ['amount' => -$period];
+                } else {
+                    $exp[] = $row + ['amount' => $period];
+                }
+            }
+            $tr = round(array_sum(array_column($rev, 'amount')), 2);
+            $te = round(array_sum(array_column($exp, 'amount')), 2);
+            return ['revenue' => $rev, 'expense' => $exp, 'total_revenue' => $tr, 'total_expense' => $te, 'net' => round($tr - $te, 2)];
+        };
+    }
     require __DIR__ . '/gl-views/profit-loss.php';
     exit;
 }

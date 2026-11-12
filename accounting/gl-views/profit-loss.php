@@ -54,14 +54,20 @@ $loadPl = isset($plLoader) && is_callable($plLoader)
 $pl = $loadPl($from, $to);
 $plCmp = $hasCompare ? $loadPl($cmpFrom, $cmpTo) : null;
 
-$isCostOfSales = static fn (array $a): bool => (bool) preg_match('/cost of (goods|sales)|\bcogs\b|cost of sale/i', (string) $a['name']);
-$sections = ['revenue' => [], 'cogs' => [], 'expense' => []];
+$expenseSection = static function (array $a): string {
+    $name = (string) $a['name'];
+    if (preg_match('/\b(income|corporate|corporation)\s+tax\b/i', $name)) {
+        return 'tax';
+    }
+    return preg_match('/cost of (goods|sales)|\bcogs\b|cost of sale/i', $name) ? 'cogs' : 'expense';
+};
+$sections = ['revenue' => [], 'cogs' => [], 'expense' => [], 'tax' => []];
 $accounts = [];
 foreach ($pl['revenue'] as $a) {
     $accounts[(int) $a['id']] = ['section' => 'revenue'] + $a;
 }
 foreach ($pl['expense'] as $a) {
-    $accounts[(int) $a['id']] = ['section' => $isCostOfSales($a) ? 'cogs' : 'expense'] + $a;
+    $accounts[(int) $a['id']] = ['section' => $expenseSection($a)] + $a;
 }
 if ($plCmp) {
     foreach (['revenue' => $plCmp['revenue'], 'expense' => $plCmp['expense']] as $kind => $list) {
@@ -69,7 +75,7 @@ if ($plCmp) {
             $id = (int) $a['id'];
             if (!isset($accounts[$id])) {
                 $accounts[$id] = [
-                    'section' => $kind === 'revenue' ? 'revenue' : ($isCostOfSales($a) ? 'cogs' : 'expense'),
+                    'section' => $kind === 'revenue' ? 'revenue' : $expenseSection($a),
                     'amount' => 0.0, 'opening' => 0.0, 'debit' => 0.0, 'credit' => 0.0, 'closing' => 0.0,
                 ] + $a;
             }
@@ -86,24 +92,38 @@ foreach ($sections as &$list) {
 }
 unset($list);
 
+$taxRate = (float) (function_exists('gl_meta_get') ? (gl_meta_get($pdo, 'income_tax_rate') ?? 30) : 30);
+if ($taxRate < 0 || $taxRate > 100) {
+    $taxRate = 30.0;
+}
+$taxRateText = rtrim(rtrim(number_format($taxRate, 2), '0'), '.') . '%';
+
 $sum = static fn (array $rows, string $key): float => round(array_sum(array_map(static fn ($r) => (float) $r[$key], $rows)), 2);
 $tot = [];
 foreach (['amount', 'compare'] as $k) {
-    $tot[$k] = [
+    $t = [
         'revenue' => $sum($sections['revenue'], $k),
         'cogs' => $sum($sections['cogs'], $k),
         'expense' => $sum($sections['expense'], $k),
+        'tax_posted' => $sum($sections['tax'], $k),
     ];
-    $tot[$k]['gross'] = round($tot[$k]['revenue'] - $tot[$k]['cogs'], 2);
-    $tot[$k]['net'] = round($tot[$k]['gross'] - $tot[$k]['expense'], 2);
+    $t['gross'] = round($t['revenue'] - $t['cogs'], 2);
+    $t['pbt'] = round($t['gross'] - $t['expense'], 2);
+    // With no income tax booked for the period, provide for it at the statutory rate on any profit.
+    $t['tax_estimate'] = abs($t['tax_posted']) < 0.005 && $t['pbt'] > 0 ? round($t['pbt'] * $taxRate / 100, 2) : 0.0;
+    $t['tax'] = round($t['tax_posted'] + $t['tax_estimate'], 2);
+    $t['net'] = round($t['pbt'] - $t['tax'], 2);
+    $tot[$k] = $t;
 }
 $cur = $tot['amount'];
 $prev = $tot['compare'];
+$showTaxEstimate = $cur['tax_estimate'] > 0 || $prev['tax_estimate'] > 0;
+$taxEstimateLabel = 'Estimated income tax (' . $taxRateText . ' of profit before tax)';
 $pctOfRevenue = static fn (float $v): string => abs($cur['revenue']) < 0.005 ? '' : number_format($v / $cur['revenue'] * 100, 1) . '%';
 $change = static fn (float $now, float $before): float => round($now - $before, 2);
 $changePct = static fn (float $now, float $before): string => abs($before) < 0.005 ? '' : number_format(($now - $before) / abs($before) * 100, 1) . '%';
 $module = (string) ($_GET['module'] ?? 'accounting');
-$sectionTitles = ['revenue' => 'Income', 'cogs' => 'Cost of Sales', 'expense' => 'Operating Expenses'];
+$sectionTitles = ['revenue' => 'Income', 'cogs' => 'Cost of Sales', 'expense' => 'Operating Expenses', 'tax' => 'Income Tax'];
 $periodText = date('d M Y', strtotime($from)) . ' – ' . date('d M Y', strtotime($to));
 $compareText = $hasCompare ? date('d M Y', strtotime($cmpFrom)) . ' – ' . date('d M Y', strtotime($cmpTo)) : '';
 
@@ -122,7 +142,16 @@ foreach (['revenue', 'cogs', 'expense'] as $key) {
         $lines[] = ['kind' => 'result', 'label' => 'Gross profit', 'amount' => $cur['gross'], 'compare' => $prev['gross']];
     }
 }
-$lines[] = ['kind' => 'result', 'label' => $cur['net'] >= 0 ? 'Net profit' : 'Net loss', 'amount' => $cur['net'], 'compare' => $prev['net']];
+$lines[] = ['kind' => 'result', 'label' => $cur['pbt'] >= 0 ? 'Profit before tax' : 'Loss before tax', 'amount' => $cur['pbt'], 'compare' => $prev['pbt']];
+$lines[] = ['kind' => 'section', 'label' => $sectionTitles['tax']];
+foreach ($sections['tax'] as $a) {
+    $lines[] = ['kind' => 'account', 'section' => $sectionTitles['tax'], 'code' => $a['code'], 'label' => $a['name'], 'amount' => (float) $a['amount'], 'compare' => (float) $a['compare']];
+}
+if ($showTaxEstimate) {
+    $lines[] = ['kind' => 'account', 'section' => $sectionTitles['tax'], 'code' => '', 'label' => $taxEstimateLabel, 'amount' => $cur['tax_estimate'], 'compare' => $prev['tax_estimate']];
+}
+$lines[] = ['kind' => 'total', 'label' => 'Total income tax', 'amount' => $cur['tax'], 'compare' => $prev['tax']];
+$lines[] = ['kind' => 'result', 'label' => $cur['net'] >= 0 ? 'Net profit after tax' : 'Net loss after tax', 'amount' => $cur['net'], 'compare' => $prev['net']];
 
 $export = (string) ($_GET['export'] ?? '');
 if ($export === 'csv') {
@@ -256,6 +285,9 @@ html:not([data-theme="dark"]) body:has(.glr-pl),html:not([data-theme="dark"]) bo
 .glr-pl-subtotal td{font-weight:700;color:#334155;border-bottom-color:#dfe3e8}
 .glr-pl-result td{font-weight:750;color:#1e3a8a;background:#f5f8ff;border-bottom-color:#dbe4f5}
 .glr-pl-muted td{color:#98a1ac;font-style:italic}
+.glr-pl-expand-spacer{display:inline-block;width:27px}
+.glr-pl-estimate td{color:#64748b}
+.glr-pl-badge{display:inline-block;margin-left:6px;padding:1px 6px;border-radius:9px;background:#fff7ed;color:#c2410c;font-size:9px;font-weight:600;vertical-align:1px}
 .glr-pl-up{color:#15803d}.glr-pl-down{color:#b42318}
 .glr-pl-detail td{height:auto;padding:0 14px 9px 48px;background:#fafbfc;white-space:normal}
 .glr-pl-detail[hidden]{display:none}
@@ -351,9 +383,9 @@ html[data-theme="dark"] .glr-pl-stat-note{color:#94a3b8}
       </div>
       <div class="glr-pl-stat <?= $cur['net'] >= 0 ? 'is-net' : 'is-net-loss' ?>">
         <div class="glr-pl-stat-body">
-          <div class="glr-pl-stat-label"><?= $cur['net'] >= 0 ? 'Net Profit' : 'Net Loss' ?></div>
+          <div class="glr-pl-stat-label"><?= $cur['net'] >= 0 ? 'Net Profit (after tax)' : 'Net Loss (after tax)' ?></div>
           <div class="glr-pl-stat-value<?= $cur['net'] < 0 ? ' is-loss' : '' ?>"><?= gl_fmt($cur['net']) ?></div>
-          <div class="glr-pl-stat-note"><?= $pctOfRevenue($cur['net']) !== '' ? gl_h($pctOfRevenue($cur['net']) . ' margin') : '&nbsp;' ?></div>
+          <div class="glr-pl-stat-note"><?= $pctOfRevenue($cur['net']) !== '' ? gl_h($pctOfRevenue($cur['net']) . ' margin · tax ' . gl_fmt($cur['tax']) . ($cur['tax_estimate'] > 0 ? ' (est.)' : '')) : '&nbsp;' ?></div>
         </div>
         <span class="glr-pl-stat-icon" aria-hidden="true"><i class="fas <?= $cur['net'] >= 0 ? 'fa-arrow-trend-up' : 'fa-arrow-trend-down' ?>"></i></span>
       </div>
@@ -428,14 +460,17 @@ html[data-theme="dark"] .glr-pl-stat-note{color:#94a3b8}
             };
             $showCogs = $sections['cogs'] || abs($prev['cogs']) >= 0.005;
           ?>
-          <?php foreach (['revenue', 'cogs', 'expense'] as $key):
+          <?php foreach (['revenue', 'cogs', 'expense', 'tax'] as $key):
               if ($key === 'cogs' && !$showCogs) {
                   continue;
               }
               $higherIsBetter = $key === 'revenue';
           ?>
+            <?php if ($key === 'tax'): ?>
+              <tr class="glr-pl-result"><td><?= $cur['pbt'] >= 0 ? 'Profit before tax' : 'Loss before tax' ?></td><?php $valueCells($cur['pbt'], $prev['pbt'], true); ?></tr>
+            <?php endif; ?>
             <tr class="glr-pl-section"><td colspan="<?= $colspan ?>"><?= gl_h($sectionTitles[$key]) ?></td></tr>
-            <?php if (!$sections[$key]): ?>
+            <?php if (!$sections[$key] && !($key === 'tax' && $showTaxEstimate)): ?>
               <tr class="glr-pl-muted"><td colspan="<?= $colspan ?>">None in this period</td></tr>
             <?php endif; ?>
             <?php foreach ($sections[$key] as $a):
@@ -466,6 +501,14 @@ html[data-theme="dark"] .glr-pl-stat-note{color:#94a3b8}
                 </td>
               </tr>
             <?php endforeach; ?>
+            <?php if ($key === 'tax' && $showTaxEstimate): ?>
+              <tr class="glr-pl-row glr-pl-estimate" data-account-row data-search="<?= gl_h(strtolower($taxEstimateLabel . ' income tax')) ?>">
+                <td class="glr-pl-account" title="No income tax has been booked for this period, so it is provided for at <?= gl_h($taxRateText) ?> of profit before tax. Post income tax to the Income Tax Expense account to replace this estimate.">
+                  <span class="glr-pl-expand-spacer" aria-hidden="true"></span><?= gl_h($taxEstimateLabel) ?> <span class="glr-pl-badge">Estimate</span>
+                </td>
+                <?php $valueCells($cur['tax_estimate'], $prev['tax_estimate'], false); ?>
+              </tr>
+            <?php endif; ?>
             <tr class="glr-pl-subtotal"><td>Total <?= gl_h(strtolower($sectionTitles[$key])) ?></td><?php $valueCells($cur[$key], $prev[$key], $higherIsBetter); ?></tr>
             <?php if ($key === 'cogs' || ($key === 'revenue' && !$showCogs)): ?>
               <tr class="glr-pl-result"><td>Gross profit</td><?php $valueCells($cur['gross'], $prev['gross'], true); ?></tr>
@@ -475,7 +518,7 @@ html[data-theme="dark"] .glr-pl-stat-note{color:#94a3b8}
           </tbody>
           <tfoot>
             <tr>
-              <td><?= $cur['net'] >= 0 ? 'Net profit' : 'Net loss' ?></td>
+              <td><?= $cur['net'] >= 0 ? 'Net profit after tax' : 'Net loss after tax' ?></td>
               <td class="glr-pl-num<?= $cur['net'] < 0 ? ' is-loss' : '' ?>"><?= gl_fmt($cur['net']) ?></td>
               <?php if ($hasCompare): $netDiff = $change($cur['net'], $prev['net']); ?>
                 <td class="glr-pl-num<?= $prev['net'] < 0 ? ' is-loss' : '' ?>"><?= gl_fmt($prev['net']) ?></td>
@@ -561,7 +604,7 @@ html[data-theme="dark"] .glr-pl-stat-note{color:#94a3b8}
       if (match) shown++;
       var detail = row.nextElementSibling;
       var button = row.querySelector('.glr-pl-expand');
-      if (detail) detail.hidden = !match || !button || button.getAttribute('aria-expanded') !== 'true';
+      if (detail && detail.hasAttribute('data-detail-row')) detail.hidden = !match || !button || button.getAttribute('aria-expanded') !== 'true';
     });
     if (noMatch) noMatch.hidden = shown > 0 || !query;
   });

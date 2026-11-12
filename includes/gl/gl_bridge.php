@@ -352,6 +352,21 @@ if (!function_exists('gl_bridge_pv_allocation')) {
             return [['account_id' => $suspense, 'debit' => $amountCents / 100, 'credit' => 0, 'memo' => 'Unclassified payment: ' . $label]];
         }
 
+        // Taxes booked against the VAT liability that are really expenses (levies, licences) or income tax.
+        $taxPayable = gl_system_account($pdo, 'vat_payable');
+        $taxRoute = static function (int $accId, string $text) use ($pdo, $taxPayable): int {
+            if ($accId !== $taxPayable) {
+                return $accId;
+            }
+            if (preg_match('/\b(income|corporate|corporation|provisional)\s+tax\b/i', $text)) {
+                return gl_system_account($pdo, 'income_tax_expense');
+            }
+            if (preg_match('/municipal|council|\bbrela\b|\blev(y|ies)\b|licen[cs]e|permit/i', $text)) {
+                return gl_system_account($pdo, 'levies_licences');
+            }
+            return $accId;
+        };
+
         $byAccount = [];
         $allocated = 0;
         $n = count($items);
@@ -364,6 +379,9 @@ if (!function_exists('gl_bridge_pv_allocation')) {
                 continue;
             }
             $accId = gl_bridge_category_account($pdo, (string) $it['budget_type']);
+            if ($accId > 0) {
+                $accId = $taxRoute($accId, $pv['payee_name'] . ' ' . $it['name']);
+            }
             $memo = $accId > 0 ? ($label . ' - ' . $it['name']) : ('Unclassified (' . $it['budget_type'] . '): ' . $label . ' - ' . $it['name']);
             $key = $accId > 0 ? $accId : $suspense;
             if (!isset($byAccount[$key])) {
@@ -532,7 +550,7 @@ if (!function_exists('gl_bridge_sync_reclassifications')) {
      */
     function gl_bridge_sync_reclassifications(PDO $pdo, array &$stats): void
     {
-        $entries = $pdo->query("SELECT DISTINCT e.id, e.entry_number, e.source_ref
+        $entries = $pdo->query("SELECT DISTINCT e.id, e.entry_number, e.source_ref, COALESCE(e.original_date, e.entry_date) AS entry_date
                                 FROM gl_source_links l
                                 JOIN gl_journal_entries e ON e.id = l.entry_id
                                 WHERE l.active = 1
@@ -583,7 +601,7 @@ if (!function_exists('gl_bridge_sync_reclassifications')) {
             }
 
             $res = gl_post_entry($pdo, [
-                'date' => date('Y-m-d'),
+                'date' => (string) $e['entry_date'],
                 'description' => 'Reclassification of ' . $e['entry_number'] . ' (payment voucher #' . $m[1] . ')',
                 'source_type' => 'reclassification',
                 'source_key' => 'reclass:' . $entryId . ':v' . gl_bridge_link_version($pdo, 'gl_reclass', [$entryId]),

@@ -254,6 +254,8 @@ if (!function_exists('gl_system_account_defs')) {
             'opening_balance_equity' => ['3900', 'Opening Balance Equity', 'equity'],
             'retained_earnings' => ['3200', 'Retained Earnings', 'equity'],
             'sales_revenue' => ['4002', 'Sales Revenue', 'revenue'],
+            'levies_licences' => ['5013', 'Taxes, Levies & Licences', 'expense'],
+            'income_tax_expense' => ['5900', 'Income Tax Expense', 'expense'],
             'fx_gain_loss' => ['5990', 'Foreign Exchange Gain/Loss', 'expense'],
         ];
     }

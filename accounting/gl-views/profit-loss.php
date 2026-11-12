@@ -264,7 +264,7 @@ include __DIR__ . '/../../includes/gl/gl_page_style.php';
 .glr-pl-table tfoot td{position:sticky;bottom:0;background:#f8fafb;font-weight:700;border-top:1px solid #dfe3e8}
 .glr-pl-table tfoot .is-loss{color:#b42318}
 .glr-pl-nomatch{padding:24px 12px!important;color:#77818c;text-align:center!important}
-.glr-pl-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin-top:7px}
+.glr-pl-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin-bottom:7px}
 .glr-pl-stat{padding:8px 10px 10px;background:#fff;border:1px solid #e6e8eb}
 .glr-pl-stat-label{font-size:10px;color:#66717d}
 .glr-pl-stat-value{padding-top:4px;text-align:center;font-size:15px;font-weight:750;color:#354052;font-variant-numeric:tabular-nums}
@@ -311,6 +311,29 @@ html[data-theme="dark"] .glr-pl-detail-grid b,html[data-theme="dark"] .glr-pl-st
       <span class="separator" aria-hidden="true">/</span>
       <span aria-current="page">Profit &amp; Loss</span>
     </nav>
+    <section class="glr-pl-summary" aria-label="Profit and loss summary">
+      <div class="glr-pl-stat">
+        <div class="glr-pl-stat-label">Total Revenue</div>
+        <div class="glr-pl-stat-value"><?= gl_fmt($cur['revenue']) ?></div>
+        <div class="glr-pl-stat-note"><?= $hasCompare ? gl_h('vs ' . gl_fmt($prev['revenue'])) : '&nbsp;' ?></div>
+      </div>
+      <div class="glr-pl-stat">
+        <div class="glr-pl-stat-label">Gross Profit</div>
+        <div class="glr-pl-stat-value<?= $cur['gross'] < 0 ? ' is-loss' : '' ?>"><?= gl_fmt($cur['gross']) ?></div>
+        <div class="glr-pl-stat-note"><?= $pctOfRevenue($cur['gross']) !== '' ? gl_h($pctOfRevenue($cur['gross']) . ' margin') : '&nbsp;' ?></div>
+      </div>
+      <div class="glr-pl-stat">
+        <div class="glr-pl-stat-label">Total Expenses</div>
+        <div class="glr-pl-stat-value"><?= gl_fmt($cur['cogs'] + $cur['expense']) ?></div>
+        <div class="glr-pl-stat-note"><?= $pctOfRevenue($cur['cogs'] + $cur['expense']) !== '' ? gl_h($pctOfRevenue($cur['cogs'] + $cur['expense']) . ' of revenue') : '&nbsp;' ?></div>
+      </div>
+      <div class="glr-pl-stat">
+        <div class="glr-pl-stat-label"><?= $cur['net'] >= 0 ? 'Net Profit' : 'Net Loss' ?></div>
+        <div class="glr-pl-stat-value<?= $cur['net'] < 0 ? ' is-loss' : '' ?>"><?= gl_fmt($cur['net']) ?></div>
+        <div class="glr-pl-stat-note"><?= $pctOfRevenue($cur['net']) !== '' ? gl_h($pctOfRevenue($cur['net']) . ' margin') : '&nbsp;' ?></div>
+      </div>
+    </section>
+
     <header class="glr-pl-head">
       <h1 class="glr-pl-title"><i class="fas fa-chart-line" aria-hidden="true"></i>Profit &amp; Loss</h1>
       <div class="glr-pl-date"><?= gl_h($periodText) ?><?php if ($hasCompare): ?><small>Compared with <?= gl_h($compareText) ?></small><?php endif; ?></div>
@@ -441,28 +464,6 @@ html[data-theme="dark"] .glr-pl-detail-grid b,html[data-theme="dark"] .glr-pl-st
       </div>
     </section>
 
-    <section class="glr-pl-summary" aria-label="Profit and loss summary">
-      <div class="glr-pl-stat">
-        <div class="glr-pl-stat-label">Total Revenue</div>
-        <div class="glr-pl-stat-value"><?= gl_fmt($cur['revenue']) ?></div>
-        <div class="glr-pl-stat-note"><?= $hasCompare ? gl_h('vs ' . gl_fmt($prev['revenue'])) : '&nbsp;' ?></div>
-      </div>
-      <div class="glr-pl-stat">
-        <div class="glr-pl-stat-label">Gross Profit</div>
-        <div class="glr-pl-stat-value<?= $cur['gross'] < 0 ? ' is-loss' : '' ?>"><?= gl_fmt($cur['gross']) ?></div>
-        <div class="glr-pl-stat-note"><?= $pctOfRevenue($cur['gross']) !== '' ? gl_h($pctOfRevenue($cur['gross']) . ' margin') : '&nbsp;' ?></div>
-      </div>
-      <div class="glr-pl-stat">
-        <div class="glr-pl-stat-label">Total Expenses</div>
-        <div class="glr-pl-stat-value"><?= gl_fmt($cur['cogs'] + $cur['expense']) ?></div>
-        <div class="glr-pl-stat-note"><?= $pctOfRevenue($cur['cogs'] + $cur['expense']) !== '' ? gl_h($pctOfRevenue($cur['cogs'] + $cur['expense']) . ' of revenue') : '&nbsp;' ?></div>
-      </div>
-      <div class="glr-pl-stat">
-        <div class="glr-pl-stat-label"><?= $cur['net'] >= 0 ? 'Net Profit' : 'Net Loss' ?></div>
-        <div class="glr-pl-stat-value<?= $cur['net'] < 0 ? ' is-loss' : '' ?>"><?= gl_fmt($cur['net']) ?></div>
-        <div class="glr-pl-stat-note"><?= $pctOfRevenue($cur['net']) !== '' ? gl_h($pctOfRevenue($cur['net']) . ' margin') : '&nbsp;' ?></div>
-      </div>
-    </section>
   </div>
 </main>
 <script>

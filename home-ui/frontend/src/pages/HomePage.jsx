@@ -293,7 +293,7 @@ export default function HomePage() {
           </div>
           <div data-aos="fade-left" className="sm:w-1/2 relative mt-10 sm:mt-0">
             <div className="erp-accent-block floating w-24 h-24 absolute rounded-lg z-0 -top-3 -left-3" />
-            <img className="rounded-xl z-40 relative w-full erp-shot" src={stockScreen} alt="Stock control dashboard" />
+            <img className="rounded-xl z-40 relative w-full erp-shot" src={stockScreen} alt="UltiTech ERP stock control dashboard" />
             <div className="bg-yellow-500 w-40 h-40 floating absolute rounded-lg z-10 -bottom-3 -right-3" />
           </div>
         </div>
@@ -309,7 +309,7 @@ export default function HomePage() {
             </p>
           </div>
           <div data-aos="fade-right" className="sm:w-1/2 relative mt-10 sm:mt-0">
-            <img className="rounded-xl w-full erp-shot" src={payrollScreen} alt="Payroll runs in UltiTech" />
+            <img className="rounded-xl w-full erp-shot" src={payrollScreen} alt="UltiTech ERP payroll runs screen" />
           </div>
         </div>
 
@@ -381,7 +381,7 @@ export default function HomePage() {
 
           <div data-aos="zoom-in-up" className="erp-news-grid">
             <article className="erp-news-featured">
-              <img src={FEATURED_NEWS.image} alt="" />
+              <img src={FEATURED_NEWS.image} alt={FEATURED_NEWS.title} />
               <span className="erp-news-tag">{FEATURED_NEWS.tag}</span>
               <h3>{FEATURED_NEWS.title}</h3>
               <p>{FEATURED_NEWS.excerpt}</p>
@@ -392,7 +392,7 @@ export default function HomePage() {
               {NEWS_ITEMS.map((item) => (
                 <article key={item.title} className="erp-news-item">
                   <div className="erp-news-item-media">
-                    <img className="rounded-xl" src={item.image} alt="" />
+                    <img className="rounded-xl" src={item.image} alt={item.title} />
                     <span className="erp-news-tag erp-news-tag--overlay">{item.tag}</span>
                   </div>
                   <div className="erp-news-item-copy">

@@ -1,0 +1,88 @@
+{
+  "index.html": {
+    "file": "assets/index-Cigx34im.js",
+    "name": "index",
+    "src": "index.html",
+    "isEntry": true,
+    "css": [
+      "assets/index-C7ImiazL.css"
+    ],
+    "assets": [
+      "assets/sales-icon-BjxT5wdJ.png",
+      "assets/accounting-icon-B5mWcsmb.png",
+      "assets/hand-cards-C7I66NhS.png",
+      "assets/sales-invoice-C_J9SWKb.jpg",
+      "assets/finance-CMMjNVp-.png",
+      "assets/operations-JMftBAhp.png",
+      "assets/product-owners-C2zDZon8.png",
+      "assets/product-teams-DMYmvAJS.png",
+      "assets/inventory-stock-Bvl18Xw9.jpg",
+      "assets/hr-payroll-DTMKfdBR.jpg",
+      "assets/featured-CKrE9ADc.png",
+      "assets/finance-BTrmAni9.png",
+      "assets/payroll-Ca_8KD9I.png",
+      "assets/stock-BfX9dbQd.png",
+      "assets/portrait-2bjI4CNW.png"
+    ]
+  },
+  "src/assets/features/finance.png": {
+    "file": "assets/finance-CMMjNVp-.png",
+    "src": "src/assets/features/finance.png"
+  },
+  "src/assets/features/operations.png": {
+    "file": "assets/operations-JMftBAhp.png",
+    "src": "src/assets/features/operations.png"
+  },
+  "src/assets/features/product-owners.png": {
+    "file": "assets/product-owners-C2zDZon8.png",
+    "src": "src/assets/features/product-owners.png"
+  },
+  "src/assets/features/product-teams.png": {
+    "file": "assets/product-teams-DMYmvAJS.png",
+    "src": "src/assets/features/product-teams.png"
+  },
+  "src/assets/features/sales-invoice.jpg": {
+    "file": "assets/sales-invoice-C_J9SWKb.jpg",
+    "src": "src/assets/features/sales-invoice.jpg"
+  },
+  "src/assets/hero/hand-cards.png": {
+    "file": "assets/hand-cards-C7I66NhS.png",
+    "src": "src/assets/hero/hand-cards.png"
+  },
+  "src/assets/modules/accounting-icon.png": {
+    "file": "assets/accounting-icon-B5mWcsmb.png",
+    "src": "src/assets/modules/accounting-icon.png"
+  },
+  "src/assets/modules/sales-icon.png": {
+    "file": "assets/sales-icon-BjxT5wdJ.png",
+    "src": "src/assets/modules/sales-icon.png"
+  },
+  "src/assets/news/featured.png": {
+    "file": "assets/featured-CKrE9ADc.png",
+    "src": "src/assets/news/featured.png"
+  },
+  "src/assets/news/finance.png": {
+    "file": "assets/finance-BTrmAni9.png",
+    "src": "src/assets/news/finance.png"
+  },
+  "src/assets/news/payroll.png": {
+    "file": "assets/payroll-Ca_8KD9I.png",
+    "src": "src/assets/news/payroll.png"
+  },
+  "src/assets/news/stock.png": {
+    "file": "assets/stock-BfX9dbQd.png",
+    "src": "src/assets/news/stock.png"
+  },
+  "src/assets/screens/hr-payroll.jpg": {
+    "file": "assets/hr-payroll-DTMKfdBR.jpg",
+    "src": "src/assets/screens/hr-payroll.jpg"
+  },
+  "src/assets/screens/inventory-stock.jpg": {
+    "file": "assets/inventory-stock-Bvl18Xw9.jpg",
+    "src": "src/assets/screens/inventory-stock.jpg"
+  },
+  "src/assets/testimonials/portrait.png": {
+    "file": "assets/portrait-2bjI4CNW.png",
+    "src": "src/assets/testimonials/portrait.png"
+  }
+}

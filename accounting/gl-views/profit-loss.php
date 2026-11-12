@@ -269,10 +269,10 @@ html:not([data-theme="dark"]) body:has(.glr-pl),html:not([data-theme="dark"]) bo
 .glr-pl-stat{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 12px;background:#fff;border:1px solid #edf0f5;border-radius:12px;box-shadow:0 1px 2px rgba(15,23,42,.03);transition:transform .15s ease,box-shadow .15s ease}
 .glr-pl-stat:hover{transform:translateY(-1px);box-shadow:0 6px 14px rgba(15,23,42,.06)}
 .glr-pl-stat-body{min-width:0;display:flex;flex-direction:column}
-.glr-pl-stat-label{font-size:11px;font-weight:500;color:#000;line-height:1.2}
-.glr-pl-stat-value{margin:1px 0;font-size:15px;font-weight:700;letter-spacing:-.02em;color:#000;line-height:1.2;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.glr-pl-stat-label{font-size:11px;font-weight:400;color:#475569;line-height:1.2}
+.glr-pl-stat-value{margin:1px 0;font-size:15px;font-weight:600;letter-spacing:-.01em;color:#1f2937;line-height:1.2;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .glr-pl-stat-value.is-loss{color:#b42318}
-.glr-pl-stat-note{font-size:10px;font-weight:500;color:#6b7280;line-height:1.2}
+.glr-pl-stat-note{font-size:10px;font-weight:400;color:#6b7280;line-height:1.2}
 .glr-pl-stat-icon{flex-shrink:0;display:flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;font-size:12px}
 .glr-pl-stat.is-revenue .glr-pl-stat-icon{background:#eff6ff;color:#3b82f6}
 .glr-pl-stat.is-gross .glr-pl-stat-icon{background:#eef2ff;color:#6366f1}

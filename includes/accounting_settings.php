@@ -259,6 +259,7 @@ if (!function_exists('accounting_gl_roles')) {
                 'names' => ['Cost of Goods', 'COGS'],
                 'system_key' => 'cogs',
                 'match' => '/cost of (goods|sales|revenue)|\bcogs\b|direct cost|purchases|freight|landed cost|carriage in/i',
+                'strict' => true,
             ],
             'inventory' => [
                 'label' => 'Inventory',
@@ -268,6 +269,7 @@ if (!function_exists('accounting_gl_roles')) {
                 'names' => ['Inventory'],
                 'system_key' => 'inventory',
                 'match' => '/inventor|stock|merchandise|goods (for|held)|warehouse/i',
+                'strict' => true,
             ],
             'payment_bank' => [
                 'label' => 'Unassigned Receipts (Undeposited Funds)',
@@ -557,6 +559,27 @@ if (!function_exists('accounting_resolve_gl_role_account_id')) {
                     }
                 }
                 return $list['options'][0]['id'];
+            }
+
+            return null;
+        }
+
+        // Strict roles only accept an account whose name fits the role; never the first account of the type.
+        if (!empty($def['strict'])) {
+            $st = $pdo->prepare('SELECT id, code, name FROM erp_accounts WHERE type = ? ORDER BY code IS NULL, code ASC, id ASC');
+            $st->execute([$def['type']]);
+            $rows = $st->fetchAll(PDO::FETCH_ASSOC) ?: [];
+            foreach ($def['codes'] as $code) {
+                foreach ($rows as $r) {
+                    if ((string) $r['code'] === (string) $code && preg_match($def['match'], (string) $r['name'])) {
+                        return (int) $r['id'];
+                    }
+                }
+            }
+            foreach ($rows as $r) {
+                if (preg_match($def['match'], (string) $r['name'])) {
+                    return (int) $r['id'];
+                }
             }
 
             return null;

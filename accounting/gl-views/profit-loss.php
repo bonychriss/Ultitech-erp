@@ -118,6 +118,8 @@ foreach (['amount', 'compare'] as $k) {
 $cur = $tot['amount'];
 $prev = $tot['compare'];
 $showTaxEstimate = $cur['tax_estimate'] > 0 || $prev['tax_estimate'] > 0;
+require_once __DIR__ . '/../../includes/gl/gl_bridge.php';
+$taxReview = function_exists('gl_bridge_tax_review_items') ? gl_bridge_tax_review_items($pdo) : [];
 $taxEstimateLabel = 'Income tax at ' . $taxRateText . ' of profit before tax';
 $pctOfRevenue = static fn (float $v): string => abs($cur['revenue']) < 0.005 ? '' : number_format($v / $cur['revenue'] * 100, 1) . '%';
 $change = static fn (float $now, float $before): float => round($now - $before, 2);
@@ -286,6 +288,14 @@ html:not([data-theme="dark"]) body:has(.glr-pl),html:not([data-theme="dark"]) bo
 .glr-pl-result td{font-weight:750;color:#1e3a8a;background:#f5f8ff;border-bottom-color:#dbe4f5}
 .glr-pl-muted td{color:#98a1ac;font-style:italic}
 .glr-pl-expand-spacer{display:inline-block;width:27px}
+.glr-pl-alert{padding:9px 12px;background:#fffbeb;border:1px solid #fde68a;border-bottom:0;color:#78350f;font-size:12px}
+.glr-pl-alert summary{cursor:pointer;font-weight:600}
+.glr-pl-alert summary i{margin-right:6px;color:#d97706}
+.glr-pl-alert p{margin:6px 0 4px}
+.glr-pl-alert ul{margin:0;padding-left:18px}
+.glr-pl-alert a{color:#1d4ed8}
+html[data-theme="dark"] .glr-pl-alert{background:#2a2112;border-color:#5b4515;color:#fcd34d}
+@media print{.glr-pl-alert{display:none}}
 .glr-pl-estimate td{color:#64748b}
 .glr-pl-badge{display:inline-block;margin-left:6px;padding:1px 6px;border-radius:9px;background:#fff7ed;color:#c2410c;font-size:9px;font-weight:600;vertical-align:1px}
 .glr-pl-up{color:#15803d}.glr-pl-down{color:#b42318}
@@ -428,6 +438,18 @@ html[data-theme="dark"] .glr-pl-stat-note{color:#94a3b8}
         <input class="glr-pl-search" id="glrPlSearch" type="search" placeholder="Search accounts" aria-label="Search accounts">
       </form>
     </section>
+
+    <?php if ($taxReview): ?>
+      <details class="glr-pl-alert">
+        <summary><i class="fas fa-triangle-exclamation" aria-hidden="true"></i><?= count($taxReview) ?> tax payment<?= count($taxReview) === 1 ? '' : 's' ?> need<?= count($taxReview) === 1 ? 's' : '' ?> a tax type (<?= gl_fmt(array_sum(array_map(static fn ($r) => (float) $r['amount'], $taxReview))) ?> held in Suspense)</summary>
+        <p>These Tax &amp; Compliance voucher items don't say which tax they pay. Edit the item description to name it (for example "VAT March 2026", "Corporate tax quarter 2", "PAYE October 2026", "Service levy"); the books update automatically. <a href="../employee/user-manual.php#paying-taxes">How to fill in tax vouchers</a></p>
+        <ul>
+          <?php foreach ($taxReview as $r): ?>
+            <li><a href="../employee/view-voucher.php?id=<?= (int) $r['id'] ?>"><?= gl_h($r['voucher_no']) ?></a> – <?= gl_h($r['payee_name']) ?><?= trim((string) $r['description']) !== '' ? ' – “' . gl_h(trim((string) $r['description'])) . '”' : '' ?> – <?= gl_fmt((float) $r['amount']) ?></li>
+          <?php endforeach; ?>
+        </ul>
+      </details>
+    <?php endif; ?>
 
     <section class="glr-pl-table-card" aria-label="Profit and loss statement">
       <div class="glr-pl-table-wrap">

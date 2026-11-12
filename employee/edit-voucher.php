@@ -575,6 +575,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['limited_classificati
         // Commit transaction
         if ($txStarted && $pdo->inTransaction()) { $pdo->commit(); }
 
+        // Paid vouchers are already in the ledger; re-sync so changed item categories/descriptions are reclassified.
+        if (!empty($voucher['is_paid'])) {
+            try {
+                require_once __DIR__ . '/../includes/gl/gl_bridge.php';
+                gl_bridge_schedule_sync($pdo);
+            } catch (Throwable $eG) { error_log('gl sync after voucher edit failed: ' . $eG->getMessage()); }
+        }
+
         // If Checked By changed to a non-empty value, notify the assignee
         try {
             $prevChecked = trim((string)($voucher['checked_by'] ?? ''));

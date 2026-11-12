@@ -37,6 +37,11 @@ requireLogin();
         .alert-tip h5 { font-size: 14px; font-weight: 700; color: #9a3412; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em; }
         .alert-tip p { font-size: 14px; color: #9a3412; margin: 0; }
         
+        .manual-table { width: 100%; border-collapse: collapse; margin: 0 0 20px; font-size: 14px; }
+        .manual-table th, .manual-table td { padding: 9px 12px; border: 1px solid #e5e7eb; text-align: left; vertical-align: top; color: #64748b; }
+        .manual-table th { background: #f9fafb; font-weight: 600; color: #475569; }
+        @media (max-width: 768px) { .manual-table { display: block; overflow-x: auto; } }
+
         .btn-back { display: inline-flex; align-items: center; gap: 8px; text-decoration: none; color: #6b7280; font-size: 14px; font-weight: 500; margin-bottom: 20px; transition: color 0.2s; }
         .btn-back:hover { color: #1e293b; }
         
@@ -209,6 +214,38 @@ requireLogin();
                         <li><strong>Description *</strong>: A general justification or explanation for the entire voucher.</li>
                         <li><strong>Attachments</strong>: Upload the actual files (PDF/Images) to support your request.</li>
                     </ul>
+                </div>
+
+                <div class="section-title" id="paying-taxes">
+                    <i class="fas fa-landmark"></i> Paying Taxes &amp; Levies (TRA, Council, BRELA)
+                </div>
+                <p>Tax payments are made with a normal payment voucher. The accounts decide <strong>which tax</strong> you paid by reading the <strong>Item Description</strong>, so every tax line must say what it is for.</p>
+                <div class="feature-box">
+                    <h4 style="color:var(--c-orange);"><i class="fas fa-clipboard-check me-2"></i> How to fill in a tax voucher</h4>
+                    <ul class="mb-0">
+                        <li><strong>Purpose</strong>: General Payment.</li>
+                        <li><strong>Payee</strong>: Tanzania Revenue Authority (TRA), the Municipal Council, BRELA, etc.</li>
+                        <li><strong>Budget Type</strong>: Tax &amp; Compliance.</li>
+                        <li><strong>Item Description</strong>: name the tax and the period, e.g. <em>"VAT April 2026"</em>. Use one item line per tax &mdash; if one payment covers VAT and PAYE, add two lines.</li>
+                    </ul>
+                </div>
+                <table class="manual-table">
+                    <thead>
+                        <tr><th>You are paying</th><th>Write in the Item Description</th><th>Where it goes in the accounts</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>VAT</td><td>VAT April 2026</td><td>Tax Payable (VAT owed to TRA)</td></tr>
+                        <tr><td>Corporate / income tax instalment</td><td>Corporate tax quarter 2 2026</td><td>Income Tax Expense (shown on the Profit &amp; Loss)</td></tr>
+                        <tr><td>Final income tax for a year</td><td>Income tax return 2025</td><td>Income Tax Expense</td></tr>
+                        <tr><td>PAYE / SDL</td><td>PAYE October 2026 &nbsp;/&nbsp; SDL October 2026</td><td>Salaries &amp; Wages</td></tr>
+                        <tr><td>Withholding tax</td><td>Withholding tax October 2026</td><td>Tax Payable</td></tr>
+                        <tr><td>Service levy, stamp duty, licences, BRELA, TRA penalties</td><td>City service levy 2026 &nbsp;/&nbsp; Stamp duty &nbsp;/&nbsp; BRELA annual return</td><td>Taxes, Levies &amp; Licences</td></tr>
+                    </tbody>
+                </table>
+                <p>The key words the system looks for are: <strong>VAT</strong>, <strong>corporate tax</strong>, <strong>income tax</strong>, <strong>provisional tax</strong>, <strong>PAYE</strong>, <strong>SDL</strong>, <strong>withholding</strong>, <strong>levy</strong>, <strong>stamp duty</strong>, <strong>licence</strong>, <strong>permit</strong>, <strong>penalty</strong>.</p>
+                <div class="alert-tip">
+                    <h5><i class="fas fa-triangle-exclamation"></i> Forgot the description?</h5>
+                    <p>If a Tax &amp; Compliance line doesn't name the tax, its amount is held in <strong>Suspense</strong> and the <strong>Profit &amp; Loss</strong> page shows a yellow warning listing the voucher. Finance (or an Admin, if the voucher is already posted) opens the voucher, clicks <strong>Edit</strong>, adds the tax name to the Item Description and saves &mdash; the accounts correct themselves automatically.</p>
                 </div>
 
                 <div class="section-title">

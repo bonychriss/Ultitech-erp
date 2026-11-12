@@ -906,3 +906,105 @@ a.cb-text-link:hover {
     transform: rotate(360deg);
   }
 }
+
+.cb-ledger-table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.cb-table.cb-ledger-table {
+  min-width: 860px;
+  table-layout: fixed;
+}
+
+.cb-table.cb-ledger-table th,
+.cb-table.cb-ledger-table td {
+  box-sizing: border-box;
+  padding: 9px 8px;
+  font-size: 0.75rem;
+  vertical-align: middle;
+}
+
+.cb-table.cb-ledger-table thead th {
+  background: var(--cb-surface);
+  color: var(--cb-text);
+  font-weight: 700;
+  text-transform: none;
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+
+.cb-table.cb-ledger-table tbody tr:nth-child(odd) td {
+  background: var(--cb-surface);
+}
+
+.cb-table.cb-ledger-table tbody tr:nth-child(even) td {
+  background: #eef4fc;
+}
+
+.cb-table.cb-ledger-table tbody tr:hover td {
+  background: #ecfdf3;
+}
+
+.cb-table.cb-ledger-table tbody tr.is-editing td {
+  background: var(--cb-accent-soft);
+}
+
+.cb-table.cb-ledger-table .cb-ledger-serial {
+  color: var(--cb-muted);
+  white-space: nowrap;
+}
+
+.cb-table.cb-ledger-table .cb-ledger-date {
+  white-space: nowrap;
+}
+
+.cb-table.cb-ledger-table .cb-ledger-category,
+.cb-table.cb-ledger-table .cb-ledger-particulars {
+  overflow-wrap: anywhere;
+}
+
+.cb-table.cb-ledger-table .cb-ledger-number {
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.cb-table.cb-ledger-table .cb-entry-amt {
+  text-align: right;
+  white-space: nowrap;
+  font-size: 0.75rem;
+}
+
+.cb-table.cb-ledger-table .cb-entry-type {
+  padding: 3px 8px;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  font-size: 0.65rem;
+  letter-spacing: 0.02em;
+}
+
+.cb-table.cb-ledger-table .cb-entry-type.in {
+  background: var(--cb-in-bg);
+}
+
+.cb-table.cb-ledger-table .cb-entry-type.out {
+  background: var(--cb-out-bg);
+}
+
+.cb-table.cb-ledger-table .cb-ledger-actions {
+  text-align: center;
+  white-space: nowrap;
+}
+
+html[data-theme='dark'] .cb-table.cb-ledger-table tbody tr:nth-child(even) td {
+  background: #223047;
+}
+
+html[data-theme='dark'] .cb-table.cb-ledger-table tbody tr:hover td {
+  background: #1d3b2b;
+}
+
+html[data-theme='dark'] .cb-table.cb-ledger-table tbody tr.is-editing td {
+  background: var(--cb-accent-soft);
+}

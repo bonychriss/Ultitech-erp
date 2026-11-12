@@ -446,36 +446,50 @@ export default function BookLedgerPage() {
         {entries.length === 0 ? (
           <div className="cb-empty cb-empty-compact">No entries yet. Create one above.</div>
         ) : (
-          <div className="cb-table-wrap cb-table-wrap-flush">
-            <table className="cb-table">
+          <div className="cb-table-wrap cb-table-wrap-flush cb-ledger-table-wrap">
+            <table className="cb-table cb-ledger-table">
+              <colgroup>
+                <col style={{ width: '6%' }} />
+                <col style={{ width: '12%' }} />
+                <col style={{ width: '11%' }} />
+                <col style={{ width: '14%' }} />
+                <col style={{ width: '27%' }} />
+                <col style={{ width: '12%' }} />
+                <col style={{ width: '11%' }} />
+                <col style={{ width: '7%' }} />
+              </colgroup>
               <thead>
                 <tr>
-                  <th>Date</th>
-                  <th>Type</th>
-                  <th>Category</th>
-                  <th>Particulars</th>
-                  <th>Amount</th>
-                  <th>Balance</th>
-                  <th />
+                  <th scope="col" className="cb-ledger-serial">S/N</th>
+                  <th scope="col">Date</th>
+                  <th scope="col">Type</th>
+                  <th scope="col">Category</th>
+                  <th scope="col">Particulars</th>
+                  <th scope="col" className="cb-ledger-number">Amount</th>
+                  <th scope="col" className="cb-ledger-number">Balance</th>
+                  <th scope="col" className="cb-ledger-actions">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {entries.map((row) => (
+                {entries.map((row, index) => (
                   <tr key={row.id} className={editingId === row.id ? 'is-editing' : ''}>
-                    <td>{formatDate(row.entry_date)}</td>
+                    <td className="cb-ledger-serial">{index + 1}</td>
+                    <td className="cb-ledger-date">{formatDate(row.entry_date)}</td>
                     <td>
                       <span className={`cb-entry-type ${row.entry_type}`}>
                         {row.entry_type === 'in' ? 'Cash in' : 'Expense'}
                       </span>
                     </td>
-                    <td>{row.category_name || '-'}</td>
-                    <td>{[row.party_name, row.remark].filter(Boolean).join(' - ') || '-'}</td>
+                    <td className="cb-ledger-category">{row.category_name || '-'}</td>
+                    <td className="cb-ledger-particulars">
+                      {[row.party_name, row.remark].filter(Boolean).join(' - ') || '-'}
+                    </td>
                     <td className={`cb-entry-amt ${row.entry_type}`}>
                       {row.entry_type === 'in' ? '+' : '-'}
                       {formatMoney(row.amount)}
                     </td>
-                    <td>{formatMoney(row.balance_after)}</td>
-                    <td>
+                    <td className="cb-ledger-number">{formatMoney(row.balance_after)}</td>
+                    <td className="cb-ledger-actions">
                       <div className="cb-entry-actions-inline">
                         <button type="button" className="cb-icon-btn" onClick={() => onEdit(row)} title="Edit" aria-label="Edit">
                           <Pencil size={16} />

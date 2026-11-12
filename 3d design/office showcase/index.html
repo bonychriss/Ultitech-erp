@@ -237,6 +237,7 @@
     <script type="module">
       import * as THREE from "three";
       import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+      import { FBXLoader } from "three/addons/loaders/FBXLoader.js";
       import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
       import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
 
@@ -252,7 +253,8 @@
         { key: "boots", slot: "Feet", productId: 85, label: "Rain boots" },
       ];
       const MODELS = {
-        character: "assets/models/readyplayer.me.glb",
+        worker: { fbx: "assets/models/rocketbox/Construction_Male_02/Construction_Male_02.fbx", tex: "assets/models/rocketbox/Construction_Male_02/Textures" },
+        donor: { fbx: "assets/models/rocketbox/Construction_Male_08/Construction_Male_08.fbx", tex: "assets/models/rocketbox/Construction_Male_08/Textures", only: /body/ },
         gloves: "assets/models/garden_gloves_01/garden_gloves_01.gltf",
         boots: "assets/models/rubber_boots/rubber_boots.gltf",
         shelf: "assets/models/steel_frame_shelves_01/steel_frame_shelves_01.gltf",
@@ -572,30 +574,6 @@
         return tag;
       }
 
-      // ---------- Skinned "garment" shells ----------
-      // Vest, gloves and boots are drawn as a slightly inflated copy of the model's own skin,
-      // so they move with the body. Each garment keeps only its region and paints its own pattern.
-      function garmentMaterial({ key, inflate, mask, color, rough = "0.8", metal = "0.0", emissive = "vec3(0.0)", uniforms = {} }) {
-        const m = new THREE.MeshStandardMaterial({ color: "#ffffff", roughness: 0.8, polygonOffset: true, polygonOffsetFactor: -2 });
-        m.userData.uniforms = { uReveal: { value: 0 }, uUnit: { value: 1 }, ...uniforms };
-        const decl = Object.keys(m.userData.uniforms).map((u) => `uniform float ${u};`).join("\n");
-        m.onBeforeCompile = (s) => {
-          Object.assign(s.uniforms, m.userData.uniforms);
-          s.vertexShader = s.vertexShader
-            .replace("#include <common>", `#include <common>\nattribute vec3 aRest;\nattribute vec3 aRestN;\nattribute vec3 aMask;\nattribute float aCut;\nvarying vec3 vRest;\nvarying vec3 vRestN;\nvarying vec3 vMask;\nvarying float vCut;\n${decl}`)
-            .replace("#include <skinning_vertex>", `#include <skinning_vertex>\nvRest = aRest;\nvRestN = aRestN;\nvMask = aMask;\nvCut = aCut;\ntransformed += normalize(objectNormal) * (${inflate}) * uUnit;`);
-          s.fragmentShader = s.fragmentShader
-            .replace("#include <common>", `#include <common>\nvarying vec3 vRest;\nvarying vec3 vRestN;\nvarying vec3 vMask;\nvarying float vCut;\n${decl}`)
-            .replace("#include <clipping_planes_fragment>", `#include <clipping_planes_fragment>\nif (vCut > 0.5 || !(${mask})) discard;`)
-            .replace("#include <color_fragment>", `#include <color_fragment>\ndiffuseColor.rgb = ${color};`)
-            .replace("#include <roughnessmap_fragment>", `#include <roughnessmap_fragment>\nroughnessFactor = ${rough};`)
-            .replace("#include <metalnessmap_fragment>", `#include <metalnessmap_fragment>\nmetalnessFactor = ${metal};`)
-            .replace("#include <emissivemap_fragment>", `#include <emissivemap_fragment>\ntotalEmissiveRadiance += ${emissive};`);
-        };
-        m.customProgramCacheKey = () => `garment-${key}`;
-        return m;
-      }
-
       // ---------- State ----------
       const items = {};
       const pickables = [];
@@ -615,7 +593,8 @@
         try {
           [data, ...assets] = await Promise.all([
             fetch(CONFIG.dataUrl, { cache: "no-cache" }).then((r) => (r.ok ? r.json() : { products: [] })).catch(() => ({ products: [] })),
-            gltfLoader.loadAsync(MODELS.character),
+            loadRocketbox(MODELS.worker),
+            loadRocketbox(MODELS.donor),
             gltfLoader.loadAsync(MODELS.gloves),
             gltfLoader.loadAsync(MODELS.boots),
             gltfLoader.loadAsync(MODELS.shelf),
@@ -625,14 +604,14 @@
           loading.textContent = `Could not load the 3D models (${err.message}).`;
           return;
         }
-        const [charGltf, glovesGltf, bootsGltf, shelfGltf] = assets;
+        const [worker, donor, glovesGltf, bootsGltf, shelfGltf] = assets;
         catalog = new Map((data.products || []).map((p) => [p.id, p]));
         for (const def of PPE) {
           def.product = catalog.get(def.productId) || { id: def.productId, name: def.label, price: 0, currency: "TZS", category: def.slot, image: "" };
         }
 
         setupShelf(shelfGltf, glovesGltf, bootsGltf);
-        setupCharacter(charGltf);
+        setupCharacter(worker, donor);
         buildTabs();
         renderWearing();
         $("#headerNote").textContent = `${PPE.length} items to try on \u00B7 prices from UltiTech`;
@@ -741,157 +720,187 @@
       }
 
       // ---------- Character ----------
+      // A Microsoft Rocketbox worker (MIT licence). His own hard hat is the helmet; the vest and
+      // gloves are cut from a second Rocketbox worker who wears them and re-skinned onto this one.
       const root = new THREE.Group();
       scene.add(root);
       const bones = {};
       const anchors = {};
-      const parts = {};
+      const restPose = {};
       const hideBelow = { value: -1 };
-      function setupCharacter(gltf) {
-        character = gltf.scene;
+      const hideHands = { value: 2 };
+
+      const blankPixel = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
+      const fbxManager = new THREE.LoadingManager();
+      // Textures are loaded separately as web-sized JPGs, so skip the FBX's own TGA references.
+      fbxManager.setURLModifier((url) => (/\.(tga|png|jpe?g|bmp)$/i.test(url) ? blankPixel : url));
+      const fbxLoader = new FBXLoader(fbxManager);
+      const loadTex = (url, srgb) => texLoader.loadAsync(url).then((t) => {
+        if (srgb) t.colorSpace = THREE.SRGBColorSpace;
+        t.anisotropy = maxAniso;
+        return t;
+      });
+      async function loadRocketbox({ fbx, tex, only = /./ }) {
+        const obj = await fbxLoader.loadAsync(fbx);
+        const mesh = obj.getObjectByProperty("isSkinnedMesh", true);
+        const jobs = [];
+        mesh.material = [].concat(mesh.material).map((m) => {
+          const name = m.name;
+          const mat = new THREE.MeshStandardMaterial({ name, roughness: /helmet/.test(name) ? 0.36 : /head/.test(name) ? 0.62 : 0.9 });
+          if (only.test(name)) {
+            jobs.push(loadTex(`${tex}/${name}_color.jpg`, true).then((t) => (mat.map = t)));
+            jobs.push(loadTex(`${tex}/${name}_normal.jpg`, false).then((t) => (mat.normalMap = t)));
+          }
+          return mat;
+        });
+        await Promise.all(jobs);
+        return { obj, mesh };
+      }
+
+      function setupCharacter(worker, donor) {
+        character = worker.obj;
+        body = worker.mesh;
+        character.scale.setScalar(0.01);
+        character.position.y = DAIS_H;
         character.traverse((o) => {
           if (o.isMesh) {
             o.castShadow = true;
             o.receiveShadow = true;
             o.frustumCulled = false;
-            parts[o.name] = o;
           }
-          if (o.isBone) bones[o.name.replace(/^mixamorig:?/, "")] = o;
+          if (o.isBone) bones[o.name.replace(/^Bip01_?/, "") || "Root"] = o;
         });
-        body = parts.Wolf3D_Body;
-        dressForWork();
-        root.add(character);
-        character.position.y = DAIS_H;
-        // Measure the body with the model at the origin; frame() moves it into place afterwards.
+        // Measure everything with the model at the origin; frame() moves it into place afterwards.
         const placed = root.position.clone();
         root.position.set(0, 0, 0);
         root.rotation.set(0, 0, 0);
+        root.add(character);
         root.updateMatrixWorld(true);
+        donor.obj.scale.setScalar(0.01);
+        donor.obj.position.y = DAIS_H;
+        donor.obj.updateMatrixWorld(true);
 
-        const top = parts.Wolf3D_Outfit_Top;
-        const bottom = parts.Wolf3D_Outfit_Bottom;
-        const hair = parts.Wolf3D_Headwear;
-        for (const mesh of [top, bottom, body]) computeRest(mesh);
+        computeRest(body);
+        const helmetMat = body.material.find((m) => /helmet/.test(m.name));
+        const upLocal = new THREE.Vector3(0, 1, 0).applyMatrix3(new THREE.Matrix3().setFromMatrix4(body.matrixWorld).invert());
+        const helmetLift = { value: new THREE.Vector3() };
+        for (const m of body.material) workerMaterial(m, m === helmetMat ? helmetLift : null);
 
-        const wp = (name) => bones[name].getWorldPosition(new THREE.Vector3()).sub(new THREE.Vector3(0, DAIS_H, 0));
-        const hipsY = wp("Hips").y;
-        const neckY = wp("Neck").y;
+        // Hard hat: his own helmet, dropped onto the head.
+        helmetMat.visible = false;
+        items.helmet = {
+          ...items.helmet,
+          progress: 0,
+          setVisible: (v) => (helmetMat.visible = v),
+          animate: (k) => helmetLift.value.copy(upLocal).multiplyScalar(0.32 * (1 - k)),
+        };
 
-        // Workwear: no lapel flower and the jacket cut at the hip.
-        for (const mesh of [bottom, body]) cutMaterial(mesh, "vCutRest.y < uHideBelow", { uHideBelow: hideBelow });
-        cutMaterial(top, "vCut > 0.5 || vCutRest.y < uJacketCut", { uJacketCut: { value: hipsY - 0.13 } });
-        markIslands(top, new THREE.Box3(new THREE.Vector3(-0.22, 1.33, 0.04), new THREE.Vector3(-0.08, 1.5, 0.16)));
-        // The hair is modelled into the fedora mesh, so the hat goes and he is clean-shaven on top.
-        if (hair) hair.visible = false;
+        // Reflective vest and gloves, cut out of the donor by their place in its body texture.
+        const donorBody = donor.mesh.material.findIndex((m) => /body/.test(m.name));
+        const donorMap = donor.mesh.material[donorBody].map;
+        const sample = textureSampler(donorMap.image);
+        const notBlue = ([r, g, b]) => !(b > r + 25 && b > g);
+        const vestGeo = extractTriangles(donor.mesh, donorBody, (u, v) => {
+          const y = 1 - v;
+          return u > 0.285 && u < 0.715 && y > 0.04 && y < 0.725 && notBlue(sample(u, v));
+        });
+        const vestMat = ppeMaterial({ map: donorMap, normalMap: donor.mesh.material[donorBody].normalMap, roughness: 0.82, push: 0.9, reveal: "vRestY > mix(uHi + 0.01, uLo - 0.01, uReveal)" });
+        const vest = reskin(vestGeo, vestMat, donor.mesh);
 
-        // Vest: hi-vis body with a V-neck, two reflective hoops, shoulder braces and a front zip.
-        const vestBottom = hipsY - 0.1;
-        const vestTop = neckY - 0.01;
-        addGarment("vest", top, garmentMaterial({
-          key: "vest",
-          uniforms: { uBottom: { value: vestBottom }, uTop: { value: vestTop } },
-          inflate: "0.011 + 0.006 * smoothstep(uTop - 0.15, uTop, aRest.y) + 0.008 * smoothstep(uBottom + 0.15, uBottom, aRest.y)",
-          mask: "vMask.x > 0.3 && vRest.y > uBottom && vRest.y < uTop && vRest.y < mix(uBottom, uTop + 0.02, uReveal) && !(vRestN.z > 0.0 && vRest.z > 0.0 && abs(vRest.x) < 0.085 * smoothstep(uTop - 0.17, uTop, vRest.y))",
-          color: "vestColor()",
-          rough: "mix(0.86, 0.3, vestReflective())",
-          metal: "mix(0.0, 0.5, vestReflective())",
-          emissive: "vec3(0.45, 0.55, 0.0) * 0.06 * (1.0 - vestReflective())",
-        }), `
-          float vestT() { return (vRest.y - uBottom) / (uTop - uBottom); }
-          float band(float x, float a, float b) { return smoothstep(a - 0.003, a, x) - smoothstep(b, b + 0.003, x); }
-          float vestReflective() {
-            float t = vestT();
-            float h = 0.05 / (uTop - uBottom);
-            float hoops = band(t, 0.12, 0.12 + h) + band(t, 0.36, 0.36 + h);
-            float braces = band(abs(vRest.x), 0.075, 0.125) * step(0.36, t);
-            return clamp(hoops + braces, 0.0, 1.0);
-          }
-          vec3 vestColor() {
-            float mesh = 0.9 + 0.1 * step(0.5, fract(vRest.x * 260.0)) * step(0.5, fract(vRest.y * 260.0));
-            vec3 c = mix(vec3(0.66, 0.85, 0.02) * mesh, vec3(0.62, 0.64, 0.66), vestReflective());
-            float edge = 1.0 - smoothstep(0.004, 0.009, min(vRest.y - uBottom, uTop - vRest.y));
-            float zip = (1.0 - smoothstep(0.003, 0.005, abs(vRest.x))) * step(0.0, vRestN.z) * step(0.0, vRest.z);
-            return mix(mix(c, vec3(0.5, 0.62, 0.05), edge), vec3(0.04), zip);
-          }
-        `);
+        const gloveMap = new THREE.Texture(donorMap.image);
+        gloveMap.colorSpace = THREE.SRGBColorSpace;
+        gloveMap.anisotropy = maxAniso;
+        // The donor's gloves have yellow cuffs; the shop's coated gloves are red knit.
+        recolor(gloveMap, (r, g, b) => {
+          const [h, s, l] = rgbToHsl(r, g, b);
+          if (s < 0.3 || h < 0.08 || h > 0.2) return [r, g, b];
+          return hslToRgb(0.995, Math.min(1, s * 1.05), l * 0.62);
+        });
+        const glovesGeo = extractTriangles(donor.mesh, donorBody, (u, v) => {
+          const y = 1 - v;
+          return (u < 0.25 || u > 0.75) && y > 0.795 && notBlue(sample(u, v));
+        });
+        const glovesMat = ppeMaterial({ map: gloveMap, normalMap: donor.mesh.material[donorBody].normalMap, roughness: 0.7, push: 0.25, reveal: "vRestY < mix(uLo - 0.01, uHi + 0.01, uReveal)" });
+        const gloves = reskin(glovesGeo, glovesMat, donor.mesh);
 
-        // Gloves: red knit back and cuff, black coating over the palm and fingers.
-        addGarment("gloves", body, garmentMaterial({
-          key: "gloves",
-          inflate: "0.0035 + 0.004 * (1.0 - smoothstep(0.55, 0.9, aMask.y))",
-          mask: "vMask.y > mix(1.1, 0.3, uReveal)",
-          color: "gloveColor()",
-          rough: "mix(0.95, 0.45, gloveCoated())",
-        }), `
-          float gloveCoated() {
-            vec3 palmDir = normalize(vec3(-sign(vRest.x), -0.35, 0.25));
-            float palm = smoothstep(0.1, 0.45, dot(normalize(vRestN), palmDir));
-            return clamp(max(palm, vMask.z), 0.0, 1.0) * step(0.85, vMask.y);
-          }
-          vec3 gloveColor() {
-            float knit = 0.86 + 0.14 * step(0.5, fract(vRest.y * 400.0));
-            float rib = 1.0 - step(0.85, vMask.y);
-            vec3 red = vec3(0.5, 0.03, 0.03) * mix(knit, 0.82 + 0.18 * step(0.5, fract(atan(vRest.z, vRest.x) * 40.0)), rib);
-            return mix(red, vec3(0.02), gloveCoated());
-          }
-        `);
+        for (const [key, mesh, mat] of [["vest", vest, vestMat], ["gloves", gloves, glovesMat]]) {
+          mesh.visible = false;
+          items[key] = {
+            ...items[key],
+            progress: 0,
+            setVisible: (v) => (mesh.visible = v),
+            animate: (k) => {
+              mat.userData.uniforms.uReveal.value = k;
+              if (key === "gloves") hideHands.value = k > 0.6 ? 0.35 : 2;
+            },
+          };
+        }
 
-        // Rain boots: the scanned gumboots, sized to the feet and attached to the shins.
-        const shoes = skinnedPoints(parts.Wolf3D_Outfit_Footwear);
+        // Rain boots: the scanned gumboots, sized to his feet and attached to the shins.
+        const rest = body.geometry.attributes.aRest.array;
+        const mask = body.geometry.attributes.aMask.array;
+        const feet = { L: new THREE.Box3(), R: new THREE.Box3() };
+        const v = new THREE.Vector3();
+        const leftSign = Math.sign(bones.L_Foot.getWorldPosition(new THREE.Vector3()).x) || 1;
+        for (let i = 0; i < rest.length / 3; i++) {
+          if (mask[i * 3 + 2] < 0.5) continue;
+          v.fromArray(rest, i * 3);
+          feet[Math.sign(v.x) === leftSign ? "L" : "R"].expandByPoint(v);
+        }
         anchors.boots = [];
         let bootTop = 0.4;
-        for (const [side, sign, name] of [["Left", 1, "rubber_boots_l"], ["Right", -1, "rubber_boots_r"]]) {
-          const box = new THREE.Box3();
-          for (const p of shoes) if (Math.sign(p.x) === sign) box.expandByPoint(p);
+        for (const [side, name] of [["L", "rubber_boots_l"], ["R", "rubber_boots_r"]]) {
+          const box = feet[side];
           const size = box.getSize(new THREE.Vector3());
-          const s = THREE.MathUtils.clamp(Math.max(size.z / 0.266, size.x / 0.091) * 1.02, 0.95, 1.3);
+          const s = THREE.MathUtils.clamp(Math.max(size.z / 0.266, size.x / 0.091) * 1.04, 0.95, 1.3);
           const boot = bootsSource[name].clone();
           boot.position.set(0, 0, 0);
           const holder = new THREE.Group();
           holder.add(boot);
-          holder.scale.set(s, Math.min(s, 1.12), s);
-          holder.position.set((box.min.x + box.max.x) / 2, DAIS_H - 0.002, (box.min.z + box.max.z) / 2 + 0.01);
+          holder.scale.set(s, Math.min(s, 1.1), s);
+          holder.position.set((box.min.x + box.max.x) / 2, DAIS_H - 0.002, (box.min.z + box.max.z) / 2 + 0.008);
           bootTop = 0.373 * holder.scale.y;
-          attachToBone(`${side}Leg`, holder);
-          anchors.boots.push({ obj: holder, bone: bones[`${side}Leg`], worldFrom: new THREE.Vector3(0, 0.22, 0.05) });
+          attachToBone(`${side}_Calf`, holder);
+          anchors.boots.push({ obj: holder, bone: bones[`${side}_Calf`], worldFrom: new THREE.Vector3(0, 0.22, 0.05) });
         }
-        items.boots = { ...items.boots, cut: bootTop - 0.035 };
+        const bootCut = bootTop - 0.035;
 
-        // Hard hat and goggles, sized from the skull and eyes and attached to the head bone.
-        const headPts = skinnedPoints(parts.Wolf3D_Head);
-        const eyes = new THREE.Box3().setFromObject(parts.EyeLeft).union(new THREE.Box3().setFromObject(parts.EyeRight));
-        eyes.translate(new THREE.Vector3(0, -DAIS_H, 0));
-        const eyeY = (eyes.min.y + eyes.max.y) / 2;
-        const skull = new THREE.Box3();
-        for (const p of headPts) if (p.y > eyeY) skull.expandByPoint(p);
-        const cx = (skull.min.x + skull.max.x) / 2;
-        const cz = (skull.min.z + skull.max.z) / 2;
-        const halfW = (skull.max.x - skull.min.x) / 2;
-        const halfD = (skull.max.z - skull.min.z) / 2;
-        const R = Math.max(halfW + 0.022, (halfD + 0.022) / 1.2);
-        const H = 0.13;
-        const helmet = buildHelmet(R, H);
-        helmet.position.set(cx, skull.max.y - H * 0.78 + DAIS_H, cz + 0.006);
-        helmet.rotation.x = -0.05;
-        attachToBone("Head", helmet);
-        anchors.helmet = [{ obj: helmet, bone: bones.Head, worldFrom: new THREE.Vector3(0, 0.3, 0) }];
-
-        const lensR = Math.max(0.09, halfW * 1.05);
-        const glassesZ = eyes.max.z + 0.016;
-        const glasses = buildGlasses(lensR, Math.max(0.08, glassesZ - cz - 0.02));
+        // Goggles, sized from his head and eyes and attached to the head bone.
+        const eyeL = bones.LEye.getWorldPosition(new THREE.Vector3()).sub(new THREE.Vector3(0, DAIS_H, 0));
+        const eyeR = bones.REye.getWorldPosition(new THREE.Vector3()).sub(new THREE.Vector3(0, DAIS_H, 0));
+        const eyeY = (eyeL.y + eyeR.y) / 2;
+        const cx = (eyeL.x + eyeR.x) / 2;
+        const headBand = new THREE.Box3();
+        let eyeFront = -Infinity;
+        for (let i = 0; i < rest.length / 3; i++) {
+          v.fromArray(rest, i * 3);
+          if (Math.abs(v.y - eyeY) < 0.02 && Math.abs(v.x - cx) < 0.12) headBand.expandByPoint(v);
+          if (v.distanceTo(eyeL) < 0.016 || v.distanceTo(eyeR) < 0.016) eyeFront = Math.max(eyeFront, v.z);
+        }
+        if (!Number.isFinite(eyeFront)) eyeFront = Math.max(eyeL.z, eyeR.z) + 0.012;
+        const headCz = (headBand.min.z + headBand.max.z) / 2;
+        const lensR = Math.max(0.09, ((headBand.max.x - headBand.min.x) / 2) * 1.08);
+        const glassesZ = eyeFront + 0.014;
+        const glasses = buildGlasses(lensR, Math.max(0.08, glassesZ - headCz - 0.015));
         glasses.position.set(cx, eyeY + 0.004 + DAIS_H, glassesZ);
         attachToBone("Head", glasses);
         anchors.glasses = [{ obj: glasses, bone: bones.Head, worldFrom: new THREE.Vector3(0, 0.02, 0.22) }];
 
-        for (const key of ["helmet", "glasses", "boots"]) {
+        for (const key of ["glasses", "boots"]) {
           for (const a of anchors[key]) {
             a.home = a.obj.position.clone();
-            // Bone space can be scaled and rotated, so convert the slide-in offset from world space.
+            // Bone space is scaled and rotated, so convert the slide-in offset from world space.
             const homeWorld = a.obj.getWorldPosition(new THREE.Vector3());
             a.from = a.bone.worldToLocal(homeWorld.add(a.worldFrom)).sub(a.home);
             a.obj.visible = false;
           }
-          items[key] = { ...items[key], parts: anchors[key].map((a) => a.obj), progress: 0 };
+          const objs = anchors[key].map((a) => a.obj);
+          items[key] = {
+            ...items[key],
+            progress: 0,
+            setVisible: (vis) => objs.forEach((o) => (o.visible = vis)),
+            animate: key === "boots" ? (k) => (hideBelow.value = k > 0.6 ? bootCut : -1) : null,
+          };
         }
 
         poseRelaxed();
@@ -899,163 +908,141 @@
         root.updateMatrixWorld(true);
       }
 
-      // Swap the avatar's suit for plain navy workwear and drop the hat.
-      function dressForWork() {
-        for (const mesh of Object.values(parts)) {
-          const m = mesh.material;
-          m.metalness = 0;
-          m.metalnessMap = null;
-          m.needsUpdate = true;
-        }
-        const tint = (mesh, fn) => mesh?.material.map && recolor(mesh.material.map, fn);
-        tint(parts.Wolf3D_Outfit_Top, (r, g, b) => {
-          const [, s, l] = rgbToHsl(r, g, b);
-          if (s < 0.15 && l > 0.72) return [r, g, b];
-          return hslToRgb(0.61, 0.42, Math.min(0.42, 0.1 + l * 0.32));
-        });
-        tint(parts.Wolf3D_Outfit_Bottom, (r, g, b) => {
-          const [, , l] = rgbToHsl(r, g, b);
-          return hslToRgb(0.6, 0.18, Math.min(0.3, 0.06 + l * 0.22));
-        });
-        tint(parts.Wolf3D_Outfit_Footwear, (r, g, b) => {
-          const [, , l] = rgbToHsl(r, g, b);
-          return hslToRgb(0.07, 0.35, Math.min(0.32, l * 0.5));
-        });
-        for (const name of ["Wolf3D_Outfit_Top", "Wolf3D_Outfit_Bottom"]) {
-          if (parts[name]) parts[name].material.roughness = 0.9;
-        }
+      // Reads pixels from a texture image so triangles can be picked by their colour.
+      function textureSampler(image) {
+        const size = 512;
+        const c = document.createElement("canvas");
+        c.width = c.height = size;
+        const ctx = c.getContext("2d");
+        ctx.drawImage(image, 0, 0, size, size);
+        const px = ctx.getImageData(0, 0, size, size).data;
+        return (u, v) => {
+          const x = Math.min(size - 1, Math.max(0, Math.floor(u * size)));
+          const y = Math.min(size - 1, Math.max(0, Math.floor((1 - v) * size)));
+          const j = (y * size + x) * 4;
+          return [px[j], px[j + 1], px[j + 2]];
+        };
       }
 
-      // World-space (dais-relative) positions of a skinned mesh in its current pose.
-      function skinnedPoints(mesh) {
-        mesh.skeleton.update();
-        const pos = mesh.geometry.attributes.position;
-        const out = [];
-        for (let i = 0; i < pos.count; i++) {
-          const v = new THREE.Vector3().fromBufferAttribute(pos, i);
-          mesh.applyBoneTransform(i, v).applyMatrix4(mesh.matrixWorld);
-          v.y -= DAIS_H;
-          out.push(v);
+      // Copies the triangles of one material whose UV centre passes `keep(u, v)`.
+      function extractTriangles(mesh, materialIndex, keep) {
+        const src = mesh.geometry;
+        const uv = src.attributes.uv;
+        const names = ["position", "normal", "uv", "skinIndex", "skinWeight"];
+        const out = Object.fromEntries(names.map((n) => [n, []]));
+        for (const group of src.groups) {
+          if (group.materialIndex !== materialIndex) continue;
+          for (let i = group.start; i < group.start + group.count; i += 3) {
+            const u = (uv.getX(i) + uv.getX(i + 1) + uv.getX(i + 2)) / 3;
+            const v = (uv.getY(i) + uv.getY(i + 1) + uv.getY(i + 2)) / 3;
+            if (!keep(u, v)) continue;
+            for (const n of names) {
+              const a = src.attributes[n];
+              for (let k = i; k < i + 3; k++) for (let c = 0; c < a.itemSize; c++) out[n].push(a.array[k * a.itemSize + c]);
+            }
+          }
         }
-        return out;
+        const geo = new THREE.BufferGeometry();
+        for (const n of names) {
+          const a = src.attributes[n];
+          geo.setAttribute(n, new THREE.BufferAttribute(new a.array.constructor(out[n]), a.itemSize, a.normalized));
+        }
+        return geo;
       }
 
-      // Per-vertex rest position, rest normal and region weights for garment shaders.
-      // aMask: x = torso (minus arms, neck, head), y = hand, z = fingers.
+      // Skins geometry cut from the donor onto the worker's skeleton. Keeping the donor's bind
+      // inverses maps the garment from the donor's body shape onto the worker's.
+      function reskin(geo, material, donorMesh) {
+        const index = new Map(body.skeleton.bones.map((b, i) => [b.name, i]));
+        const donorBones = donorMesh.skeleton.bones;
+        const remap = donorBones.map((b) => index.get(b.name) ?? 0);
+        const si = geo.attributes.skinIndex;
+        for (let i = 0; i < si.count; i++) si.setXYZW(i, remap[si.getX(i)], remap[si.getY(i)], remap[si.getZ(i)], remap[si.getW(i)]);
+        const inverses = body.skeleton.bones.map((b, i) => {
+          const j = donorBones.findIndex((d) => d.name === b.name);
+          return (j >= 0 ? donorMesh.skeleton.boneInverses[j] : body.skeleton.boneInverses[i]).clone();
+        });
+        const mesh = new THREE.SkinnedMesh(geo, material);
+        mesh.position.copy(donorMesh.position);
+        mesh.quaternion.copy(donorMesh.quaternion);
+        mesh.scale.copy(donorMesh.scale);
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+        mesh.frustumCulled = false;
+        body.parent.add(mesh);
+        mesh.updateMatrixWorld(true);
+        mesh.bind(new THREE.Skeleton(body.skeleton.bones, inverses), donorMesh.bindMatrix);
+        computeRest(mesh);
+        const ys = geo.attributes.aRest.array.filter((_, i) => i % 3 === 1);
+        material.userData.uniforms.uLo.value = Math.min(...ys);
+        material.userData.uniforms.uHi.value = Math.max(...ys);
+        return mesh;
+      }
+
+      // Per-vertex rest position (metres, above the dais) and region weights.
+      // aMask: x = torso, y = hand and fingers, z = foot and toes.
       function computeRest(mesh) {
         const geo = mesh.geometry;
-        if (geo.attributes.aRest) return;
         const pos = geo.attributes.position;
-        const nor = geo.attributes.normal;
         const skinIndex = geo.attributes.skinIndex;
         const skinWeight = geo.attributes.skinWeight;
-        const boneNames = mesh.skeleton.bones.map((b) => b.name.replace(/^mixamorig:?/, ""));
+        const names = mesh.skeleton.bones.map((b) => b.name.replace(/^Bip01_?/, ""));
         const n = pos.count;
         const rest = new Float32Array(n * 3);
-        const restN = new Float32Array(n * 3);
         const mask = new Float32Array(n * 3);
         const v = new THREE.Vector3();
-        const tip = new THREE.Vector3();
-        const unit = mesh.matrixWorld.getMaxScaleOnAxis();
-        mesh.skeleton.update();
         for (let i = 0; i < n; i++) {
           v.fromBufferAttribute(pos, i);
-          tip.fromBufferAttribute(nor, i).multiplyScalar(0.005 / unit).add(v);
           mesh.applyBoneTransform(i, v).applyMatrix4(mesh.matrixWorld);
-          mesh.applyBoneTransform(i, tip).applyMatrix4(mesh.matrixWorld);
-          const nn = tip.sub(v).normalize();
           rest.set([v.x, v.y - DAIS_H, v.z], i * 3);
-          restN.set([nn.x, nn.y, nn.z], i * 3);
-          let torso = 0, arm = 0, neck = 0, head = 0, hand = 0, fingers = 0;
-          const weights = [skinWeight.getX(i), skinWeight.getY(i), skinWeight.getZ(i), skinWeight.getW(i)];
-          const indices = [skinIndex.getX(i), skinIndex.getY(i), skinIndex.getZ(i), skinIndex.getW(i)];
+          const w = [skinWeight.getX(i), skinWeight.getY(i), skinWeight.getZ(i), skinWeight.getW(i)];
+          const b = [skinIndex.getX(i), skinIndex.getY(i), skinIndex.getZ(i), skinIndex.getW(i)];
+          let torso = 0, hand = 0, foot = 0;
           for (let k = 0; k < 4; k++) {
-            const w = weights[k];
-            if (!w) continue;
-            const name = boneNames[indices[k]];
-            if (/^(Hips|Spine|Spine1|Spine2)$/.test(name)) torso += w;
-            else if (/Hand/.test(name)) {
-              hand += w;
-              arm += w;
-              if (/Hand(Thumb|Index|Middle|Ring|Pinky)/.test(name)) fingers += w;
-            } else if (/Shoulder|Arm/.test(name)) arm += w;
-            else if (/Neck/.test(name)) neck += w;
-            else if (/Head/.test(name)) head += w;
+            const name = names[b[k]] || "";
+            if (/^(Pelvis|Spine\d?)$/.test(name)) torso += w[k];
+            else if (/Hand|Finger/.test(name)) hand += w[k];
+            else if (/Foot|Toe/.test(name)) foot += w[k];
           }
-          mask.set([torso - arm * 1.2 - neck - head, hand, fingers], i * 3);
+          mask.set([torso, hand, foot], i * 3);
         }
         geo.setAttribute("aRest", new THREE.BufferAttribute(rest, 3));
-        geo.setAttribute("aRestN", new THREE.BufferAttribute(restN, 3));
         geo.setAttribute("aMask", new THREE.BufferAttribute(mask, 3));
-        geo.setAttribute("aCut", new THREE.BufferAttribute(new Float32Array(n), 1));
-        mesh.userData.unit = unit;
       }
 
-      // Trims parts of the avatar's own meshes (lapel flower, jacket tails, legs inside boots).
-      // `cond` is GLSL using vCutRest (rest position) and vCut (per-vertex flag from markIslands).
-      function cutMaterial(mesh, cond, uniforms) {
-        const geo = mesh.geometry;
-        if (!geo.attributes.aCut) geo.setAttribute("aCut", new THREE.BufferAttribute(new Float32Array(geo.attributes.position.count), 1));
-        const material = mesh.material;
-        const decl = Object.keys(uniforms).map((u) => `uniform float ${u};`).join("\n");
-        material.onBeforeCompile = (s) => {
-          Object.assign(s.uniforms, uniforms);
+      // The worker's own materials: hide shins inside the boots, bare hands inside the gloves,
+      // and lift the helmet while it is being put on.
+      function workerMaterial(m, lift) {
+        m.onBeforeCompile = (s) => {
+          s.uniforms.uHideBelow = hideBelow;
+          s.uniforms.uHideHands = hideHands;
+          s.uniforms.uLift = lift || { value: new THREE.Vector3() };
           s.vertexShader = s.vertexShader
-            .replace("#include <common>", "#include <common>\nattribute vec3 aRest;\nattribute float aCut;\nvarying vec3 vCutRest;\nvarying float vCut;")
-            .replace("#include <begin_vertex>", "#include <begin_vertex>\nvCutRest = aRest;\nvCut = aCut;");
+            .replace("#include <common>", "#include <common>\nattribute vec3 aRest;\nattribute vec3 aMask;\nuniform vec3 uLift;\nvarying float vRestY;\nvarying float vHand;")
+            .replace("#include <skinning_vertex>", "#include <skinning_vertex>\ntransformed += uLift;\nvRestY = aRest.y;\nvHand = aMask.y;");
           s.fragmentShader = s.fragmentShader
-            .replace("#include <common>", `#include <common>\nvarying vec3 vCutRest;\nvarying float vCut;\n${decl}`)
-            .replace("#include <clipping_planes_fragment>", `#include <clipping_planes_fragment>\nif (${cond}) discard;`);
+            .replace("#include <common>", "#include <common>\nuniform float uHideBelow;\nuniform float uHideHands;\nvarying float vRestY;\nvarying float vHand;")
+            .replace("#include <clipping_planes_fragment>", "#include <clipping_planes_fragment>\nif (vRestY < uHideBelow || vHand > uHideHands) discard;");
         };
-        material.customProgramCacheKey = () => `cut-${mesh.name}`;
-        material.needsUpdate = true;
+        m.customProgramCacheKey = () => `worker-${m.name}`;
       }
 
-      // Flags every connected piece of a mesh whose rest-space bounds fall inside `box`.
-      function markIslands(mesh, box) {
-        const geo = mesh.geometry;
-        const rest = geo.attributes.aRest.array;
-        const n = rest.length / 3;
-        const parent = Int32Array.from({ length: n }, (_, i) => i);
-        const find = (a) => {
-          while (parent[a] !== a) a = parent[a] = parent[parent[a]];
-          return a;
+      // Vest and gloves: the donor's textures, pushed out slightly over the worker's clothes,
+      // revealed with a sweep while being put on.
+      function ppeMaterial({ map, normalMap, roughness, push, reveal }) {
+        const m = new THREE.MeshStandardMaterial({ map, normalMap, roughness, side: THREE.DoubleSide });
+        m.userData.uniforms = { uReveal: { value: 0 }, uLo: { value: 0 }, uHi: { value: 2 }, uPush: { value: push } };
+        m.onBeforeCompile = (s) => {
+          Object.assign(s.uniforms, m.userData.uniforms);
+          s.vertexShader = s.vertexShader
+            .replace("#include <common>", "#include <common>\nattribute vec3 aRest;\nuniform float uPush;\nvarying float vRestY;")
+            .replace("#include <skinning_vertex>", "#include <skinning_vertex>\ntransformed += normalize(objectNormal) * uPush;\nvRestY = aRest.y;");
+          s.fragmentShader = s.fragmentShader
+            .replace("#include <common>", "#include <common>\nuniform float uReveal;\nuniform float uLo;\nuniform float uHi;\nvarying float vRestY;")
+            .replace("#include <clipping_planes_fragment>", `#include <clipping_planes_fragment>\nif (!(${reveal})) discard;`);
         };
-        const idx = geo.index.array;
-        for (let i = 0; i < idx.length; i += 3) {
-          const a = find(idx[i]);
-          parent[find(idx[i + 1])] = a;
-          parent[find(idx[i + 2])] = a;
-        }
-        const bounds = new Map();
-        const v = new THREE.Vector3();
-        for (let i = 0; i < n; i++) {
-          const k = find(i);
-          if (!bounds.has(k)) bounds.set(k, new THREE.Box3());
-          bounds.get(k).expandByPoint(v.fromArray(rest, i * 3));
-        }
-        const cut = geo.attributes.aCut.array;
-        for (let i = 0; i < n; i++) if (box.containsBox(bounds.get(find(i)))) cut[i] = 1;
-        geo.attributes.aCut.needsUpdate = true;
-      }
-
-      function addGarment(key, source, material, glslHelpers) {
-        const original = material.onBeforeCompile;
-        material.userData.uniforms.uUnit.value = 1 / (source.userData.unit || 1);
-        material.onBeforeCompile = (s) => {
-          original(s);
-          s.fragmentShader = s.fragmentShader.replace("void main() {", `${glslHelpers}\nvoid main() {`);
-        };
-        const mesh = new THREE.SkinnedMesh(source.geometry, material);
-        mesh.bind(source.skeleton, source.bindMatrix);
-        mesh.position.copy(source.position);
-        mesh.quaternion.copy(source.quaternion);
-        mesh.scale.copy(source.scale);
-        mesh.castShadow = true;
-        mesh.frustumCulled = false;
-        mesh.visible = false;
-        source.parent.add(mesh);
-        items[key] = { ...items[key], parts: [mesh], progress: 0, uniforms: material.userData.uniforms };
+        m.customProgramCacheKey = () => `ppe-${reveal}`;
+        return m;
       }
 
       function attachToBone(boneName, obj) {
@@ -1074,13 +1061,17 @@
         const from = child.getWorldPosition(new THREE.Vector3()).sub(bone.getWorldPosition(new THREE.Vector3())).normalize();
         rotateBoneWorld(bone, new THREE.Quaternion().setFromUnitVectors(from, dir.clone().normalize()));
       }
-      const restPose = {};
       function poseRelaxed() {
-        for (const [side, s] of [["Left", 1], ["Right", -1]]) {
-          aimBone(bones[`${side}Arm`], bones[`${side}ForeArm`], new THREE.Vector3(0.2 * s, -1, 0.02));
-          aimBone(bones[`${side}ForeArm`], bones[`${side}Hand`], new THREE.Vector3(0.1 * s, -1, 0.2));
+        for (const side of ["L", "R"]) {
+          const s = Math.sign(bones[`${side}_Hand`].getWorldPosition(new THREE.Vector3()).x) || 1;
+          aimBone(bones[`${side}_UpperArm`], bones[`${side}_Forearm`], new THREE.Vector3(0.2 * s, -1, 0.02));
+          aimBone(bones[`${side}_Forearm`], bones[`${side}_Hand`], new THREE.Vector3(0.1 * s, -1, 0.2));
         }
-        for (const name of ["Spine", "Spine1", "Spine2", "Neck", "Head"]) restPose[name] = bones[name].quaternion.clone();
+        // Breathing and head sway rotate about world axes, expressed in each bone's local frame.
+        for (const [name, axis] of [["Spine1", new THREE.Vector3(1, 0, 0)], ["Head", new THREE.Vector3(0, 1, 0)]]) {
+          const inv = bones[name].getWorldQuaternion(new THREE.Quaternion()).invert();
+          restPose[name] = { q: bones[name].quaternion.clone(), axis: axis.applyQuaternion(inv) };
+        }
       }
 
       // ---------- Wear / take off ----------
@@ -1089,7 +1080,7 @@
         if (!item) return;
         if (on) worn.add(key);
         else worn.delete(key);
-        if (on) item.parts.forEach((o) => (o.visible = true));
+        if (on) item.setVisible(true);
         item.target = on ? 1 : 0;
         renderWearing();
         if (selectedKey === key) renderProduct();
@@ -1304,24 +1295,20 @@
         }
         if (character) {
           // Gentle breathing so the model doesn't look frozen.
-          const breath = Math.sin(t * 1.6) * 0.012;
-          bones.Spine1.quaternion.copy(restPose.Spine1).multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), breath));
-          bones.Head.quaternion.copy(restPose.Head).multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.sin(t * 0.5) * 0.05));
+          const sway = { Spine1: Math.sin(t * 1.6) * 0.012, Head: Math.sin(t * 0.5) * 0.05 };
+          for (const [name, angle] of Object.entries(sway)) {
+            const r = restPose[name];
+            bones[name].quaternion.copy(r.q).multiply(new THREE.Quaternion().setFromAxisAngle(r.axis, angle));
+          }
         }
         for (const [key, item] of Object.entries(items)) {
           if (item.target !== undefined && item.progress !== item.target) {
             const step = dt / 0.7;
             item.progress = item.target > item.progress ? Math.min(item.target, item.progress + step) : Math.max(item.target, item.progress - step);
             const k = easeOut(item.progress);
-            if (item.uniforms) item.uniforms.uReveal.value = k;
+            item.animate?.(k);
             for (const a of anchors[key] || []) a.obj.position.copy(a.home).addScaledVector(a.from, 1 - k);
-            if (item.progress === 0) item.parts.forEach((o) => (o.visible = false));
-            if (key === "boots") {
-              // Once the boots are mostly on, hide the shoes and the trouser legs inside them.
-              const on = item.progress > 0.6;
-              hideBelow.value = on ? item.cut : -1;
-              if (parts.Wolf3D_Outfit_Footwear) parts.Wolf3D_Outfit_Footwear.visible = !on;
-            }
+            if (item.progress === 0) item.setVisible(false);
           }
           if (item.shelf) {
             const target = item.shelfTarget ?? 1;
@@ -1335,6 +1322,7 @@
         renderer.render(scene, camera);
       });
 
+      window.__fit = { items, scene, renderer, camera, root, THREE };
       init();
     </script>
   </body>

@@ -2,8 +2,7 @@
 /**
  * Read-only: ledger trial balance and reconciliation checks for one company.
  *
- * Usage: php scripts/gl-ledger-report.php --company=ultimate [--from=2026-01-01] [--to=2026-12-31] [--preview]
- * --preview runs the ledger sync inside a transaction that is rolled back, and reports on the result.
+ * Usage: php scripts/gl-ledger-report.php --company=ultimate|--db=<database> [--from=2026-01-01] [--to=2026-12-31]
  */
 declare(strict_types=1);
 
@@ -18,11 +17,10 @@ require_once dirname(__DIR__) . '/includes/functions.php';
 require_once dirname(__DIR__) . '/includes/gl/gl_reports.php';
 
 // Read options after functions.php: it defines globals such as $slug.
-$opts = getopt('', ['company::', 'db::', 'from::', 'to::', 'preview', 'sync']);
+$opts = getopt('', ['company::', 'db::', 'from::', 'to::']);
 $companySlug = strtolower(trim((string) ($opts['company'] ?? '')));
 $from = (string) ($opts['from'] ?? date('Y') . '-01-01');
 $to = (string) ($opts['to'] ?? date('Y-m-d'));
-$preview = array_key_exists('preview', $opts);
 
 if (!empty($opts['db'])) {
     $c = ['db_name' => (string) $opts['db'], 'db_host' => null, 'db_user' => null, 'db_pass' => null];
@@ -43,36 +41,6 @@ $GLOBALS['pdo'] = $pdo;
 
 $n = static fn ($v): string => number_format((float) $v, 2);
 echo "DB {$c['db_name']}  source=" . gl_report_source($pdo) . '  autosync=' . (gl_meta_get($pdo, 'autosync') ?? '-') . "  period {$from}..{$to}\n";
-
-if ($preview) {
-    gl_ensure_schema($pdo);
-    $pdo->beginTransaction();
-    $res = gl_bridge_sync_all_in_tx($pdo);
-} elseif (array_key_exists('sync', $opts)) {
-    $res = gl_bridge_sync_all($pdo);
-}
-
-function gl_bridge_sync_all_in_tx(PDO $pdo): array
-{
-    $stats = ['posted' => 0, 'reversed' => 0, 'skipped_zero' => 0, 'by_type' => [], 'errors' => []];
-    gl_ensure_schema($pdo);
-    gl_bridge_fa_rows($pdo, true);
-    gl_bridge_sync_openings($pdo, $stats);
-    gl_bridge_sync_transactions($pdo, $stats);
-    gl_bridge_sync_reclassifications($pdo, $stats);
-    gl_bridge_sync_revenue($pdo, $stats);
-    if (function_exists('gl_bridge_sync_cogs')) {
-        gl_bridge_sync_cogs($pdo, $stats);
-    }
-    return $stats;
-}
-
-if (isset($res)) {
-    echo "Preview sync: {$res['posted']} posted, {$res['reversed']} reversed, by type " . json_encode($res['by_type']) . "\n";
-    foreach (array_slice($res['errors'], 0, 10) as $e) {
-        echo "  ERROR {$e}\n";
-    }
-}
 
 echo "\n== Trial balance (ledger)\n";
 $dr = $cr = 0.0;
@@ -107,8 +75,3 @@ foreach (array_slice($byMemo, 0, 15, true) as $k => $v) {
     echo "  {$n($v)}  {$k}\n";
 }
 echo '  pending transactions: ' . gl_report_pending_sources($pdo) . "\n";
-
-if ($preview) {
-    $pdo->rollBack();
-    echo "\nPreview rolled back: nothing saved.\n";
-}

@@ -535,10 +535,12 @@ if (!function_exists('gl_bridge_sync_reclassifications')) {
         $entries = $pdo->query("SELECT DISTINCT e.id, e.entry_number, e.source_ref
                                 FROM gl_source_links l
                                 JOIN gl_journal_entries e ON e.id = l.entry_id
-                                WHERE l.source_table = 'account_transactions' AND l.active = 1
-                                  AND e.source_type = 'payment_voucher'")->fetchAll(PDO::FETCH_ASSOC);
+                                WHERE l.active = 1
+                                  AND ((l.source_table = 'account_transactions' AND e.source_type = 'payment_voucher')
+                                    OR (l.source_table = 'payment_vouchers_unbanked' AND e.source_type = 'payment_voucher_unbanked'))")->fetchAll(PDO::FETCH_ASSOC);
         $linesOf = $pdo->prepare('SELECT account_id, SUM(ROUND(debit * 100)) - SUM(ROUND(credit * 100)) AS net
-                                  FROM gl_journal_lines WHERE entry_id = ? AND financial_account_id IS NULL GROUP BY account_id');
+                                  FROM gl_journal_lines WHERE entry_id = ? AND financial_account_id IS NULL AND account_id <> ? GROUP BY account_id');
+        $obe = gl_system_account($pdo, 'opening_balance_equity');
         $reclassOf = $pdo->prepare("SELECT l2.account_id, SUM(ROUND(l2.debit * 100)) - SUM(ROUND(l2.credit * 100)) AS net
                                     FROM gl_source_links s JOIN gl_journal_lines l2 ON l2.entry_id = s.entry_id
                                     WHERE s.source_table = 'gl_reclass' AND s.source_id = ? AND s.active = 1
@@ -550,7 +552,7 @@ if (!function_exists('gl_bridge_sync_reclassifications')) {
                 continue;
             }
             $posted = [];
-            $linesOf->execute([$entryId]);
+            $linesOf->execute([$entryId, $obe]);
             foreach ($linesOf->fetchAll(PDO::FETCH_ASSOC) as $r) {
                 $posted[(int) $r['account_id']] = (int) $r['net'];
             }
@@ -719,6 +721,148 @@ if (!function_exists('gl_bridge_sync_revenue')) {
 }
 
 /* ------------------------------------------------------------------ */
+/* Vouchers paid before money accounts were kept                       */
+/* ------------------------------------------------------------------ */
+
+if (!function_exists('gl_bridge_sync_unbanked_vouchers')) {
+    /**
+     * Approved vouchers marked paid on or before gl_meta 'unbanked_pv_cutoff' with no money movement recorded:
+     * the payment happened before bank balances were tracked, so the expense is booked against Opening Balance
+     * Equity (the opening bank balances already reflect that money leaving). Off unless the cutoff is set.
+     */
+    function gl_bridge_sync_unbanked_vouchers(PDO $pdo, array &$stats): void
+    {
+        $cutoff = (string) (gl_meta_get($pdo, 'unbanked_pv_cutoff') ?? '');
+        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $cutoff) || !gl_table_exists($pdo, 'payment_vouchers')) {
+            return;
+        }
+        $rows = [];
+        $sql = "SELECT pv.id, pv.voucher_no, pv.payee_name, pv.total_amount, pv.status, pv.is_paid,
+                       DATE(COALESCE(pv.paid_at, pv.approved_at, pv.date_created, pv.created_at)) AS paid_date,
+                       EXISTS (SELECT 1 FROM account_transactions t WHERE t.reference_type = 'payment_voucher' AND t.reference_id = pv.id) AS has_tx
+                FROM payment_vouchers pv";
+        foreach ($pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC) as $r) {
+            $rows[(int) $r['id']] = $r;
+        }
+        $qualifies = static function (array $r) use ($cutoff): bool {
+            return strtolower(trim((string) $r['status'])) === 'approved'
+                && (int) $r['is_paid'] === 1
+                && !(int) $r['has_tx']
+                && (string) $r['paid_date'] !== ''
+                && (string) $r['paid_date'] <= $cutoff
+                && round((float) $r['total_amount'], 2) > 0;
+        };
+        $fingerprint = static fn (array $r): string => md5(number_format((float) $r['total_amount'], 2, '.', '') . '|' . $r['paid_date']);
+
+        $linked = [];
+        foreach ($pdo->query("SELECT source_id, entry_id, fingerprint FROM gl_source_links WHERE source_table = 'payment_vouchers_unbanked' AND active = 1")->fetchAll(PDO::FETCH_ASSOC) as $l) {
+            $linked[(int) $l['source_id']] = $l;
+        }
+        foreach ($linked as $id => $l) {
+            $r = $rows[$id] ?? null;
+            if (!$r || !$qualifies($r) || $fingerprint($r) !== $l['fingerprint']) {
+                $reason = !$r ? "voucher #{$id} was deleted" : ($qualifies($r) ? "voucher #{$id} was changed" : "voucher #{$id} now has a recorded payment or is no longer paid");
+                gl_bridge_reverse_and_unlink($pdo, (int) $l['entry_id'], $reason, $stats);
+                unset($linked[$id]);
+            }
+        }
+
+        $obe = gl_system_account($pdo, 'opening_balance_equity');
+        foreach ($rows as $id => $r) {
+            if (isset($linked[$id]) || !$qualifies($r)) {
+                continue;
+            }
+            $cents = gl_to_cents($r['total_amount']);
+            $lines = gl_bridge_pv_allocation($pdo, $id, $cents);
+            $label = (string) $r['voucher_no'] . ' - ' . (string) $r['payee_name'];
+            $lines[] = ['account_id' => $obe, 'debit' => 0, 'credit' => $cents / 100, 'memo' => 'Paid before bank records: ' . $label];
+            $res = gl_post_entry($pdo, [
+                'date' => (string) $r['paid_date'],
+                'description' => mb_substr('Voucher paid before bank records: ' . $label, 0, 400),
+                'source_type' => 'payment_voucher_unbanked',
+                'source_key' => 'pvub:' . $id . ':v' . gl_bridge_link_version($pdo, 'payment_vouchers_unbanked', [$id]),
+                'source_ref' => 'payment_voucher#' . $id,
+            ], $lines);
+            if (!$res['ok']) {
+                $stats['errors'][] = "Voucher #{$id} (paid before bank records): " . $res['error'];
+                continue;
+            }
+            gl_bridge_link($pdo, 'payment_vouchers_unbanked', $id, $res['entry_id'], $fingerprint($r));
+            if (!$res['existing']) {
+                $stats['posted']++;
+                $stats['by_type']['payment_voucher_unbanked'] = ($stats['by_type']['payment_voucher_unbanked'] ?? 0) + 1;
+            }
+        }
+    }
+}
+
+if (!function_exists('gl_bridge_sync_unbanked_receipts')) {
+    /**
+     * Invoice payments dated on or before gl_meta 'unbanked_pv_cutoff' with no matching money movement: received
+     * before bank balances were tracked, so the receivable is cleared against Opening Balance Equity.
+     */
+    function gl_bridge_sync_unbanked_receipts(PDO $pdo, array &$stats): void
+    {
+        $cutoff = (string) (gl_meta_get($pdo, 'unbanked_pv_cutoff') ?? '');
+        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $cutoff) || !gl_table_exists($pdo, 'sales_payments')) {
+            return;
+        }
+        $rows = [];
+        $sql = "SELECT sp.id, sp.invoice_id, sp.amount, DATE(sp.payment_date) AS pay_date, COALESCE(i.invoice_number, '') AS invoice_number,
+                       EXISTS (SELECT 1 FROM account_transactions t WHERE t.reference_type = 'invoice_payment'
+                                 AND t.reference_id = sp.invoice_id AND ABS(t.amount - sp.amount) < 0.02) AS has_tx
+                FROM sales_payments sp LEFT JOIN invoices i ON i.id = sp.invoice_id";
+        foreach ($pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC) as $r) {
+            $rows[(int) $r['id']] = $r;
+        }
+        $qualifies = static fn (array $r): bool => !(int) $r['has_tx'] && (string) $r['pay_date'] !== ''
+            && (string) $r['pay_date'] <= $cutoff && round((float) $r['amount'], 2) > 0;
+        $fingerprint = static fn (array $r): string => md5(number_format((float) $r['amount'], 2, '.', '') . '|' . $r['pay_date']);
+
+        $linked = [];
+        foreach ($pdo->query("SELECT source_id, entry_id, fingerprint FROM gl_source_links WHERE source_table = 'sales_payments_unbanked' AND active = 1")->fetchAll(PDO::FETCH_ASSOC) as $l) {
+            $linked[(int) $l['source_id']] = $l;
+        }
+        foreach ($linked as $id => $l) {
+            $r = $rows[$id] ?? null;
+            if (!$r || !$qualifies($r) || $fingerprint($r) !== $l['fingerprint']) {
+                gl_bridge_reverse_and_unlink($pdo, (int) $l['entry_id'], "invoice payment #{$id} was changed, deleted or now has a recorded receipt", $stats);
+                unset($linked[$id]);
+            }
+        }
+
+        $obe = gl_system_account($pdo, 'opening_balance_equity');
+        $ar = gl_system_account($pdo, 'accounts_receivable');
+        foreach ($rows as $id => $r) {
+            if (isset($linked[$id]) || !$qualifies($r)) {
+                continue;
+            }
+            $amt = gl_to_cents($r['amount']) / 100;
+            $label = ($r['invoice_number'] !== '' ? $r['invoice_number'] : 'invoice #' . $r['invoice_id']) . ' payment #' . $id;
+            $res = gl_post_entry($pdo, [
+                'date' => (string) $r['pay_date'],
+                'description' => 'Received before bank records: ' . $label,
+                'source_type' => 'sales_payment_unbanked',
+                'source_key' => 'spub:' . $id . ':v' . gl_bridge_link_version($pdo, 'sales_payments_unbanked', [$id]),
+                'source_ref' => 'sales_payment#' . $id,
+            ], [
+                ['account_id' => $obe, 'debit' => $amt, 'credit' => 0, 'memo' => 'Received before bank records: ' . $label],
+                ['account_id' => $ar, 'debit' => 0, 'credit' => $amt, 'memo' => 'Customer receipt: ' . $label],
+            ]);
+            if (!$res['ok']) {
+                $stats['errors'][] = "Invoice payment #{$id} (received before bank records): " . $res['error'];
+                continue;
+            }
+            gl_bridge_link($pdo, 'sales_payments_unbanked', $id, $res['entry_id'], $fingerprint($r));
+            if (!$res['existing']) {
+                $stats['posted']++;
+                $stats['by_type']['sales_payment_unbanked'] = ($stats['by_type']['sales_payment_unbanked'] ?? 0) + 1;
+            }
+        }
+    }
+}
+
+/* ------------------------------------------------------------------ */
 /* Orchestration                                                       */
 /* ------------------------------------------------------------------ */
 
@@ -736,7 +880,7 @@ if (!function_exists('gl_bridge_sync_all')) {
             $stats['errors'][] = 'Ledger tables are not available.';
             return $stats;
         }
-        $only = $options['only'] ?? ['openings', 'transactions', 'reclass', 'revenue'];
+        $only = $options['only'] ?? ['openings', 'transactions', 'reclass', 'revenue', 'unbanked'];
 
         $pdo->beginTransaction();
         try {
@@ -752,6 +896,10 @@ if (!function_exists('gl_bridge_sync_all')) {
             }
             if (in_array('revenue', $only, true)) {
                 gl_bridge_sync_revenue($pdo, $stats);
+            }
+            if (in_array('unbanked', $only, true)) {
+                gl_bridge_sync_unbanked_vouchers($pdo, $stats);
+                gl_bridge_sync_unbanked_receipts($pdo, $stats);
             }
             if ($stats['dry_run']) {
                 $pdo->rollBack();

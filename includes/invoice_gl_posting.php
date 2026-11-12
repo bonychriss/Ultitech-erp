@@ -367,6 +367,19 @@ if (!function_exists('invoice_gl_post_revenue_recognition')) {
             return 0;
         }
 
+        // An invoice's revenue voucher is recognised once, through the invoice (INV-REC).
+        try {
+            $st = $pdo->prepare('SELECT COALESCE(source_invoice_id, 0) FROM revenue_entries WHERE id = ? LIMIT 1');
+            $st->execute([$entryId]);
+            $sourceInvoiceId = (int) ($st->fetchColumn() ?: 0);
+        } catch (Throwable $e) {
+            $sourceInvoiceId = 0;
+        }
+        if ($sourceInvoiceId > 0) {
+            invoice_gl_ensure_invoice_recognition($pdo, $sourceInvoiceId);
+            return 0;
+        }
+
         $arId = accounting_resolve_gl_role_account_id($pdo, 'receivable');
         $revId = $revenueGlAccountId ?: accounting_resolve_default_sales_revenue_gl_account_id($pdo);
         $taxId = accounting_resolve_gl_role_account_id($pdo, 'output_tax');

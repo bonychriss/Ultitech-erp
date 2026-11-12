@@ -118,7 +118,7 @@ foreach (['amount', 'compare'] as $k) {
 $cur = $tot['amount'];
 $prev = $tot['compare'];
 $showTaxEstimate = $cur['tax_estimate'] > 0 || $prev['tax_estimate'] > 0;
-$taxEstimateLabel = 'Estimated income tax (' . $taxRateText . ' of profit before tax)';
+$taxEstimateLabel = 'Income tax at ' . $taxRateText . ' of profit before tax';
 $pctOfRevenue = static fn (float $v): string => abs($cur['revenue']) < 0.005 ? '' : number_format($v / $cur['revenue'] * 100, 1) . '%';
 $change = static fn (float $now, float $before): float => round($now - $before, 2);
 $changePct = static fn (float $now, float $before): string => abs($before) < 0.005 ? '' : number_format(($now - $before) / abs($before) * 100, 1) . '%';
@@ -148,7 +148,7 @@ foreach ($sections['tax'] as $a) {
     $lines[] = ['kind' => 'account', 'section' => $sectionTitles['tax'], 'code' => $a['code'], 'label' => $a['name'], 'amount' => (float) $a['amount'], 'compare' => (float) $a['compare']];
 }
 if ($showTaxEstimate) {
-    $lines[] = ['kind' => 'account', 'section' => $sectionTitles['tax'], 'code' => '', 'label' => $taxEstimateLabel, 'amount' => $cur['tax_estimate'], 'compare' => $prev['tax_estimate']];
+    $lines[] = ['kind' => 'account', 'section' => $sectionTitles['tax'], 'code' => '', 'label' => $taxEstimateLabel . ' (estimate)', 'amount' => $cur['tax_estimate'], 'compare' => $prev['tax_estimate']];
 }
 $lines[] = ['kind' => 'total', 'label' => 'Total income tax', 'amount' => $cur['tax'], 'compare' => $prev['tax']];
 $lines[] = ['kind' => 'result', 'label' => $cur['net'] >= 0 ? 'Net profit after tax' : 'Net loss after tax', 'amount' => $cur['net'], 'compare' => $prev['net']];

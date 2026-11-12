@@ -65,6 +65,7 @@ const allVouchersHref = MODULE
 // Share column is opt-in (admin dashboard table has star + ⋮ only).
 const SHARE_ENABLED = CFG.share === true
 const DELETE_MODE = CFG.deleteMode || 'simple' // 'simple' | 'action'
+const PAYMENT_TYPE_OPTIONS = ['Bank Transfer', 'Cash Payment', 'Cheque', 'Mobile Payment', 'Credit']
 
 function num(v) {
   return Number(v || 0)
@@ -881,9 +882,18 @@ export default function DashboardPage() {
   const total = num(stats.total)
 
   const allVouchers = useMemo(() => data?.recent || [], [data])
-  const paymentTypeOptions = useMemo(() => Array.from(new Set(
-    allVouchers.flatMap((voucher) => Array.isArray(voucher.payment_types) ? voucher.payment_types : []),
-  )).sort((a, b) => a.localeCompare(b)), [allVouchers])
+  const paymentTypeOptions = useMemo(() => {
+    const options = new Map(PAYMENT_TYPE_OPTIONS.map((option) => [option.toLowerCase(), option]))
+    allVouchers.forEach((voucher) => {
+      const paymentTypes = Array.isArray(voucher.payment_types) ? voucher.payment_types : []
+      paymentTypes.forEach((rawType) => {
+        const option = String(rawType || '').trim()
+        const key = option.toLowerCase()
+        if (key && !options.has(key)) options.set(key, option)
+      })
+    })
+    return Array.from(options.values()).sort((a, b) => a.localeCompare(b))
+  }, [allVouchers])
   const budgetTypeOptions = useMemo(() => Array.from(new Set(
     allVouchers.flatMap((voucher) => Array.isArray(voucher.budget_types) ? voucher.budget_types : []),
   )).sort((a, b) => a.localeCompare(b)), [allVouchers])

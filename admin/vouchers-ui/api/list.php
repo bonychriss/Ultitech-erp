@@ -257,6 +257,17 @@ try {
         }
     }
 
+    $paymentTypeOptions = ['Bank Transfer', 'Cash Payment', 'Cheque', 'Mobile Payment', 'Credit'];
+    $knownPaymentTypes = array_fill_keys(array_map('strtolower', $paymentTypeOptions), true);
+    foreach ($classificationOptions['payment_type_options'] as $paymentTypeOption) {
+        $normalizedPaymentType = strtolower(trim((string) $paymentTypeOption));
+        if ($normalizedPaymentType !== '' && !isset($knownPaymentTypes[$normalizedPaymentType])) {
+            $knownPaymentTypes[$normalizedPaymentType] = true;
+            $paymentTypeOptions[] = trim((string) $paymentTypeOption);
+        }
+    }
+    $classificationOptions['payment_type_options'] = $paymentTypeOptions;
+
     $sql = "
         SELECT pv.id, pv.voucher_no, pv.payee_name, pv.total_amount, pv.status,
                pv.date_created, pv.currency, pv.created_at, pv.prepared_by, pv.description,

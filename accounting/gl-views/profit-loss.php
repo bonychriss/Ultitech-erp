@@ -204,7 +204,8 @@ include __DIR__ . '/../../modules/balances/includes/header.php';
 include __DIR__ . '/../../includes/gl/gl_page_style.php';
 ?>
 <style>
-.main-content.glr.glr-pl{padding-top:8px!important;background:#f4f5f7}
+.main-content.glr.glr-pl{padding-top:8px!important;background:#f1f5f9!important}
+html:not([data-theme="dark"]) body:has(.glr-pl),html:not([data-theme="dark"]) body:has(.glr-pl) .layout-main-wrapper{background:#f1f5f9!important}
 .glr-pl .glr-wrap{width:100%;max-width:none;padding:0 10px}
 .glr-pl-breadcrumb{display:flex;align-items:center;gap:9px;min-height:42px;padding:0 12px;margin-bottom:8px;color:#94a3b8;font-size:13px}
 .glr-pl-breadcrumb a{color:#8290a2;text-decoration:none}
@@ -264,21 +265,20 @@ include __DIR__ . '/../../includes/gl/gl_page_style.php';
 .glr-pl-table tfoot td{position:sticky;bottom:0;background:#f8fafb;font-weight:700;border-top:1px solid #dfe3e8}
 .glr-pl-table tfoot .is-loss{color:#b42318}
 .glr-pl-nomatch{padding:24px 12px!important;color:#77818c;text-align:center!important}
-.glr-pl-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:10px 0 12px}
-.glr-pl-stat{--glr-pl-accent:#2563eb;--glr-pl-tint:#eff6ff;position:relative;display:flex;align-items:center;gap:12px;padding:14px 16px;background:#fff;border:1px solid #e6e8eb;border-radius:14px;box-shadow:0 1px 3px rgba(15,23,42,.06);overflow:hidden;transition:transform .15s ease,box-shadow .15s ease}
-.glr-pl-stat::before{content:"";position:absolute;inset:0 auto 0 0;width:4px;background:var(--glr-pl-accent)}
-.glr-pl-stat:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(15,23,42,.1)}
-.glr-pl-stat.is-revenue{--glr-pl-accent:#2563eb;--glr-pl-tint:#eff6ff}
-.glr-pl-stat.is-gross{--glr-pl-accent:#7c3aed;--glr-pl-tint:#f5f3ff}
-.glr-pl-stat.is-expense{--glr-pl-accent:#ea580c;--glr-pl-tint:#fff7ed}
-.glr-pl-stat.is-net{--glr-pl-accent:#16a34a;--glr-pl-tint:#f0fdf4}
-.glr-pl-stat.is-net-loss{--glr-pl-accent:#dc2626;--glr-pl-tint:#fef2f2}
-.glr-pl-stat-icon{flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:12px;background:var(--glr-pl-tint);color:var(--glr-pl-accent);font-size:18px}
-.glr-pl-stat-body{min-width:0}
-.glr-pl-stat-label{font-size:11px;font-weight:600;color:#66717d;text-transform:uppercase;letter-spacing:.03em}
-.glr-pl-stat-value{padding-top:3px;font-size:18px;font-weight:750;color:#1f2937;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.glr-pl-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:6px 0 12px}
+.glr-pl-stat{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 12px;background:#fff;border:1px solid #edf0f5;border-radius:12px;box-shadow:0 1px 2px rgba(15,23,42,.03);transition:transform .15s ease,box-shadow .15s ease}
+.glr-pl-stat:hover{transform:translateY(-1px);box-shadow:0 6px 14px rgba(15,23,42,.06)}
+.glr-pl-stat-body{min-width:0;display:flex;flex-direction:column}
+.glr-pl-stat-label{font-size:11px;font-weight:500;color:#000;line-height:1.2}
+.glr-pl-stat-value{margin:1px 0;font-size:15px;font-weight:700;letter-spacing:-.02em;color:#000;line-height:1.2;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .glr-pl-stat-value.is-loss{color:#b42318}
-.glr-pl-stat-note{font-size:11px;color:var(--glr-pl-accent);margin-top:2px;font-weight:600}
+.glr-pl-stat-note{font-size:10px;font-weight:500;color:#6b7280;line-height:1.2}
+.glr-pl-stat-icon{flex-shrink:0;display:flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;font-size:12px}
+.glr-pl-stat.is-revenue .glr-pl-stat-icon{background:#eff6ff;color:#3b82f6}
+.glr-pl-stat.is-gross .glr-pl-stat-icon{background:#eef2ff;color:#6366f1}
+.glr-pl-stat.is-expense .glr-pl-stat-icon{background:#fff7ed;color:#f59e0b}
+.glr-pl-stat.is-net .glr-pl-stat-icon{background:#ecfdf5;color:#10b981}
+.glr-pl-stat.is-net-loss .glr-pl-stat-icon{background:#fef2f2;color:#ef4444}
 @media(prefers-reduced-motion:reduce){.glr-pl-stat{transition:none}.glr-pl-stat:hover{transform:none}}
 html[data-theme="dark"] .main-content.glr.glr-pl{background:#111827}
 html[data-theme="dark"] .glr-pl-breadcrumb [aria-current="page"]{color:#dbe4ed}
@@ -295,8 +295,8 @@ html[data-theme="dark"] .glr-pl-download-menu{background:#17212b;border-color:#3
 html[data-theme="dark"] .glr-pl-download-menu a,html[data-theme="dark"] .glr-pl-download-menu button{color:#dbe4ed}
 html[data-theme="dark"] .glr-pl-download-menu a:hover,html[data-theme="dark"] .glr-pl-download-menu button:hover{background:#1d2935}
 html[data-theme="dark"] .glr-pl-detail-grid b,html[data-theme="dark"] .glr-pl-stat-value{color:#e2e8f0}
-html[data-theme="dark"] .glr-pl-stat-icon{background:rgba(148,163,184,.12)}
-html[data-theme="dark"] .glr-pl-stat-label{color:#94a3b8}
+html[data-theme="dark"] .glr-pl-stat-label,html[data-theme="dark"] .glr-pl-stat-value{color:#f8fafc}
+html[data-theme="dark"] .glr-pl-stat-note{color:#94a3b8}
 @media(max-width:900px){.glr-pl-summary{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:520px){.glr-pl-summary{grid-template-columns:1fr}}
 @media(max-width:680px){
@@ -326,36 +326,36 @@ html[data-theme="dark"] .glr-pl-stat-label{color:#94a3b8}
     </nav>
     <section class="glr-pl-summary" aria-label="Profit and loss summary">
       <div class="glr-pl-stat is-revenue">
-        <span class="glr-pl-stat-icon" aria-hidden="true"><i class="fas fa-sack-dollar"></i></span>
         <div class="glr-pl-stat-body">
           <div class="glr-pl-stat-label">Total Revenue</div>
           <div class="glr-pl-stat-value"><?= gl_fmt($cur['revenue']) ?></div>
           <div class="glr-pl-stat-note"><?= $hasCompare ? gl_h('vs ' . gl_fmt($prev['revenue'])) : 'Income for the period' ?></div>
         </div>
+        <span class="glr-pl-stat-icon" aria-hidden="true"><i class="fas fa-sack-dollar"></i></span>
       </div>
       <div class="glr-pl-stat is-gross">
-        <span class="glr-pl-stat-icon" aria-hidden="true"><i class="fas fa-chart-pie"></i></span>
         <div class="glr-pl-stat-body">
           <div class="glr-pl-stat-label">Gross Profit</div>
           <div class="glr-pl-stat-value<?= $cur['gross'] < 0 ? ' is-loss' : '' ?>"><?= gl_fmt($cur['gross']) ?></div>
           <div class="glr-pl-stat-note"><?= $pctOfRevenue($cur['gross']) !== '' ? gl_h($pctOfRevenue($cur['gross']) . ' margin') : '&nbsp;' ?></div>
         </div>
+        <span class="glr-pl-stat-icon" aria-hidden="true"><i class="fas fa-chart-pie"></i></span>
       </div>
       <div class="glr-pl-stat is-expense">
-        <span class="glr-pl-stat-icon" aria-hidden="true"><i class="fas fa-receipt"></i></span>
         <div class="glr-pl-stat-body">
           <div class="glr-pl-stat-label">Total Expenses</div>
           <div class="glr-pl-stat-value"><?= gl_fmt($cur['cogs'] + $cur['expense']) ?></div>
           <div class="glr-pl-stat-note"><?= $pctOfRevenue($cur['cogs'] + $cur['expense']) !== '' ? gl_h($pctOfRevenue($cur['cogs'] + $cur['expense']) . ' of revenue') : '&nbsp;' ?></div>
         </div>
+        <span class="glr-pl-stat-icon" aria-hidden="true"><i class="fas fa-receipt"></i></span>
       </div>
       <div class="glr-pl-stat <?= $cur['net'] >= 0 ? 'is-net' : 'is-net-loss' ?>">
-        <span class="glr-pl-stat-icon" aria-hidden="true"><i class="fas <?= $cur['net'] >= 0 ? 'fa-arrow-trend-up' : 'fa-arrow-trend-down' ?>"></i></span>
         <div class="glr-pl-stat-body">
           <div class="glr-pl-stat-label"><?= $cur['net'] >= 0 ? 'Net Profit' : 'Net Loss' ?></div>
           <div class="glr-pl-stat-value<?= $cur['net'] < 0 ? ' is-loss' : '' ?>"><?= gl_fmt($cur['net']) ?></div>
           <div class="glr-pl-stat-note"><?= $pctOfRevenue($cur['net']) !== '' ? gl_h($pctOfRevenue($cur['net']) . ' margin') : '&nbsp;' ?></div>
         </div>
+        <span class="glr-pl-stat-icon" aria-hidden="true"><i class="fas <?= $cur['net'] >= 0 ? 'fa-arrow-trend-up' : 'fa-arrow-trend-down' ?>"></i></span>
       </div>
     </section>
 

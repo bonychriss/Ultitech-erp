@@ -9,6 +9,7 @@ export default function SiteChrome({ active = 'home', children }) {
   const pricingUrl = cfg.pricingUrl || 'pricing.php'
   const aboutUrl = cfg.aboutUrl || 'about.php'
   const contactUrl = cfg.contactUrl || 'contact.php'
+  const faqUrl = cfg.faqUrl || 'faq.php'
   const loginUrl = cfg.loginUrl || 'login.php'
   const trialUrl = cfg.trialUrl || 'free-trial.php'
   const year = cfg.year || new Date().getFullYear()
@@ -119,6 +120,9 @@ export default function SiteChrome({ active = 'home', children }) {
               </a>
               <a href={contactUrl} className="text-gray-500 hover:text-gray-900">
                 Contact us
+              </a>
+              <a href={faqUrl} className="text-gray-500 hover:text-gray-900">
+                FAQ
               </a>
             </div>
             <div className="flex flex-col gap-2">

@@ -2,8 +2,9 @@ import HomePage from './pages/HomePage.jsx'
 import PricingPage from './pages/PricingPage.jsx'
 import ContactPage from './pages/ContactPage.jsx'
 import AboutPage from './pages/AboutPage.jsx'
+import FaqPage from './pages/FaqPage.jsx'
 
-const PAGES = { pricing: PricingPage, contact: ContactPage, about: AboutPage }
+const PAGES = { pricing: PricingPage, contact: ContactPage, about: AboutPage, faq: FaqPage }
 
 function getPage() {
   const cfg = window.__HOME_CFG__ || {}

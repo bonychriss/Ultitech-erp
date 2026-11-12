@@ -68,6 +68,14 @@ if (!function_exists('erp_seo_tags')) {
                     ['@type' => 'BreadcrumbList', '@id' => $url . '#breadcrumb', 'itemListElement' => $crumbs],
                 ],
             ];
+            if (!empty($page['faq']) && is_array($page['faq'])) {
+                $graph['@graph'][0]['@type'] = ['WebPage', 'FAQPage'];
+                $graph['@graph'][0]['mainEntity'] = array_map(static fn (array $item): array => [
+                    '@type' => 'Question',
+                    'name' => (string) $item['question'],
+                    'acceptedAnswer' => ['@type' => 'Answer', 'text' => (string) $item['answer']],
+                ], $page['faq']);
+            }
             $tags[] = '<script type="application/ld+json">'
                 . json_encode($graph, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG)
                 . '</script>';
@@ -149,7 +157,7 @@ if (!function_exists('erp_seo_fallback_html')) {
      * site links before JavaScript runs. React replaces it on mount.
      *
      * @param array{title:string,description:string} $page
-     * @param array<string,string> $urls keys: home, pricing, trial, about, contact, login
+     * @param array<string,string> $urls keys: home, pricing, trial, about, contact, faq, login
      */
     function erp_seo_fallback_html(string $pageKey, array $page, array $urls): string
     {
@@ -160,6 +168,7 @@ if (!function_exists('erp_seo_fallback_html')) {
             'trial' => 'Free Trial',
             'about' => 'About Us',
             'contact' => 'Contact Us',
+            'faq' => 'FAQ',
             'login' => 'Sign in',
         ];
         $links = '';
@@ -183,12 +192,19 @@ if (!function_exists('erp_seo_fallback_html')) {
         foreach ($modules as $name => $text) {
             $items .= '<li><strong>' . $esc($name) . '</strong>: ' . $esc($text) . '</li>';
         }
+        $body = '<h2>Modules in UltiTech ERP</h2><ul>' . $items . '</ul>';
+        if (!empty($page['faq']) && is_array($page['faq'])) {
+            $body = '';
+            foreach ($page['faq'] as $item) {
+                $body .= '<h2>' . $esc((string) $item['question']) . '</h2><p>' . $esc((string) $item['answer']) . '</p>';
+            }
+        }
 
         return '<div class="erp-seo-fallback" style="max-width:960px;margin:0 auto;padding:2rem 1.25rem;font-family:sans-serif;line-height:1.5;">'
             . '<nav aria-label="Main"><ul style="display:flex;flex-wrap:wrap;gap:1rem;list-style:none;padding:0;margin:0 0 1.5rem;">' . $links . '</ul></nav>'
             . '<h1>' . $esc($heading) . '</h1>'
             . '<p>' . $esc($page['description']) . '</p>'
-            . '<h2>Modules in UltiTech ERP</h2><ul>' . $items . '</ul>'
+            . $body
             . '<p><a href="' . $esc($urls['trial'] ?? '/free-trial.php') . '">Start a free 14-day trial</a> or <a href="' . $esc($urls['contact'] ?? '/contact.php') . '">contact the UltiTech team</a> in Dar es Salaam, Tanzania.</p>'
             . '</div>';
     }

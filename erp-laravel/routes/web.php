@@ -7,6 +7,7 @@ use App\Domains\Payroll\DeskShell as PayrollDeskShell;
 use App\Domains\Letter\DeskShell as LetterDeskShell;
 use App\Domains\Admin\DeskShell as AdminDeskShell;
 use App\Http\Controllers\HomePageController;
+use App\Http\Controllers\SitemapController;
 use App\Http\Controllers\TrialPageController;
 use App\Http\Controllers\SalesDashboardApiController;
 use App\Http\Controllers\SalesDashboardPageController;
@@ -54,6 +55,9 @@ Route::get('/pricing', [HomePageController::class, 'show'])->name('home.pricing'
 
 // Public free-trial signup (POST stays on free-trial.php; GET shell via Laravel)
 Route::get('/free-trial', [TrialPageController::class, 'show'])->name('trial.page');
+
+// Public XML sitemap (root sitemap.php bridge; /sitemap.xml rewrites there)
+Route::get('/sitemap.xml', [SitemapController::class, 'show'])->name('sitemap');
 
 Route::middleware([AttachErpContext::class])->group(function () {
     // Sales

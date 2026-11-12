@@ -35,6 +35,7 @@ final class HomeShell
                 : '/home-ui/frontend/dist/skilline/img/')),
             'contactUrl' => (string) ($cfg['contactUrl'] ?? (function_exists('app_url') ? app_url('/contact.php') : '/contact.php')),
             'aboutUrl' => (string) ($cfg['aboutUrl'] ?? (function_exists('app_url') ? app_url('/about.php') : '/about.php')),
+            'faqUrl' => (string) ($cfg['faqUrl'] ?? (function_exists('app_url') ? app_url('/faq.php') : '/faq.php')),
             'year' => (int) ($cfg['year'] ?? date('Y')),
             'engine' => 'erp-laravel Domains/Home',
         ];
@@ -51,6 +52,13 @@ final class HomeShell
         $bootCfg['texts'] = $texts;
 
         $pageKey = strtolower((string) $bootCfg['page']);
+        $faq = [];
+        if ($pageKey === 'faq' && is_file($root . '/includes/site-faq.php')) {
+            require_once $root . '/includes/site-faq.php';
+            $faq = erp_site_faq();
+        }
+        $bootCfg['faq'] = $faq;
+
         $seo = match ($pageKey) {
             'pricing' => [
                 'title' => 'Pricing and Free Trial | UltiTech ERP',
@@ -66,6 +74,12 @@ final class HomeShell
                 'title' => 'About Us | UltiTech ERP',
                 'description' => 'UltiTech builds a cloud ERP that brings sales, stock, payroll, expenses and accounting into one system for growing businesses in Tanzania.',
                 'path' => '/about.php',
+            ],
+            'faq' => [
+                'title' => 'Frequently Asked Questions | UltiTech ERP',
+                'description' => 'Answers about UltiTech ERP: the 14-day free trial, included modules, multi-company setup, user access, data import and getting support in Tanzania.',
+                'path' => '/faq.php',
+                'faq' => $faq,
             ],
             default => [
                 'title' => 'UltiTech ERP | Cloud ERP for Sales, Stock, Payroll and Accounting',
@@ -93,6 +107,7 @@ final class HomeShell
                     'trial' => $bootCfg['trialUrl'],
                     'about' => $bootCfg['aboutUrl'],
                     'contact' => $bootCfg['contactUrl'],
+                    'faq' => $bootCfg['faqUrl'],
                     'login' => $bootCfg['loginUrl'],
                 ]);
             }

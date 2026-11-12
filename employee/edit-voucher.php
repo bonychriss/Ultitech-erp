@@ -254,6 +254,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['limited_classificatio
                 $description
             );
         }
+        $postedTaxTypes = (isset($_POST['tax_type']) && is_array($_POST['tax_type'])) ? array_values($_POST['tax_type']) : [];
+        if ($result['ok'] && $postedTaxTypes && count($postedTaxTypes) === count($existing_items)) {
+            require_once __DIR__ . '/../includes/voucher_tax_types.php';
+            if (voucher_ensure_tax_type_column($pdo)) {
+                $upTax = $pdo->prepare('UPDATE voucher_items SET tax_type = ? WHERE id = ? AND voucher_id = ?');
+                foreach (array_values($existing_items) as $i => $row) {
+                    $newTax = voucher_normalize_tax_type((string) $row['budget_type'], $postedTaxTypes[$i]);
+                    if ($newTax !== null && $newTax !== ($row['tax_type'] ?? null)) {
+                        $upTax->execute([$newTax, (int) $row['id'], $voucher_id]);
+                    }
+                }
+                if (!empty($voucher['is_paid'])) {
+                    require_once __DIR__ . '/../includes/gl/gl_bridge.php';
+                    gl_bridge_schedule_sync($pdo);
+                }
+            }
+        }
         if ($result['ok']) {
             $redirectUrl = 'view-voucher.php?id=' . $voucher_id;
             if (isset($_GET['module']) && (string) $_GET['module'] !== '') {
@@ -378,6 +395,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['limited_classificati
             throw new Exception('Please add at least one payment item');
         }
         
+        require_once __DIR__ . '/../includes/voucher_tax_types.php';
+        $hasTaxTypeCol = voucher_ensure_tax_type_column($pdo);
         for ($i = 0; $i < count($_POST['payment_type']); $i++) {
             $payment_type = trim($_POST['payment_type'][$i]);
             $budget_type = trim($_POST['budget_type'][$i]);
@@ -386,9 +405,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['limited_classificati
             $item_description = trim($_POST['item_description'][$i]);
             
             if ($payment_type && $budget_type && $name && $amount > 0) {
+                $tax_type = voucher_normalize_tax_type($budget_type, $_POST['tax_type'][$i] ?? '');
+                if ($tax_type === null && voucher_is_tax_budget_type($budget_type)) {
+                    throw new Exception('Please choose the Tax type for each Tax & Compliance item.');
+                }
                 $items[] = [
                     'payment_type' => $payment_type,
                     'budget_type' => $budget_type,
+                    'tax_type' => $tax_type,
                     'name' => $name,
                     'amount' => $amount,
                     'description' => $item_description
@@ -508,19 +532,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['limited_classificati
 
             // Prepare insert for new items
             $stmt = $pdo->prepare("
-                INSERT INTO voucher_items (voucher_id, payment_type, budget_type, name, amount, description) 
-                VALUES (?, ?, ?, ?, ?, ?)
+                INSERT INTO voucher_items (voucher_id, payment_type, budget_type, name, amount, description" . ($hasTaxTypeCol ? ', tax_type' : '') . ") 
+                VALUES (?, ?, ?, ?, ?, ?" . ($hasTaxTypeCol ? ', ?' : '') . ")
             ");
         
         foreach ($items as $item) {
-            $stmt->execute([
+            $vals = [
                 $voucher_id,
                 $item['payment_type'],
                 $item['budget_type'], 
                 $item['name'],
                 $item['amount'],
                 $item['description']
-            ]);
+            ];
+            if ($hasTaxTypeCol) {
+                $vals[] = $item['tax_type'];
+            }
+            $stmt->execute($vals);
         }
         $pdo->prepare('UPDATE payment_vouchers SET due_date = ? WHERE id = ?')
             ->execute([$creditAmount > 0 ? $voucherDueDate : null, $voucher_id]);
@@ -801,11 +829,19 @@ if (function_exists('parseLinkedStockPoIdsFromVoucher')) {
     $linkedPoIds = array_values($linkedPoIds);
 }
 
+require_once __DIR__ . '/../includes/voucher_tax_types.php';
+require_once __DIR__ . '/../includes/gl/gl_bridge.php';
 $initialItems = [];
 foreach ($existing_items as $row) {
+    $initialTaxType = voucher_normalize_tax_type((string) ($row['budget_type'] ?? ''), $row['tax_type'] ?? '');
+    if ($initialTaxType === null && voucher_is_tax_budget_type((string) ($row['budget_type'] ?? ''))) {
+        // Older vouchers: pre-select the type implied by the description; the user confirms on save.
+        $initialTaxType = gl_bridge_tax_type_from_text((string) ($voucher['payee_name'] ?? '') . ' ' . ($row['name'] ?? '') . ' ' . ($row['description'] ?? ''));
+    }
     $initialItems[] = [
         'payment_type' => (string) ($row['payment_type'] ?? ''),
         'budget_type' => (string) ($row['budget_type'] ?? ''),
+        'tax_type' => (string) ($initialTaxType ?? ''),
         'amount' => (string) ($row['amount'] ?? ''),
         'item_description' => (string) ($row['description'] ?? ''),
         'name' => (string) ($row['name'] ?? ''),
@@ -874,6 +910,8 @@ $editVoucherConfig = [
         'Tax & Compliance',
         'Others / Miscellaneous',
     ],
+    'taxTypes' => voucher_tax_types(),
+    'taxBudgetTypes' => voucher_tax_budget_types(),
     'payees' => $mapPayees(is_array($payees) ? $payees : []),
     'users' => $mapUserNames(is_array($allUsers) ? $allUsers : []),
     'financeUsers' => $mapUserNames(is_array($financeUsers) ? $financeUsers : []),

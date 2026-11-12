@@ -219,35 +219,40 @@ requireLogin();
                 <div class="section-title" id="paying-taxes">
                     <i class="fas fa-landmark"></i> Paying Taxes &amp; Levies (TRA, Council, BRELA)
                 </div>
-                <p>Tax payments are made with a normal payment voucher. The accounts decide <strong>which tax</strong> you paid by reading the <strong>Item Description</strong>, so every tax line must say what it is for.</p>
+                <p>Tax payments are made with a normal payment voucher. When an item's <strong>Budget Type</strong> is <strong>Tax &amp; Compliance</strong>, a required <strong>Tax type</strong> box appears under that item. What you choose there decides where the payment goes in the accounts.</p>
                 <div class="feature-box">
                     <h4 style="color:var(--c-orange);"><i class="fas fa-clipboard-check me-2"></i> How to fill in a tax voucher</h4>
                     <ul class="mb-0">
                         <li><strong>Purpose</strong>: General Payment.</li>
                         <li><strong>Payee</strong>: Tanzania Revenue Authority (TRA), the Municipal Council, BRELA, etc.</li>
                         <li><strong>Budget Type</strong>: Tax &amp; Compliance.</li>
-                        <li><strong>Item Description</strong>: name the tax and the period, e.g. <em>"VAT April 2026"</em>. Use one item line per tax &mdash; if one payment covers VAT and PAYE, add two lines.</li>
+                        <li><strong>Tax type *</strong>: choose which tax this line pays (see the table below). The voucher cannot be submitted until every Tax &amp; Compliance line has one.</li>
+                        <li><strong>Item Description</strong>: the period or reference, e.g. <em>"April 2026"</em> or <em>"Quarter 2 2026"</em>.</li>
+                        <li>Use <strong>one item line per tax</strong> &mdash; if one payment covers VAT and PAYE, add two lines and choose the right Tax type on each.</li>
                     </ul>
                 </div>
                 <table class="manual-table">
                     <thead>
-                        <tr><th>You are paying</th><th>Write in the Item Description</th><th>Where it goes in the accounts</th></tr>
+                        <tr><th>You are paying</th><th>Choose Tax type</th><th>Where it goes in the accounts</th></tr>
                     </thead>
                     <tbody>
-                        <tr><td>VAT</td><td>VAT April 2026</td><td>Tax Payable (VAT owed to TRA)</td></tr>
-                        <tr><td>Corporate / income tax instalment</td><td>Corporate tax quarter 2 2026</td><td>Income Tax Expense (shown on the Profit &amp; Loss)</td></tr>
-                        <tr><td>Final income tax for a year</td><td>Income tax return 2025</td><td>Income Tax Expense</td></tr>
-                        <tr><td>PAYE / SDL</td><td>PAYE October 2026 &nbsp;/&nbsp; SDL October 2026</td><td>Salaries &amp; Wages</td></tr>
-                        <tr><td>Withholding tax</td><td>Withholding tax October 2026</td><td>Tax Payable</td></tr>
-                        <tr><td>Service levy, stamp duty, licences, BRELA, TRA penalties</td><td>City service levy 2026 &nbsp;/&nbsp; Stamp duty &nbsp;/&nbsp; BRELA annual return</td><td>Taxes, Levies &amp; Licences</td></tr>
+                        <tr><td>VAT</td><td>VAT</td><td>Tax Payable (VAT owed to TRA)</td></tr>
+                        <tr><td>Corporate / income tax instalment, or the final income tax for a year</td><td>Corporate / Income tax</td><td>Income Tax Expense (shown on the Profit &amp; Loss)</td></tr>
+                        <tr><td>PAYE</td><td>PAYE</td><td>Salaries &amp; Wages</td></tr>
+                        <tr><td>SDL</td><td>SDL (Skills Development Levy)</td><td>Salaries &amp; Wages</td></tr>
+                        <tr><td>Withholding tax</td><td>Withholding tax</td><td>Tax Payable</td></tr>
+                        <tr><td>City service levy, stamp duty, licences, permits, BRELA fees</td><td>Levies, licences &amp; stamp duty</td><td>Taxes, Levies &amp; Licences</td></tr>
+                        <tr><td>TRA penalties, interest and fines</td><td>TRA penalties &amp; fines</td><td>Taxes, Levies &amp; Licences</td></tr>
                     </tbody>
                 </table>
-                <p>The key words the system looks for are: <strong>VAT</strong>, <strong>corporate tax</strong>, <strong>income tax</strong>, <strong>provisional tax</strong>, <strong>PAYE</strong>, <strong>SDL</strong>, <strong>withholding</strong>, <strong>levy</strong>, <strong>stamp duty</strong>, <strong>licence</strong>, <strong>permit</strong>, <strong>penalty</strong>.</p>
-                <div class="alert-tip">
-                    <h5><i class="fas fa-triangle-exclamation"></i> Forgot the description?</h5>
-                    <p>If a Tax &amp; Compliance line doesn't name the tax, its amount is held in <strong>Suspense</strong> and the <strong>Profit &amp; Loss</strong> page shows a yellow warning listing the voucher. Finance (or an Admin, if the voucher is already posted) opens the voucher, clicks <strong>Edit</strong>, adds the tax name to the Item Description and saves &mdash; the accounts correct themselves automatically.</p>
+                <div class="feature-box">
+                    <h4 style="color:var(--c-orange);"><i class="fas fa-file-csv me-2"></i> Bulk upload</h4>
+                    <p class="mb-0">The bulk upload template has no Tax type column, so for Tax &amp; Compliance rows write the tax in the <strong>Voucher Description</strong> (e.g. <em>"VAT April 2026"</em>, <em>"Corporate tax quarter 2"</em>, <em>"PAYE October 2026"</em>, <em>"Service levy"</em>). Rows that don't name the tax are rejected with a message so you can fix them before importing.</p>
                 </div>
-
+                <div class="alert-tip">
+                    <h5><i class="fas fa-triangle-exclamation"></i> Chose the wrong Tax type?</h5>
+                    <p>Open the voucher, click <strong>Edit</strong>, change the Tax type and save &mdash; the accounts move the amount automatically, dated to the original payment. Finance can do this on unposted vouchers; an Admin is needed once a voucher is posted. The voucher view and printout show the Tax type, so approvers can check it before approving. Older vouchers without a Tax type are sorted from their description; any the system can't recognise are held in <strong>Suspense</strong> and listed in a yellow warning on the <strong>Profit &amp; Loss</strong> page until someone sets the Tax type.</p>
+                </div>
                 <div class="section-title">
                     <i class="fas fa-history"></i> Managing Your History
                 </div>

@@ -442,7 +442,7 @@ html[data-theme="dark"] .glr-pl-stat-note{color:#94a3b8}
     <?php if ($taxReview): ?>
       <details class="glr-pl-alert">
         <summary><i class="fas fa-triangle-exclamation" aria-hidden="true"></i><?= count($taxReview) ?> tax payment<?= count($taxReview) === 1 ? '' : 's' ?> need<?= count($taxReview) === 1 ? 's' : '' ?> a tax type (<?= gl_fmt(array_sum(array_map(static fn ($r) => (float) $r['amount'], $taxReview))) ?> held in Suspense)</summary>
-        <p>These Tax &amp; Compliance voucher items don't say which tax they pay. Edit the item description to name it (for example "VAT March 2026", "Corporate tax quarter 2", "PAYE October 2026", "Service levy"); the books update automatically. <a href="../employee/user-manual.php#paying-taxes">How to fill in tax vouchers</a></p>
+        <p>These Tax &amp; Compliance voucher items have no Tax type. Open each voucher, click Edit, choose its Tax type and save; the books update automatically. <a href="../employee/user-manual.php#paying-taxes">How to fill in tax vouchers</a></p>
         <ul>
           <?php foreach ($taxReview as $r): ?>
             <li><a href="../employee/view-voucher.php?id=<?= (int) $r['id'] ?>"><?= gl_h($r['voucher_no']) ?></a> – <?= gl_h($r['payee_name']) ?><?= trim((string) $r['description']) !== '' ? ' – “' . gl_h(trim((string) $r['description'])) . '”' : '' ?> – <?= gl_fmt((float) $r['amount']) ?></li>

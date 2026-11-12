@@ -103,7 +103,10 @@ export default function VoucherPreview({ data }) {
             {items.map((item, i) => (
               <tr key={i}>
                 <td style={cellStyle()}>{item.payment_type}</td>
-                <td style={cellStyle()}>{item.budget_type}</td>
+                <td style={cellStyle()}>
+                  {item.budget_type}
+                  {item.tax_type_label ? (<div style={{ fontSize: '0.85em', marginTop: 2 }}>Tax type: <strong>{item.tax_type_label}</strong></div>) : null}
+                </td>
                 <td style={cellStyle()}>{item.name}</td>
                 <td style={{ ...cellStyle(), textAlign: 'right' }}>{Number(item.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                 <td style={cellStyle()}>{item.description}</td>

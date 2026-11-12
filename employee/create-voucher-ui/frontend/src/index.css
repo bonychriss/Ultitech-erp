@@ -355,6 +355,16 @@
   max-width: 160px;
 }
 .cv-item-cell label { font-size: 12px; font-weight: 500; color: var(--cv-muted); }
+.cv-item-tax {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 8px 0 0 46px;
+  max-width: 420px;
+}
+.cv-item-tax label { font-size: 12px; font-weight: 500; color: var(--cv-muted); }
+.cv-item-tax .cv-req { color: #ef4444; }
+@media (max-width: 640px) { .cv-item-tax { margin-left: 0; max-width: none; } }
 .cv-lock-hint { font-weight: 400; font-style: italic; color: #94a3b8; }
 .cv-select:disabled, .cv-input:disabled {
   background: #f1f5f9; color: var(--cv-text-2); cursor: not-allowed; opacity: 1;

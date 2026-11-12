@@ -1044,9 +1044,14 @@ function vv_load_view_payload(PDO $pdo, int $voucherId, array $opts = []): array
                 'general_manager' => (string) ($voucher['general_manager'] ?? ''),
             ],
             'items' => array_map(static function ($item) {
+                if (!function_exists('voucher_tax_types')) {
+                    require_once dirname(__DIR__) . '/includes/voucher_tax_types.php';
+                }
+                $taxType = voucher_normalize_tax_type((string) ($item['budget_type'] ?? ''), $item['tax_type'] ?? '');
                 return [
                     'payment_type' => (string) ($item['payment_type'] ?? ''),
                     'budget_type' => (string) ($item['budget_type'] ?? ''),
+                    'tax_type_label' => $taxType !== null ? voucher_tax_types()[$taxType] : '',
                     'name' => (string) ($item['name'] ?? ''),
                     'amount' => (float) ($item['amount'] ?? 0),
                     'description' => (string) ($item['description'] ?? ''),

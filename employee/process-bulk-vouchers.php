@@ -1,5 +1,7 @@
 <?php
 require_once '../includes/functions.php';
+require_once '../includes/voucher_tax_types.php';
+require_once '../includes/gl/gl_bridge.php';
 requireLogin();
 
 // Increase execution time for large files
@@ -136,6 +138,13 @@ while (($csvRow = fgetcsv($handle)) !== FALSE) {
     if (!in_array($data['bud_type'], $validBudgetTypes)) {
         $errors[] = "Invalid Budget Type: '" . $data['bud_type'] . "'.";
     }
+    $data['tax_type'] = null;
+    if (voucher_is_tax_budget_type($data['bud_type'])) {
+        $data['tax_type'] = gl_bridge_tax_type_from_text($data['payee'] . ' ' . $data['item'] . ' ' . $data['desc']);
+        if ($data['tax_type'] === null) {
+            $errors[] = "Tax & Compliance rows must name the tax in the Voucher Description (e.g. VAT, Corporate tax, PAYE, SDL, Withholding tax, Service levy, Penalty).";
+        }
+    }
 
     // User Existence Checks
     $appUser = $userData[strtolower($data['applicant'])] ?? null;
@@ -174,6 +183,7 @@ if (empty($rows)) {
 
 // 7. Pass 2: Transactional Insertion
 $successCount = 0;
+$hasTaxTypeCol = voucher_ensure_tax_type_column($pdo);
 try {
     $pdo->beginTransaction();
 
@@ -194,8 +204,13 @@ try {
         $voucher_id = $pdo->lastInsertId();
 
         // Insert Item
-        $iStmt = $pdo->prepare("INSERT INTO voucher_items (voucher_id, payment_type, budget_type, name, amount, description) VALUES (?, ?, ?, ?, ?, ?)");
-        $iStmt->execute([$voucher_id, $r['pay_type'], $r['bud_type'], $r['payee'], $r['amount'], $r['desc']]);
+        if ($hasTaxTypeCol) {
+            $iStmt = $pdo->prepare("INSERT INTO voucher_items (voucher_id, payment_type, budget_type, tax_type, name, amount, description) VALUES (?, ?, ?, ?, ?, ?, ?)");
+            $iStmt->execute([$voucher_id, $r['pay_type'], $r['bud_type'], $r['tax_type'], $r['payee'], $r['amount'], $r['desc']]);
+        } else {
+            $iStmt = $pdo->prepare("INSERT INTO voucher_items (voucher_id, payment_type, budget_type, name, amount, description) VALUES (?, ?, ?, ?, ?, ?)");
+            $iStmt->execute([$voucher_id, $r['pay_type'], $r['bud_type'], $r['payee'], $r['amount'], $r['desc']]);
+        }
 
         // Insert Approvals
         $aCols = "voucher_id, approver_id, approver_name, role, status, created_at";

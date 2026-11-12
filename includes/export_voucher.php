@@ -117,7 +117,10 @@ ob_start();
             <?php $total=0; foreach($items as $it): $total += (float)$it['amount']; ?>
             <tr>
                 <td><?= htmlspecialchars($it['payment_type']) ?></td>
-                <td><?= htmlspecialchars($it['budget_type']) ?></td>
+                <td><?= htmlspecialchars($it['budget_type']) ?><?php
+                    require_once __DIR__ . '/voucher_tax_types.php';
+                    $itTax = voucher_normalize_tax_type((string) $it['budget_type'], $it['tax_type'] ?? '');
+                    if ($itTax !== null): ?><br><small>Tax type: <?= htmlspecialchars(voucher_tax_types()[$itTax]) ?></small><?php endif; ?></td>
                 <td class="center"><?= htmlspecialchars($it['name']) ?></td>
                 <td class="center"><?= number_format((float)$it['amount'], 2) ?></td>
                 <td><?= htmlspecialchars($it['description'] ?: '') ?></td>

@@ -317,16 +317,21 @@ if (!function_exists('gl_bridge_category_account')) {
     }
 }
 
-if (!function_exists('gl_bridge_tax_payment_kind')) {
-    /** Which tax a Tax & Compliance voucher item pays, from its payee, item name and description; null if unclear. */
-    function gl_bridge_tax_payment_kind(string $text): ?string
+if (!function_exists('gl_bridge_tax_type_from_text')) {
+    /**
+     * Tax type (see voucher_tax_types()) implied by an item's payee, name and description. Used only for items
+     * saved before the Tax type field existed; null if unclear.
+     */
+    function gl_bridge_tax_type_from_text(string $text): ?string
     {
         $rules = [
             'income_tax' => '/\b(income|corporate|corporation|provisional)\s+tax\b|\breturn\s+(on|of)\s+income\b|\bcit\b/i',
-            'payroll' => '/\bpaye\b|\bsdl\b|skills\s+development/i',
+            'sdl' => '/\bsdl\b|skills\s+development/i',
+            'paye' => '/\bpaye\b/i',
             'withholding' => '/withholding|\bwht\b/i',
+            'penalty' => '/penalt|\bfines?\b/i',
             'vat' => '/\bvat\b|value\s+added\s+tax/i',
-            'levy' => '/municipal|council|\bbrela\b|\blev(y|ies)\b|licen[cs]e|permit|stamp\s+duty|penalt|\bfines?\b|annual\s+return/i',
+            'levy' => '/municipal|council|\bbrela\b|\blev(y|ies)\b|licen[cs]e|permit|stamp\s+duty|annual\s+return/i',
         ];
         foreach ($rules as $kind => $pattern) {
             if (preg_match($pattern, $text)) {
@@ -337,13 +342,45 @@ if (!function_exists('gl_bridge_tax_payment_kind')) {
     }
 }
 
+if (!function_exists('gl_bridge_items_have_tax_type')) {
+    function gl_bridge_items_have_tax_type(PDO $pdo): bool
+    {
+        static $cache = [];
+        $oid = spl_object_id($pdo);
+        if (!isset($cache[$oid])) {
+            try {
+                $cache[$oid] = (bool) $pdo->query("SHOW COLUMNS FROM voucher_items LIKE 'tax_type'")->fetch();
+            } catch (Throwable $e) {
+                $cache[$oid] = false;
+            }
+        }
+        return $cache[$oid];
+    }
+}
+
+if (!function_exists('gl_bridge_item_tax_type')) {
+    /** The item's chosen tax type, falling back to the one implied by its text for older vouchers. */
+    function gl_bridge_item_tax_type(array $item, string $payeeName): ?string
+    {
+        if (!function_exists('voucher_tax_types')) {
+            require_once dirname(__DIR__) . '/voucher_tax_types.php';
+        }
+        $chosen = strtolower(trim((string) ($item['tax_type'] ?? '')));
+        if ($chosen !== '' && isset(voucher_tax_types()[$chosen])) {
+            return $chosen;
+        }
+        return gl_bridge_tax_type_from_text($payeeName . ' ' . ($item['name'] ?? '') . ' ' . (string) ($item['description'] ?? ''));
+    }
+}
+
 if (!function_exists('gl_bridge_tax_review_items')) {
     /** Paid Tax & Compliance voucher items whose tax type cannot be recognised (posted to Suspense until fixed). */
     function gl_bridge_tax_review_items(PDO $pdo): array
     {
         $out = [];
         try {
-            $st = $pdo->prepare("SELECT p.id, p.voucher_no, p.payee_name, i.budget_type, i.name, i.description, i.amount
+            $taxCol = gl_bridge_items_have_tax_type($pdo) ? 'i.tax_type' : 'NULL AS tax_type';
+            $st = $pdo->prepare("SELECT p.id, p.voucher_no, p.payee_name, i.budget_type, {$taxCol}, i.name, i.description, i.amount
                                  FROM voucher_items i
                                  JOIN payment_vouchers p ON p.id = i.voucher_id
                                  JOIN gl_category_map m ON m.category = i.budget_type AND m.account_id = ?
@@ -354,7 +391,7 @@ if (!function_exists('gl_bridge_tax_review_items')) {
             return [];
         }
         foreach ($rows as $r) {
-            if (gl_bridge_tax_payment_kind($r['payee_name'] . ' ' . $r['name'] . ' ' . (string) $r['description']) === null) {
+            if (gl_bridge_item_tax_type($r, (string) $r['payee_name']) === null) {
                 $out[] = $r;
             }
         }
@@ -386,7 +423,7 @@ if (!function_exists('gl_bridge_pv_allocation')) {
             return [['account_id' => gl_system_account($pdo, 'inventory'), 'debit' => $amountCents / 100, 'credit' => 0, 'memo' => 'Stock purchase: ' . $label]];
         }
 
-        $st = $pdo->prepare('SELECT budget_type, name, amount, description FROM voucher_items WHERE voucher_id = ? ORDER BY id');
+        $st = $pdo->prepare('SELECT budget_type, ' . (gl_bridge_items_have_tax_type($pdo) ? 'tax_type' : 'NULL AS tax_type') . ', name, amount, description FROM voucher_items WHERE voucher_id = ? ORDER BY id');
         $st->execute([$voucherId]);
         $items = $st->fetchAll(PDO::FETCH_ASSOC) ?: [];
         $itemTotal = 0;
@@ -399,14 +436,14 @@ if (!function_exists('gl_bridge_pv_allocation')) {
 
         // Items in a category mapped to the VAT liability are split by the tax named in the item text.
         $taxPayable = gl_system_account($pdo, 'vat_payable');
-        $taxRoute = static function (int $accId, string $text) use ($pdo, $taxPayable, $suspense): int {
+        $taxRoute = static function (int $accId, array $item) use ($pdo, $pv, $taxPayable, $suspense): int {
             if ($accId !== $taxPayable) {
                 return $accId;
             }
-            return match (gl_bridge_tax_payment_kind($text)) {
+            return match (gl_bridge_item_tax_type($item, (string) $pv['payee_name'])) {
                 'income_tax' => gl_system_account($pdo, 'income_tax_expense'),
-                'payroll' => gl_bridge_category_account($pdo, 'Employee Costs') ?: $suspense,
-                'levy' => gl_system_account($pdo, 'levies_licences'),
+                'paye', 'sdl' => gl_bridge_category_account($pdo, 'Employee Costs') ?: $suspense,
+                'levy', 'penalty' => gl_system_account($pdo, 'levies_licences'),
                 'vat', 'withholding' => $taxPayable,
                 default => $suspense,
             };
@@ -427,7 +464,7 @@ if (!function_exists('gl_bridge_pv_allocation')) {
             $itemText = trim($it['name'] . ' ' . (string) ($it['description'] ?? ''));
             $taxUnknown = false;
             if ($accId > 0) {
-                $routed = $taxRoute($accId, $pv['payee_name'] . ' ' . $itemText);
+                $routed = $taxRoute($accId, $it);
                 $taxUnknown = $routed === $suspense;
                 $accId = $taxUnknown ? 0 : $routed;
             }

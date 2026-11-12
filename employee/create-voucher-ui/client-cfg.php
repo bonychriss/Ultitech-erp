@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+require_once dirname(__DIR__, 2) . '/includes/voucher_tax_types.php';
+
 /**
  * Build window.__CV_CFG__ for the Create Voucher React app.
  *
@@ -137,6 +139,8 @@ function createVoucherBuildClientCfg(array $data = []): array
             'Tax & Compliance',
             'Others / Miscellaneous',
         ],
+        'taxTypes' => voucher_tax_types(),
+        'taxBudgetTypes' => voucher_tax_budget_types(),
         'payees' => $mapPayees(is_array($data['payees'] ?? null) ? $data['payees'] : []),
         'payeesRefreshUrl' => function_exists('company_url')
             ? company_url('employee/create-voucher-ui/api/payees.php')

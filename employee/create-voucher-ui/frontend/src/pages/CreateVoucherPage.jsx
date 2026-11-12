@@ -48,11 +48,16 @@ function clearCreateDraft() {
 /** Snapshot restored once at boot (create mode only). */
 const BOOT_DRAFT = readCreateDraft()
 
+const TAX_TYPES = Object.entries(CFG.taxTypes || {})
+const TAX_BUDGET_TYPES = CFG.taxBudgetTypes || []
+const isTaxBudget = (budgetType) => TAX_BUDGET_TYPES.includes(budgetType)
+
 function newItem(seed = {}) {
   return {
     key: Math.random().toString(36).slice(2),
     payment_type: seed.payment_type || '',
     budget_type: seed.budget_type || '',
+    tax_type: seed.tax_type || '',
     amount: seed.amount != null && seed.amount !== '' ? String(seed.amount) : '',
     item_description: seed.item_description || seed.description || '',
   }
@@ -268,6 +273,7 @@ export default function CreateVoucherPage() {
         items: items.map((it) => ({
           payment_type: it.payment_type || '',
           budget_type: it.budget_type || '',
+          tax_type: it.tax_type || '',
           amount: it.amount || '',
           item_description: it.item_description || '',
         })),
@@ -541,6 +547,8 @@ export default function CreateVoucherPage() {
     )
     if (validItems.length === 0)
       return 'Please add at least one payment item with a payment type, budget type and amount.'
+    if (validItems.some((it) => isTaxBudget(it.budget_type) && !it.tax_type))
+      return 'Please choose the Tax type for each Tax & Compliance item.'
     if (validItems.some((it) => it.payment_type.toLowerCase() === 'credit') && !dueDate)
       return 'Please enter a due date for the credit payment.'
     if (!applicant || !departmentManager || !checkedBy)
@@ -960,7 +968,10 @@ export default function CreateVoucherPage() {
                         className={`cv-select${it.budget_type ? ' is-valid' : ''}`}
                         value={it.budget_type}
                         name="budget_type[]"
-                        onChange={(e) => updateItem(it.key, { budget_type: e.target.value })}
+                        onChange={(e) => updateItem(it.key, {
+                          budget_type: e.target.value,
+                          tax_type: isTaxBudget(e.target.value) ? it.tax_type : '',
+                        })}
                         disabled={fieldsLocked}
                       >
                         <option value="">Select...</option>
@@ -1004,6 +1015,26 @@ export default function CreateVoucherPage() {
                       </div>
                     )}
                   </div>
+                  {isTaxBudget(it.budget_type) ? (
+                    <div className={`cv-item-tax${showErrors && !it.tax_type ? ' is-invalid' : ''}`}>
+                      <label htmlFor={`cv-tax-${it.key}`}>Tax type <span className="cv-req">*</span></label>
+                      <select
+                        id={`cv-tax-${it.key}`}
+                        className={`cv-select${invCls(!!it.tax_type)}`}
+                        value={it.tax_type}
+                        name="tax_type[]"
+                        onChange={(e) => updateItem(it.key, { tax_type: e.target.value })}
+                      >
+                        <option value="">Select which tax this pays...</option>
+                        {TAX_TYPES.map(([value, label]) => (<option key={value} value={value}>{label}</option>))}
+                      </select>
+                      {showErrors && !it.tax_type ? (
+                        <div className="cv-err"><AlertCircle size={12} /> Choose the tax this line pays.</div>
+                      ) : null}
+                    </div>
+                  ) : (
+                    <input type="hidden" name="tax_type[]" value="" readOnly />
+                  )}
                   {/* payee name carried per item to satisfy backend name[] */}
                   <input type="hidden" name="name[]" value={payeeName} readOnly />
                 </div>

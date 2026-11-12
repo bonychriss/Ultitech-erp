@@ -474,6 +474,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $arr_name = (isset($_POST['name']) && is_array($_POST['name'])) ? $_POST['name'] : [];
         $arr_amount = (isset($_POST['amount']) && is_array($_POST['amount'])) ? $_POST['amount'] : [];
         $arr_desc = (isset($_POST['item_description']) && is_array($_POST['item_description'])) ? $_POST['item_description'] : [];
+        $arr_tax = (isset($_POST['tax_type']) && is_array($_POST['tax_type'])) ? $_POST['tax_type'] : [];
+        require_once __DIR__ . '/../includes/voucher_tax_types.php';
         $maxRows = max(count($arr_type), count($arr_budget), count($arr_name), count($arr_amount), count($arr_desc));
         if ($maxRows === 0 && $debugMode && function_exists('app_log')) {
             app_log('create-voucher: No item arrays present in POST');
@@ -497,9 +499,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $item_description = isset($arr_desc[$i]) ? trim((string) $arr_desc[$i]) : '';
 
             if ($payment_type && $budget_type && $name && $amount > 0) {
+                $tax_type = voucher_normalize_tax_type($budget_type, $arr_tax[$i] ?? '');
+                if (!$isDraft && $tax_type === null && voucher_is_tax_budget_type($budget_type)) {
+                    throw new Exception('Please choose the Tax type for each Tax & Compliance item.');
+                }
                 $items[] = [
                     'payment_type' => $payment_type,
                     'budget_type' => $budget_type,
+                    'tax_type' => $tax_type,
                     'name' => $name,
                     'amount' => $amount,
                     'description' => $item_description
@@ -510,6 +517,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!$isDraft && empty($items)) {
             throw new Exception('Please add at least one valid payment item');
         }
+        $hasTaxTypeCol = voucher_ensure_tax_type_column($pdo);
         if (function_exists('app_log')) {
             app_log('create-voucher: itemsValid=' . count($items) . ' total_amount=' . $total_amount);
         }
@@ -725,6 +733,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $colsItem[] = "company_id";
                 $placeholdersItem[] = "?";
             }
+            if ($hasTaxTypeCol) {
+                $colsItem[] = "tax_type";
+                $placeholdersItem[] = "?";
+            }
 
             $stmt = $pdo->prepare("
                 INSERT INTO voucher_items (" . implode(", ", $colsItem) . ") 
@@ -743,6 +755,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $item['description']
                 ];
                 if ($hasCompanyIdItem) $vals[] = $cId;
+                if ($hasTaxTypeCol) $vals[] = $item['tax_type'];
                 $stmt->execute($vals);
                 if (function_exists('app_log')) {
                     app_log('create-voucher: item inserted payment_type=' . $item['payment_type'] . ' amount=' . $item['amount']);

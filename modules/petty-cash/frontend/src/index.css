@@ -946,6 +946,10 @@ a.cb-text-link:hover {
   background: #ecfdf3;
 }
 
+.cb-table.cb-ledger-table tbody tr.is-selected td {
+  background: rgba(34, 197, 94, 0.1);
+}
+
 .cb-table.cb-ledger-table tbody tr.is-editing td {
   background: var(--cb-accent-soft);
 }
@@ -953,6 +957,24 @@ a.cb-text-link:hover {
 .cb-table.cb-ledger-table .cb-ledger-serial {
   color: var(--cb-muted);
   white-space: nowrap;
+}
+
+.cb-table.cb-ledger-table .cb-ledger-mark-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0;
+  font: inherit;
+  cursor: pointer;
+}
+
+.cb-table.cb-ledger-table .cb-ledger-mark-wrap input {
+  width: 15px;
+  height: 15px;
+  flex: 0 0 auto;
+  margin: 0;
+  accent-color: #16a34a;
+  cursor: pointer;
 }
 
 .cb-table.cb-ledger-table .cb-ledger-date {
@@ -1007,4 +1029,8 @@ html[data-theme='dark'] .cb-table.cb-ledger-table tbody tr:hover td {
 
 html[data-theme='dark'] .cb-table.cb-ledger-table tbody tr.is-editing td {
   background: var(--cb-accent-soft);
+}
+
+html[data-theme='dark'] .cb-table.cb-ledger-table tbody tr.is-selected td {
+  background: rgba(34, 197, 94, 0.2);
 }

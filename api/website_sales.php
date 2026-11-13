@@ -21,13 +21,14 @@ if (!$canWebsite) {
     exit;
 }
 
-if (strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET')) !== 'POST') {
+$isPost = strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET')) === 'POST';
+if (!$isPost && (string) ($_GET['action'] ?? '') !== 'docs') {
     http_response_code(405);
     echo json_encode(['success' => false, 'message' => 'POST required.']);
     exit;
 }
 
-if (!function_exists('verify_csrf') || !verify_csrf($_POST['csrf_token'] ?? '')) {
+if ($isPost && (!function_exists('verify_csrf') || !verify_csrf($_POST['csrf_token'] ?? ''))) {
     http_response_code(419);
     echo json_encode(['success' => false, 'message' => 'Your session has expired. Refresh the page and try again.']);
     exit;
@@ -47,6 +48,17 @@ if (!$pdo) {
 }
 
 try {
+    if (!$isPost) {
+        $id = (int) ($_GET['customer_id'] ?? 0);
+        if ($id <= 0) {
+            http_response_code(400);
+            echo json_encode(['success' => false, 'message' => 'Customer is required.']);
+            exit;
+        }
+        [$from, $to] = webSalesRange();
+        echo json_encode(['success' => true] + webSalesCustomerDocs($pdo, $id, $from, $to), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        exit;
+    }
     $action = (string) ($_POST['action'] ?? '');
     if ($action === 'add') {
         $raw = $_POST['customer_ids'] ?? [];

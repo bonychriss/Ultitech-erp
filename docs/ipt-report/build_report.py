@@ -1,4 +1,4 @@
-import os
+﻿import os
 from docx import Document
 from docx.enum.section import WD_SECTION
 from docx.enum.table import WD_TABLE_ALIGNMENT
@@ -153,6 +153,7 @@ def figure_pair(p1, p2, text, w=7.6):
     for cell, pth in zip(t.rows[0].cells, (p1, p2)):
         cp = cell.paragraphs[0]
         cp.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        cp.paragraph_format.keep_with_next = True
         cp.add_run().add_picture(small(pth), width=Cm(w))
     caption(text)
 
@@ -179,8 +180,6 @@ def table(headers, rows, widths=None, cap_text=None, font=10):
         c = t.rows[0].cells[i]
         c.text = ""
         r = c.paragraphs[0].add_run(h); r.bold = True; r.font.size = Pt(font)
-        r.font.color.rgb = RGBColor(0xFF, 0xFF, 0xFF)
-        shade(c, "1F3864")
     for ri, row in enumerate(rows):
         cells = t.add_row().cells
         for i, v in enumerate(row):
@@ -189,10 +188,6 @@ def table(headers, rows, widths=None, cap_text=None, font=10):
             pp.paragraph_format.line_spacing = 1.15
             pp.paragraph_format.space_after = Pt(0)
             r = pp.add_run(str(v)); r.font.size = Pt(font)
-            if i == 0:
-                r.bold = True
-            if ri % 2 == 1:
-                shade(cells[i], "EEF2F8")
     if widths:
         t.autofit = False
         for i, w in enumerate(widths):
@@ -313,7 +308,7 @@ para("In the remaining weeks I produced a 3D model of the office compound, redes
      "for better presentation and mobile responsiveness, carried out printer troubleshooting and Windows 11 installation, "
      "and compared the ERP accounting module with Odoo and EnterpriZe to recommend improvements. The training greatly "
      "improved my skills in full-stack web development, database management, system testing, UI/UX design, 3D "
-     "visualisation and ICT support. Drawings, system screenshots and copies of the signed log book are included.")
+     "visualisation and ICT support. Drawings and system screenshots are included.")
 
 page_break()
 doc.add_heading("TABLE OF CONTENTS", level=1)
@@ -389,7 +384,7 @@ figure(D("d01_org_chart.png"), "Organisation structure of Ultimate General Tradi
 doc.add_heading("1.4 Scope of this Report", level=2)
 para("Chapter Two describes the UltiTech ERP system and the company website. Chapter Three gives a week-by-week account of "
      "the activities performed, supported by drawings and screenshots. Chapter Four summarises skills gained and challenges "
-     "faced, and Chapter Five gives the conclusion and recommendations. The appendices contain copies of the signed log book.")
+     "faced, and Chapter Five gives the conclusion and recommendations. The appendix contains reference photographs of the office site.")
 figure(D("d13_gantt.png"), "Timeline of the ten-week Industrial Practical Training")
 
 # ---------------- CHAPTER 2 ----------------
@@ -784,38 +779,7 @@ for ref in [
 
 # ---------------- APPENDICES ----------------
 chapter("APPENDICES")
-doc.add_heading("Appendix A: Copies of the Signed Log Book", level=2)
-para("The following pages are photographs of my IPT log book, showing the weekly activity tables and report writing, signed "
-     f"and stamped by the industrial supervisor, {SUPERVISOR}.")
-pages = [
-    ("IMG_2143", "Week 1 activity table and report writing"),
-    ("IMG_2144", "Week 2 activity table"), ("IMG_2145", "Week 2 report writing"),
-    ("IMG_2146", "Week 3 activity table"), ("IMG_2147", "Week 3 report writing"),
-    ("IMG_2148", "Week 4 activity table"), ("IMG_2149", "Week 4 report writing"), ("IMG_2150", "Week 4 report writing (continued)"),
-    ("IMG_2151", "Week 5 activity table"), ("IMG_2152", "Week 5 report writing"), ("IMG_2153", "Week 5 report writing (continued)"),
-    ("IMG_2154", "Week 6 activity table"), ("IMG_2155", "Week 6 report writing"), ("IMG_2156", "Week 6 report writing (continued)"),
-    ("IMG_2250", "Week 7 activity table"), ("IMG_2251", "Week 7 report writing"), ("IMG_2252", "Week 7 report writing (continued)"),
-    ("IMG_2253", "Week 8 activity table"), ("IMG_2254", "Week 8 report writing"),
-    ("IMG_2255", "Week 9 activity table"), ("IMG_2256", "Week 9 report writing"),
-    ("IMG_2257", "Week 10 activity table"), ("IMG_2258", "Week 10 report writing"),
-]
-for i in range(0, len(pages), 2):
-    pair = pages[i:i + 2]
-    t = doc.add_table(rows=2, cols=2)
-    t.alignment = WD_TABLE_ALIGNMENT.CENTER
-    for j, (img, lbl) in enumerate(pair):
-        path = os.path.join(LOG, img + ".jpg")
-        cp = t.rows[0].cells[j].paragraphs[0]
-        cp.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        cp.add_run().add_picture(small(path, 1100), height=Cm(9.6))
-        lp = t.rows[1].cells[j].paragraphs[0]
-        lp.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        r = lp.add_run(f"Log book: {lbl}"); r.italic = True; r.font.size = Pt(9)
-    if i % 4 == 0 and i + 2 < len(pages):
-        page_break()
-
-page_break()
-doc.add_heading("Appendix B: Additional Office Reference Photographs", level=2)
+doc.add_heading("Appendix A: Office Reference Photographs", level=2)
 office = sorted(f for f in os.listdir(OFFICE) if f.endswith(".jpg"))
 picks = [f for f in office if f not in ("IMG_2125.jpg", "IMG_2129.jpg")][:6]
 t = doc.add_table(rows=3, cols=2)

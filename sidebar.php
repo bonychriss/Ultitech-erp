@@ -509,6 +509,7 @@ switch ($active_module) {
         if (!function_exists('salesQuoteRequestsUserCanAccess') || salesQuoteRequestsUserCanAccess()) {
             addItem($menuItems, 'website-quotes', 'Quote requests', 'file-text', $prefix . 'website/quotes');
         }
+        addItem($menuItems, 'website-web-sales', 'Web sales', 'cart', $prefix . 'website/web-sales');
         addParentItem($menuItems, 'website-advertisements', 'Advertisements', 'megaphone', [
             [
                 'id' => 'website-ad-email',

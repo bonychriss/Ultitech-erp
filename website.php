@@ -35,7 +35,7 @@ $requestUri = (string) ($_SERVER['REQUEST_URI'] ?? '');
 if (trim((string) ($_GET['view'] ?? '')) === '') {
     if (preg_match('#/website/advertisements(?:/email)?(?:/|\?|$)#i', $requestUri)) {
         $_GET['view'] = 'advertisements-email';
-    } elseif (preg_match('#/website/(dashboard|quotes)(?:/|\?|$)#i', $requestUri, $viewMatch)) {
+    } elseif (preg_match('#/website/(dashboard|quotes|web-sales)(?:/|\?|$)#i', $requestUri, $viewMatch)) {
         $_GET['view'] = strtolower($viewMatch[1]);
     }
 }

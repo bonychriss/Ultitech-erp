@@ -44,7 +44,7 @@ class WebsitePageController extends Controller
             if (preg_match('#/website/advertisements(?:/email)?(?:/|\?|$)#i', $uri)) {
                 $view = 'advertisements-email';
                 $_GET['view'] = $view;
-            } elseif (preg_match('#/website/(dashboard|quotes)(?:/|\?|$)#i', $uri, $m)) {
+            } elseif (preg_match('#/website/(dashboard|quotes|web-sales)(?:/|\?|$)#i', $uri, $m)) {
                 $view = strtolower($m[1]);
                 $_GET['view'] = $view;
             }
@@ -104,6 +104,18 @@ CSS
                 report($e);
                 $viewData['pageTitle'] = 'Email advertisement';
                 $viewData['employeeHeaderTitle'] = 'Email advertisement';
+            }
+        }
+
+        if ($view === 'web-sales') {
+            $viewData['pageTitle'] = 'Web sales';
+            $viewData['employeeHeaderTitle'] = '';
+            $viewData['footerScripts'] = '';
+            $viewData['beforeRoot'] = '';
+            $webSalesLib = rtrim((string) config('erp.app_root'), '\\/') . '/stock/includes/web-sales-lib.php';
+            if (is_file($webSalesLib)) {
+                require_once $webSalesLib;
+                $viewData['beforeRoot'] = webSalesPanel();
             }
         }
 

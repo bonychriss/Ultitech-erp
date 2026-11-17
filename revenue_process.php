@@ -695,9 +695,9 @@ if (isset($_POST['action']) && $_POST['action'] === 'delete_entry') {
         exit;
     }
     
-    // Only Admin can delete ratified entries. Finance can only delete Pending.
-    if ($entry['approval_status'] === 'Ratified' && !isAdmin()) {
-        header("Location: revenue_entries.php?module=revenue&error=Cannot delete ratified entry.");
+    // Finance and Admin may delete ratified entries; others cannot.
+    if (!isFinance() && !isAdmin()) {
+        header("Location: revenue_entries.php?module=revenue&error=You do not have permission to delete revenue entries.");
         exit;
     }
     

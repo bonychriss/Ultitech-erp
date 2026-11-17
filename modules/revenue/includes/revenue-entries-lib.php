@@ -229,6 +229,13 @@ function ren_can_edit(array $row): bool
         || $status === '';
 }
 
+/** True when the signed-in user may manage revenue desk actions (Finance or Admin). */
+function ren_can_manage_revenue(): bool
+{
+    return (function_exists('isFinance') && isFinance())
+        || (function_exists('isAdmin') && isAdmin());
+}
+
 /** Empty string when the entry may be deleted, otherwise the reason it cannot. */
 function ren_delete_block_reason(array $row): string
 {
@@ -236,8 +243,9 @@ function ren_delete_block_reason(array $row): string
     if ((!empty($row['source_invoice_id']) && (int) $row['source_invoice_id'] > 0) || $invoiceNo !== '') {
         return 'Created from sales invoice ' . ($invoiceNo !== '' ? $invoiceNo . ' ' : '') . '- delete or cancel the invoice in Sales instead.';
     }
-    if (!ren_can_edit($row)) {
-        return 'Only an admin can delete a ratified entry.';
+    // Anyone with revenue access (Finance/Admin) may delete manual entries, including ratified.
+    if (!ren_can_manage_revenue()) {
+        return 'You do not have permission to delete revenue entries.';
     }
     if (!REVENUE_ALLOW_DELETE_WITH_PAYMENTS && ren_row_amount_paid($row) > 0.009) {
         return 'Payments have been received on this entry, so it cannot be deleted.';

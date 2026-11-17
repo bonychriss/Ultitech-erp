@@ -2,6 +2,12 @@
 
 declare(strict_types=1);
 
+/**
+ * TEMP (data cleanup): allow deleting revenue entries that already have payments.
+ * Set to false later to restore the "paid entries cannot be deleted" guard.
+ */
+const REVENUE_ALLOW_DELETE_WITH_PAYMENTS = true;
+
 function revenue_entries_resolve_pdo(): PDO
 {
     if (!function_exists('revenue_resolve_pdo')) {
@@ -233,7 +239,7 @@ function ren_delete_block_reason(array $row): string
     if (!ren_can_edit($row)) {
         return 'Only an admin can delete a ratified entry.';
     }
-    if (ren_row_amount_paid($row) > 0.009) {
+    if (!REVENUE_ALLOW_DELETE_WITH_PAYMENTS && ren_row_amount_paid($row) > 0.009) {
         return 'Payments have been received on this entry, so it cannot be deleted.';
     }
 
@@ -906,14 +912,16 @@ function revenue_entries_delete(PDO $pdo, int $entryId): array
         return ['ok' => false, 'message' => $reason];
     }
 
+    $collectionIds = [];
     if ($hasTable('revenue_collections')) {
-        $c = $pdo->prepare('SELECT COUNT(*) FROM revenue_collections WHERE entry_id = ?');
+        $c = $pdo->prepare('SELECT id FROM revenue_collections WHERE entry_id = ?');
         $c->execute([$entryId]);
-        if ((int) $c->fetchColumn() > 0) {
+        $collectionIds = array_values(array_filter(array_map('intval', $c->fetchAll(PDO::FETCH_COLUMN) ?: [])));
+        if ($collectionIds !== [] && !REVENUE_ALLOW_DELETE_WITH_PAYMENTS) {
             return ['ok' => false, 'message' => 'Payments have been received on this entry, so it cannot be deleted.'];
         }
     }
-    if ($hasTable('account_transactions')) {
+    if ($hasTable('account_transactions') && !REVENUE_ALLOW_DELETE_WITH_PAYMENTS) {
         $c = $pdo->prepare("SELECT COUNT(*) FROM account_transactions WHERE reference_type IN ('revenue_entry', 'revenue_collection') AND reference_id = ?");
         $c->execute([$entryId]);
         if ((int) $c->fetchColumn() > 0) {
@@ -926,11 +934,13 @@ function revenue_entries_delete(PDO $pdo, int $entryId): array
     if ($hasTable('erp_journal_entries')) {
         $jeCols = $pdo->query('SHOW COLUMNS FROM erp_journal_entries')->fetchAll(PDO::FETCH_COLUMN) ?: [];
         if (in_array('reference', $jeCols, true)) {
-            $q = $pdo->prepare("SELECT id FROM erp_journal_entries WHERE reference LIKE ? LIMIT 1");
+            $q = $pdo->prepare('SELECT id FROM erp_journal_entries WHERE reference LIKE ?');
             $q->execute(['REV-PAY-' . $entryId . '-%']);
-            if ($q->fetchColumn() !== false) {
+            $payJournalIds = array_map('intval', $q->fetchAll(PDO::FETCH_COLUMN) ?: []);
+            if ($payJournalIds !== [] && !REVENUE_ALLOW_DELETE_WITH_PAYMENTS) {
                 return ['ok' => false, 'message' => 'Payments have been posted to the ledger for this entry, so it cannot be deleted.'];
             }
+            $journalIds = array_merge($journalIds, $payJournalIds);
 
             $q = $pdo->prepare('SELECT id FROM erp_journal_entries WHERE reference = ?');
             $q->execute(['REV-REC-' . $entryId]);
@@ -951,6 +961,20 @@ function revenue_entries_delete(PDO $pdo, int $entryId): array
 
     try {
         $pdo->beginTransaction();
+
+        if ($hasTable('account_transactions')) {
+            $pdo->prepare("DELETE FROM account_transactions WHERE reference_type = 'revenue_entry' AND reference_id = ?")
+                ->execute([$entryId]);
+            if ($collectionIds !== []) {
+                $in = implode(',', array_fill(0, count($collectionIds), '?'));
+                $pdo->prepare("DELETE FROM account_transactions WHERE reference_type = 'revenue_collection' AND reference_id IN ($in)")
+                    ->execute($collectionIds);
+            }
+        }
+        if ($collectionIds !== [] && $hasTable('revenue_collections')) {
+            $in = implode(',', array_fill(0, count($collectionIds), '?'));
+            $pdo->prepare("DELETE FROM revenue_collections WHERE id IN ($in)")->execute($collectionIds);
+        }
 
         if ($journalIds !== []) {
             $in = implode(',', array_fill(0, count($journalIds), '?'));

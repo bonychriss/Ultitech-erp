@@ -967,6 +967,15 @@ function revenue_entries_delete(PDO $pdo, int $entryId): array
         }
         $pdo->prepare('DELETE FROM revenue_entries WHERE id = ?')->execute([$entryId]);
 
+        // Close gaps in that month's voucher sequence (REV-YYYY-M-2 becomes -1, etc.).
+        if (!function_exists('renumberRevenueVouchersForYearMonth')) {
+            require_once dirname(__DIR__, 3) . '/includes/revenue_ledger.php';
+        }
+        [$renumberYear, $renumberMonth] = revenueVoucherYearMonthFromDate(
+            isset($row['entry_date']) ? (string) $row['entry_date'] : null
+        );
+        renumberRevenueVouchersForYearMonth($pdo, $renumberYear, $renumberMonth, false);
+
         $pdo->commit();
     } catch (Throwable $e) {
         if ($pdo->inTransaction()) {

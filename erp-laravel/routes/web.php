@@ -126,6 +126,7 @@ Route::middleware([AttachErpContext::class])->group(function () {
 
     // Accounting hub
     Route::get('/accounting', [AccountingPageController::class, 'show'])->name('accounting.page');
+    Route::get('/accounting/ultitech', [\App\Http\Controllers\UltitechAccountingPageController::class, 'show'])->name('accounting.ultitech');
 
     // Revenue (existing React UI via Laravel shell; APIs stay under modules/revenue/api)
     Route::get('/revenue', [RevenuePageController::class, 'show'])->name('revenue.page');

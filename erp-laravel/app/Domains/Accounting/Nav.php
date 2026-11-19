@@ -26,7 +26,7 @@ final class Nav
             ? (string) app_url('/modules/accounting/assets/expenses-icon.png')
             : '/modules/accounting/assets/expenses-icon.png';
 
-        return [
+        $sections = [
             [
                 'id' => 'balances',
                 'title' => 'Balances',
@@ -143,5 +143,47 @@ final class Nav
                 'tone' => 'cyan',
             ],
         ];
+
+        self::loadBridgeHelper();
+        $mode = function_exists('ultitech_accounting_mode') ? ultitech_accounting_mode() : 'parallel';
+        if ($mode !== 'off') {
+            $bridgeHref = function_exists('ultitech_accounting_bridge_path')
+                ? ultitech_accounting_bridge_path($companySlug)
+                : $u('accounting/ultitech-bridge') . '?module=accounting';
+
+            $sections[] = [
+                'id' => 'ultitech-accounting',
+                'title' => $mode === 'primary' ? 'Accounting (New)' : 'New Accounting',
+                'desc' => 'Open the upgraded Accounting module inside ERP. Use Classic Accounting anytime to roll back.',
+                'href' => $bridgeHref,
+                'icon' => 'statements',
+                'tone' => 'violet',
+            ];
+            if (function_exists('ultitech_accounting_classic_path')) {
+                $sections[] = [
+                    'id' => 'classic-accounting',
+                    'title' => 'Classic Accounting',
+                    'desc' => 'Open the previous Accounting hub (fallback while upgrading).',
+                    'href' => ultitech_accounting_classic_path($companySlug),
+                    'icon' => 'book',
+                    'tone' => 'cyan',
+                ];
+            }
+        }
+
+        return $sections;
+    }
+
+    private static function loadBridgeHelper(): void
+    {
+        if (function_exists('ultitech_accounting_mode')) {
+            return;
+        }
+
+        $root = rtrim((string) config('erp.app_root'), '\\/');
+        $helper = $root . '/includes/ultitech_accounting_bridge.php';
+        if (is_file($helper)) {
+            require_once $helper;
+        }
     }
 }

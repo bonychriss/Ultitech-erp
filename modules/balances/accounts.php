@@ -166,8 +166,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     @unlink(dirname(__DIR__, 2) . '/' . $imagePath);
                 }
             }
-            if (!empty($result['success']) && $imageUploaded) {
-                balances_save_custom_institution($pdo, $accountName, $paymentWalletType, $imagePath);
+            if (!empty($result['success']) && $paymentWalletType !== '' && empty($_POST['institution'])) {
+                // Persist typed names (even without a logo) so they reappear in the Select Bank list.
+                balances_save_custom_institution($pdo, $accountName, $paymentWalletType, $imageUploaded ? $imagePath : '');
             }
             if (!empty($result['success'])) {
                 $_SESSION['bal_lottie_success'] = (string) ($result['message'] ?? 'Sub-account created successfully.');

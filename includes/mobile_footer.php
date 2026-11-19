@@ -676,7 +676,14 @@ $nav_class = 'mobile-footer mf-floating-instagram';
     box-shadow: 0 8px 32px rgba(15, 23, 42, 0.12); /* Softer shadow */
     display: block;
     overflow: visible;
-    transition: background 0.3s, border 0.3s, box-shadow 0.3s;
+    transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.28s ease, background 0.3s, border 0.3s, box-shadow 0.3s;
+    will-change: transform, opacity;
+  }
+  .mobile-footer.mf-floating-instagram.mf-scroll-hidden,
+  nav.mobile-footer.mf-floating-instagram.mf-scroll-hidden {
+    transform: translate(-50%, calc(100% + 32px + env(safe-area-inset-bottom, 0px))) !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
   }
   .mobile-footer.mf-floating-instagram .bar {
     display: flex;
@@ -867,14 +874,99 @@ $nav_class = 'mobile-footer mf-floating-instagram';
         document.body.appendChild(nav);
       }
     }
-    applyFooterPadding();
-    mountFooterNav();
+    function bindScrollHide(){
+      if (window.__mfScrollHideBound) return;
+      window.__mfScrollHideBound = true;
+
+      var lastY = 0;
+      var lastSource = null;
+      var ticking = false;
+      var hidden = false;
+
+      function navEl(){
+        return document.querySelector('nav.mobile-footer');
+      }
+
+      function scrollTopOf(el){
+        if (!el || el === window || el === document || el === document.documentElement || el === document.body) {
+          return window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
+        }
+        return el.scrollTop || 0;
+      }
+
+      function setHidden(next){
+        var nav = navEl();
+        if (!nav) return;
+        if (next === hidden) {
+          if (next) nav.classList.add('mf-scroll-hidden');
+          else nav.classList.remove('mf-scroll-hidden');
+          return;
+        }
+        hidden = next;
+        if (hidden) nav.classList.add('mf-scroll-hidden');
+        else nav.classList.remove('mf-scroll-hidden');
+      }
+
+      function onScroll(source){
+        var nav = navEl();
+        if (!nav) return;
+        if (!(window.matchMedia && window.matchMedia('(max-width: 767.98px)').matches)) {
+          setHidden(false);
+          return;
+        }
+        if (document.body.classList.contains('ua-sheet-open')) {
+          setHidden(true);
+          return;
+        }
+        var y = scrollTopOf(source);
+        if (source !== lastSource) {
+          lastSource = source;
+          lastY = y;
+          return;
+        }
+        if (ticking) return;
+        ticking = true;
+        window.requestAnimationFrame(function(){
+          var delta = y - lastY;
+          if (y <= 12) {
+            setHidden(false);
+          } else if (delta > 4) {
+            setHidden(true);
+          } else if (delta < -4) {
+            setHidden(false);
+          }
+          lastY = y;
+          ticking = false;
+        });
+      }
+
+      // Capture phase: scroll does not bubble, but is captured from any scrollable child
+      // (needed because Cash & Bank scrolls inside main, and this script runs before main exists).
+      document.addEventListener('scroll', function(e){
+        var t = e.target;
+        if (t === document || t === document.documentElement || t === document.body) {
+          onScroll(window);
+        } else {
+          onScroll(t);
+        }
+      }, { passive: true, capture: true });
+      window.addEventListener('scroll', function(){ onScroll(window); }, { passive: true });
+    }
+    function boot(){
+      applyFooterPadding();
+      mountFooterNav();
+      bindScrollHide();
+    }
+    boot();
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', boot);
+    } else {
+      setTimeout(boot, 0);
+    }
+    window.addEventListener('load', boot);
     window.addEventListener('resize', function(){
       clearTimeout(window.__mfResizeTimer);
-      window.__mfResizeTimer = setTimeout(function(){
-        applyFooterPadding();
-        mountFooterNav();
-      }, 120);
+      window.__mfResizeTimer = setTimeout(boot, 120);
     });
   })();
 </script>

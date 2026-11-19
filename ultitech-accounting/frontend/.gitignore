@@ -8,7 +8,7 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
-dist
+# dist kept for cPanel / ERP shell deploy
 dist-ssr
 *.local
 

@@ -512,7 +512,8 @@ export function BankingPage() {
   const banks = useQuery({
     queryKey: ['bank-accounts', companyId, bookId],
     enabled: ready,
-    initialData: prefetchedBanks.length ? { data: prefetchedBanks } : undefined,
+    // placeholderData keeps first paint fast but still refetches live balances.
+    placeholderData: prefetchedBanks.length ? { data: prefetchedBanks } : undefined,
     refetchInterval: 60_000,
     queryFn: () =>
       apiRequest<{ data: BankAccount[] }>('/bank-accounts', { token, companyId, bookId }),
@@ -521,7 +522,7 @@ export function BankingPage() {
   const cash = useQuery({
     queryKey: ['cash-accounts', companyId, bookId],
     enabled: ready,
-    initialData: prefetchedCash.length ? { data: prefetchedCash } : undefined,
+    placeholderData: prefetchedCash.length ? { data: prefetchedCash } : undefined,
     refetchInterval: 60_000,
     queryFn: () =>
       apiRequest<{ data: CashAccount[] }>('/cash-accounts', { token, companyId, bookId }),
@@ -530,6 +531,7 @@ export function BankingPage() {
   const txns = useQuery({
     queryKey: ['bank-transactions', companyId, bookId],
     enabled: ready,
+    refetchInterval: 60_000,
     queryFn: () =>
       apiRequest<{ data: BankTransaction[] }>('/bank-transactions', { token, companyId, bookId }),
   })

@@ -1,0 +1,41 @@
+{
+    "present_ms": 19,
+    "balances": [
+        {
+            "id": 1,
+            "name": "UBA Bank Account",
+            "balance": 89555765.469999999,
+            "balance_source": "erp_balances",
+            "erp_financial_account_id": 6,
+            "account_number": ""
+        },
+        {
+            "id": 2,
+            "name": "CRDB Bank Account",
+            "balance": 257676355.15000001,
+            "balance_source": "erp_balances",
+            "erp_financial_account_id": 7,
+            "account_number": ""
+        },
+        {
+            "id": 3,
+            "name": "MIXX BY YAS",
+            "balance": 1293239,
+            "balance_source": "erp_balances",
+            "erp_financial_account_id": 9,
+            "account_number": ""
+        }
+    ],
+    "moves_error": "Call to undefined method App\\Application\\Services\\BankingErpEnrichmentService::presentRecentTransactions()",
+    "moves_at": "\/home\/sites\/42b\/a\/a953b07082\/public_html\/ultitech-accounting\/backend\/public\/_ua_bank_diag.php:35",
+    "moves_trace": [
+        "#0 {main}"
+    ],
+    "live_balances": {
+        "6": 89555765.469999999,
+        "7": 257676355.15000001,
+        "9": 1293239,
+        "26": 12038573.01
+    },
+    "live_ms": 3
+}

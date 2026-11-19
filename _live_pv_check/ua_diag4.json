@@ -1,0 +1,91 @@
+{
+    "token_row": {
+        "id": 13,
+        "tokenable_id": 2,
+        "name": "erp-bridge",
+        "last_used": null
+    },
+    "user": {
+        "id": 1,
+        "email": "smoke@ultitech.io"
+    },
+    "plain_token_prefix": "14|vNT7bE54C...",
+    "api": {
+        "\/api\/v1\/bank-accounts": {
+            "status": 200,
+            "ms": 119,
+            "count": 3,
+            "sample": [
+                {
+                    "id": 1,
+                    "name": "UBA Bank Account",
+                    "balance": 89555765.469999999,
+                    "balance_source": "erp_balances"
+                },
+                {
+                    "id": 2,
+                    "name": "CRDB Bank Account",
+                    "balance": 257676355.15000001,
+                    "balance_source": "erp_balances"
+                }
+            ],
+            "error": null
+        },
+        "\/api\/v1\/cash-accounts": {
+            "status": 200,
+            "ms": 65,
+            "count": 5,
+            "sample": [
+                {
+                    "id": 1,
+                    "name": "Petty Cash",
+                    "balance": 12038573.01,
+                    "balance_source": "erp_balances"
+                },
+                {
+                    "id": 2,
+                    "name": "Cash Sales",
+                    "balance": 8230500,
+                    "balance_source": "erp_balances"
+                }
+            ],
+            "error": null
+        },
+        "\/api\/v1\/bank-transactions": {
+            "status": 200,
+            "ms": 20,
+            "count": 200,
+            "sample": [
+                {
+                    "id": 1231,
+                    "bank_account_id": 2,
+                    "cash_account_id": 0,
+                    "wallet_type": "bank",
+                    "account_name": "CRDB Bank Account",
+                    "transaction_date": "2026-11-19 00:00:00",
+                    "description": "Debt Payment: REV-2026-7-22 - JITEGEMEE TRANSPORT & LOGISTICS COMPANY - Ref TRF-20261119-001 - PAID (Sales invoice INV-2026-0161 (from Sales)) [Attachment: uploads\/revenue\/payments\/pay_254_1795082731.jpeg]",
+                    "debit": "0",
+                    "credit": "9628800.00",
+                    "reference": null,
+                    "is_reconciled": false,
+                    "source": "erp_balances"
+                },
+                {
+                    "id": 1230,
+                    "bank_account_id": 2,
+                    "cash_account_id": 0,
+                    "wallet_type": "bank",
+                    "account_name": "CRDB Bank Account",
+                    "transaction_date": "2026-11-19 00:00:00",
+                    "description": "Debt Payment: REV-2026-10-23 - MAPINGA PREMIUM FOODS LIMITED - Ref TRF-20261119-001 - PAID (Sales invoice INV-2026-0252 (from Sales)) [Attachment: uploads\/revenue\/payments\/pay_346_1795082617.jpeg]",
+                    "debit": "0",
+                    "credit": "8507800.00",
+                    "reference": null,
+                    "is_reconciled": false,
+                    "source": "erp_balances"
+                }
+            ],
+            "error": null
+        }
+    }
+}

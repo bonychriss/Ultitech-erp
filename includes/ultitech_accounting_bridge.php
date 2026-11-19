@@ -130,9 +130,22 @@ if (! function_exists('ultitech_accounting_classic_path')) {
 if (! function_exists('ultitech_accounting_uses_internal_api')) {
     function ultitech_accounting_uses_internal_api(): bool
     {
-        $base = strtolower(ultitech_accounting_api_base());
+        $base = strtolower(rtrim(ultitech_accounting_api_base(), '/'));
+        if ($base === 'internal' || $base === 'app' || $base === 'in-process') {
+            return true;
+        }
 
-        return $base === 'internal' || $base === 'app' || $base === 'in-process';
+        // Shared hosting safety net: browser hits api-proxy.php without ERP bootstrap,
+        // so env may be missing and api_base still defaults to artisan. If the Laravel
+        // backend is on disk, dispatch in-process instead of curling 127.0.0.1:8000.
+        if (
+            ($base === 'http://127.0.0.1:8000' || $base === 'http://localhost:8000')
+            && is_file(ultitech_accounting_backend_root() . DIRECTORY_SEPARATOR . 'bootstrap' . DIRECTORY_SEPARATOR . 'app.php')
+        ) {
+            return true;
+        }
+
+        return false;
     }
 }
 

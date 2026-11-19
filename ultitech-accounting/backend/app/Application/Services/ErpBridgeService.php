@@ -150,29 +150,42 @@ final class ErpBridgeService
             ?? AccountingBook::withoutGlobalScopes()->where('company_id', $company->id)->first();
 
         $payload['book_id'] = $book?->id;
+
+        $bankRows = $book
+            ? BankAccount::withoutGlobalScopes()
+                ->where('company_id', $company->id)
+                ->where('book_id', $book->id)
+                ->where('status', 'active')
+                ->with('glAccount:id,code,name')
+                ->orderBy('code')
+                ->get()
+            : collect();
+        $cashRows = $book
+            ? CashAccount::withoutGlobalScopes()
+                ->where('company_id', $company->id)
+                ->where('book_id', $book->id)
+                ->where('status', 'active')
+                ->with('glAccount:id,code,name')
+                ->orderBy('code')
+                ->get()
+            : collect();
+
+        // Prefetch with live ERP balances so Cash & Bank is not blank until proxy refetch.
+        $bankPrefetch = $bankRows->values()->all();
+        $cashPrefetch = $cashRows->values()->all();
+        if ($book && config('erp.enabled')) {
+            try {
+                $enrichment = app(BankingErpEnrichmentService::class);
+                $bankPrefetch = $enrichment->presentBankAccounts($book, $bankRows);
+                $cashPrefetch = $enrichment->presentCashAccounts($book, $cashRows);
+            } catch (\Throwable $e) {
+                // Keep raw desks if enrichment fails; UI can still refetch.
+            }
+        }
+
         $payload['prefetch'] = [
-            'bank_accounts' => $book
-                ? BankAccount::withoutGlobalScopes()
-                    ->where('company_id', $company->id)
-                    ->where('book_id', $book->id)
-                    ->where('status', 'active')
-                    ->with('glAccount:id,code,name')
-                    ->orderBy('code')
-                    ->get()
-                    ->values()
-                    ->all()
-                : [],
-            'cash_accounts' => $book
-                ? CashAccount::withoutGlobalScopes()
-                    ->where('company_id', $company->id)
-                    ->where('book_id', $book->id)
-                    ->where('status', 'active')
-                    ->with('glAccount:id,code,name')
-                    ->orderBy('code')
-                    ->get()
-                    ->values()
-                    ->all()
-                : [],
+            'bank_accounts' => $bankPrefetch,
+            'cash_accounts' => $cashPrefetch,
             'accounts' => $book
                 ? Account::withoutGlobalScopes()
                     ->where('company_id', $company->id)

@@ -1,0 +1,1033 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><script id="erp-theme-init">(function(){try{var t=localStorage.getItem("theme")||"light";document.documentElement.setAttribute("data-theme",t);}catch(e){document.documentElement.setAttribute("data-theme","light");}})();</script>
+
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Company not found</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    html, body {
+      height: 100%;
+      margin: 0;
+    }
+    body {
+      font-family: "Geist", -apple-system, BlinkMacSystemFont, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      background: #0a0a0a;
+      color: #fff;
+      overflow: hidden;
+    }
+
+    .hero {
+      position: relative;
+      height: 100vh;
+      width: 100%;
+      overflow: hidden;
+    }
+    .hero-fallback {
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(ellipse at 30% 20%, rgba(80,80,90,.45), transparent 55%),
+        linear-gradient(160deg, #1a1a1f 0%, #0b0b0d 55%, #121218 100%);
+      z-index: 0;
+    }
+    .hero-video {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      background: #111;
+    }
+    .hero-ui {
+      position: relative;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+
+    .content {
+      margin-top: auto;
+      display: flex;
+      width: 100%;
+      flex-direction: column;
+      align-items: flex-start;
+      padding: 0 1.25rem 2rem;
+    }
+    @media (min-width: 640px) {
+      .content { padding: 0 2rem 3rem; }
+    }
+    @media (min-width: 1024px) {
+      .content { padding: 0 3rem 4rem; }
+    }
+
+    .copy { max-width: 36rem; }
+    .eyebrow {
+      margin: 0 0 0.5rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,.60);
+    }
+    .headline {
+      margin: 0;
+      font-size: 1.875rem;
+      font-weight: 600;
+      line-height: 1.1;
+      letter-spacing: -0.025em;
+      color: #fff;
+    }
+    .lede {
+      margin: 1rem 0 0;
+      max-width: 32rem;
+      font-size: 0.875rem;
+      line-height: 1.6;
+      color: rgba(255,255,255,.70);
+    }
+    @media (min-width: 640px) {
+      .headline { font-size: 2.25rem; }
+      .lede { font-size: 1rem; }
+    }
+    @media (min-width: 1024px) {
+      .headline { font-size: 3.5rem; }
+    }
+
+    .cta-wrap { margin-top: 1.5rem; }
+    @media (min-width: 640px) {
+      .cta-wrap {
+        margin-top: 2rem;
+        display: inline-flex;
+        align-items: center;
+        border-radius: 9999px;
+        background: #fff;
+        padding: 0.375rem;
+      }
+    }
+    .cta {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: none;
+      border-radius: 9999px;
+      padding: 0.75rem 1.5rem;
+      font: inherit;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: #fff;
+      text-decoration: none;
+      cursor: pointer;
+      background: linear-gradient(to bottom, #2B2B2B, #101010);
+      transition: opacity .2s;
+    }
+    .cta:hover { opacity: 0.9; }
+  </style>
+<link rel="stylesheet" id="erp-system-font" href="/assets/css/erp-system-font.css.php?v=74a49f392f6f">
+<style id="erp-system-font-live">
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap");
+:root{--erp-font-family:'DM Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;}
+html{font-family:var(--erp-font-family)!important;}
+html body,html body[class],
+html body *:not(.fa):not(.fas):not(.far):not(.fab):not(.fal):not(.fad):not(.bi):not(svg):not(path):not(circle):not(rect):not(line):not(polyline):not(polygon){font-family:var(--erp-font-family)!important;}
+html body input,html body select,html body textarea,html body button,html body label,
+html body .form-control,html body .form-input,html body .btn,html body .table,
+html body .sidebar,html body .layout-main-wrapper,html body .main-content,
+html body .settings-shell,html body .editor-shell,html body .page-shell,
+html body .modal,html body .modal-content,html body .dropdown-menu,
+html body .app-label,html body .app-desc,html body .top-bar,
+html body .po-shell,html body .pay-shell,html body .desk-pay-modal,
+html body .pe-shell,html body .prod-desk-page,html body .pe-product-search-menu,
+html body .mov-desk,html body .repl-desk,html body .dash-desk,
+html body .ld-react-root,html body .ld-dash,html body .tl-page,html body .tf-page,
+html body.page-backup-desk,html body .bk-page{font-family:var(--erp-font-family)!important;}
+html body.page-exp-desk,html body.page-exp-desk *:not(.fa):not(.fas):not(.far):not(.fab):not(.fal):not(.fad):not(.bi):not(svg):not(path):not(circle):not(rect):not(line):not(polyline):not(polygon),
+html body.page-crm-desk,html body.page-crm-desk *:not(.fa):not(.fas):not(.far):not(.fab):not(.fal):not(.fad):not(.bi):not(svg):not(path):not(circle):not(rect):not(line):not(polyline):not(polygon),
+html body.page-crm-desk button,html body.page-crm-desk input,html body.page-crm-desk select,html body.page-crm-desk textarea,
+html body.page-crm-desk .crm-page,html body.page-crm-desk .crm-page *:not(.fa):not(.fas):not(.far):not(.fab):not(.fal):not(.fad):not(.bi):not(svg):not(path):not(circle):not(rect):not(line):not(polyline):not(polygon),
+html body.page-exp-desk button,html body.page-exp-desk input,html body.page-exp-desk select,html body.page-exp-desk textarea,
+html body.exp-dashboard-page,html body.exp-dashboard-page *:not(.fa):not(.fas):not(.far):not(.fab):not(.fal):not(.fad):not(.bi):not(svg):not(path):not(circle):not(rect):not(line):not(polyline):not(polygon),
+html .exp-desk-page,html .exp-desk-page *:not(.fa):not(.fas):not(.far):not(.fab):not(.fal):not(.fad):not(.bi):not(svg):not(path):not(circle):not(rect):not(line):not(polyline):not(polygon),
+html .pc-voucher-view,html .pc-voucher-view *:not(.fa):not(.fas):not(.far):not(.fab):not(.fal):not(.fad):not(.bi):not(svg):not(path):not(circle):not(rect):not(line):not(polyline):not(polygon),
+html .pc-pcv-form,html .pc-pcv-form *:not(.fa):not(.fas):not(.far):not(.fab):not(.fal):not(.fad):not(.bi):not(svg):not(path):not(circle):not(rect):not(line):not(polyline):not(polygon),
+html .exp-create-shell,html .exp-create-shell *:not(.fa):not(.fas):not(.far):not(.fab):not(.fal):not(.fad):not(.bi):not(svg):not(path):not(circle):not(rect):not(line):not(polyline):not(polygon){font-family:var(--erp-font-family)!important;}
+html body.dashboard,html body.dashboard *:not(.fa):not(.fas):not(.far):not(.fab):not(.fal):not(.fad):not(.bi):not(svg):not(path):not(circle):not(rect):not(line):not(polyline):not(polygon),
+html body.dashboard button,html body.dashboard input,html body.dashboard select,html body.dashboard textarea,
+html body.dashboard.vf-voucher-form,html body.dashboard.vf-voucher-form *:not(.fa):not(.fas):not(.far):not(.fab):not(.fal):not(.fad):not(.bi):not(svg):not(path):not(circle):not(rect):not(line):not(polyline):not(polygon),
+html body.dashboard.vf-voucher-form button,html body.dashboard.vf-voucher-form input,
+html body.dashboard.vf-voucher-form select,html body.dashboard.vf-voucher-form textarea{font-family:var(--erp-font-family)!important;}
+html #native-sidebar,html #native-sidebar *:not(.fa):not(.fas):not(.far):not(.fab):not(.fal):not(.fad):not(.bi):not(svg):not(path):not(circle):not(rect):not(line):not(polyline):not(polygon){font-family:var(--erp-font-family)!important;}
+html .po-shell,html .po-shell *:not(.fa):not(.fas):not(.far):not(.fab):not(.fal):not(.fad):not(.bi):not(svg):not(path):not(circle):not(rect):not(line):not(polyline):not(polygon),html .pay-shell,html .pay-shell *:not(.fa):not(.fas):not(.far):not(.fab):not(.fal):not(.fad):not(.bi):not(svg):not(path):not(circle):not(rect):not(line):not(polyline):not(polygon),
+html .pe-shell,html .pe-shell *:not(.fa):not(.fas):not(.far):not(.fab):not(.fal):not(.fad):not(.bi):not(svg):not(path):not(circle):not(rect):not(line):not(polyline):not(polygon),html .prod-desk-page,html .prod-desk-page *:not(.fa):not(.fas):not(.far):not(.fab):not(.fal):not(.fad):not(.bi):not(svg):not(path):not(circle):not(rect):not(line):not(polyline):not(polygon),
+html .pe-product-search-menu,html .pe-product-search-menu *:not(.fa):not(.fas):not(.far):not(.fab):not(.fal):not(.fad):not(.bi):not(svg):not(path):not(circle):not(rect):not(line):not(polyline):not(polygon),
+html .mov-desk,html .mov-desk *:not(.fa):not(.fas):not(.far):not(.fab):not(.fal):not(.fad):not(.bi):not(svg):not(path):not(circle):not(rect):not(line):not(polyline):not(polygon),html .repl-desk,html .repl-desk *:not(.fa):not(.fas):not(.far):not(.fab):not(.fal):not(.fad):not(.bi):not(svg):not(path):not(circle):not(rect):not(line):not(polyline):not(polygon),
+html .dash-desk,html .dash-desk *:not(.fa):not(.fas):not(.far):not(.fab):not(.fal):not(.fad):not(.bi):not(svg):not(path):not(circle):not(rect):not(line):not(polyline):not(polygon),
+html .ld-react-root,html .ld-react-root *:not(.fa):not(.fas):not(.far):not(.fab):not(.fal):not(.fad):not(.bi):not(svg):not(path):not(circle):not(rect):not(line):not(polyline):not(polygon),html .ld-dash,html .ld-dash *:not(.fa):not(.fas):not(.far):not(.fab):not(.fal):not(.fad):not(.bi):not(svg):not(path):not(circle):not(rect):not(line):not(polyline):not(polygon),
+html .tl-page,html .tl-page *:not(.fa):not(.fas):not(.far):not(.fab):not(.fal):not(.fad):not(.bi):not(svg):not(path):not(circle):not(rect):not(line):not(polyline):not(polygon),html .tf-page,html .tf-page *:not(.fa):not(.fas):not(.far):not(.fab):not(.fal):not(.fad):not(.bi):not(svg):not(path):not(circle):not(rect):not(line):not(polyline):not(polygon),
+html .bk-page,html .bk-page *:not(.fa):not(.fas):not(.far):not(.fab):not(.fal):not(.fad):not(.bi):not(svg):not(path):not(circle):not(rect):not(line):not(polyline):not(polygon){font-family:var(--erp-font-family)!important;}
+html body .fa,html body .fas,html body .far,html body .fab,html body .fal,html body .fad,
+html body .fa-solid,html body .fa-regular,html body .fa-brands,
+html body i[class*="fa-"]{font-family:"Font Awesome 6 Free","Font Awesome 5 Free",FontAwesome!important;font-style:normal!important;}
+html body .fab,html body .fa-brands,html body i.fab{font-family:"Font Awesome 6 Brands","Font Awesome 5 Brands"!important;}
+html body .fas,html body .fa-solid,html body i.fas,html body i.fa-solid{font-weight:900!important;}
+html body .far,html body .fa-regular,html body i.far,html body i.fa-regular{font-weight:400!important;}
+html body .bi,html body [class^="bi-"],html body [class*=" bi-"]{font-family:bootstrap-icons!important;}
+html body .ss-font-select-value,html body .ss-font-select-option,
+html body .ss-font-select-option-label,html body button.ss-font-select-option,
+html body.dashboard .ss-font-select-value,html body.dashboard .ss-font-select-option,
+html body.dashboard .ss-font-select-option-label,html body.dashboard button.ss-font-select-option,
+html body.page-exp-desk .ss-font-select-value,html body.page-exp-desk .ss-font-select-option,
+html body.page-exp-desk .ss-font-select-option-label,html body.page-exp-desk button.ss-font-select-option,
+html .exp-create-shell .ss-font-select-value,html .exp-create-shell .ss-font-select-option,
+html .exp-create-shell .ss-font-select-option-label,html .exp-create-shell button.ss-font-select-option{
+font-family:var(--ss-option-font,inherit)!important;}
+html body .sf-font-face,html body .sf-dropdown-option,html body button.sf-dropdown-option,
+html body.dashboard .sf-font-face,html body.dashboard button.sf-dropdown-option,
+html body.page-system-font .sf-font-face,html body.page-system-font button.sf-dropdown-option{
+font-family:var(--sf-option-font,inherit)!important;}
+</style>
+<link rel="stylesheet" id="erp-dark-theme" href="/assets/css/dark-theme.css?v=1791882245">
+<script id="erp-dark-palette" src="/assets/js/dark-palette.js?v=1793887626"></script>
+<script>window.__ERP_NAV_BACK_CFG__={"fallbackUrl":"/ultitech-accounting/select-module","appBasePath":""};</script><script src="/assets/js/nav-back.js?v=1793695505"></script></head>
+<body>
+  <section class="hero" aria-label="Page not found">
+    <div class="hero-fallback" aria-hidden="true"></div>
+    <video class="hero-video" autoplay loop muted playsinline preload="auto">
+      <source src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260803_192301_9231ed6b-c55c-4a48-909c-4ebe11cf2e11.mp4" type="video/mp4">
+    </video>
+
+    <div class="hero-ui">
+      <div class="content">
+        <div class="copy">
+          <p class="eyebrow">Error 404</p>
+          <h1 class="headline">Company not found</h1>
+          <p class="lede">Company not found. This company page is unavailable or the link is incorrect.</p>
+          <div class="cta-wrap">
+            <a class="cta" href="/">Back to Home</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <script>
+    (function () {
+      var video = document.querySelector(".hero-video");
+      if (!video) return;
+      var play = video.play();
+      if (play && typeof play.catch === "function") {
+        play.catch(function () {});
+      }
+    })();
+  </script>
+<style id="erp-system-font-final">
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap");
+:root{--erp-font-family:'DM Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;}
+html{font-family:var(--erp-font-family)!important;}
+html body,html body[class],
+html body *:not(.fa):not(.fas):not(.far):not(.fab):not(.fal):not(.fad):not(.bi):not(svg):not(path):not(circle):not(rect):not(line):not(polyline):not(polygon){font-family:var(--erp-font-family)!important;}
+html body input,html body select,html body textarea,html body button,html body label,
+html body .form-control,html body .form-input,html body .btn,html body .table,
+html body .sidebar,html body .layout-main-wrapper,html body .main-content,
+html body .settings-shell,html body .editor-shell,html body .page-shell,
+html body .modal,html body .modal-content,html body .dropdown-menu,
+html body .app-label,html body .app-desc,html body .top-bar,
+html body .po-shell,html body .pay-shell,html body .desk-pay-modal,
+html body .pe-shell,html body .prod-desk-page,html body .pe-product-search-menu,
+html body .mov-desk,html body .repl-desk,html body .dash-desk,
+html body .ld-react-root,html body .ld-dash,html body .tl-page,html body .tf-page,
+html body.page-backup-desk,html body .bk-page{font-family:var(--erp-font-family)!important;}
+html body.page-exp-desk,html body.page-exp-desk *:not(.fa):not(.fas):not(.far):not(.fab):not(.fal):not(.fad):not(.bi):not(svg):not(path):not(circle):not(rect):not(line):not(polyline):not(polygon),
+html body.page-crm-desk,html body.page-crm-desk *:not(.fa):not(.fas):not(.far):not(.fab):not(.fal):not(.fad):not(.bi):not(svg):not(path):not(circle):not(rect):not(line):not(polyline):not(polygon),
+html body.page-crm-desk button,html body.page-crm-desk input,html body.page-crm-desk select,html body.page-crm-desk textarea,
+html body.page-crm-desk .crm-page,html body.page-crm-desk .crm-page *:not(.fa):not(.fas):not(.far):not(.fab):not(.fal):not(.fad):not(.bi):not(svg):not(path):not(circle):not(rect):not(line):not(polyline):not(polygon),
+html body.page-exp-desk button,html body.page-exp-desk input,html body.page-exp-desk select,html body.page-exp-desk textarea,
+html body.exp-dashboard-page,html body.exp-dashboard-page *:not(.fa):not(.fas):not(.far):not(.fab):not(.fal):not(.fad):not(.bi):not(svg):not(path):not(circle):not(rect):not(line):not(polyline):not(polygon),
+html .exp-desk-page,html .exp-desk-page *:not(.fa):not(.fas):not(.far):not(.fab):not(.fal):not(.fad):not(.bi):not(svg):not(path):not(circle):not(rect):not(line):not(polyline):not(polygon),
+html .pc-voucher-view,html .pc-voucher-view *:not(.fa):not(.fas):not(.far):not(.fab):not(.fal):not(.fad):not(.bi):not(svg):not(path):not(circle):not(rect):not(line):not(polyline):not(polygon),
+html .pc-pcv-form,html .pc-pcv-form *:not(.fa):not(.fas):not(.far):not(.fab):not(.fal):not(.fad):not(.bi):not(svg):not(path):not(circle):not(rect):not(line):not(polyline):not(polygon),
+html .exp-create-shell,html .exp-create-shell *:not(.fa):not(.fas):not(.far):not(.fab):not(.fal):not(.fad):not(.bi):not(svg):not(path):not(circle):not(rect):not(line):not(polyline):not(polygon){font-family:var(--erp-font-family)!important;}
+html body.dashboard,html body.dashboard *:not(.fa):not(.fas):not(.far):not(.fab):not(.fal):not(.fad):not(.bi):not(svg):not(path):not(circle):not(rect):not(line):not(polyline):not(polygon),
+html body.dashboard button,html body.dashboard input,html body.dashboard select,html body.dashboard textarea,
+html body.dashboard.vf-voucher-form,html body.dashboard.vf-voucher-form *:not(.fa):not(.fas):not(.far):not(.fab):not(.fal):not(.fad):not(.bi):not(svg):not(path):not(circle):not(rect):not(line):not(polyline):not(polygon),
+html body.dashboard.vf-voucher-form button,html body.dashboard.vf-voucher-form input,
+html body.dashboard.vf-voucher-form select,html body.dashboard.vf-voucher-form textarea{font-family:var(--erp-font-family)!important;}
+html #native-sidebar,html #native-sidebar *:not(.fa):not(.fas):not(.far):not(.fab):not(.fal):not(.fad):not(.bi):not(svg):not(path):not(circle):not(rect):not(line):not(polyline):not(polygon){font-family:var(--erp-font-family)!important;}
+html .po-shell,html .po-shell *:not(.fa):not(.fas):not(.far):not(.fab):not(.fal):not(.fad):not(.bi):not(svg):not(path):not(circle):not(rect):not(line):not(polyline):not(polygon),html .pay-shell,html .pay-shell *:not(.fa):not(.fas):not(.far):not(.fab):not(.fal):not(.fad):not(.bi):not(svg):not(path):not(circle):not(rect):not(line):not(polyline):not(polygon),
+html .pe-shell,html .pe-shell *:not(.fa):not(.fas):not(.far):not(.fab):not(.fal):not(.fad):not(.bi):not(svg):not(path):not(circle):not(rect):not(line):not(polyline):not(polygon),html .prod-desk-page,html .prod-desk-page *:not(.fa):not(.fas):not(.far):not(.fab):not(.fal):not(.fad):not(.bi):not(svg):not(path):not(circle):not(rect):not(line):not(polyline):not(polygon),
+html .pe-product-search-menu,html .pe-product-search-menu *:not(.fa):not(.fas):not(.far):not(.fab):not(.fal):not(.fad):not(.bi):not(svg):not(path):not(circle):not(rect):not(line):not(polyline):not(polygon),
+html .mov-desk,html .mov-desk *:not(.fa):not(.fas):not(.far):not(.fab):not(.fal):not(.fad):not(.bi):not(svg):not(path):not(circle):not(rect):not(line):not(polyline):not(polygon),html .repl-desk,html .repl-desk *:not(.fa):not(.fas):not(.far):not(.fab):not(.fal):not(.fad):not(.bi):not(svg):not(path):not(circle):not(rect):not(line):not(polyline):not(polygon),
+html .dash-desk,html .dash-desk *:not(.fa):not(.fas):not(.far):not(.fab):not(.fal):not(.fad):not(.bi):not(svg):not(path):not(circle):not(rect):not(line):not(polyline):not(polygon),
+html .ld-react-root,html .ld-react-root *:not(.fa):not(.fas):not(.far):not(.fab):not(.fal):not(.fad):not(.bi):not(svg):not(path):not(circle):not(rect):not(line):not(polyline):not(polygon),html .ld-dash,html .ld-dash *:not(.fa):not(.fas):not(.far):not(.fab):not(.fal):not(.fad):not(.bi):not(svg):not(path):not(circle):not(rect):not(line):not(polyline):not(polygon),
+html .tl-page,html .tl-page *:not(.fa):not(.fas):not(.far):not(.fab):not(.fal):not(.fad):not(.bi):not(svg):not(path):not(circle):not(rect):not(line):not(polyline):not(polygon),html .tf-page,html .tf-page *:not(.fa):not(.fas):not(.far):not(.fab):not(.fal):not(.fad):not(.bi):not(svg):not(path):not(circle):not(rect):not(line):not(polyline):not(polygon),
+html .bk-page,html .bk-page *:not(.fa):not(.fas):not(.far):not(.fab):not(.fal):not(.fad):not(.bi):not(svg):not(path):not(circle):not(rect):not(line):not(polyline):not(polygon){font-family:var(--erp-font-family)!important;}
+html body .fa,html body .fas,html body .far,html body .fab,html body .fal,html body .fad,
+html body .fa-solid,html body .fa-regular,html body .fa-brands,
+html body i[class*="fa-"]{font-family:"Font Awesome 6 Free","Font Awesome 5 Free",FontAwesome!important;font-style:normal!important;}
+html body .fab,html body .fa-brands,html body i.fab{font-family:"Font Awesome 6 Brands","Font Awesome 5 Brands"!important;}
+html body .fas,html body .fa-solid,html body i.fas,html body i.fa-solid{font-weight:900!important;}
+html body .far,html body .fa-regular,html body i.far,html body i.fa-regular{font-weight:400!important;}
+html body .bi,html body [class^="bi-"],html body [class*=" bi-"]{font-family:bootstrap-icons!important;}
+html body .ss-font-select-value,html body .ss-font-select-option,
+html body .ss-font-select-option-label,html body button.ss-font-select-option,
+html body.dashboard .ss-font-select-value,html body.dashboard .ss-font-select-option,
+html body.dashboard .ss-font-select-option-label,html body.dashboard button.ss-font-select-option,
+html body.page-exp-desk .ss-font-select-value,html body.page-exp-desk .ss-font-select-option,
+html body.page-exp-desk .ss-font-select-option-label,html body.page-exp-desk button.ss-font-select-option,
+html .exp-create-shell .ss-font-select-value,html .exp-create-shell .ss-font-select-option,
+html .exp-create-shell .ss-font-select-option-label,html .exp-create-shell button.ss-font-select-option{
+font-family:var(--ss-option-font,inherit)!important;}
+html body .sf-font-face,html body .sf-dropdown-option,html body button.sf-dropdown-option,
+html body.dashboard .sf-font-face,html body.dashboard button.sf-dropdown-option,
+html body.page-system-font .sf-font-face,html body.page-system-font button.sf-dropdown-option{
+font-family:var(--sf-option-font,inherit)!important;}
+</style>
+<style id="erp-dark-theme-final">
+/**
+ * Global dark theme � loaded on every page (head + body override).
+ * Beats page-local light styles via late injection before body close.
+ * Toggle: html[data-theme="dark"] (set by theme init script + header toggle).
+ * Do not put literal HTML closing tags in this file — it is also inlined in HTML.
+ */
+
+html[data-theme="dark"] {
+    color-scheme: dark;
+
+    /* Shared CSS variables used across modules */
+    --bg-body: #0f172a;
+    --text-main: rgba(248, 250, 252, 0.95);
+    --text-muted: rgba(148, 163, 184, 0.95);
+    --border-color: #334155;
+    --primary: #60a5fa;
+
+    /* Revenue details */
+    --rd-bg-page: #0f172a;
+    --rd-bg-card: #1e293b;
+    --rd-border: #334155;
+    --rd-text: #f8fafc;
+    --rd-text-secondary: #94a3b8;
+
+    /* Expense smart insights */
+    --esi-bg: #0f172a;
+    --esi-card: #1e293b;
+    --esi-border: #334155;
+    --esi-text: #f8fafc;
+    --esi-muted: #94a3b8;
+
+    /* Login / auth */
+    --bg-color: #0f172a;
+    --text-dark: #f8fafc;
+    --text-muted: #94a3b8;
+    --input-border: #334155;
+}
+
+/* Theme toggle (icon-only legacy); glass control styled in theme-toggle-glass.css */
+html[data-theme="dark"] .theme-toggle-btn:not(.theme-toggle-glass) {
+    color: #a5b4fc;
+}
+html[data-theme="dark"] .theme-toggle-btn:not(.theme-toggle-glass):hover {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+html[data-theme="dark"] .theme-toggle-btn.theme-toggle-glass:hover {
+    background: transparent !important;
+}
+
+/* ?? Layout & backgrounds (beat style.css white !important) ?? */
+html[data-theme="dark"] body,
+html[data-theme="dark"] body.dashboard,
+html[data-theme="dark"] body.revenue-page,
+html[data-theme="dark"] body.voucher-module,
+html[data-theme="dark"] .layout-main-wrapper,
+html[data-theme="dark"] .layout-main-wrapper > .flex-grow-1,
+html[data-theme="dark"] .main-content,
+html[data-theme="dark"] .main-wrapper {
+    background-color: #0f172a !important;
+    background: #0f172a !important;
+    color: #f8fafc !important;
+}
+
+/* ?? Typography ?? */
+html[data-theme="dark"] p,
+html[data-theme="dark"] span,
+html[data-theme="dark"] h1,
+html[data-theme="dark"] h2,
+html[data-theme="dark"] h3,
+html[data-theme="dark"] h4,
+html[data-theme="dark"] h5,
+html[data-theme="dark"] h6,
+html[data-theme="dark"] label,
+html[data-theme="dark"] td,
+html[data-theme="dark"] th,
+html[data-theme="dark"] .employee-header-page-title,
+html[data-theme="dark"] .step-label,
+html[data-theme="dark"] .nav-title,
+html[data-theme="dark"] .app-label {
+    color: #f8fafc !important;
+}
+
+html[data-theme="dark"] .text-muted,
+html[data-theme="dark"] .meta,
+html[data-theme="dark"] .kpi-label,
+html[data-theme="dark"] .kpi-sub,
+html[data-theme="dark"] .step-name,
+html[data-theme="dark"] .step-date,
+html[data-theme="dark"] .dash-header p,
+html[data-theme="dark"] .employee-header-page-subtitle,
+html[data-theme="dark"] .app-desc,
+html[data-theme="dark"] .rd-subtitle,
+html[data-theme="dark"] .rd-breadcrumb,
+html[data-theme="dark"] .rd-label {
+    color: #94a3b8 !important;
+}
+
+/* ?? Headers ?? */
+html[data-theme="dark"] .header,
+html[data-theme="dark"] .admin-header,
+html[data-theme="dark"] .employee-header,
+html[data-theme="dark"] body.rev-det-page .employee-header,
+html[data-theme="dark"] body.exp-expense-dashboard .employee-header,
+html[data-theme="dark"] body.page-sales-invoices header.employee-header,
+html[data-theme="dark"] body.page-sales-orders header.employee-header,
+html[data-theme="dark"] body.page-sales-create header.employee-header {
+    background-color: #1e293b !important;
+    background: #1e293b !important;
+    border-bottom: 1px solid #334155 !important;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2) !important;
+}
+
+html[data-theme="dark"] .employee-header-menu-btn,
+html[data-theme="dark"] .header-left .btn-link {
+    color: #cbd5e1 !important;
+}
+
+html[data-theme="dark"] .top-bar {
+    background: #1e293b !important;
+    color: #f8fafc !important;
+    border-bottom-color: #334155 !important;
+}
+
+html[data-theme="dark"] .top-bar-logo-name {
+    color: #f8fafc !important;
+}
+
+/* ?? Sidebar ?? */
+html[data-theme="dark"] .sidebar,
+html[data-theme="dark"] #native-sidebar {
+    --sidebar-bg: #0f172a !important;
+    --sidebar-text: #cbd5e1 !important;
+    --sidebar-hover-bg: #1e293b !important;
+    --sidebar-hover-text: #ffffff !important;
+    --sidebar-active-bg: #1e293b !important;
+    --sidebar-active-text: #ffffff !important;
+    --sidebar-border: #1e293b !important;
+    --sidebar-icon-color: #94a3b8 !important;
+    --sidebar-hover-icon: #cbd5e1 !important;
+    background-color: #0f172a !important;
+    background: #0f172a !important;
+    color: #cbd5e1 !important;
+    border-right: 1px solid #1e293b !important;
+}
+
+html[data-theme="dark"] #native-sidebar .user-profile-link .sidebar-text div {
+    color: #cbd5e1 !important;
+}
+
+html[data-theme="dark"] .sidebar-submenu-nested .nav-link.sidebar-nested-under-category {
+    color: #94a3b8 !important;
+}
+
+html[data-theme="dark"] .sidebar-submenu-nested .nav-link.sidebar-nested-under-category:hover,
+html[data-theme="dark"] .sidebar-submenu-nested .nav-link.sidebar-nested-under-category.active {
+    color: #a78bfa !important;
+    background: rgba(124, 58, 237, 0.15) !important;
+}
+
+/* ?? Cards & containers ?? */
+html[data-theme="dark"] .dash-card,
+html[data-theme="dark"] .card,
+html[data-theme="dark"] .kpi-card,
+html[data-theme="dark"] .table-card,
+html[data-theme="dark"] .chart-card,
+html[data-theme="dark"] .report-card,
+html[data-theme="dark"] .rd-card,
+html[data-theme="dark"] .jed-card,
+html[data-theme="dark"] .pay-table-card,
+html[data-theme="dark"] .pay-filters,
+html[data-theme="dark"] .kpi,
+html[data-theme="dark"] .app-item,
+html[data-theme="dark"] .quote-card,
+html[data-theme="dark"] .exp-card,
+html[data-theme="dark"] .exp-detail-card,
+html[data-theme="dark"] .exp-form-card,
+html[data-theme="dark"] .esi-card,
+html[data-theme="dark"] .esi-panel,
+html[data-theme="dark"] .stock-dash .kpi-card,
+html[data-theme="dark"] .stock-dash .chart-card,
+html[data-theme="dark"] .stock-dash .table-card,
+html[data-theme="dark"] .stock-dash .insight-card,
+html[data-theme="dark"] .top-nav {
+    background-color: #1e293b !important;
+    background: #1e293b !important;
+    border-color: #334155 !important;
+    color: #f8fafc !important;
+}
+
+html[data-theme="dark"] .dash-card-h,
+html[data-theme="dark"] .card-header,
+html[data-theme="dark"] .card-footer,
+html[data-theme="dark"] .table-header,
+html[data-theme="dark"] .table-footer,
+html[data-theme="dark"] .exp-card-header {
+    background-color: #1e293b !important;
+    background: #1e293b !important;
+    border-color: #334155 !important;
+}
+
+html[data-theme="dark"] .kpi.orange,
+html[data-theme="dark"] .kpi.green,
+html[data-theme="dark"] .kpi.blue {
+    background: #1e293b !important;
+}
+
+/* ?? Tables ?? */
+html[data-theme="dark"] table,
+html[data-theme="dark"] .table,
+html[data-theme="dark"] .rd-table {
+    color: #f8fafc !important;
+    background-color: #1e293b !important;
+}
+
+html[data-theme="dark"] table th,
+html[data-theme="dark"] .table th,
+html[data-theme="dark"] .ledger-table thead th,
+html[data-theme="dark"] .table-card th,
+html[data-theme="dark"] .rd-table thead th,
+html[data-theme="dark"] .quote-table th,
+html[data-theme="dark"] .stock-dash .table-card th {
+    background-color: #0f172a !important;
+    color: #f8fafc !important;
+    border-bottom-color: #334155 !important;
+}
+
+html[data-theme="dark"] table td,
+html[data-theme="dark"] .table td,
+html[data-theme="dark"] .table-card td,
+html[data-theme="dark"] .rd-table td {
+    background-color: #1e293b !important;
+    color: #e2e8f0 !important;
+    border-bottom-color: #334155 !important;
+}
+
+html[data-theme="dark"] .ledger-table tbody tr:hover,
+html[data-theme="dark"] .table-card tbody tr:hover {
+    background-color: #334155 !important;
+}
+
+html[data-theme="dark"] .ledger-table tbody tr.selected {
+    background-color: #1e3a8a !important;
+    outline: 2px solid #3b82f6 !important;
+}
+
+html[data-theme="dark"] .table-striped > tbody > tr:nth-of-type(odd) > * {
+    --bs-table-accent-bg: rgba(255, 255, 255, 0.03);
+    color: #e2e8f0;
+}
+
+/* ?? Forms & inputs ?? */
+html[data-theme="dark"] input:not([type="checkbox"]):not([type="radio"]),
+html[data-theme="dark"] select,
+html[data-theme="dark"] textarea,
+html[data-theme="dark"] .form-control,
+html[data-theme="dark"] .form-select,
+html[data-theme="dark"] .pay-filters input,
+html[data-theme="dark"] .pay-filters select,
+html[data-theme="dark"] .ledger-filters select,
+html[data-theme="dark"] .search-bar input,
+html[data-theme="dark"] .quote-input,
+html[data-theme="dark"] .quote-select,
+html[data-theme="dark"] .quote-textarea,
+html[data-theme="dark"] .li-tax-select {
+    background-color: #0f172a !important;
+    color: #f8fafc !important;
+    border-color: #334155 !important;
+}
+
+html[data-theme="dark"] input::placeholder,
+html[data-theme="dark"] textarea::placeholder {
+    color: #64748b !important;
+}
+
+html[data-theme="dark"] .tx-search-wrap {
+    background-color: #0f172a !important;
+    border-color: #334155 !important;
+}
+
+html[data-theme="dark"] .tx-search-input {
+    color: #f8fafc !important;
+}
+
+html[data-theme="dark"] .quote-static-box,
+html[data-theme="dark"] .li-qty-stepper,
+html[data-theme="dark"] .date-picker a {
+    background: #0f172a !important;
+    color: #e2e8f0 !important;
+    border-color: #334155 !important;
+}
+
+html[data-theme="dark"] .li-qty-stepper button {
+    background: #1e293b !important;
+    color: #cbd5e1 !important;
+}
+
+/* ?? Buttons ?? */
+html[data-theme="dark"] .btn-outline,
+html[data-theme="dark"] .stock-dash .btn-outline,
+html[data-theme="dark"] .rd-btn-secondary,
+html[data-theme="dark"] .btn-pay,
+html[data-theme="dark"] .jed-btn,
+html[data-theme="dark"] .pager a,
+html[data-theme="dark"] .pager span,
+html[data-theme="dark"] .li-btn-catalogue,
+html[data-theme="dark"] .li-action-btn {
+    background-color: #1e293b !important;
+    color: #f8fafc !important;
+    border-color: #334155 !important;
+}
+
+html[data-theme="dark"] .btn-outline:hover,
+html[data-theme="dark"] .stock-dash .btn-outline:hover,
+html[data-theme="dark"] .rd-btn-secondary:hover,
+html[data-theme="dark"] .btn-pay:hover,
+html[data-theme="dark"] .li-btn-catalogue:hover {
+    background-color: #334155 !important;
+    color: #f8fafc !important;
+}
+
+html[data-theme="dark"] .action-btn {
+    background-color: #1e293b !important;
+    border-color: #334155 !important;
+}
+
+html[data-theme="dark"] .action-btn:hover {
+    background-color: #334155 !important;
+}
+
+/* ?? Modals & alerts ?? */
+html[data-theme="dark"] .modal-content,
+html[data-theme="dark"] .swal2-popup,
+html[data-theme="dark"] .dropdown-menu {
+    background-color: #1e293b !important;
+    color: #f8fafc !important;
+    border: 1px solid #334155 !important;
+}
+
+html[data-theme="dark"] .swal2-title,
+html[data-theme="dark"] .swal2-html-container,
+html[data-theme="dark"] .modal-title,
+html[data-theme="dark"] .modal-body {
+    color: #f8fafc !important;
+}
+
+html[data-theme="dark"] .dropdown-item {
+    color: #e2e8f0 !important;
+}
+
+html[data-theme="dark"] .dropdown-item:hover,
+html[data-theme="dark"] .dropdown-item:focus {
+    background-color: #334155 !important;
+    color: #f8fafc !important;
+}
+
+/* ?? KPI icons ?? */
+html[data-theme="dark"] .kpi-icon--total { background: #1e3a8a !important; color: #60a5fa !important; }
+html[data-theme="dark"] .kpi-icon--active { background: #064e3b !important; color: #34d399 !important; }
+html[data-theme="dark"] .kpi-icon--inactive { background: #7f1d1d !important; color: #f87171 !important; }
+html[data-theme="dark"] .kpi-icon--default { background: #4c1d95 !important; color: #c084fc !important; }
+
+html[data-theme="dark"] .kpi-info .value,
+html[data-theme="dark"] .stock-dash .kpi-card .kpi-value,
+html[data-theme="dark"] .stock-dash .dash-header h1 {
+    color: #f8fafc !important;
+}
+
+/* ?? Links ?? */
+html[data-theme="dark"] a:not(.btn):not(.company-logo-link):not(.logout-btn):not(.action-btn):not(.app-item):not(.rd-btn-primary):not(.rd-btn-success):not(.rd-btn-danger) {
+    color: #60a5fa !important;
+}
+
+html[data-theme="dark"] a:not(.btn):not(.company-logo-link):not(.logout-btn):not(.action-btn):not(.app-item):hover {
+    color: #93c5fd !important;
+}
+
+/* ?? Select module page ?? */
+html[data-theme="dark"] body.select-module-page,
+html[data-theme="dark"] body.select-module-page .app-container {
+    background-color: #0f172a !important;
+}
+
+html[data-theme="dark"] .app-item {
+    border-color: #334155 !important;
+    color: #f8fafc !important;
+}
+
+html[data-theme="dark"] .app-item:hover {
+    background: #334155 !important;
+    border-color: #60a5fa !important;
+    color: #f8fafc !important;
+}
+
+html[data-theme="dark"] .app-item:hover .app-label {
+    color: #f8fafc !important;
+}
+
+/* ?? Revenue module pages ?? */
+html[data-theme="dark"] body.rev-det-page,
+html[data-theme="dark"] body.rev-det-page .layout-main-wrapper > .flex-grow-1 {
+    background: var(--rd-bg-page) !important;
+    color: var(--rd-text) !important;
+}
+
+html[data-theme="dark"] body.dashboard.pay-page {
+    background: #0f172a !important;
+    color: #f8fafc !important;
+}
+
+html[data-theme="dark"] .rd-value,
+html[data-theme="dark"] .rd-page-header h1 {
+    color: #f8fafc !important;
+}
+
+html[data-theme="dark"] .rd-voucher-icon {
+    background: #1e3a8a !important;
+    color: #60a5fa !important;
+}
+
+html[data-theme="dark"] .rd-timeline-dot {
+    border-color: #1e293b !important;
+}
+
+/* ?? Expenses module ?? */
+html[data-theme="dark"] body.exp-expense-dashboard,
+html[data-theme="dark"] body.exp-expense-list,
+html[data-theme="dark"] body.exp-expense-view,
+html[data-theme="dark"] body.exp-expense-create,
+html[data-theme="dark"] body.esi-page {
+    background: var(--bg-body) !important;
+    color: var(--text-main) !important;
+}
+
+html[data-theme="dark"] .exp-header-avatar {
+    background: #312e81 !important;
+    color: #a5b4fc !important;
+}
+
+html[data-theme="dark"] .exp-header-user-block {
+    border-left-color: #334155 !important;
+}
+
+html[data-theme="dark"] .search-bar .shortcut {
+    background: #334155 !important;
+    color: #94a3b8 !important;
+}
+
+/* ?? Sales module ?? */
+html[data-theme="dark"] html:has(body.page-sales-invoices),
+html[data-theme="dark"] body.page-sales-invoices,
+html[data-theme="dark"] body.page-sales-orders,
+html[data-theme="dark"] body.page-sales-create,
+html[data-theme="dark"] body.page-sales-invoices .layout-main-wrapper,
+html[data-theme="dark"] body.page-sales-invoices .layout-main-wrapper > .flex-grow-1,
+html[data-theme="dark"] body.page-sales-orders .layout-main-wrapper,
+html[data-theme="dark"] body.page-sales-create .layout-main-wrapper {
+    background-color: #0f172a !important;
+    color: #e2e8f0 !important;
+}
+
+html[data-theme="dark"] body.page-sales-invoices .sales-invoices-shell,
+html[data-theme="dark"] body.page-sales-orders .sales-orders-shell {
+    background-color: #0f172a !important;
+}
+
+/* ?? Balances / stock-dash ?? */
+html[data-theme="dark"] .stock-dash {
+    color: #e2e8f0;
+}
+
+html[data-theme="dark"] .stock-dash .dash-header h1 {
+    color: #f8fafc !important;
+}
+
+html[data-theme="dark"] .stock-dash .dash-header p {
+    color: #94a3b8 !important;
+}
+
+/* ?? Accounting / journal ?? */
+html[data-theme="dark"] .jed-dl {
+    background: #1e293b !important;
+    border-color: #334155 !important;
+    color: #60a5fa !important;
+}
+
+html[data-theme="dark"] .jed-card-header,
+html[data-theme="dark"] .jed-section {
+    background: #1e293b !important;
+    border-color: #334155 !important;
+}
+
+/* ?? Analytics full report themes ?? */
+html[data-theme="dark"] .theme-dark-glass,
+html[data-theme="dark"] .da-shell {
+    background: linear-gradient(135deg, #090d16 0%, #111827 100%) !important;
+    color: #f8fafc !important;
+}
+
+html[data-theme="dark"]:not([data-analytics-theme]) .report-card,
+html[data-theme="dark"] .theme-indigo .report-card,
+html[data-theme="dark"] .theme-emerald .report-card {
+    background: #1e293b !important;
+    border-color: #334155 !important;
+    color: #f8fafc !important;
+}
+
+html[data-theme="dark"] .theme-indigo,
+html[data-theme="dark"] .theme-emerald {
+    background: #0f172a !important;
+    color: #f8fafc !important;
+}
+
+html[data-theme="dark"] .chat-messages {
+    background: rgba(15, 23, 42, 0.8) !important;
+    border-color: #334155 !important;
+}
+
+html[data-theme="dark"] .message-bubble.assistant {
+    background: #1e293b !important;
+    border-color: #334155 !important;
+    color: #f8fafc !important;
+}
+
+html[data-theme="dark"] .chat-input {
+    background: #0f172a !important;
+    border-color: #334155 !important;
+    color: #f8fafc !important;
+}
+
+html[data-theme="dark"] .chatbot-launcher,
+html[data-theme="dark"] button.chatbot-launcher,
+html[data-theme="dark"] #chatbotLauncher.chatbot-launcher {
+    background: #134e4a !important;
+    color: #ecfdf5 !important;
+    border-color: rgba(45, 212, 191, 0.45) !important;
+    border-radius: 50% !important;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35) !important;
+}
+
+html[data-theme="dark"] .chatbot-launcher:hover,
+html[data-theme="dark"] button.chatbot-launcher:hover,
+html[data-theme="dark"] #chatbotLauncher.chatbot-launcher:hover {
+    background: #0f766e !important;
+    color: #ffffff !important;
+}
+
+/* ?? DataTables ?? */
+html[data-theme="dark"] .dataTables_wrapper .dataTables_length,
+html[data-theme="dark"] .dataTables_wrapper .dataTables_filter,
+html[data-theme="dark"] .dataTables_wrapper .dataTables_info,
+html[data-theme="dark"] .dataTables_wrapper .dataTables_paginate {
+    color: #94a3b8 !important;
+}
+
+html[data-theme="dark"] .page-link {
+    background-color: #1e293b !important;
+    border-color: #334155 !important;
+    color: #e2e8f0 !important;
+}
+
+html[data-theme="dark"] .page-item.active .page-link {
+    background-color: #2563eb !important;
+    border-color: #2563eb !important;
+}
+
+/* ?? Badges & status pills (keep hue, darken bg) ?? */
+html[data-theme="dark"] .badge.bg-light,
+html[data-theme="dark"] .badge.bg-white {
+    background-color: #334155 !important;
+    color: #e2e8f0 !important;
+}
+
+/* ?? List groups & nav tabs ?? */
+html[data-theme="dark"] .list-group-item {
+    background-color: #1e293b !important;
+    border-color: #334155 !important;
+    color: #e2e8f0 !important;
+}
+
+html[data-theme="dark"] .nav-tabs .nav-link {
+    color: #94a3b8 !important;
+}
+
+html[data-theme="dark"] .nav-tabs .nav-link.active {
+    background-color: #1e293b !important;
+    border-color: #334155 #334155 #1e293b !important;
+    color: #f8fafc !important;
+}
+
+/* ?? HR / attendance settings shells ?? */
+html[data-theme="dark"] .settings-shell,
+html[data-theme="dark"] .page-shell,
+html[data-theme="dark"] .editor-shell,
+html[data-theme="dark"] .po-shell,
+html[data-theme="dark"] .pay-shell {
+    background-color: #0f172a !important;
+    color: #f8fafc !important;
+}
+
+/* ?? Scrollbar (webkit) ?? */
+html[data-theme="dark"] ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+html[data-theme="dark"] ::-webkit-scrollbar-track {
+    background: #0f172a;
+}
+
+html[data-theme="dark"] ::-webkit-scrollbar-thumb {
+    background: #475569;
+    border-radius: 4px;
+}
+
+html[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
+    background: #64748b;
+}
+
+/* ?? Select module inline overrides ?? */
+html[data-theme="dark"] .top-bar span[style*="border"] {
+    color: #94a3b8 !important;
+    border-color: #334155 !important;
+    background: #1e293b !important;
+}
+
+html[data-theme="dark"] .top-bar a[style*="background:#f3f4f6"],
+html[data-theme="dark"] .top-bar a[style*="background: #f3f4f6"] {
+    background: #334155 !important;
+    color: #e2e8f0 !important;
+    border-color: #475569 !important;
+}
+
+/* ?? Login / auth page ?? */
+html[data-theme="dark"] body.login-page,
+html[data-theme="dark"] .auth-container {
+    background: #0f172a !important;
+    color: #f8fafc !important;
+}
+
+html[data-theme="dark"] .auth-container {
+    background: #1e293b !important;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4) !important;
+}
+
+html[data-theme="dark"] .auth-container input,
+html[data-theme="dark"] .auth-container select {
+    background: #0f172a !important;
+    color: #f8fafc !important;
+    border-color: #334155 !important;
+}
+
+html[data-theme="dark"] .auth-container label,
+html[data-theme="dark"] .auth-container h1,
+html[data-theme="dark"] .auth-container h2,
+html[data-theme="dark"] .auth-container p {
+    color: #f8fafc !important;
+}
+
+html[data-theme="dark"] .auth-container .text-muted,
+html[data-theme="dark"] .auth-container small {
+    color: #94a3b8 !important;
+}
+
+</style>
+<script src="/assets/js/theme-toggle.js?v=1791364466" defer></script>
+<link rel="stylesheet" id="erp-cookie-consent-css" href="/assets/css/cookie-consent.css?v=1793262330">
+<div id="erp-cookie-consent" class="erp-cc-root" data-erp-cc-root>
+  <div id="erp-cc-banner" class="erp-cc-banner is-open" role="dialog" aria-live="polite" aria-label="Cookie consent">
+    <div class="erp-cc-banner__inner">
+      <button type="button" class="erp-cc-banner__dismiss" data-erp-cc="dismiss" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
+      <div class="erp-cc-banner__main">
+        <span class="erp-cc-banner__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.2c.4 1.7 1.7 3 3.4 3.4.7 1.8 2.3 3.1 4.2 3.4-.1 4.8-4 8.7-8.8 8.8A8.8 8.8 0 0 1 7.4 4.6c1.5.7 3.2.4 4.6-.8Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><circle cx="9.2" cy="10.2" r="1" fill="currentColor"/><circle cx="13.6" cy="9.4" r="1" fill="currentColor"/><circle cx="11.2" cy="14.2" r="1" fill="currentColor"/><circle cx="15" cy="13.2" r="0.9" fill="currentColor"/></svg></span>
+        <div class="erp-cc-banner__text">
+          <h2 class="erp-cc-banner__title">We use cookies</h2>
+          <p class="erp-cc-banner__copy">
+            By clicking <strong>&ldquo;Accept All Cookies&rdquo;</strong>, you agree to the storing of cookies on your device to enhance site navigation, analyze site usage, and assist in our marketing efforts.
+          </p>
+        </div>
+      </div>
+      <div class="erp-cc-banner__actions">
+        <button type="button" class="erp-cc-btn erp-cc-btn--settings" data-erp-cc="settings"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 15.2a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4Z" stroke="currentColor" stroke-width="1.7"/><path d="M19.4 13.1v-2.2l-1.7-.3a6.7 6.7 0 0 0-.5-1.2l1-1.4-1.6-1.6-1.4 1a6.7 6.7 0 0 0-1.2-.5l-.3-1.7h-2.2l-.3 1.7a6.7 6.7 0 0 0-1.2.5l-1.4-1-1.6 1.6 1 1.4a6.7 6.7 0 0 0-.5 1.2l-1.7.3v2.2l1.7.3c.1.4.3.8.5 1.2l-1 1.4 1.6 1.6 1.4-1c.4.2.8.4 1.2.5l.3 1.7h2.2l.3-1.7c.4-.1.8-.3 1.2-.5l1.4 1 1.6-1.6-1-1.4c.2-.4.4-.8.5-1.2l1.7-.3Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg><span>Cookies Settings</span></button>
+        <button type="button" class="erp-cc-btn erp-cc-btn--reject" data-erp-cc="reject">Reject All</button>
+        <button type="button" class="erp-cc-btn erp-cc-btn--accept" data-erp-cc="accept">Accept All Cookies</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="erp-cc-overlay" class="erp-cc-overlay" aria-hidden="true">
+    <div class="erp-cc-panel" role="dialog" aria-modal="true" aria-labelledby="erp-cc-panel-title">
+      <div class="erp-cc-panel__head">
+        <h2 id="erp-cc-panel-title">Cookies Settings</h2>
+        <button type="button" class="erp-cc-panel__close" data-erp-cc="close-settings" aria-label="Close">&times;</button>
+      </div>
+      <p class="erp-cc-panel__intro">
+        Choose which cookies we may store. Necessary cookies are always on so the site can run securely.
+      </p>
+
+      <div class="erp-cc-row">
+        <div class="erp-cc-row__text">
+          <strong>Necessary</strong>
+          <p>Required for login, security, and basic site features.</p>
+        </div>
+        <label class="erp-cc-switch">
+          <input type="checkbox" checked disabled aria-label="Necessary cookies always on">
+          <span></span>
+        </label>
+      </div>
+
+      <div class="erp-cc-row">
+        <div class="erp-cc-row__text">
+          <strong>Analytics</strong>
+          <p>Help us understand how the site is used so we can improve navigation.</p>
+        </div>
+        <label class="erp-cc-switch">
+          <input type="checkbox" id="erp-cc-analytics" aria-label="Allow analytics cookies">
+          <span></span>
+        </label>
+      </div>
+
+      <div class="erp-cc-row">
+        <div class="erp-cc-row__text">
+          <strong>Marketing</strong>
+          <p>Used to assist marketing efforts and measure campaign performance.</p>
+        </div>
+        <label class="erp-cc-switch">
+          <input type="checkbox" id="erp-cc-marketing" aria-label="Allow marketing cookies">
+          <span></span>
+        </label>
+      </div>
+
+      <div class="erp-cc-panel__actions">
+        <button type="button" class="erp-cc-btn erp-cc-btn--ghost" data-erp-cc="reject-panel">Reject All</button>
+        <button type="button" class="erp-cc-btn erp-cc-btn--reject" data-erp-cc="save">Save Settings</button>
+        <button type="button" class="erp-cc-btn erp-cc-btn--accept" data-erp-cc="accept-panel">Accept All Cookies</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+<script src="/assets/js/cookie-consent.js?v=1793262015" defer></script>
+</body>
+</html>

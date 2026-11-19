@@ -7,8 +7,25 @@ declare(strict_types=1);
  *
  * When ULTITECH_ACCOUNTING_API=internal, requests are dispatched in-process
  * (shared hosting; no php artisan serve required).
+ *
+ * Important: this file is hit directly by the browser, so it must load ERP env
+ * itself (env.php sets ULTITECH_ACCOUNTING_API=internal). Without that it falls
+ * back to http://127.0.0.1:8000 and every request 502s on shared hosting.
  */
-$helper = dirname(__DIR__) . '/includes/ultitech_accounting_bridge.php';
+$root = dirname(__DIR__);
+$host = (string) ($_SERVER['HTTP_HOST'] ?? '');
+$isLocal = str_contains($host, 'localhost') || str_contains($host, '127.0.0.1');
+$envCandidates = $isLocal
+    ? [$root . '/env.local.php', $root . '/env.php', $root . '/includes/env.local.php', $root . '/includes/env.php']
+    : [$root . '/env.php', $root . '/includes/env.php'];
+foreach ($envCandidates as $envFile) {
+    if (is_file($envFile)) {
+        require_once $envFile;
+        break;
+    }
+}
+
+$helper = $root . '/includes/ultitech_accounting_bridge.php';
 if (is_file($helper)) {
     require_once $helper;
 }

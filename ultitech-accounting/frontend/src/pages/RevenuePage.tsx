@@ -4,8 +4,8 @@ import { apiRequest } from '../lib/api'
 import { useAuth } from '../lib/auth'
 import { Button, Card, EmptyState, ErrorBanner, Input, Label, PageHeader, Select, Table, SectionTitle } from '../components/ui'
 
-type Customer = {id: number; code: string; name: string }
-type Account = {id: number; code: string; name: string }
+type Customer = { id: number; code: string; name: string }
+type Account = { id: number; code: string; name: string }
 type InvoiceLine = {
   id?: number
   line_no?: number
@@ -33,6 +33,11 @@ type Invoice = {
   erp_invoice_id?: string | null
   erp_order_id?: number | null
 }
+
+type BankAccount = { id: number; code: string; name: string; account_type?: string }
+type CashAccount = { id: number; code: string; name: string }
+type PayFilter = 'all' | 'unpaid' | 'partial' | 'paid'
+type DepositKind = 'bank' | 'cash'
 
 function resolveCompanySlug(embedSlug: string): string {
   const fromEmbed = String(embedSlug || '').trim().replace(/^\/+|\/+$/g, '')
@@ -63,10 +68,6 @@ function erpOrderViewUrl(slug: string, orderId: number, hintUrl = ''): string {
   const base = companyRootPath(slug, hintUrl).replace(/\/+$/, '')
   return `${base}/sales/order-view?module=sales&id=${orderId}`
 }
-type BankAccount = { id: number; code: string; name: string; account_type?: string }
-type CashAccount = { id: number; code: string; name: string }
-type PayFilter = 'all' | 'unpaid' | 'partial' | 'paid'
-type DepositKind = 'bank' | 'cash'
 
 function money(value: string | number | undefined) {
   const n = Number(value || 0)
@@ -109,31 +110,32 @@ export function RevenuePage() {
   const { token, companyId, bookId, embed, classicAccountingUrl } = useAuth()
   const client = useQueryClient()
   const [error, setError] = useState('')
+  const [notice, setNotice] = useState('')
+  const [formOpen, setFormOpen] = useState(false)
+
+  const [revenueDate, setRevenueDate] = useState(todayIso)
   const [customerId, setCustomerId] = useState('')
-  const [amount, setAmount] = useState('')
   const [description, setDescription] = useState('')
+  const [amount, setAmount] = useState('')
   const [revenueAccountId, setRevenueAccountId] = useState('')
-  const [receiptInvoiceId, setReceiptInvoiceId] = useState('')
-  const [receiptAmount, setReceiptAmount] = useState('')
+  const [depositKind, setDepositKind] = useState<DepositKind>('bank')
   const [bankAccountId, setBankAccountId] = useState('')
-  const [manualDate, setManualDate] = useState(todayIso)
-  const [manualCustomerId, setManualCustomerId] = useState('')
-  const [manualDescription, setManualDescription] = useState('')
-  const [manualAmount, setManualAmount] = useState('')
-  const [manualRevenueAccountId, setManualRevenueAccountId] = useState('')
-  const [manualDepositKind, setManualDepositKind] = useState<DepositKind>('bank')
-  const [manualBankAccountId, setManualBankAccountId] = useState('')
-  const [manualCashAccountId, setManualCashAccountId] = useState('')
-  const [manualReference, setManualReference] = useState('')
-  const [manualNotice, setManualNotice] = useState('')
+  const [cashAccountId, setCashAccountId] = useState('')
+  const [reference, setReference] = useState('')
+
+  const [payInvoiceId, setPayInvoiceId] = useState<number | null>(null)
+  const [payAmount, setPayAmount] = useState('')
+  const [payBankAccountId, setPayBankAccountId] = useState('')
+  const [payDepositKind, setPayDepositKind] = useState<DepositKind>('bank')
+  const [payCashAccountId, setPayCashAccountId] = useState('')
+
   const [payFilter, setPayFilter] = useState<PayFilter>('all')
   const [openMenuId, setOpenMenuId] = useState<number | null>(null)
   const [viewInvoiceId, setViewInvoiceId] = useState<number | null>(null)
-  const receiptCardRef = useRef<HTMLDivElement | null>(null)
   const menuRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
-    if (openMenuId == null && viewInvoiceId == null) return
+    if (openMenuId == null && viewInvoiceId == null && payInvoiceId == null && !formOpen) return
     const onDoc = (e: MouseEvent) => {
       if (openMenuId != null && menuRef.current && !menuRef.current.contains(e.target as Node)) {
         setOpenMenuId(null)
@@ -141,8 +143,10 @@ export function RevenuePage() {
     }
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return
-      if (viewInvoiceId != null) setViewInvoiceId(null)
-      else setOpenMenuId(null)
+      if (payInvoiceId != null) setPayInvoiceId(null)
+      else if (viewInvoiceId != null) setViewInvoiceId(null)
+      else if (openMenuId != null) setOpenMenuId(null)
+      else if (formOpen) setFormOpen(false)
     }
     document.addEventListener('mousedown', onDoc)
     document.addEventListener('keydown', onKey)
@@ -150,32 +154,7 @@ export function RevenuePage() {
       document.removeEventListener('mousedown', onDoc)
       document.removeEventListener('keydown', onKey)
     }
-  }, [openMenuId, viewInvoiceId])
-
-  function openInvoice(invoice: Invoice) {
-    setOpenMenuId(null)
-    const orderId = Number(invoice.erp_order_id || 0)
-    if (orderId > 0) {
-      const slug = resolveCompanySlug(embed.erpCompanySlug)
-      const hint = classicAccountingUrl || embed.backUrl || ''
-      window.location.href = erpOrderViewUrl(slug, orderId, hint)
-      return
-    }
-    setViewInvoiceId(invoice.id)
-  }
-
-  function startPayInvoice(invoice: Invoice) {
-    setOpenMenuId(null)
-    setViewInvoiceId(null)
-    setReceiptInvoiceId(String(invoice.id))
-    setReceiptAmount(String(invoice.balance_due || ''))
-    if (!bankAccountId && (banks.data?.data?.length ?? 0) > 0) {
-      setBankAccountId(String(banks.data!.data[0].id))
-    }
-    requestAnimationFrame(() => {
-      receiptCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    })
-  }
+  }, [openMenuId, viewInvoiceId, payInvoiceId, formOpen])
 
   const customers = useQuery({
     queryKey: ['customers', companyId],
@@ -213,22 +192,27 @@ export function RevenuePage() {
   )
 
   useEffect(() => {
-    if (!manualRevenueAccountId && otherIncomeAccount) {
-      setManualRevenueAccountId(String(otherIncomeAccount.id))
-    }
-  }, [manualRevenueAccountId, otherIncomeAccount])
+    if (!revenueAccountId && otherIncomeAccount) setRevenueAccountId(String(otherIncomeAccount.id))
+  }, [revenueAccountId, otherIncomeAccount])
 
   useEffect(() => {
-    if (!manualBankAccountId && (banks.data?.data?.length ?? 0) > 0) {
-      setManualBankAccountId(String(banks.data!.data[0].id))
+    if (!bankAccountId && (banks.data?.data?.length ?? 0) > 0) {
+      setBankAccountId(String(banks.data!.data[0].id))
     }
-  }, [manualBankAccountId, banks.data])
+    if (!payBankAccountId && (banks.data?.data?.length ?? 0) > 0) {
+      setPayBankAccountId(String(banks.data!.data[0].id))
+    }
+  }, [bankAccountId, payBankAccountId, banks.data])
 
   useEffect(() => {
-    if (!manualCashAccountId && (cashAccounts.data?.data?.length ?? 0) > 0) {
-      setManualCashAccountId(String(cashAccounts.data!.data[0].id))
+    if (!cashAccountId && (cashAccounts.data?.data?.length ?? 0) > 0) {
+      setCashAccountId(String(cashAccounts.data!.data[0].id))
     }
-  }, [manualCashAccountId, cashAccounts.data])
+    if (!payCashAccountId && (cashAccounts.data?.data?.length ?? 0) > 0) {
+      setPayCashAccountId(String(cashAccounts.data!.data[0].id))
+    }
+  }, [cashAccountId, payCashAccountId, cashAccounts.data])
+
   const receivableInvoices = useMemo(
     () => (invoices.data?.data ?? []).filter((i) => paymentBucket(i) !== 'other'),
     [invoices.data],
@@ -249,13 +233,7 @@ export function RevenuePage() {
     if (payFilter === 'all') return receivableInvoices
     return receivableInvoices.filter((i) => paymentBucket(i) === payFilter)
   }, [receivableInvoices, payFilter])
-  const openInvoices = useMemo(
-    () => receivableInvoices.filter((i) => {
-      const bucket = paymentBucket(i)
-      return bucket === 'unpaid' || bucket === 'partial'
-    }),
-    [receivableInvoices],
-  )
+
   const viewedInvoice = useMemo(
     () => (invoices.data?.data ?? []).find((i) => i.id === viewInvoiceId) ?? null,
     [invoices.data, viewInvoiceId],
@@ -263,92 +241,58 @@ export function RevenuePage() {
   const viewedBucket = viewedInvoice ? paymentBucket(viewedInvoice) : null
   const viewedCanPay = viewedBucket === 'unpaid' || viewedBucket === 'partial'
 
-  const createInvoice = useMutation({
-    mutationFn: () =>
-      apiRequest('/customer-invoices', {
-        method: 'POST',
-        token,
-        companyId,
-        bookId,
-        body: {
-          customer_id: Number(customerId),
-          invoice_date: todayIso(),
-          currency_code: 'TZS',
-          description,
-          lines: [
-            {
-              description,
-              quantity: 1,
-              unit_price: amount,
-              revenue_account_id: Number(revenueAccountId),
-            },
-          ],
-        },
-      }),
-    onSuccess: async () => {
-      setError('')
-      setDescription('')
-      setAmount('')
-      await Promise.all([
-        client.invalidateQueries({ queryKey: ['customer-invoices', companyId] }),
-        client.invalidateQueries({ queryKey: ['trial-balance', companyId] }),
-        client.invalidateQueries({ queryKey: ['journals', companyId] }),
-      ])
-    },
-    onError: (err) => setError((err as Error).message),
-  })
+  const payingInvoice = useMemo(
+    () => (invoices.data?.data ?? []).find((i) => i.id === payInvoiceId) ?? null,
+    [invoices.data, payInvoiceId],
+  )
 
-  const createReceipt = useMutation({
-    mutationFn: () => {
-      const invoice = openInvoices.find((i) => String(i.id) === receiptInvoiceId)
-      if (!invoice) throw new Error('Select an invoice')
-      return apiRequest('/customer-receipts', {
-        method: 'POST',
-        token,
-        companyId,
-        bookId,
-        body: {
-          customer_id: invoice.customer?.id,
-          receipt_date: todayIso(),
-          currency_code: 'TZS',
-          amount: receiptAmount || invoice.balance_due,
-          bank_account_id: Number(bankAccountId),
-          allocations: [
-            {
-              invoice_id: invoice.id,
-              amount: receiptAmount || invoice.balance_due,
-            },
-          ],
-        },
-      })
-    },
-    onSuccess: async () => {
-      setError('')
-      await Promise.all([
-        client.invalidateQueries({ queryKey: ['customer-invoices', companyId] }),
-        client.invalidateQueries({ queryKey: ['trial-balance', companyId] }),
-        client.invalidateQueries({ queryKey: ['bank-transactions', companyId] }),
-      ])
-    },
-    onError: (err) => setError((err as Error).message),
-  })
+  function openInvoice(invoice: Invoice) {
+    setOpenMenuId(null)
+    const orderId = Number(invoice.erp_order_id || 0)
+    if (orderId > 0) {
+      const slug = resolveCompanySlug(embed.erpCompanySlug)
+      const hint = classicAccountingUrl || embed.backUrl || ''
+      window.location.href = erpOrderViewUrl(slug, orderId, hint)
+      return
+    }
+    setViewInvoiceId(invoice.id)
+  }
 
-  const createManualRevenue = useMutation({
+  function startPayInvoice(invoice: Invoice) {
+    setOpenMenuId(null)
+    setViewInvoiceId(null)
+    setError('')
+    setPayInvoiceId(invoice.id)
+    setPayAmount(String(invoice.balance_due || ''))
+    setPayDepositKind('bank')
+    if (!payBankAccountId && (banks.data?.data?.length ?? 0) > 0) {
+      setPayBankAccountId(String(banks.data!.data[0].id))
+    }
+  }
+
+  const invalidateRevenue = async () => {
+    await Promise.all([
+      client.invalidateQueries({ queryKey: ['customer-invoices', companyId] }),
+      client.invalidateQueries({ queryKey: ['customers', companyId] }),
+      client.invalidateQueries({ queryKey: ['trial-balance', companyId] }),
+      client.invalidateQueries({ queryKey: ['journals', companyId] }),
+      client.invalidateQueries({ queryKey: ['bank-transactions', companyId] }),
+    ])
+  }
+
+  const createRevenue = useMutation({
     mutationFn: () => {
       const body: Record<string, unknown> = {
-        revenue_date: manualDate || todayIso(),
+        revenue_date: revenueDate || todayIso(),
         currency_code: 'TZS',
-        description: manualDescription.trim(),
-        amount: manualAmount,
-        revenue_account_id: Number(manualRevenueAccountId),
-        reference: manualReference.trim() || undefined,
+        description: description.trim(),
+        amount,
+        revenue_account_id: Number(revenueAccountId),
+        reference: reference.trim() || undefined,
       }
-      if (manualCustomerId) body.customer_id = Number(manualCustomerId)
-      if (manualDepositKind === 'bank') {
-        body.bank_account_id = Number(manualBankAccountId)
-      } else {
-        body.cash_account_id = Number(manualCashAccountId)
-      }
+      if (customerId) body.customer_id = Number(customerId)
+      if (depositKind === 'bank') body.bank_account_id = Number(bankAccountId)
+      else body.cash_account_id = Number(cashAccountId)
       return apiRequest<{ data: { invoice: Invoice } }>('/manual-revenues', {
         method: 'POST',
         token,
@@ -360,76 +304,144 @@ export function RevenuePage() {
     onSuccess: async (res) => {
       setError('')
       const number = res?.data?.invoice?.invoice_number
-      setManualNotice(number ? `Recorded as ${number} (paid).` : 'Manual revenue recorded.')
-      setManualDescription('')
-      setManualAmount('')
-      setManualReference('')
-      setManualCustomerId('')
-      setManualDate(todayIso())
-      await Promise.all([
-        client.invalidateQueries({ queryKey: ['customer-invoices', companyId] }),
-        client.invalidateQueries({ queryKey: ['customers', companyId] }),
-        client.invalidateQueries({ queryKey: ['trial-balance', companyId] }),
-        client.invalidateQueries({ queryKey: ['journals', companyId] }),
-        client.invalidateQueries({ queryKey: ['bank-transactions', companyId] }),
-      ])
+      setNotice(number ? `Recorded ${number} (paid).` : 'Revenue recorded.')
+      setDescription('')
+      setAmount('')
+      setReference('')
+      setCustomerId('')
+      setRevenueDate(todayIso())
+      await invalidateRevenue()
       setPayFilter('paid')
     },
     onError: (err) => {
-      setManualNotice('')
+      setNotice('')
       setError((err as Error).message)
     },
   })
 
-  const onInvoice = (e: FormEvent) => {
+  const createReceipt = useMutation({
+    mutationFn: () => {
+      if (!payingInvoice) throw new Error('Select an invoice')
+      const body: Record<string, unknown> = {
+        customer_id: payingInvoice.customer?.id,
+        receipt_date: todayIso(),
+        currency_code: 'TZS',
+        amount: payAmount || payingInvoice.balance_due,
+        allocations: [
+          {
+            invoice_id: payingInvoice.id,
+            amount: payAmount || payingInvoice.balance_due,
+          },
+        ],
+      }
+      if (payDepositKind === 'bank') body.bank_account_id = Number(payBankAccountId)
+      else body.cash_account_id = Number(payCashAccountId)
+      return apiRequest('/customer-receipts', {
+        method: 'POST',
+        token,
+        companyId,
+        bookId,
+        body,
+      })
+    },
+    onSuccess: async () => {
+      setError('')
+      setNotice(`Payment recorded for ${payingInvoice?.invoice_number || 'invoice'}.`)
+      setPayInvoiceId(null)
+      await invalidateRevenue()
+    },
+    onError: (err) => setError((err as Error).message),
+  })
+
+  const onRecordRevenue = (e: FormEvent) => {
     e.preventDefault()
-    createInvoice.mutate()
+    setNotice('')
+    if (depositKind === 'bank' && !bankAccountId) {
+      setError('Select a bank or mobile account.')
+      return
+    }
+    if (depositKind === 'cash' && !cashAccountId) {
+      setError('Select a cash account.')
+      return
+    }
+    createRevenue.mutate()
   }
 
-  const onReceipt = (e: FormEvent) => {
+  const onPayReceipt = (e: FormEvent) => {
     e.preventDefault()
+    if (payDepositKind === 'bank' && !payBankAccountId) {
+      setError('Select a bank or mobile account.')
+      return
+    }
+    if (payDepositKind === 'cash' && !payCashAccountId) {
+      setError('Select a cash account.')
+      return
+    }
     createReceipt.mutate()
-  }
-
-  const onManualRevenue = (e: FormEvent) => {
-    e.preventDefault()
-    setManualNotice('')
-    if (manualDepositKind === 'bank' && !manualBankAccountId) {
-      setError('Select a bank or mobile account to deposit into.')
-      return
-    }
-    if (manualDepositKind === 'cash' && !manualCashAccountId) {
-      setError('Select a cash account to deposit into.')
-      return
-    }
-    createManualRevenue.mutate()
   }
 
   return (
     <div>
       <PageHeader
         title="Revenue"
-        subtitle="Sales invoices sync from ERP. Receive payments on open AR, or record manual / other income here."
+        subtitle="Sales invoices come from ERP. Create revenue for other income, or pay open invoices from the list."
+        actions={
+          <Button
+            type="button"
+            aria-expanded={formOpen}
+            aria-controls="ua-record-revenue-panel"
+            onClick={() => {
+              setFormOpen((open) => !open)
+              if (formOpen) setError('')
+            }}
+          >
+            {formOpen ? 'Close form' : 'Create revenue'}
+          </Button>
+        }
       />
       {error ? <ErrorBanner message={error} /> : null}
+      {notice && !formOpen ? (
+        <div className="mb-4 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+          {notice}
+        </div>
+      ) : null}
 
-      <div className="grid gap-6 xl:grid-cols-2">
+      {formOpen ? (
+        <div id="ua-record-revenue-panel" className="mb-2">
         <Card>
-          <SectionTitle>Post sales invoice</SectionTitle>
+          <SectionTitle>Record revenue</SectionTitle>
           <p className="mb-3 text-sm text-[var(--muted)]">
-            Billed revenue on account (AR). Use when the customer will pay later.
+            Cash sale or other income paid now. Leave customer blank for walk-in.
           </p>
-          <form className="space-y-3" onSubmit={onInvoice}>
+          {notice ? (
+            <div className="mb-3 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+              {notice}
+            </div>
+          ) : null}
+          <form className="grid gap-3 md:grid-cols-2" onSubmit={onRecordRevenue}>
             <div>
-              <Label>Customer</Label>
-              <Select value={customerId} onChange={(e) => setCustomerId(e.target.value)} required>
-                <option value="">Select customer</option>
+              <Label>Date</Label>
+              <Input type="date" value={revenueDate} onChange={(e) => setRevenueDate(e.target.value)} required />
+            </div>
+            <div>
+              <Label>Customer (optional)</Label>
+              <Select value={customerId} onChange={(e) => setCustomerId(e.target.value)}>
+                <option value="">Walk-in / Other income</option>
                 {(customers.data?.data ?? []).map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.code} — {c.name}
                   </option>
                 ))}
               </Select>
+            </div>
+            <div className="md:col-span-2">
+              <Label>Description</Label>
+              <Input
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="e.g. Scrap sale, service fee, interest"
+                required
+              />
             </div>
             <div>
               <Label>Revenue account</Label>
@@ -443,131 +455,21 @@ export function RevenuePage() {
               </Select>
             </div>
             <div>
-              <Label>Description</Label>
-              <Input value={description} onChange={(e) => setDescription(e.target.value)} required />
-            </div>
-            <div>
               <Label>Amount (TZS)</Label>
               <Input value={amount} onChange={(e) => setAmount(e.target.value)} required />
             </div>
-            <Button disabled={createInvoice.isPending}>{createInvoice.isPending ? 'Posting…' : 'Create & post invoice'}</Button>
-          </form>
-        </Card>
-
-        <Card className="scroll-mt-4">
-          <div ref={receiptCardRef}>
-            <SectionTitle>Receive payment</SectionTitle>
-            <p className="mb-3 text-sm text-[var(--muted)]">
-              Collect against an open sales invoice (including ERP-synced invoices).
-            </p>
-            <form className="space-y-3" onSubmit={onReceipt}>
-              <div>
-                <Label>Open invoice</Label>
-                <Select value={receiptInvoiceId} onChange={(e) => setReceiptInvoiceId(e.target.value)} required>
-                  <option value="">Select invoice</option>
-                  {openInvoices.map((invoice) => (
-                    <option key={invoice.id} value={invoice.id}>
-                      {invoice.invoice_number} — {invoice.customer?.name} — due {invoice.balance_due}
-                    </option>
-                  ))}
-                </Select>
-              </div>
-              <div>
-                <Label>Bank account</Label>
-                <Select value={bankAccountId} onChange={(e) => setBankAccountId(e.target.value)} required>
-                  <option value="">Select bank</option>
-                  {(banks.data?.data ?? []).map((b) => (
-                    <option key={b.id} value={b.id}>
-                      {b.code} — {b.name}
-                    </option>
-                  ))}
-                </Select>
-              </div>
-              <div>
-                <Label>Amount (optional = full balance)</Label>
-                <Input value={receiptAmount} onChange={(e) => setReceiptAmount(e.target.value)} />
-              </div>
-              <Button disabled={createReceipt.isPending}>{createReceipt.isPending ? 'Posting…' : 'Create & post receipt'}</Button>
-            </form>
-          </div>
-        </Card>
-      </div>
-
-      <div className="mt-6">
-        <Card>
-          <SectionTitle>Manual revenue</SectionTitle>
-          <p className="mb-3 text-sm text-[var(--muted)]">
-            Other income or cash sale paid now — posts income and deposits to bank/mobile/cash in one step.
-            Leave customer blank for walk-in / other income.
-          </p>
-          {manualNotice ? (
-            <div className="mb-3 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
-              {manualNotice}
-            </div>
-          ) : null}
-          <form className="grid gap-3 md:grid-cols-2" onSubmit={onManualRevenue}>
-            <div>
-              <Label>Date</Label>
-              <Input type="date" value={manualDate} onChange={(e) => setManualDate(e.target.value)} required />
-            </div>
-            <div>
-              <Label>Customer (optional)</Label>
-              <Select value={manualCustomerId} onChange={(e) => setManualCustomerId(e.target.value)}>
-                <option value="">Walk-in / Other income</option>
-                {(customers.data?.data ?? []).map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.code} — {c.name}
-                  </option>
-                ))}
-              </Select>
-            </div>
-            <div className="md:col-span-2">
-              <Label>Description</Label>
-              <Input
-                value={manualDescription}
-                onChange={(e) => setManualDescription(e.target.value)}
-                placeholder="e.g. Scrap sale, service fee, interest"
-                required
-              />
-            </div>
-            <div>
-              <Label>Revenue account</Label>
-              <Select
-                value={manualRevenueAccountId}
-                onChange={(e) => setManualRevenueAccountId(e.target.value)}
-                required
-              >
-                <option value="">Select account</option>
-                {revenueAccounts.map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.code} — {a.name}
-                  </option>
-                ))}
-              </Select>
-            </div>
-            <div>
-              <Label>Amount (TZS)</Label>
-              <Input value={manualAmount} onChange={(e) => setManualAmount(e.target.value)} required />
-            </div>
             <div>
               <Label>Deposit to</Label>
-              <Select
-                value={manualDepositKind}
-                onChange={(e) => setManualDepositKind(e.target.value as DepositKind)}
-              >
+              <Select value={depositKind} onChange={(e) => setDepositKind(e.target.value as DepositKind)}>
                 <option value="bank">Bank / mobile</option>
                 <option value="cash">Cash</option>
               </Select>
             </div>
             <div>
-              {manualDepositKind === 'bank' ? (
+              {depositKind === 'bank' ? (
                 <>
                   <Label>Bank / mobile account</Label>
-                  <Select
-                    value={manualBankAccountId}
-                    onChange={(e) => setManualBankAccountId(e.target.value)}
-                    required
-                  >
+                  <Select value={bankAccountId} onChange={(e) => setBankAccountId(e.target.value)} required>
                     <option value="">Select account</option>
                     {(banks.data?.data ?? []).map((b) => (
                       <option key={b.id} value={b.id}>
@@ -579,11 +481,7 @@ export function RevenuePage() {
               ) : (
                 <>
                   <Label>Cash account</Label>
-                  <Select
-                    value={manualCashAccountId}
-                    onChange={(e) => setManualCashAccountId(e.target.value)}
-                    required
-                  >
+                  <Select value={cashAccountId} onChange={(e) => setCashAccountId(e.target.value)} required>
                     <option value="">Select cash account</option>
                     {(cashAccounts.data?.data ?? []).map((c) => (
                       <option key={c.id} value={c.id}>
@@ -597,19 +495,30 @@ export function RevenuePage() {
             <div className="md:col-span-2">
               <Label>Reference (optional)</Label>
               <Input
-                value={manualReference}
-                onChange={(e) => setManualReference(e.target.value)}
+                value={reference}
+                onChange={(e) => setReference(e.target.value)}
                 placeholder="Receipt no. / narration"
               />
             </div>
-            <div className="md:col-span-2">
-              <Button disabled={createManualRevenue.isPending}>
-                {createManualRevenue.isPending ? 'Posting…' : 'Record manual revenue'}
+            <div className="md:col-span-2 flex flex-wrap gap-2">
+              <Button disabled={createRevenue.isPending}>
+                {createRevenue.isPending ? 'Posting…' : 'Record revenue'}
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => {
+                  setFormOpen(false)
+                  setError('')
+                }}
+              >
+                Cancel
               </Button>
             </div>
           </form>
         </Card>
-      </div>
+        </div>
+      ) : null}
 
       <div className="mt-6">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
@@ -717,16 +626,93 @@ export function RevenuePage() {
         ) : (
           !invoices.isLoading && (
             <EmptyState
-              title={payFilter === 'all' ? 'No invoices yet' : `No ${paymentLabel(payFilter === 'partial' ? 'partial' : payFilter).toLowerCase()} invoices`}
+              title={
+                payFilter === 'all'
+                  ? 'No invoices yet'
+                  : `No ${paymentLabel(payFilter === 'partial' ? 'partial' : payFilter).toLowerCase()} invoices`
+              }
               body={
                 payFilter === 'all'
-                  ? 'Sales invoices created in the system appear here after ERP sync. You can also post an invoice above.'
+                  ? 'ERP sales invoices appear here after sync. Use Record revenue above for other income.'
                   : 'Try another filter to see unpaid, partially paid, or paid invoices.'
               }
             />
           )
         )}
       </div>
+
+      {payingInvoice ? (
+        <div
+          className="fixed inset-0 z-[80] flex items-start justify-center overflow-y-auto bg-slate-900/45 p-4 sm:items-center"
+          role="presentation"
+          onClick={() => setPayInvoiceId(null)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="ua-pay-title"
+            className="w-full max-w-md rounded-lg border border-[var(--line)] bg-white p-4 shadow-xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="mb-3 flex items-start justify-between gap-3">
+              <div>
+                <div id="ua-pay-title" className="text-base font-normal text-[var(--ink)]">
+                  Pay {payingInvoice.invoice_number}
+                </div>
+                <div className="mt-1 text-sm text-[var(--muted)]">
+                  {payingInvoice.customer?.name || '—'} · due {money(payingInvoice.balance_due)}
+                </div>
+              </div>
+              <Button type="button" variant="secondary" onClick={() => setPayInvoiceId(null)}>
+                Close
+              </Button>
+            </div>
+            <form className="space-y-3" onSubmit={onPayReceipt}>
+              <div>
+                <Label>Deposit to</Label>
+                <Select value={payDepositKind} onChange={(e) => setPayDepositKind(e.target.value as DepositKind)}>
+                  <option value="bank">Bank / mobile</option>
+                  <option value="cash">Cash</option>
+                </Select>
+              </div>
+              <div>
+                {payDepositKind === 'bank' ? (
+                  <>
+                    <Label>Bank / mobile account</Label>
+                    <Select value={payBankAccountId} onChange={(e) => setPayBankAccountId(e.target.value)} required>
+                      <option value="">Select account</option>
+                      {(banks.data?.data ?? []).map((b) => (
+                        <option key={b.id} value={b.id}>
+                          {b.code} — {b.name}
+                        </option>
+                      ))}
+                    </Select>
+                  </>
+                ) : (
+                  <>
+                    <Label>Cash account</Label>
+                    <Select value={payCashAccountId} onChange={(e) => setPayCashAccountId(e.target.value)} required>
+                      <option value="">Select cash account</option>
+                      {(cashAccounts.data?.data ?? []).map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.code} — {c.name}
+                        </option>
+                      ))}
+                    </Select>
+                  </>
+                )}
+              </div>
+              <div>
+                <Label>Amount (optional = full balance)</Label>
+                <Input value={payAmount} onChange={(e) => setPayAmount(e.target.value)} />
+              </div>
+              <Button disabled={createReceipt.isPending}>
+                {createReceipt.isPending ? 'Posting…' : 'Post payment'}
+              </Button>
+            </form>
+          </div>
+        </div>
+      ) : null}
 
       {viewedInvoice ? (
         <div

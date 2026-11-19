@@ -46,8 +46,8 @@ function DocPreviewThumb({ isImage, previewUrl, missing, kind }) {
   return <FileTypeIcon tone={kind.tone} label={kind.label} />;
 }
 
-function PaymentPlainRow({ amountLabel, dateLabel, userLabel }) {
-  const meta = [dateLabel, userLabel].filter(Boolean).join(' · ');
+function PaymentPlainRow({ amountLabel, dateLabel, userLabel, reference }) {
+  const meta = [dateLabel, userLabel, reference].filter(Boolean).join(' · ');
   return (
     <article
       className="inv-pay-plain"
@@ -67,6 +67,12 @@ function PaymentPlainRow({ amountLabel, dateLabel, userLabel }) {
               <span>{userLabel}</span>
             </>
           ) : null}
+          {reference ? (
+            <>
+              <span className="inv-pay-card-dot" aria-hidden="true">·</span>
+              <span>{reference}</span>
+            </>
+          ) : null}
         </div>
       </div>
     </article>
@@ -77,6 +83,7 @@ function PaymentCard({
   amountLabel,
   dateLabel,
   userLabel,
+  reference,
   attachment,
 }) {
   const hasFile = Boolean(attachment?.name);
@@ -86,6 +93,7 @@ function PaymentCard({
         amountLabel={amountLabel}
         dateLabel={dateLabel}
         userLabel={userLabel}
+        reference={reference}
       />
     );
   }
@@ -94,7 +102,7 @@ function PaymentCard({
   const href = !attachment?.missing ? (attachment?.proxyLink || null) : null;
   const kind = fileKind(attachment?.name);
   const footName = attachment.name || 'Attachment';
-  const titleBits = [amountLabel, dateLabel, userLabel].filter(Boolean).join(' · ');
+  const titleBits = [amountLabel, dateLabel, userLabel, reference].filter(Boolean).join(' · ');
 
   const open = () => {
     if (!href) return;
@@ -103,7 +111,7 @@ function PaymentCard({
 
   return (
     <article
-      className={`inv-gmail-card inv-file-card${fileMissing ? ' inv-gmail-card--missing' : ''}`}
+      className={`inv-gmail-card inv-file-card inv-pay-proof-card${fileMissing ? ' inv-gmail-card--missing' : ''}`}
       title={titleBits ? `${footName}\n${titleBits}` : footName}
       role="listitem"
     >
@@ -112,7 +120,7 @@ function PaymentCard({
         className="inv-gmail-card-hit"
         onClick={open}
         disabled={!href}
-        aria-label={href ? `Open ${footName}` : amountLabel}
+        aria-label={href ? `Open payment proof ${footName}` : `Payment proof ${footName} unavailable`}
       >
         <DocPreviewThumb
           isImage={!!attachment?.isImage}
@@ -150,6 +158,8 @@ function PaymentCard({
             </>
           ) : null}
         </div>
+        {reference ? <div className="inv-pay-card-ref">Ref {reference}</div> : null}
+        {fileMissing ? <div className="inv-pay-card-missing">Proof file missing on this server</div> : null}
       </div>
     </article>
   );
@@ -160,18 +170,22 @@ export default function OrderPaymentsCard({ payments = [], currency = 'TZS' }) {
   if (!list.length) return null;
 
   const cards = [];
+  let proofCount = 0;
   list.forEach((payment) => {
     const amountLabel = money(payment.amount, payment.currency || currency);
     const dateLabel = formatDate(payment.collection_date || payment.created_at);
     const userLabel = payment.user_name || 'System';
+    const reference = String(payment.reference || '').trim();
     const attachments = Array.isArray(payment.attachments) ? payment.attachments : [];
     if (attachments.length) {
       attachments.forEach((att, index) => {
+        proofCount += 1;
         cards.push({
           key: att.id > 0 ? `pay-${payment.id}-att-${att.id}` : `pay-${payment.id || 'x'}-att-${index}`,
           amountLabel,
           dateLabel,
           userLabel,
+          reference,
           attachment: att,
         });
       });
@@ -181,18 +195,22 @@ export default function OrderPaymentsCard({ payments = [], currency = 'TZS' }) {
         amountLabel,
         dateLabel,
         userLabel,
+        reference,
         attachment: null,
       });
     }
   });
 
-  const countLabel = list.length === 1 ? '1 payment' : `${list.length} payments`;
+  const title = proofCount > 0 ? 'Payment proofs' : 'Recent payments';
+  const countLabel = proofCount > 0
+    ? `${proofCount} proof${proofCount === 1 ? '' : 's'} · ${list.length} payment${list.length === 1 ? '' : 's'}`
+    : (list.length === 1 ? '1 payment' : `${list.length} payments`);
 
   return (
-    <section className="inv-docs-card no-print" id="recent-payments" aria-label="Recent payments">
+    <section className="inv-docs-card ov-payments-card no-print" id="recent-payments" aria-label={title}>
       <div className="inv-docs-head">
         <h2 className="inv-docs-title">
-          Recent payments
+          {title}
           <span className="inv-docs-count"> · {countLabel}</span>
         </h2>
       </div>
@@ -204,6 +222,7 @@ export default function OrderPaymentsCard({ payments = [], currency = 'TZS' }) {
               amountLabel={card.amountLabel}
               dateLabel={card.dateLabel}
               userLabel={card.userLabel}
+              reference={card.reference}
               attachment={card.attachment}
             />
           ))}

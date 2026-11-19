@@ -377,14 +377,14 @@ export default function OrderViewPage() {
         onRegisterPayment={flags.can_register_payment && revenueEntryId > 0 ? openRegisterPayment : undefined}
       />
 
-      <OrderDocumentPane
-        html={documentHtml}
-        fontFamily={documentFontFamily}
-      />
-
       <OrderPaymentsCard
         payments={data?.payments}
         currency={order?.currency || 'TZS'}
+      />
+
+      <OrderDocumentPane
+        html={documentHtml}
+        fontFamily={documentFontFamily}
       />
 
       {catalogHtml ? (

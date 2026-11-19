@@ -1751,6 +1751,25 @@ body.ov-inv-transform-lock {
   color: #94a3b8;
 }
 
+.ov-payments-card {
+  margin: 0 0 1rem;
+}
+
+.ov-page-root .inv-pay-card-ref {
+  margin-top: 0.2rem;
+  font-size: 0.72rem;
+  color: #64748b;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ov-page-root .inv-pay-card-missing {
+  margin-top: 0.2rem;
+  font-size: 0.7rem;
+  color: #b45309;
+}
+
 @media print {
   .ov-no-print {
     display: none !important;

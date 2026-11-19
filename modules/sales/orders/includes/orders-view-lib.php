@@ -499,13 +499,40 @@ function salesOrderViewCollectPayments(PDO $salesDb, int $revEntryId, string $cu
         }
     }
 
+    $extractAttachmentPaths = static function (string $desc): array {
+        if ($desc === '' || !preg_match_all('/\[Attachment:\s*([^\]]+)\]/i', $desc, $m)) {
+            return [];
+        }
+        $paths = [];
+        foreach ($m[1] as $path) {
+            $rel = ltrim(str_replace('\\', '/', trim((string) $path)), '/');
+            if ($rel !== '') {
+                $paths[] = $rel;
+            }
+        }
+        return $paths;
+    };
+
+    $extractReference = static function (string $desc): string {
+        if ($desc === '') {
+            return '';
+        }
+        if (preg_match('/\bRef(?:erence)?\s*[:#-]?\s*([A-Za-z0-9\/._-]+)/i', $desc, $m)) {
+            return trim((string) $m[1]);
+        }
+        if (preg_match('/\b(TRF|SWIFT|TT|REF)[-_ ]?[A-Za-z0-9\/._-]+/i', $desc, $m)) {
+            return trim((string) $m[0]);
+        }
+        return '';
+    };
+
     $usedTxnIds = [];
     $payments = [];
     foreach ($collections as $row) {
         $amount = (float) ($row['amount_collected'] ?? 0);
         $collectionDate = (string) ($row['collection_date'] ?? '');
         $createdAt = (string) ($row['created_at'] ?? '');
-        $createdTs = $createdAt !== '' ? strtotime($createdAt) : 0;
+        $createdTs = $createdAt !== '' ? strtotime($createdAt) : ($collectionDate !== '' ? strtotime($collectionDate . ' 12:00:00') : 0);
 
         $matchedTxn = null;
         foreach ($txns as $txn) {
@@ -528,6 +555,24 @@ function salesOrderViewCollectPayments(PDO $salesDb, int $revEntryId, string $cu
             break;
         }
 
+        // Soft fallback: first unused txn with same amount when dates differ.
+        if ($matchedTxn === null) {
+            foreach ($txns as $txn) {
+                $txnId = (int) ($txn['id'] ?? 0);
+                if ($txnId > 0 && isset($usedTxnIds[$txnId])) {
+                    continue;
+                }
+                if (abs((float) ($txn['amount'] ?? 0) - $amount) > 0.05) {
+                    continue;
+                }
+                $matchedTxn = $txn;
+                if ($txnId > 0) {
+                    $usedTxnIds[$txnId] = true;
+                }
+                break;
+            }
+        }
+
         $attachments = [];
         $seenPaths = [];
         $addAttachment = static function (string $rel) use (&$attachments, &$seenPaths): void {
@@ -540,9 +585,21 @@ function salesOrderViewCollectPayments(PDO $salesDb, int $revEntryId, string $cu
         };
 
         $desc = (string) ($matchedTxn['description'] ?? '');
-        if ($desc !== '' && preg_match_all('/\[Attachment:\s*([^\]]+)\]/i', $desc, $m)) {
-            foreach ($m[1] as $path) {
-                $addAttachment(trim((string) $path));
+        foreach ($extractAttachmentPaths($desc) as $path) {
+            $addAttachment($path);
+        }
+
+        // Also harvest attachment paths from any unused same-amount txns.
+        foreach ($txns as $txn) {
+            $txnId = (int) ($txn['id'] ?? 0);
+            if ($txnId > 0 && isset($usedTxnIds[$txnId]) && $matchedTxn && (int) ($matchedTxn['id'] ?? 0) === $txnId) {
+                // already used above
+            }
+            if (abs((float) ($txn['amount'] ?? 0) - $amount) > 0.05) {
+                continue;
+            }
+            foreach ($extractAttachmentPaths((string) ($txn['description'] ?? '')) as $path) {
+                $addAttachment($path);
             }
         }
 
@@ -559,15 +616,15 @@ function salesOrderViewCollectPayments(PDO $salesDb, int $revEntryId, string $cu
             }
             $fileTs = (int) ($file['ts'] ?: $file['mtime']);
             if ($createdTs <= 0 || $fileTs <= 0) {
-                // For synthetic/legacy rows, attach unused proofs once.
-                if (!empty($row['synthetic']) && $bestIdx < 0) {
+                if ($attachments === [] && $bestIdx < 0) {
                     $bestIdx = $idx;
                     $bestDelta = 0;
                 }
                 continue;
             }
             $delta = abs($fileTs - $createdTs);
-            if ($delta < $bestDelta && $delta <= 86400) {
+            // Allow wider window so older proofs still attach.
+            if ($delta < $bestDelta && $delta <= (86400 * 45)) {
                 $bestDelta = $delta;
                 $bestIdx = $idx;
             }
@@ -594,8 +651,37 @@ function salesOrderViewCollectPayments(PDO $salesDb, int $revEntryId, string $cu
             'currency' => $currency !== '' ? $currency : 'TZS',
             'user_id' => $userId,
             'user_name' => $userName,
+            'reference' => $extractReference($desc),
             'attachments' => $attachments,
         ];
+    }
+
+    // Attach any leftover on-disk proofs to the latest payment so they remain visible.
+    if ($payments !== []) {
+        $seen = [];
+        foreach ($payments[0]['attachments'] as $att) {
+            $name = basename((string) ($att['name'] ?? ''));
+            if ($name !== '') {
+                $seen[$name] = true;
+            }
+        }
+        foreach ($proofFiles as $idx => $file) {
+            if (!empty($file['used'])) {
+                continue;
+            }
+            $base = basename((string) $file['path']);
+            if ($base !== '' && isset($seen[$base])) {
+                continue;
+            }
+            $payments[0]['attachments'][] = salesOrderViewFormatPaymentAttachment(
+                (string) $file['path'],
+                'Payment proof'
+            );
+            $proofFiles[$idx]['used'] = true;
+            if ($base !== '') {
+                $seen[$base] = true;
+            }
+        }
     }
 
     return $payments;

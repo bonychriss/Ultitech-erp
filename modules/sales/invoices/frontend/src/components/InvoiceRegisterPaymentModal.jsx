@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Loader2, Upload, Wallet, X } from 'lucide-react';
+import { ChevronDown, Loader2, Upload, Wallet, X } from 'lucide-react';
 import { fetchRevenuePaymentInit, submitRevenuePayment } from '../api/invoiceViewDesk.js';
 
 function depositBucketForPayment(method) {
@@ -7,6 +7,127 @@ function depositBucketForPayment(method) {
   if (m.includes('cash')) return 'cash';
   if (m.includes('mobile')) return 'mobile';
   return 'bank';
+}
+
+function money(value) {
+  const n = Number(value || 0);
+  if (!Number.isFinite(n)) return '0.00';
+  return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function accountInitial(name) {
+  const cleaned = String(name || '').replace(/^\s*\d+\s*-\s*/, '').trim();
+  return (cleaned.charAt(0) || '?').toUpperCase();
+}
+
+function AccountLogo({ account, size = 22 }) {
+  const logo = String(account?.logo_url || '').trim();
+  const [broken, setBroken] = useState(false);
+  if (!logo || broken) {
+    return (
+      <span className="rev-pay-acc-logo rev-pay-acc-logo--initial" aria-hidden="true" style={{ width: size, height: size }}>
+        {accountInitial(account?.name)}
+      </span>
+    );
+  }
+  return (
+    <span className="rev-pay-acc-logo" aria-hidden="true" style={{ width: size, height: size }}>
+      <img src={logo} alt="" loading="lazy" onError={() => setBroken(true)} />
+    </span>
+  );
+}
+
+function PaymentAccountPicker({
+  accounts,
+  value,
+  onChange,
+  disabled,
+  placeholder,
+}) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef(null);
+  const selected = accounts.find((acc) => String(acc.id) === String(value)) || null;
+
+  useEffect(() => {
+    if (!open) return undefined;
+    function onDoc(event) {
+      if (rootRef.current && !rootRef.current.contains(event.target)) {
+        setOpen(false);
+      }
+    }
+    function onKey(event) {
+      if (event.key !== 'Escape') return;
+      event.stopPropagation();
+      setOpen(false);
+    }
+    document.addEventListener('mousedown', onDoc);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDoc);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [open]);
+
+  useEffect(() => {
+    if (disabled) setOpen(false);
+  }, [disabled]);
+
+  return (
+    <div className={`rev-pay-acc-picker${open ? ' is-open' : ''}${disabled ? ' is-disabled' : ''}`} ref={rootRef}>
+      <button
+        type="button"
+        className="rev-pay-acc-trigger"
+        disabled={disabled}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        onClick={() => {
+          if (!disabled) setOpen((prev) => !prev);
+        }}
+      >
+        {selected ? (
+          <span className="rev-pay-acc-option-main">
+            <AccountLogo account={selected} />
+            <span className="rev-pay-acc-option-text">
+              <span className="rev-pay-acc-option-name">{selected.name}</span>
+              {selected.currency ? <span className="rev-pay-acc-option-meta">{selected.currency}</span> : null}
+            </span>
+          </span>
+        ) : (
+          <span className="rev-pay-acc-placeholder">{placeholder}</span>
+        )}
+        <ChevronDown size={16} className="rev-pay-acc-caret" aria-hidden="true" />
+      </button>
+
+      {open ? (
+        <div className="rev-pay-acc-menu" role="listbox">
+          {accounts.length ? accounts.map((acc) => {
+            const active = String(acc.id) === String(value);
+            return (
+              <button
+                key={acc.id}
+                type="button"
+                role="option"
+                aria-selected={active}
+                className={`rev-pay-acc-option${active ? ' is-active' : ''}`}
+                onClick={() => {
+                  onChange(String(acc.id));
+                  setOpen(false);
+                }}
+              >
+                <AccountLogo account={acc} />
+                <span className="rev-pay-acc-option-text">
+                  <span className="rev-pay-acc-option-name">{acc.name}</span>
+                  {acc.currency ? <span className="rev-pay-acc-option-meta">{acc.currency}</span> : null}
+                </span>
+              </button>
+            );
+          }) : (
+            <div className="rev-pay-acc-empty">No accounts for this method</div>
+          )}
+        </div>
+      ) : null}
+    </div>
+  );
 }
 
 export default function InvoiceRegisterPaymentModal({ entryId, onClose, onSuccess }) {
@@ -35,13 +156,14 @@ export default function InvoiceRegisterPaymentModal({ entryId, onClose, onSucces
         if (cancelled) return;
         setInit(data);
         const entry = data.entry || {};
-        setCollectionDate(entry.collection_date || new Date().toISOString().slice(0, 10));
+        setCollectionDate(data.collection_date || entry.collection_date || new Date().toISOString().slice(0, 10));
         setPaymentMethod('');
-        setReferenceNumber(entry.default_reference || '');
-        setPayerName(entry.customer_name || '');
-        setAmount(String(entry.default_amount ?? entry.amount_due ?? ''));
+        setReferenceNumber(data.default_reference || entry.default_reference || '');
+        setPayerName(data.customer_name || entry.customer_name || '');
+        setAmount(String(data.default_amount ?? entry.default_amount ?? data.amount_due ?? entry.amount_due ?? ''));
         setPaymentNotes('');
-        setCurrency((entry.currencies || [{ code: 'TZS' }])[0]?.code || 'TZS');
+        const currencies = data.currencies || entry.currencies || [{ code: 'TZS' }];
+        setCurrency(currencies[0]?.code || 'TZS');
       } catch (err) {
         if (!cancelled) {
           setError(err instanceof Error ? err.message : 'Could not load payment form.');
@@ -68,7 +190,9 @@ export default function InvoiceRegisterPaymentModal({ entryId, onClose, onSucces
   }, [onClose]);
 
   const entry = init?.entry || {};
-  const maxAmount = Number(entry.amount_due) || 0;
+  const customerName = init?.customer_name || entry.customer_name || '';
+  const voucherNumber = init?.voucher_number || entry.voucher_number || `#${entryId}`;
+  const maxAmount = Number(init?.amount_due ?? entry.amount_due ?? 0) || 0;
   const depositBucket = depositBucketForPayment(paymentMethod);
 
   const filteredAccounts = useMemo(() => {
@@ -128,7 +252,7 @@ export default function InvoiceRegisterPaymentModal({ entryId, onClose, onSucces
       formData.set('collection_date', collectionDate);
       formData.set('payment_method', paymentMethod);
       formData.set('reference_number', referenceNumber);
-      formData.set('payer_name', payerName || entry.customer_name || 'Customer');
+      formData.set('payer_name', payerName || customerName || 'Customer');
       formData.set('account_id', accountId);
       formData.set('currency', currency);
       formData.set('amount_collected', amount);
@@ -158,9 +282,15 @@ export default function InvoiceRegisterPaymentModal({ entryId, onClose, onSucces
           <div>
             <h2 id="inv-pay-title">Record payment</h2>
             <p className="rev-pay-sub">
-              {entry.voucher_number || `#${entryId}`}
-              {entry.customer_name ? ` - ${entry.customer_name}` : ''}
+              {voucherNumber}
+              {customerName ? ` · ${customerName}` : ''}
             </p>
+            {!loading ? (
+              <p className="rev-pay-balance">
+                Balance due
+                <strong>{currency} {money(maxAmount)}</strong>
+              </p>
+            ) : null}
           </div>
           <button type="button" className="rev-pay-close" onClick={onClose} aria-label="Close">
             <X size={18} />
@@ -175,60 +305,60 @@ export default function InvoiceRegisterPaymentModal({ entryId, onClose, onSucces
         ) : (
           <form className="rev-pay-form" onSubmit={handleSubmit}>
             <div className="rev-pay-body">
-              <section className="rev-pay-section">
-                <h3 className="rev-pay-section-title">Payment details</h3>
-                <div className="rev-pay-form-grid">
-                  <div className="rev-pay-field">
-                    <label htmlFor="inv-pay-date">Payment date *</label>
-                    <input
-                      id="inv-pay-date"
-                      type="date"
-                      value={collectionDate}
-                      onChange={(e) => setCollectionDate(e.target.value)}
-                      required
-                    />
-                  </div>
+              <div className="rev-pay-form-grid">
+                <div className="rev-pay-field">
+                  <label htmlFor="inv-pay-date">Payment date *</label>
+                  <input
+                    id="inv-pay-date"
+                    type="date"
+                    value={collectionDate}
+                    onChange={(e) => setCollectionDate(e.target.value)}
+                    required
+                  />
+                </div>
 
-                  <div className="rev-pay-field">
-                    <label htmlFor="inv-pay-method">Payment method *</label>
-                    <select
-                      id="inv-pay-method"
-                      value={paymentMethod}
-                      onChange={(e) => {
-                        setPaymentMethod(e.target.value);
-                        setAccountId('');
-                      }}
-                      required
-                    >
-                      <option value="">Select method</option>
-                      {(init?.payment_methods || []).map((method) => (
-                        <option key={method} value={method}>{method}</option>
-                      ))}
-                    </select>
-                  </div>
+                <div className="rev-pay-field">
+                  <label htmlFor="inv-pay-method">Payment method *</label>
+                  <select
+                    id="inv-pay-method"
+                    value={paymentMethod}
+                    onChange={(e) => {
+                      setPaymentMethod(e.target.value);
+                      setAccountId('');
+                    }}
+                    required
+                  >
+                    <option value="">Select method</option>
+                    {(init?.payment_methods || []).map((method) => (
+                      <option key={method} value={method}>{method}</option>
+                    ))}
+                  </select>
+                </div>
 
-                  <div className="rev-pay-field">
-                    <label htmlFor="inv-pay-account">Payment account *</label>
-                    <select
-                      id="inv-pay-account"
-                      value={accountId}
-                      onChange={(e) => setAccountId(e.target.value)}
-                      required
-                      disabled={!paymentMethod}
-                    >
-                      <option value="">
-                        {paymentMethod ? 'Select account' : 'Select payment method first'}
-                      </option>
-                      {filteredAccounts.map((acc) => (
-                        <option key={acc.id} value={acc.id}>
-                          {acc.name}{acc.currency ? ` (${acc.currency})` : ''}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                <div className="rev-pay-field">
+                  <label id="inv-pay-account-label">Payment account *</label>
+                  <PaymentAccountPicker
+                    accounts={filteredAccounts}
+                    value={accountId}
+                    onChange={setAccountId}
+                    disabled={!paymentMethod}
+                    placeholder={paymentMethod ? 'Select account' : 'Select payment method first'}
+                  />
+                  <input
+                    type="text"
+                    value={accountId}
+                    required
+                    tabIndex={-1}
+                    aria-labelledby="inv-pay-account-label"
+                    className="rev-pay-acc-hidden-required"
+                    onChange={() => {}}
+                  />
+                </div>
 
-                  <div className="rev-pay-field">
-                    <label htmlFor="inv-pay-amount">amount *</label>
+                <div className="rev-pay-field">
+                  <label htmlFor="inv-pay-amount">Amount *</label>
+                  <div className="rev-pay-amount-wrap">
+                    <span className="rev-pay-amount-currency">{currency}</span>
                     <input
                       id="inv-pay-amount"
                       type="number"
@@ -238,26 +368,23 @@ export default function InvoiceRegisterPaymentModal({ entryId, onClose, onSucces
                       value={amount}
                       onChange={(e) => setAmount(e.target.value)}
                       className={amountMeetsRequired ? 'rev-pay-input--met' : 'rev-pay-input--under'}
-                      style={{ color: amountColor, WebkitTextFillColor: amountColor, fontWeight: 600 }}
+                      style={{ color: amountColor, WebkitTextFillColor: amountColor }}
                       required
                     />
                   </div>
-
-                  <div className="rev-pay-field">
-                    <label htmlFor="inv-pay-notes">Notes</label>
-                    <input
-                      id="inv-pay-notes"
-                      type="text"
-                      value={paymentNotes}
-                      onChange={(e) => setPaymentNotes(e.target.value)}
-                      placeholder="Optional"
-                    />
-                  </div>
                 </div>
-              </section>
 
-              <section className="rev-pay-section">
-                <h3 className="rev-pay-section-title">Payment proof</h3>
+                <div className="rev-pay-field rev-pay-field--full">
+                  <label htmlFor="inv-pay-notes">Notes</label>
+                  <input
+                    id="inv-pay-notes"
+                    type="text"
+                    value={paymentNotes}
+                    onChange={(e) => setPaymentNotes(e.target.value)}
+                    placeholder="Optional"
+                  />
+                </div>
+
                 <div className="rev-pay-field rev-pay-field--full">
                   <label htmlFor="inv-pay-proof">SWIFT / bank slip *</label>
                   <button
@@ -267,10 +394,10 @@ export default function InvoiceRegisterPaymentModal({ entryId, onClose, onSucces
                   >
                     <Upload className="rev-pay-upload-icon" size={18} aria-hidden="true" />
                     <span className="rev-pay-upload-text">
-                      {attachment ? attachment.name : 'Click to choose PDF, image, or document'}
+                      {attachment ? attachment.name : 'Choose PDF, image, or document'}
                     </span>
                     <span className="rev-pay-upload-action">
-                      {attachment ? 'Change file' : 'Browse'}
+                      {attachment ? 'Change' : 'Browse'}
                     </span>
                   </button>
                   <input
@@ -283,7 +410,7 @@ export default function InvoiceRegisterPaymentModal({ entryId, onClose, onSucces
                     required
                   />
                 </div>
-              </section>
+              </div>
 
               {error ? (
                 <div className="rev-pay-alert" role="alert">{error}</div>

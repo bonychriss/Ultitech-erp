@@ -22,6 +22,7 @@ import InvoiceViewToolbar from '../components/InvoiceViewToolbar.jsx';
 import InvoiceDownloadModal from '../components/InvoiceDownloadModal.jsx';
 import InvoiceDocumentPane from '../components/InvoiceDocumentPane.jsx';
 import InvoiceDocumentsCard from '../components/InvoiceDocumentsCard.jsx';
+import InvoicePaymentsCard from '../components/InvoicePaymentsCard.jsx';
 import InvoiceRegisterPaymentModal from '../components/InvoiceRegisterPaymentModal.jsx';
 
 function getDeskCfg() {
@@ -418,6 +419,11 @@ export default function InvoiceViewPage() {
       <InvoiceDocumentPane
         html={documentHtml}
         fontFamily={documentFontFamily}
+      />
+
+      <InvoicePaymentsCard
+        payments={data?.payments}
+        currency={invoice?.currency || 'TZS'}
       />
 
       <InvoiceDocumentsCard

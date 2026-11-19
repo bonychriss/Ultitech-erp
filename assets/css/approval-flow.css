@@ -91,7 +91,7 @@
 .approval-card .approval-header .vv-approval-flow-title {
     margin: 0 !important;
     font-size: 18px !important;
-    font-weight: 800 !important;
+    font-weight: 500 !important;
     color: #111827 !important;
     font-family: 'Poppins', system-ui, sans-serif !important;
 }
@@ -106,7 +106,7 @@
     border: 1px solid #bbf7d0 !important;
     padding: 5px 12px !important;
     border-radius: 999px !important;
-    font-weight: 700 !important;
+    font-weight: 500 !important;
     font-size: 13px !important;
     white-space: nowrap !important;
 }
@@ -263,7 +263,7 @@
     align-items: center !important;
     justify-content: center !important;
     font-size: 14px !important;
-    font-weight: 800 !important;
+    font-weight: 500 !important;
     letter-spacing: -0.03em !important;
     border-radius: 50% !important;
     border: 1px solid transparent !important;
@@ -296,7 +296,7 @@
 }
 
 .approval-card .approval-role {
-    font-weight: 800 !important;
+    font-weight: 500 !important;
     color: #111827 !important;
     margin-bottom: 3px !important;
     font-size: 14px !important;
@@ -305,7 +305,7 @@
 
 .approval-card .approval-name {
     font-size: 13px !important;
-    font-weight: 600 !important;
+    font-weight: 500 !important;
     color: #6b7280 !important;
     letter-spacing: 0.03em !important;
     text-transform: uppercase !important;

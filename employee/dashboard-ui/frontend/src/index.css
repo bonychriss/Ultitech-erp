@@ -201,7 +201,7 @@
 }
 .ed-suggest-payee {
   font-size: 13px;
-  font-weight: 700;
+  font-weight: 500;
   color: #0f172a;
   white-space: nowrap;
   overflow: hidden;
@@ -209,7 +209,7 @@
 }
 .ed-suggest-vno {
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 400;
   color: #475569;
   font-variant-numeric: tabular-nums;
 }
@@ -219,7 +219,7 @@
 }
 .ed-suggest-amt {
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 500;
   color: #0f172a;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
@@ -291,9 +291,19 @@ html[data-theme="dark"] .ed-card.ed-card--list {
 .ed-kpi:hover { transform: translateY(-1px); box-shadow: 0 6px 14px rgba(15, 23, 42, .06); }
 .ed-kpi-text { min-width: 0; display: flex; flex-direction: column; gap: 0; }
 .ed-kpi-label { font-size: 11px; color: #000; font-weight: 500; line-height: 1.2; }
-.ed-kpi-value { font-size: 15px; font-weight: 700; letter-spacing: -0.02em; margin: 1px 0; color: #000; white-space: nowrap; line-height: 1.2; }
+.ed-kpi-value { font-size: 15px; font-weight: 500; letter-spacing: -0.02em; margin: 1px 0; color: #000; white-space: nowrap; line-height: 1.2; }
 .ed-kpi--wide .ed-kpi-value { font-size: 12.5px; }
 .ed-kpi-sub { font-size: 10px; color: var(--ed-faint); font-weight: 500; line-height: 1.2; }
+.ed-page--credit .ed-kpi-label,
+.ed-page--credit .ed-kpi-value,
+.ed-page--credit .ed-kpi-sub,
+.ed-page--credit .ed-card-title,
+.ed-page--credit .ed-card-title-link {
+  font-weight: 500;
+}
+.ed-page--credit .ed-kpi-value {
+  letter-spacing: 0;
+}
 .ed-sub--amber { color: var(--ed-amber); }
 .ed-sub--green { color: var(--ed-green); }
 .ed-sub--blue { color: var(--ed-blue); }
@@ -319,7 +329,9 @@ html[data-theme="dark"] .ed-card.ed-card--list {
 .ed-col-span-2 { grid-column: span 2; }
 
 .ed-card-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
-.ed-card-title { font-size: 15px; font-weight: 700; margin: 0; color: #111827; }
+.ed-card-head--export-only { justify-content: flex-end; margin-bottom: 8px; }
+.ed-card-title-spacer { display: none; }
+.ed-card-title { font-size: 15px; font-weight: 500; margin: 0; color: #111827; }
 .ed-card-title-link {
   color: inherit;
   text-decoration: none;
@@ -328,6 +340,16 @@ html[data-theme="dark"] .ed-card.ed-card--list {
 .ed-card-link { font-size: 12px; color: var(--ed-indigo); text-decoration: none; font-weight: 600; }
 .ed-card-link:hover { text-decoration: underline; }
 .ed-empty { padding: 28px 10px; text-align: center; color: var(--ed-faint); font-size: 13px; }
+.ed-table-wrap--empty {
+  min-height: 220px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+}
+.ed-table-wrap--empty .ed-empty {
+  padding: 48px 16px;
+}
 
 /* ---- Table (matches All Vouchers desk) ---- */
 .ed-table-wrap {
@@ -352,7 +374,7 @@ html[data-theme="dark"] .ed-card.ed-card--list {
 .ed-table thead th {
   background: #1e293b;
   color: #f8fafc;
-  font-weight: 600;
+  font-weight: 500;
   text-transform: uppercase;
   font-size: 11px;
   letter-spacing: .04em;
@@ -386,7 +408,7 @@ html[data-theme="dark"] .ed-card.ed-card--list {
 }
 .ed-ta-right { text-align: right; }
 .ed-ta-center { text-align: center; }
-.ed-vno { font-weight: 600; font-size: 0.72rem; color: #334155; white-space: nowrap; overflow: visible; text-overflow: clip; }
+.ed-vno { font-weight: 400; font-size: 0.72rem; color: #334155; white-space: nowrap; overflow: visible; text-overflow: clip; }
 .ed-muted { color: #94a3b8; white-space: nowrap; }
 
 /* ---- Voucher status badges (matches my-vouchers) ---- */
@@ -397,7 +419,7 @@ html[data-theme="dark"] .ed-card.ed-card--list {
   padding: 3px 8px;
   border-radius: 6px;
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 500;
 }
 /* Compact badges inside desk tables — inline on the row, not stacked above content */
 .ed-table .ed-vbadge {
@@ -416,6 +438,8 @@ html[data-theme="dark"] .ed-card.ed-card--list {
 .ed-vbadge--posted { background: #fef9c3; color: #a16207; }
 .ed-vbadge--paid { background: #dcfce7; color: #16a34a; }
 .ed-vbadge--approved { background: #dbeafe; color: #1d4ed8; }
+.ed-vbadge--unpaid { background: #fee2e2; color: #b91c1c; }
+.ed-vbadge--partial { background: #ffedd5; color: #c2410c; }
 .ed-vbadge--pending { background: #fff4de; color: #b45309; }
 .ed-vbadge--confirming { background: #fee2e2; color: #dc2626; }
 .ed-vbadge--signed { background: #e0e7ff; color: #3730a3; }
@@ -496,7 +520,7 @@ html[data-theme="dark"] .ed-card.ed-card--list {
   text-overflow: clip;
 }
 .ed-vno {
-  font-weight: 600;
+  font-weight: 400;
   font-size: 0.72rem;
   color: #334155;
   white-space: nowrap;
@@ -504,7 +528,7 @@ html[data-theme="dark"] .ed-card.ed-card--list {
   text-overflow: clip;
 }
 .ed-amt {
-  font-weight: 600;
+  font-weight: 500;
   color: #334155;
   white-space: nowrap;
   text-align: right;
@@ -578,7 +602,7 @@ html[data-theme="dark"] .ed-card.ed-card--list {
   border-radius: 10px;
   background: #f0fdf4;
 }
-.ed-bulk-count { font-size: 13px; font-weight: 700; color: #166534; margin-right: 6px; }
+.ed-bulk-count { font-size: 13px; font-weight: 500; color: #166534; margin-right: 6px; }
 .ed-bulk-btn {
   display: inline-flex;
   align-items: center;
@@ -731,7 +755,7 @@ html[data-theme="dark"] .ed-menu-item:hover { background: #0f172a; color: #f8faf
 .ed-payees { display: grid; gap: 14px; }
 .ed-payee-top { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
 .ed-payee-name { font-size: 13px; color: #374151; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.ed-payee-amt { font-size: 12px; font-weight: 700; color: #111827; }
+.ed-payee-amt { font-size: 12px; font-weight: 500; color: #111827; }
 .ed-payee-bar { height: 6px; background: #f1f5f9; border-radius: 999px; overflow: hidden; }
 .ed-payee-bar span { display: block; height: 100%; border-radius: 999px; background: #6d5df6; }
 
@@ -975,13 +999,13 @@ html[data-theme="dark"] .ed-modal-label input[type="file"] {
   .ed-table.ed-table--full td.ed-vno {
     grid-area: vno;
     font-size: 13px;
-    font-weight: 700;
+    font-weight: 400;
     white-space: normal;
     overflow: visible !important;
   }
   .ed-table.ed-table--full td.ed-payee-cell {
     grid-area: payee;
-    font-weight: 600;
+    font-weight: 400;
     color: #0f172a;
     white-space: normal;
     overflow: visible !important;
@@ -1721,7 +1745,7 @@ html[data-theme="dark"] .ed-export-pdf-shortcut.is-active {
   .ed-table-wrap .ed-table thead th {
     background: #fff;
     color: #111827;
-    font-weight: 700;
+    font-weight: 500;
     font-size: 13px;
     text-transform: none;
     letter-spacing: 0;
@@ -1753,7 +1777,7 @@ html[data-theme="dark"] .ed-export-pdf-shortcut.is-active {
   .ed-table-wrap .ed-table--full td.ed-vno,
   .ed-table-wrap .ed-vno {
     font-size: 13px;
-    font-weight: 600;
+    font-weight: 400;
     color: #111827;
     white-space: nowrap;
     overflow: visible;
@@ -1778,19 +1802,24 @@ html[data-theme="dark"] .ed-export-pdf-shortcut.is-active {
   }
   .ed-table-wrap .ed-amt {
     font-size: 13px;
+    font-weight: 500;
     color: #111827;
   }
   .ed-table-wrap .ed-date-cell { color: #374151; }
   .ed-table-wrap .ed-date-cell small { color: #9ca3af; font-size: 12px; }
   .ed-table-wrap .ed-table .ed-vbadge {
     font-size: 12.5px;
-    font-weight: 600;
+    font-weight: 500;
     padding: 0;
     border-radius: 0;
     background: transparent !important;
   }
   .ed-table-wrap .ed-table .ed-vbadge--pending,
   html[data-theme="dark"] .ed-table-wrap .ed-table .ed-vbadge--pending { color: var(--ed-amber); }
+  .ed-table-wrap .ed-table .ed-vbadge--unpaid,
+  html[data-theme="dark"] .ed-table-wrap .ed-table .ed-vbadge--unpaid { color: #ef4444; }
+  .ed-table-wrap .ed-table .ed-vbadge--partial,
+  html[data-theme="dark"] .ed-table-wrap .ed-table .ed-vbadge--partial { color: #fb923c; }
   html[data-theme="dark"] .ed-table-wrap .ed-table .ed-vbadge--posted { color: #facc15; }
   html[data-theme="dark"] .ed-table-wrap .ed-table .ed-vbadge--paid { color: #4ade80; }
   html[data-theme="dark"] .ed-table-wrap .ed-table .ed-vbadge--approved { color: #60a5fa; }

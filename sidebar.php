@@ -628,12 +628,61 @@ switch ($active_module) {
         break;
 
     case 'accounting':
-        // Module cards on the hub cover Balances / Revenues / Expenses / Purchases /
-        // Cash Book / Journal / Reconciliation — hide those sidebar duplicates.
         if ($is_admin) {
             addItem($menuItems, 'ai_assistant', 'AI Assistant', 'stars', $prefix . 'admin/ai_assistant.php?module=accounting');
         } else {
             addItem($menuItems, 'ai_assistant', 'AI Assistant', 'stars', $prefix . 'employee/ai_assistant.php?module=accounting');
+        }
+
+        // New Accounting module (in-ERP upgrade) + classic hub fallback.
+        $__uaHelper = __DIR__ . '/includes/ultitech_accounting_bridge.php';
+        if (is_file($__uaHelper)) {
+            require_once $__uaHelper;
+        }
+        $__uaMode = function_exists('ultitech_accounting_mode') ? ultitech_accounting_mode() : 'off';
+        if ($__uaMode !== 'off' && function_exists('ultitech_accounting_bridge_path')) {
+            $__uaSlug = (string) ($currentSlug ?? ($_SESSION['company_slug'] ?? ''));
+            $__ua = static function (string $hash = '') use ($__uaSlug): string {
+                return ultitech_accounting_bridge_path($__uaSlug, $hash);
+            };
+            addItem($menuItems, 'ua-dashboard', 'Dashboard', 'layout-wtf', $__ua('/'));
+            addItem($menuItems, 'ua-balances', 'Balances', 'wallet2', $__ua('/banking'));
+            addItem($menuItems, 'ua-revenue', 'Revenue', 'cash-coin', $__ua('/revenue'));
+            addItem($menuItems, 'ua-purchases', 'Purchases', 'cart-check', $__ua('/purchases'));
+            addItem($menuItems, 'ua-journals', 'Journal Entries', 'journal-text', $__ua('/journals'));
+            addItem($menuItems, 'ua-vat', 'VAT Control', 'percent', $__ua('/tax'));
+            addParentItem($menuItems, 'ua-statements', 'Financial Statements', 'file-earmark-bar-graph', [
+                [
+                    'id' => 'ua-trial-balance',
+                    'label' => 'Trial Balance',
+                    'icon' => 'table',
+                    'path' => $__ua('/trial-balance'),
+                ],
+                [
+                    'id' => 'ua-fs',
+                    'label' => 'Statements',
+                    'icon' => 'file-earmark-text',
+                    'path' => $__ua('/financial-statements'),
+                ],
+                [
+                    'id' => 'ua-coa',
+                    'label' => 'Chart of Accounts',
+                    'icon' => 'list-ul',
+                    'path' => $__ua('/accounts'),
+                ],
+            ]);
+            addItem($menuItems, 'ua-recon', 'Reconciliation', 'link-45deg', $__ua('/reconciliation'));
+            addItem($menuItems, 'ua-settings', 'Accounting Settings', 'gear', $__ua('/settings'));
+            addItem($menuItems, 'ua-erp-link', 'ERP Data Link', 'arrow-left-right', $__ua('/erp'));
+            if (function_exists('ultitech_accounting_classic_path')) {
+                addItem(
+                    $menuItems,
+                    'ua-classic',
+                    'Classic Accounting',
+                    'clock-history',
+                    ultitech_accounting_classic_path($__uaSlug)
+                );
+            }
         }
         break;
 
@@ -713,6 +762,7 @@ switch ($active_module) {
             addItem($menuItems, 'ai_assistant', 'AI Assistant', 'stars', $prefix . 'admin/ai_assistant.php?module=voucher');
             addItem($menuItems, 'create', 'Create Voucher', 'file-plus', $prefix . 'employee/create-voucher.php?module=voucher');
             addItem($menuItems, 'all', 'View All', 'collection', $prefix . 'admin/all-vouchers.php?module=voucher');
+            addItem($menuItems, 'credit-vouchers', 'Credit Vouchers', 'credit-card', $prefix . 'admin/dashboard.php?module=voucher&payment=credit');
             addItem($menuItems, 'users', 'Manage Users', 'people-fill', $prefix . 'admin/manage-users.php?module=voucher');
             addItem($menuItems, 'reports', 'Reports', 'bar-chart-line', $prefix . 'admin/reports.php?module=voucher');
             addItem($menuItems, 'payees', 'Manage Payees', 'person-lines-fill', $prefix . 'admin/manage-payees.php?module=voucher');
@@ -721,6 +771,7 @@ switch ($active_module) {
             addItem($menuItems, 'create', 'Create Voucher', 'file-plus', $prefix . 'employee/create-voucher.php?module=voucher');
             addItem($menuItems, 'create-payee', 'Manage Payees', 'person-lines-fill', $prefix . 'employee/manage-payees.php?module=voucher');
             addItem($menuItems, 'view', 'My Vouchers', 'ticket-detailed', $prefix . 'employee/my-vouchers.php?module=voucher');
+            addItem($menuItems, 'credit-vouchers', 'Credit Vouchers', 'credit-card', $prefix . 'admin/dashboard.php?module=voucher&payment=credit');
             addItem($menuItems, 'bulk-upload', 'Upload', 'upload', $prefix . 'employee/bulk-upload-vouchers.php?module=voucher');
             addItem($menuItems, 'export', 'Download Excel', 'download', $prefix . 'export_confirm.php');
         }
@@ -1059,6 +1110,7 @@ if (!function_exists('isSidebarActive')) {
         $linkParts = parse_url($path);
         $path_parsed = $linkParts['path'] ?? '';
         $linkQuery = isset($linkParts['query']) ? (string) $linkParts['query'] : '';
+        $linkFrag = isset($linkParts['fragment']) ? ltrim((string) $linkParts['fragment'], '/') : '';
 
         $curParts = parse_url($current_uri);
         $curPath = $curParts['path'] ?? '';
@@ -1067,6 +1119,12 @@ if (!function_exists('isSidebarActive')) {
             $path = rtrim(str_replace('\\', '/', (string) $path), '/');
             return (string) preg_replace('#/(index)?\.php$#', '', $path);
         };
+
+        // Hash routes (new Accounting): browser does not send fragments to PHP, so never
+        // mark these active on the server — client script syncs from location.hash.
+        if ($linkFrag !== '' || str_contains((string) $path, 'ultitech-bridge')) {
+            return '';
+        }
 
         // Links with a query string: require same path and matching query keys (e.g. uploads ?folder=&images=)
         if ($linkQuery !== '') {

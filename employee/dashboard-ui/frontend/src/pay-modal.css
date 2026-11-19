@@ -40,9 +40,41 @@
   display: grid; gap: 2px; margin: 0 0 10px; padding: 9px 12px; border-radius: 9px;
   background: #f8fafc; color: #374151; font-size: 13px;
 }
-.vv-pay-modal__summary strong { color: #111827; font-weight: 600; }
+.vv-pay-modal__summary strong { color: #374151; font-weight: 500; }
 .vv-pay-modal__field { display: flex; flex-direction: column; gap: 3px; margin: 0 0 8px; }
 .vv-pay-modal__field > label:first-child { color: #374151; font-size: 14px; font-weight: 500; }
+.vv-pay-modal__amount-wrap {
+  display: flex; align-items: stretch; min-height: 44px; border: 1px solid #d1d5db; border-radius: 9px;
+  background: #fff; overflow: hidden;
+}
+.vv-pay-modal__amount-currency {
+  display: inline-flex; align-items: center; padding: 0 12px; border-right: 1px solid #e5e7eb;
+  background: #f8fafc; color: #6b7280; font-size: 13px; font-weight: 500;
+}
+.vv-pay-modal__amount-input {
+  flex: 1; min-width: 0; border: 0; outline: none; padding: 10px 12px; background: transparent;
+  color: #111827; font-size: 15px; font-weight: 400;
+}
+.vv-pay-modal__amount-input.is-full { color: #15803d; }
+.vv-pay-modal__amount-input.is-partial { color: #b45309; }
+.vv-pay-modal__amount-input.has-error { color: #b42318; }
+.vv-pay-modal__amount-wrap:focus-within { border-color: #08734d; box-shadow: 0 0 0 3px rgba(8, 115, 77, 0.12); }
+.vv-pay-modal__amount-hint { color: #6b7280; font-size: 11px; line-height: 1.35; }
+.vv-pay-modal__prior {
+  margin: 0 0 10px; padding: 9px 12px; border-radius: 9px;
+  border: 1px solid #e5e7eb; background: #fff;
+}
+.vv-pay-modal__prior-title {
+  margin: 0 0 6px; color: #4b5563; font-size: 12px; font-weight: 500;
+}
+.vv-pay-modal__prior-list {
+  display: grid; gap: 6px; margin: 0; padding: 0; list-style: none;
+}
+.vv-pay-modal__prior-list li {
+  display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 12px;
+}
+.vv-pay-modal__prior-amount { color: #111827; font-size: 13px; font-weight: 500; }
+.vv-pay-modal__prior-meta { color: #6b7280; font-size: 12px; }
 .vv-pay-modal__account-picker { position: relative; width: 100%; }
 .vv-pay-modal__account-picker > summary {
   display: flex; min-height: 48px; box-sizing: border-box; padding: 6px 12px; align-items: center; gap: 10px;
@@ -166,6 +198,17 @@ html[data-theme="dark"] .vv-pay-modal__field > label:first-child,
 html[data-theme="dark"] .vv-pay-modal__summary,
 html[data-theme="dark"] .vv-pay-modal__account-balance,
 html[data-theme="dark"] .vv-pay-modal__close { color: #e9edef; }
+html[data-theme="dark"] .vv-pay-modal__amount-wrap { background: #0b141a; border-color: #2a3942; }
+html[data-theme="dark"] .vv-pay-modal__amount-currency { background: #111b21; border-right-color: #2a3942; color: #8696a0; }
+html[data-theme="dark"] .vv-pay-modal__amount-input { color: #e9edef; }
+html[data-theme="dark"] .vv-pay-modal__amount-input.is-full { color: #4ade80; }
+html[data-theme="dark"] .vv-pay-modal__amount-input.is-partial { color: #fbbf24; }
+html[data-theme="dark"] .vv-pay-modal__amount-hint { color: #8696a0; }
+html[data-theme="dark"] .vv-pay-modal__amount-wrap:focus-within { border-color: #4ade80; box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.18); }
+html[data-theme="dark"] .vv-pay-modal__prior { background: #0b141a; border-color: #2a3942; }
+html[data-theme="dark"] .vv-pay-modal__prior-title,
+html[data-theme="dark"] .vv-pay-modal__prior-meta { color: #8696a0; }
+html[data-theme="dark"] .vv-pay-modal__prior-amount { color: #e9edef; }
 html[data-theme="dark"] .vv-pay-modal__icon { background: rgba(34, 197, 94, 0.16); color: #4ade80; }
 html[data-theme="dark"] .vv-pay-modal__summary { background: #0b141a; }
 html[data-theme="dark"] .vv-pay-modal__account-picker > summary { background: #0b141a; border-color: #2a3942; color: #e9edef; }

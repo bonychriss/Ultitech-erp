@@ -758,6 +758,14 @@ function salesInvoiceViewLoadContext(int $id): array
 
     $supportingDocs = salesInvoiceViewCollectSupportingDocuments($salesDb, $revEntryId);
 
+    $ordersViewLib = dirname(__DIR__, 2) . '/orders/includes/orders-view-lib.php';
+    if (is_file($ordersViewLib)) {
+        require_once $ordersViewLib;
+    }
+    $payments = function_exists('salesOrderViewCollectPayments')
+        ? salesOrderViewCollectPayments($salesDb, $revEntryId, (string) $currency, $id)
+        : [];
+
     $createFlash = null;
     if (session_status() === PHP_SESSION_NONE) {
         session_start();
@@ -823,6 +831,7 @@ function salesInvoiceViewLoadContext(int $id): array
             'show_catalogue' => (bool) $share['show_catalogue'],
         ],
         'revenue_entry_id' => $revEntryId,
+        'payments' => $payments,
         'attachments' => $supportingDocs['attachments'],
         'documents' => $supportingDocs['documents'],
         'document_html' => salesInvoiceViewRenderDocumentHtml(

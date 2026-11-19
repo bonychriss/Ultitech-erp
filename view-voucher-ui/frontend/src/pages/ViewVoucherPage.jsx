@@ -6,6 +6,7 @@ import { showToast } from '../toast.js'
 import VoucherPreview from '../components/VoucherPreview.jsx'
 import VoucherActions from '../components/VoucherActions.jsx'
 import ApprovalFlowCard from '../components/ApprovalFlowCard.jsx'
+import ApprovalCommentsCard from '../components/ApprovalCommentsCard.jsx'
 import DocumentsCard from '../components/DocumentsCard.jsx'
 import { MarkPaidModal, AdminApprovalModal, DocPreviewModal, ApproveModal } from '../components/Modals.jsx'
 
@@ -243,6 +244,16 @@ export default function ViewVoucherPage() {
             </div>
           </div>
 
+          <ApprovalCommentsCard
+            data={data}
+            onCommentsChange={(updater) => {
+              setData((prev) => ({
+                ...prev,
+                comments: typeof updater === 'function' ? updater(prev.comments || []) : updater,
+              }))
+            }}
+          />
+
           <ApprovalFlowCard data={data} />
 
           <DocumentsCard
@@ -251,31 +262,6 @@ export default function ViewVoucherPage() {
             onDeleteAttachment={deleteAttachment}
             onUnlinkOrder={unlinkOrder}
           />
-
-          {data.comments.length > 0 && (
-            <div style={{ marginTop: 24, borderTop: '1px solid #e5e7eb', paddingTop: 20 }} className="no-print">
-              <h3 style={{ fontSize: 16, fontWeight: 600, color: '#111', marginBottom: 12 }}>Approval Comments</h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                {data.comments.map((vc, i) => {
-                  const actionLabel = String(vc.action || '').replace(/_/g, ' ').trim()
-                  return (
-                    <div key={i} style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 8, padding: 12 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                        <span style={{ fontSize: 13, fontWeight: 600, color: '#374151' }}>
-                          {vc.full_name || 'User'}
-                          {actionLabel ? (
-                            <span style={{ fontWeight: 400, color: '#6b7280' }}>{` (${actionLabel})`}</span>
-                          ) : null}
-                        </span>
-                        <span style={{ fontSize: 11, color: '#9ca3af' }}>{new Date(vc.created_at).toLocaleString()}</span>
-                      </div>
-                      <div style={{ fontSize: 14, color: '#1f2937', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{vc.comments}</div>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-          )}
         </div>
       </div>
 

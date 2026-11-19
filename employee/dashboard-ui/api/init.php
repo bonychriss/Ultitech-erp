@@ -6,6 +6,10 @@
  */
 require_once __DIR__ . '/../../../includes/functions.php';
 requireLogin();
+// Release the session lock so parallel desk/notifications requests do not block or race.
+if (session_status() === PHP_SESSION_ACTIVE) {
+    session_write_close();
+}
 
 header('Content-Type: application/json; charset=utf-8');
 

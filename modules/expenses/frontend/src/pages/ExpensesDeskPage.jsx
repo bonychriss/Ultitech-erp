@@ -31,17 +31,23 @@ import {
   deskPageUrl,
   fetchDeskExpenses,
   fetchDeskInit,
+  isCreditDesk,
   isPurchasesDesk,
+  isVoucherListDesk,
   purchasesVoucherViewUrl,
 } from '../api/expensesDesk';
 import { exportExpensesExcel, exportExpensesPdf } from '../utils/exportExpenses';
 import { formatDateDigits, formatVoucherRef } from '../utils/formatDisplay';
 import { isPurchasesKpiKey, resolveKpiTrace } from '../utils/kpiTrace';
-import { buildListedSummaryStats, buildPurchasesSummaryStats } from '../utils/summaryStats';
+import {
+  buildCreditSummaryStats,
+  buildListedSummaryStats,
+  buildPurchasesSummaryStats,
+} from '../utils/summaryStats';
 
 function expenseKpiKeyFromLocation() {
   if (typeof window === 'undefined') return '';
-  if (window.__EXPENSES_DESK_MODE__ === 'purchases') return '';
+  if (window.__EXPENSES_DESK_MODE__ === 'purchases' || window.__EXPENSES_DESK_MODE__ === 'credit') return '';
   return String(new URLSearchParams(window.location.search).get('kpi') || '').trim();
 }
 
@@ -134,11 +140,15 @@ function isThisMonthRange(filters, now = new Date()) {
 }
 
 function defaultListFilters() {
+  // Credit desk is a payables work queue: unpaid credit vouchers, all time.
+  if (isCreditDesk()) {
+    return { ...emptyFilters, only_unpaid: '1' };
+  }
   return { ...emptyFilters, ...thisMonthDateRange() };
 }
 
 function filterStorageKey() {
-  return `exp-desk-filters:${isPurchasesDesk() ? 'purchases' : 'expenses'}`;
+  return `exp-desk-filters:${isPurchasesDesk() ? 'purchases' : (isCreditDesk() ? 'credit' : 'expenses')}`;
 }
 
 // Saved filters stay until the user clears them or the calendar month changes.
@@ -183,10 +193,19 @@ function filtersFromLocationSearch() {
   const base = defaultListFilters();
   if (typeof window === 'undefined') return base;
   const params = new URLSearchParams(window.location.search);
-  const hasUrlFilters = ['status', 'date_from', 'date_to'].some((k) => params.has(k));
+  const hasUrlFilters = ['status', 'date_from', 'date_to', 'only_unpaid'].some((k) => params.has(k));
   if (!hasUrlFilters) {
     const saved = loadSavedFilters();
-    if (saved) return saved;
+    if (saved) {
+      // Credit desk always starts unpaid unless the URL overrides it.
+      if (isCreditDesk() && saved.only_unpaid !== '0') {
+        return { ...saved, only_unpaid: '1' };
+      }
+      return saved;
+    }
+  }
+  if (isCreditDesk() && params.has('only_unpaid')) {
+    base.only_unpaid = String(params.get('only_unpaid') || '') === '0' ? '' : '1';
   }
   const status = String(params.get('status') || '').trim().toLowerCase();
   const allowed = new Set(['draft', 'posted', 'unposted', 'pending', 'rejected']);
@@ -378,6 +397,8 @@ function ExpenseRowActionsMenu({ menu, onClose, onView, onEdit, onDelete, deleti
 
 export default function ExpensesDeskPage() {
   const purchasesDesk = isPurchasesDesk();
+  const creditDesk = isCreditDesk();
+  const voucherDesk = isVoucherListDesk();
   const initialFilters = filtersFromLocationSearch();
   const [init, setInit] = useState(null);
   const [expenses, setExpenses] = useState([]);
@@ -468,15 +489,17 @@ export default function ExpensesDeskPage() {
     try {
       const rows = await fetchExpensesForExport(range);
       if (isExcel) {
-        await exportExpensesExcel(rows, { purchasesDesk });
+        await exportExpensesExcel(rows, { purchasesDesk: voucherDesk });
       } else {
         const subtitle = range.allTime
           ? 'All time'
           : `${range.startDate} to ${range.endDate}`;
         await exportExpensesPdf(rows, {
-          title: purchasesDesk ? 'Purchases report' : 'Expenses report',
+          title: creditDesk
+            ? 'Credit vouchers report'
+            : (purchasesDesk ? 'Purchases report' : 'Expenses report'),
           subtitle,
-          purchasesDesk,
+          purchasesDesk: voucherDesk,
         });
       }
       setExportModalOpen(false);
@@ -601,8 +624,12 @@ export default function ExpensesDeskPage() {
     { value: 'bank', label: 'Bank transfer' },
   ];
   const summaryStats = useMemo(
-    () => (purchasesDesk ? buildPurchasesSummaryStats(expenses) : buildListedSummaryStats(expenses)),
-    [expenses, purchasesDesk],
+    () => {
+      if (purchasesDesk) return buildPurchasesSummaryStats(expenses);
+      if (creditDesk) return buildCreditSummaryStats(expenses);
+      return buildListedSummaryStats(expenses);
+    },
+    [expenses, purchasesDesk, creditDesk],
   );
   const statusBreakdown = useMemo(
     () => buildStatusBreakdownFromRows(expenses),
@@ -831,7 +858,7 @@ export default function ExpensesDeskPage() {
 
   function openExpenseDetails(expense) {
     setSelectedId(expense.row_key || Number(expense.id) || 0);
-    if (purchasesDesk || expense.source_type === 'voucher' || Number(expense.pv_id) > 0) {
+    if (voucherDesk || expense.source_type === 'voucher' || Number(expense.pv_id) > 0) {
       const voucherUrl = purchasesVoucherViewUrl(expense);
       if (voucherUrl) {
         window.location.href = voucherUrl;
@@ -897,7 +924,7 @@ export default function ExpensesDeskPage() {
           type="text"
           role="searchbox"
           className="exp-desk-search-input"
-          placeholder={purchasesDesk ? 'Search voucher #, payee, description' : 'Search expense #, description, accounts'}
+          placeholder={voucherDesk ? 'Search voucher #, payee, description' : 'Search expense #, description, accounts'}
           value={draftFilters.search}
           onChange={(e) => onSearchChange(e.target.value)}
           onKeyDown={(e) => {
@@ -908,7 +935,7 @@ export default function ExpensesDeskPage() {
             }
             if (e.key === 'Escape') clearSearch(inputRef);
           }}
-          aria-label={purchasesDesk ? 'Search purchases' : 'Search expenses'}
+          aria-label={creditDesk ? 'Search credit vouchers' : (purchasesDesk ? 'Search purchases' : 'Search expenses')}
           autoComplete="off"
         />
         {showClear && (
@@ -1084,9 +1111,11 @@ export default function ExpensesDeskPage() {
             <span className="exp-desk-unpaid-toggle-copy">
               <span className="exp-desk-unpaid-toggle-title">Show only unpaid</span>
               <span className="exp-desk-unpaid-toggle-sub">
-                {purchasesDesk
-                  ? 'Display purchases with pending payments only.'
-                  : 'Display expenses that are not paid yet.'}
+                {creditDesk
+                  ? 'Display credit vouchers still unpaid.'
+                  : (purchasesDesk
+                    ? 'Display purchases with pending payments only.'
+                    : 'Display expenses that are not paid yet.')}
               </span>
             </span>
           </label>
@@ -1119,7 +1148,7 @@ export default function ExpensesDeskPage() {
     );
   }
 
-  if (!purchasesDesk && kpiPageKey) {
+  if (!voucherDesk && kpiPageKey) {
     if (loading) {
       return (
         <div className="exp-desk-page exp-desk-boot-loading" role="status" aria-live="polite">
@@ -1166,7 +1195,7 @@ export default function ExpensesDeskPage() {
           }}
         />
       )}
-      {activeKpiTrace && !purchasesDesk && (
+      {activeKpiTrace && !voucherDesk && (
         <ExpenseKpiTraceModal
           trace={activeKpiTrace.trace}
           traceKey={activeKpiTrace.key}
@@ -1195,7 +1224,7 @@ export default function ExpensesDeskPage() {
           </div>
         );
 
-        const createControl = purchasesDesk ? null : (
+        const createControl = voucherDesk ? null : (
           <button
             type="button"
             className="exp-desk-btn exp-desk-btn-primary exp-desk-btn-create"
@@ -1252,7 +1281,59 @@ export default function ExpensesDeskPage() {
       )}
 
       <section className="exp-desk-kpi-grid exp-desk-kpi-grid--dash" aria-label="Summary">
-        {purchasesDesk ? (
+        {creditDesk ? (
+          <>
+            <button type="button" className="exp-desk-kpi" disabled>
+              <div className="exp-desk-kpi-icon exp-desk-kpi-icon--rose">
+                <CreditCard size={20} aria-hidden="true" />
+              </div>
+              <div className="exp-desk-kpi-body">
+                <div className="exp-desk-kpi-label">Total Credit</div>
+                <KpiMoney amount={summaryStats.total_credit} />
+                <div className="exp-desk-kpi-helper">
+                  {summaryStats.voucher_count
+                    ? `${Number(summaryStats.voucher_count).toLocaleString('en-US')} vouchers`
+                    : 'Credit payment type'}
+                </div>
+              </div>
+            </button>
+            <button type="button" className="exp-desk-kpi" disabled>
+              <div className="exp-desk-kpi-icon exp-desk-kpi-icon--amber">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                  <circle cx="12" cy="12" r="10" />
+                  <path d="M12 6v6l4 2" />
+                </svg>
+              </div>
+              <div className="exp-desk-kpi-body">
+                <div className="exp-desk-kpi-label">Unpaid</div>
+                <KpiMoney amount={summaryStats.unpaid} />
+                <div className="exp-desk-kpi-helper">{formatPctOfTotal(summaryStats.pct_unpaid)}</div>
+              </div>
+            </button>
+            <button type="button" className="exp-desk-kpi" disabled>
+              <div className="exp-desk-kpi-icon exp-desk-kpi-icon--teal">
+                <Wallet size={20} aria-hidden="true" />
+              </div>
+              <div className="exp-desk-kpi-body">
+                <div className="exp-desk-kpi-label">Paid</div>
+                <KpiMoney amount={summaryStats.paid} />
+              </div>
+            </button>
+            <button type="button" className="exp-desk-kpi" disabled>
+              <div className="exp-desk-kpi-icon exp-desk-kpi-icon--violet">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                  <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                  <path d="M12 9v4M12 17h.01" />
+                </svg>
+              </div>
+              <div className="exp-desk-kpi-body">
+                <div className="exp-desk-kpi-label">Overdue</div>
+                <KpiMoney amount={summaryStats.overdue} />
+                <div className="exp-desk-kpi-helper">{formatPctOfTotal(summaryStats.pct_overdue)}</div>
+              </div>
+            </button>
+          </>
+        ) : purchasesDesk ? (
           <>
             <button {...kpiCardProps('totalExclusive', 'Total Exclusive')}>
               <div className="exp-desk-kpi-icon exp-desk-kpi-icon--violet">
@@ -1430,7 +1511,7 @@ export default function ExpensesDeskPage() {
         />
       ) : null}
 
-      <section className="exp-desk-results" aria-label={purchasesDesk ? 'Stock purchase vouchers' : 'Expense entries'}>
+      <section className="exp-desk-results" aria-label={creditDesk ? 'Credit vouchers' : (purchasesDesk ? 'Stock purchase vouchers' : 'Expense entries')}>
         <div className="exp-desk-results-head">
           <div className="exp-desk-results-summary">
             {showingCurrentMonth ? (
@@ -1492,12 +1573,14 @@ export default function ExpensesDeskPage() {
         ) : null}
 
         <>
-          <div className="exp-desk-mobile-cards" aria-label={purchasesDesk ? 'Stock purchase vouchers' : 'Expense entries'}>
+          <div className="exp-desk-mobile-cards" aria-label={creditDesk ? 'Credit vouchers' : (purchasesDesk ? 'Stock purchase vouchers' : 'Expense entries')}>
             {expenses.length === 0 ? (
               <div className="exp-desk-empty exp-desk-empty--mobile">
-                {purchasesDesk
-                  ? 'No Stock Purchase vouchers match your filters.'
-                  : 'No expense entries match your filters.'}
+                {creditDesk
+                  ? 'No credit vouchers match your filters.'
+                  : (purchasesDesk
+                    ? 'No Stock Purchase vouchers match your filters.'
+                    : 'No expense entries match your filters.')}
               </div>
             ) : (
               visibleExpenses.map((expense) => {
@@ -1574,7 +1657,7 @@ export default function ExpensesDeskPage() {
         <div className="exp-desk-table-wrap">
           <table className="exp-desk-table exp-desk-table--ledger">
             <colgroup>
-              <col className={purchasesDesk ? 'col-voucher' : 'col-ref'} style={{ width: '14%' }} />
+              <col className={voucherDesk ? 'col-voucher' : 'col-ref'} style={{ width: '14%' }} />
               <col className="col-date" style={{ width: '9%' }} />
               <col className="col-payee" style={{ width: '18%' }} />
               <col className="col-type" style={{ width: '12%' }} />
@@ -1586,8 +1669,8 @@ export default function ExpensesDeskPage() {
             </colgroup>
             <thead>
               <tr>
-                <th className={purchasesDesk ? 'col-voucher' : 'col-ref'}>
-                  {purchasesDesk ? 'Voucher Entry' : 'Reference'}
+                <th className={voucherDesk ? 'col-voucher' : 'col-ref'}>
+                  {voucherDesk ? 'Voucher Entry' : 'Reference'}
                 </th>
                 <th className="col-date">Date</th>
                 <th className="col-payee">Payee</th>
@@ -1604,9 +1687,11 @@ export default function ExpensesDeskPage() {
                 <tr>
                   <td colSpan={9}>
                     <div className="exp-desk-empty">
-                      {purchasesDesk
-                        ? 'No Stock Purchase vouchers match your filters.'
-                        : 'No expense entries match your filters.'}
+                      {creditDesk
+                        ? 'No credit vouchers match your filters.'
+                        : (purchasesDesk
+                          ? 'No Stock Purchase vouchers match your filters.'
+                          : 'No expense entries match your filters.')}
                     </div>
                   </td>
                 </tr>
@@ -1622,7 +1707,7 @@ export default function ExpensesDeskPage() {
                   const accountLabel = expense.category_name || expense.main_account_name || '';
                   const methodLabel = String(expense.payment_method_label || '').trim() || '—';
                   const TypeIcon = paymentTypeIcon(expense);
-                  const voucherLabel = purchasesDesk
+                  const voucherLabel = voucherDesk
                     ? formatVoucherRef(
                       expense.voucher_entry || expense.expense_number,
                       `#${expense.id}`,
@@ -1642,9 +1727,9 @@ export default function ExpensesDeskPage() {
                         }
                       }}
                     >
-                      <td className={purchasesDesk ? 'col-voucher' : 'col-ref'}>
+                      <td className={voucherDesk ? 'col-voucher' : 'col-ref'}>
                         <span
-                          className={purchasesDesk ? 'exp-desk-voucher' : 'exp-desk-ref'}
+                          className={voucherDesk ? 'exp-desk-voucher' : 'exp-desk-ref'}
                           title={voucherLabel}
                         >
                           {voucherLabel}

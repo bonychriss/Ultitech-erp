@@ -261,12 +261,21 @@ function salesOrderViewDetectTruckOrder(array $order, array $items): bool
 
 function salesOrderViewFindLinkedInvoice(PDO $salesDb, int $orderId): array
 {
+    $empty = [
+        'id' => 0,
+        'invoice_number' => '',
+        'status' => '',
+        'total_amount' => 0.0,
+        'amount_paid' => 0.0,
+        'balance_due' => 0.0,
+    ];
     if ($orderId <= 0) {
-        return ['id' => 0, 'invoice_number' => ''];
+        return $empty;
     }
 
     try {
-        $invoiceCheckSql = 'SELECT id, invoice_number FROM invoices WHERE order_id = ?';
+        $invoiceCheckSql = 'SELECT id, invoice_number, status, total_amount, amount_paid, balance_due
+                            FROM invoices WHERE order_id = ?';
         $invoiceCheckParams = [$orderId];
         if (function_exists('salesAppendCompanyScope')) {
             salesAppendCompanyScope($invoiceCheckSql, $invoiceCheckParams, 'invoices');
@@ -275,21 +284,321 @@ function salesOrderViewFindLinkedInvoice(PDO $salesDb, int $orderId): array
         $stmtCheck->execute($invoiceCheckParams);
         $row = $stmtCheck->fetch(PDO::FETCH_ASSOC);
         if (!$row) {
-            return ['id' => 0, 'invoice_number' => ''];
+            return $empty;
         }
+
+        $total = (float) ($row['total_amount'] ?? 0);
+        $paid = (float) ($row['amount_paid'] ?? 0);
+        $balance = array_key_exists('balance_due', $row) && $row['balance_due'] !== null
+            ? (float) $row['balance_due']
+            : max(0, $total - $paid);
 
         return [
             'id' => (int) ($row['id'] ?? 0),
             'invoice_number' => trim((string) ($row['invoice_number'] ?? '')),
+            'status' => strtolower(trim((string) ($row['status'] ?? ''))),
+            'total_amount' => $total,
+            'amount_paid' => $paid,
+            'balance_due' => $balance,
         ];
     } catch (Throwable $e) {
-        return ['id' => 0, 'invoice_number' => ''];
+        return $empty;
     }
 }
 
 function salesOrderViewFindLinkedInvoiceId(PDO $salesDb, int $orderId): int
 {
     return (int) (salesOrderViewFindLinkedInvoice($salesDb, $orderId)['id'] ?? 0);
+}
+
+/**
+ * @return array<string, mixed>
+ */
+function salesOrderViewFormatPaymentAttachment(string $relPath, string $sub = 'Payment proof'): array
+{
+    $invoiceLib = dirname(__DIR__, 2) . '/invoices/includes/invoices-view-lib.php';
+    if (is_file($invoiceLib)) {
+        require_once $invoiceLib;
+    }
+    if (function_exists('salesInvoiceViewFormatAttachmentRow')) {
+        return salesInvoiceViewFormatAttachmentRow($relPath, 0, $sub);
+    }
+
+    $rel = ltrim(str_replace('\\', '/', $relPath), '/');
+    $name = basename($rel) ?: 'Attachment';
+    $proxyBase = function_exists('app_url') ? app_url('/proxy_pdf.php') : '/proxy_pdf.php';
+
+    return [
+        'id' => 0,
+        'name' => $name,
+        'proxyLink' => $proxyBase . '?file=' . urlencode($rel),
+        'isImage' => (bool) preg_match('/\.(jpg|jpeg|png|gif|webp|bmp)$/i', $rel),
+        'sub' => $sub,
+        'missing' => false,
+    ];
+}
+
+/**
+ * Recent payments for a linked invoice revenue entry (amount, date, user, attachments).
+ *
+ * @return list<array<string, mixed>>
+ */
+function salesOrderViewCollectPayments(PDO $salesDb, int $revEntryId, string $currency = 'TZS', int $invoiceId = 0): array
+{
+    if ($revEntryId <= 0 && $invoiceId <= 0) {
+        return [];
+    }
+
+    if (!function_exists('resolveStoredMediaFilePath')) {
+        $resolver = dirname(__DIR__, 4) . '/includes/media_path_resolver.php';
+        if (is_file($resolver)) {
+            require_once $resolver;
+        }
+    }
+
+    $collections = [];
+    if ($revEntryId > 0) {
+        try {
+            $st = $salesDb->prepare(
+                'SELECT id, collection_date, amount_collected, created_at
+                 FROM revenue_collections
+                 WHERE entry_id = ?
+                 ORDER BY collection_date DESC, id DESC
+                 LIMIT 50'
+            );
+            $st->execute([$revEntryId]);
+            $collections = $st->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        } catch (Throwable $e) {
+            $collections = [];
+        }
+    }
+
+    // Older paid invoices may have total_paid without revenue_collections rows.
+    if ($collections === [] && $revEntryId > 0) {
+        try {
+            $st = $salesDb->prepare(
+                'SELECT id, total_paid, payment_status, payment_mode, entry_date, created_at, attachment
+                 FROM revenue_entries WHERE id = ? LIMIT 1'
+            );
+            $st->execute([$revEntryId]);
+            $entry = $st->fetch(PDO::FETCH_ASSOC) ?: [];
+            $paid = (float) ($entry['total_paid'] ?? 0);
+            if ($paid > 0.009) {
+                $collections[] = [
+                    'id' => 0,
+                    'collection_date' => (string) ($entry['entry_date'] ?? ''),
+                    'amount_collected' => $paid,
+                    'created_at' => (string) ($entry['created_at'] ?? ''),
+                    'synthetic' => true,
+                    'payment_mode' => (string) ($entry['payment_mode'] ?? ''),
+                    'attachment' => (string) ($entry['attachment'] ?? ''),
+                ];
+            }
+        } catch (Throwable $e) {
+            // keep empty
+        }
+    }
+
+    if ($collections === []) {
+        return [];
+    }
+
+    $txns = [];
+    $txnPdbs = [];
+    if (isset($GLOBALS['pdo']) && $GLOBALS['pdo'] instanceof PDO) {
+        $txnPdbs[] = $GLOBALS['pdo'];
+    }
+    $txnPdbs[] = $salesDb;
+    foreach ($txnPdbs as $txnPdo) {
+        try {
+            if ($revEntryId > 0 && $invoiceId > 0) {
+                $st = $txnPdo->prepare(
+                    "SELECT id, amount, description, transaction_date, created_by, created_at, reference_type, reference_id
+                     FROM account_transactions
+                     WHERE type = 'credit'
+                       AND (
+                         (reference_type IN ('revenue_collection', 'revenue_entry') AND reference_id = ?)
+                         OR (reference_type = 'invoice_payment' AND reference_id = ?)
+                       )
+                     ORDER BY id DESC
+                     LIMIT 100"
+                );
+                $st->execute([$revEntryId, $invoiceId]);
+            } elseif ($revEntryId > 0) {
+                $st = $txnPdo->prepare(
+                    "SELECT id, amount, description, transaction_date, created_by, created_at, reference_type, reference_id
+                     FROM account_transactions
+                     WHERE reference_type IN ('revenue_collection', 'revenue_entry', 'invoice_payment')
+                       AND reference_id = ?
+                       AND type = 'credit'
+                     ORDER BY id DESC
+                     LIMIT 100"
+                );
+                $st->execute([$revEntryId]);
+            } else {
+                $st = $txnPdo->prepare(
+                    "SELECT id, amount, description, transaction_date, created_by, created_at, reference_type, reference_id
+                     FROM account_transactions
+                     WHERE reference_type = 'invoice_payment'
+                       AND reference_id = ?
+                       AND type = 'credit'
+                     ORDER BY id DESC
+                     LIMIT 100"
+                );
+                $st->execute([$invoiceId]);
+            }
+            $txns = $st->fetchAll(PDO::FETCH_ASSOC) ?: [];
+            break;
+        } catch (Throwable $e) {
+            continue;
+        }
+    }
+
+    $userNames = [];
+    $userIds = [];
+    foreach ($txns as $txn) {
+        $uid = (int) ($txn['created_by'] ?? 0);
+        if ($uid > 0) {
+            $userIds[$uid] = true;
+        }
+    }
+    if ($userIds !== []) {
+        try {
+            $placeholders = implode(',', array_fill(0, count($userIds), '?'));
+            $st = $salesDb->prepare(
+                "SELECT id, COALESCE(NULLIF(full_name, ''), NULLIF(username, ''), CONCAT('User #', id)) AS display_name
+                 FROM users WHERE id IN ({$placeholders})"
+            );
+            $st->execute(array_keys($userIds));
+            foreach ($st->fetchAll(PDO::FETCH_ASSOC) ?: [] as $user) {
+                $userNames[(int) $user['id']] = (string) ($user['display_name'] ?? ('User #' . $user['id']));
+            }
+        } catch (Throwable $e) {
+            $userNames = [];
+        }
+    }
+
+    $proofFiles = [];
+    $payDir = dirname(__DIR__, 4) . '/uploads/revenue/payments';
+    if (is_dir($payDir)) {
+        foreach (glob($payDir . '/pay_' . $revEntryId . '_*') ?: [] as $abs) {
+            if (!is_file($abs)) {
+                continue;
+            }
+            $base = basename($abs);
+            $ts = 0;
+            if (preg_match('/^pay_' . preg_quote((string) $revEntryId, '/') . '_(\d+)\./', $base, $m)) {
+                $ts = (int) $m[1];
+            }
+            $proofFiles[] = [
+                'path' => 'uploads/revenue/payments/' . $base,
+                'ts' => $ts,
+                'mtime' => (int) filemtime($abs),
+                'used' => false,
+            ];
+        }
+    }
+
+    $usedTxnIds = [];
+    $payments = [];
+    foreach ($collections as $row) {
+        $amount = (float) ($row['amount_collected'] ?? 0);
+        $collectionDate = (string) ($row['collection_date'] ?? '');
+        $createdAt = (string) ($row['created_at'] ?? '');
+        $createdTs = $createdAt !== '' ? strtotime($createdAt) : 0;
+
+        $matchedTxn = null;
+        foreach ($txns as $txn) {
+            $txnId = (int) ($txn['id'] ?? 0);
+            if ($txnId > 0 && isset($usedTxnIds[$txnId])) {
+                continue;
+            }
+            $txnAmount = (float) ($txn['amount'] ?? 0);
+            if (abs($txnAmount - $amount) > 0.05) {
+                continue;
+            }
+            $txnDate = substr((string) ($txn['transaction_date'] ?? ''), 0, 10);
+            if ($collectionDate !== '' && $txnDate !== '' && $txnDate !== $collectionDate) {
+                continue;
+            }
+            $matchedTxn = $txn;
+            if ($txnId > 0) {
+                $usedTxnIds[$txnId] = true;
+            }
+            break;
+        }
+
+        $attachments = [];
+        $seenPaths = [];
+        $addAttachment = static function (string $rel) use (&$attachments, &$seenPaths): void {
+            $rel = ltrim(str_replace('\\', '/', $rel), '/');
+            if ($rel === '' || isset($seenPaths[$rel])) {
+                return;
+            }
+            $seenPaths[$rel] = true;
+            $attachments[] = salesOrderViewFormatPaymentAttachment($rel, 'Payment proof');
+        };
+
+        $desc = (string) ($matchedTxn['description'] ?? '');
+        if ($desc !== '' && preg_match_all('/\[Attachment:\s*([^\]]+)\]/i', $desc, $m)) {
+            foreach ($m[1] as $path) {
+                $addAttachment(trim((string) $path));
+            }
+        }
+
+        $legacyAttachment = trim((string) ($row['attachment'] ?? ''));
+        if ($legacyAttachment !== '') {
+            $addAttachment($legacyAttachment);
+        }
+
+        $bestIdx = -1;
+        $bestDelta = PHP_INT_MAX;
+        foreach ($proofFiles as $idx => $file) {
+            if (!empty($file['used'])) {
+                continue;
+            }
+            $fileTs = (int) ($file['ts'] ?: $file['mtime']);
+            if ($createdTs <= 0 || $fileTs <= 0) {
+                // For synthetic/legacy rows, attach unused proofs once.
+                if (!empty($row['synthetic']) && $bestIdx < 0) {
+                    $bestIdx = $idx;
+                    $bestDelta = 0;
+                }
+                continue;
+            }
+            $delta = abs($fileTs - $createdTs);
+            if ($delta < $bestDelta && $delta <= 86400) {
+                $bestDelta = $delta;
+                $bestIdx = $idx;
+            }
+        }
+        if ($bestIdx >= 0) {
+            $proofFiles[$bestIdx]['used'] = true;
+            $addAttachment((string) $proofFiles[$bestIdx]['path']);
+        }
+
+        $userId = (int) ($matchedTxn['created_by'] ?? 0);
+        $userName = $userId > 0
+            ? ($userNames[$userId] ?? ('User #' . $userId))
+            : (!empty($row['synthetic']) ? 'System' : 'System');
+        $mode = trim((string) ($row['payment_mode'] ?? ''));
+        if ($userName === 'System' && $mode !== '') {
+            $userName = $mode;
+        }
+
+        $payments[] = [
+            'id' => (int) ($row['id'] ?? 0),
+            'collection_date' => $collectionDate,
+            'created_at' => $createdAt,
+            'amount' => $amount,
+            'currency' => $currency !== '' ? $currency : 'TZS',
+            'user_id' => $userId,
+            'user_name' => $userName,
+            'attachments' => $attachments,
+        ];
+    }
+
+    return $payments;
 }
 
 /**
@@ -581,6 +890,8 @@ function salesOrderViewLoadContext(int $id): array
     $linkedInvoice = salesOrderViewFindLinkedInvoice($salesDb, $id);
     $linkedInvoiceId = (int) ($linkedInvoice['id'] ?? 0);
     $linkedInvoiceNumber = trim((string) ($linkedInvoice['invoice_number'] ?? ''));
+    $linkedInvoiceStatus = strtolower(trim((string) ($linkedInvoice['status'] ?? '')));
+    $linkedBalanceDue = (float) ($linkedInvoice['balance_due'] ?? 0);
     $documentDisplayNumber = ($linkedInvoiceId > 0 && $linkedInvoiceNumber !== '')
         ? $linkedInvoiceNumber
         : $displayOrderNumber;
@@ -592,6 +903,33 @@ function salesOrderViewLoadContext(int $id): array
     $invoiceViewUrl = $linkedInvoiceId > 0
         ? sales_module_url('invoices/view.php', ['id' => $linkedInvoiceId, 'module' => $module])
         : '';
+
+    $paymentUrl = '';
+    $revEntryId = 0;
+    $canRegisterPayment = false;
+    if ($linkedInvoiceId > 0 && !in_array($linkedInvoiceStatus, ['draft', 'cancelled', 'canceled', 'void'], true)) {
+        require_once dirname(__DIR__, 4) . '/includes/revenue_sync.php';
+        try {
+            $stRev = $salesDb->prepare('SELECT id FROM revenue_entries WHERE source_invoice_id = ? LIMIT 1');
+            $stRev->execute([$linkedInvoiceId]);
+            $revEntryId = (int) $stRev->fetchColumn();
+        } catch (Throwable $e) {
+            $revEntryId = 0;
+        }
+        if ($revEntryId <= 0 && $linkedBalanceDue > 0.009 && function_exists('syncInvoiceToRevenue')) {
+            $revEntryId = (int) syncInvoiceToRevenue($salesDb, $linkedInvoiceId);
+        }
+        if ($revEntryId > 0 && $linkedBalanceDue > 0.009 && $linkedInvoiceStatus !== 'paid') {
+            $canRegisterPayment = true;
+            $paymentUrl = function_exists('app_url')
+                ? app_url('/revenue_record_payment.php?id=' . $revEntryId)
+                : '/revenue_record_payment.php?id=' . $revEntryId;
+        }
+    }
+
+    $payments = ($revEntryId > 0 || $linkedInvoiceId > 0)
+        ? salesOrderViewCollectPayments($salesDb, $revEntryId, (string) $currency, $linkedInvoiceId)
+        : [];
 
     $returnUrl = isset($_GET['return']) ? urldecode((string) $_GET['return']) : '';
     $orderReturnUrl = rawurlencode(sales_module_url('orders/view.php', [
@@ -616,7 +954,11 @@ function salesOrderViewLoadContext(int $id): array
         'display_document_number' => $documentDisplayNumber,
         'linked_invoice_id' => $linkedInvoiceId,
         'linked_invoice_number' => $linkedInvoiceNumber,
+        'linked_invoice_status' => $linkedInvoiceStatus,
+        'linked_invoice_balance_due' => $linkedBalanceDue,
         'document_label' => $documentLabel,
+        'revenue_entry_id' => $revEntryId,
+        'payments' => $payments,
         'order' => [
             'id' => (int) ($order['id'] ?? 0),
             'order_number' => (string) ($order['order_number'] ?? ''),
@@ -641,6 +983,7 @@ function salesOrderViewLoadContext(int $id): array
             'can_view_invoice' => $canViewInvoice,
             'can_open_invoice' => $canCreateInvoice,
             'has_linked_invoice' => $linkedInvoiceId > 0,
+            'can_register_payment' => $canRegisterPayment,
             'can_cancel' => $canCancel,
             'show_catalogue' => (bool) $share['show_catalogue'],
         ],
@@ -669,6 +1012,7 @@ function salesOrderViewLoadContext(int $id): array
             'products' => $orderProductsUrl,
             'create_invoice' => $canCreateInvoice ? $invoiceCreateUrl : '',
             'view_invoice' => $invoiceViewUrl,
+            'register_payment' => $paymentUrl,
             'send_email' => sales_module_url('send_doc.php', ['type' => 'order', 'id' => $id, 'module' => $module]),
             'return' => $returnUrl,
         ],

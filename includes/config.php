@@ -366,7 +366,15 @@ if (session_status() == PHP_SESSION_NONE) {
     @ini_set('session.cookie_httponly', '1');
     @ini_set('session.cookie_samesite', 'Lax');
 
-    $sessionSaveDir = dirname(__DIR__) . DIRECTORY_SEPARATOR . 'storage' . DIRECTORY_SEPARATOR . 'sessions';
+    $sessionRoot = dirname(__DIR__);
+    $sessionRootNorm = str_replace('\\', '/', $sessionRoot);
+    if (preg_match('#/ultimate$#i', $sessionRootNorm)) {
+        $parentRoot = dirname($sessionRoot);
+        if (is_file($parentRoot . '/includes/config.php')) {
+            $sessionRoot = $parentRoot;
+        }
+    }
+    $sessionSaveDir = $sessionRoot . DIRECTORY_SEPARATOR . 'storage' . DIRECTORY_SEPARATOR . 'sessions';
     if (!is_dir($sessionSaveDir)) {
         @mkdir($sessionSaveDir, 0700, true);
     }
@@ -391,8 +399,13 @@ if (session_status() == PHP_SESSION_NONE) {
         define('PVS_SESSION_NAMED', true);
     }
 
-    // Pass cookie options directly to session_start so the host cannot ignore
-    // session_set_cookie_params and later emit Max-Age=0 (which deletes the cookie).
+    // Disable PHP's automatic session Set-Cookie. We emit it manually below so a
+    // strict_mode regen on a JSON API 401 cannot overwrite a still-valid browser login.
+    $sessionName = session_name();
+    $incomingSid = isset($_COOKIE[$sessionName]) ? trim((string) $_COOKIE[$sessionName]) : '';
+    if ($incomingSid !== '') {
+        @session_id($incomingSid);
+    }
     session_start([
         'cookie_lifetime' => $sessionLifeSeconds,
         'cookie_path' => $sessionCookiePath,
@@ -401,14 +414,24 @@ if (session_status() == PHP_SESSION_NONE) {
         'cookie_samesite' => 'Lax',
         'use_strict_mode' => true,
         'use_only_cookies' => true,
+        'use_cookies' => false,
         'gc_maxlifetime' => $sessionLifeSeconds,
     ]);
 
     // Renew cookie on activity with an explicit future Max-Age.
-    // A previous helper emitted Max-Age=0 and logged users out on the next click.
-    if (!headers_sent() && session_status() === PHP_SESSION_ACTIVE && session_id() !== '') {
+    // Never mint/overwrite PVSSESSID for an empty API session (strict_mode regen
+    // was wiping a valid browser login after one 401 from /ultimate/.../api).
+    $currentSid = (string) session_id();
+    $sessionResumed = ($incomingSid !== '' && $currentSid !== '' && hash_equals($incomingSid, $currentSid));
+    $hasAuth = !empty($_SESSION['user_id']);
+    $reqUri = strtolower((string) ($_SERVER['REQUEST_URI'] ?? ''));
+    $isJsonApi = defined('ERP_FORCE_JSON_RESPONSE')
+        || str_contains($reqUri, '/api/')
+        || str_contains($reqUri, '/dashboard-ui/api/');
+    $shouldEmitSessionCookie = !$isJsonApi || $sessionResumed || $hasAuth;
+    if ($shouldEmitSessionCookie && !headers_sent() && session_status() === PHP_SESSION_ACTIVE && $currentSid !== '') {
         $cookieExpires = time() + $sessionLifeSeconds;
-        $cookie = rawurlencode(session_name()) . '=' . rawurlencode(session_id())
+        $cookie = rawurlencode($sessionName) . '=' . rawurlencode($currentSid)
             . '; Expires=' . gmdate('D, d M Y H:i:s', $cookieExpires) . ' GMT'
             . '; Max-Age=' . $sessionLifeSeconds
             . '; Path=' . $sessionCookiePath

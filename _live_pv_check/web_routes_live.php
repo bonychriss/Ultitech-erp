@@ -1,0 +1,169 @@
+<?php
+
+use App\Domains\Sales\DeskShell;
+use App\Domains\Sales\LegacyApiBridge;
+use App\Domains\Stock\DeskShell as StockDeskShell;
+use App\Domains\Payroll\DeskShell as PayrollDeskShell;
+use App\Domains\Letter\DeskShell as LetterDeskShell;
+use App\Domains\Admin\DeskShell as AdminDeskShell;
+use App\Http\Controllers\HomePageController;
+use App\Http\Controllers\SitemapController;
+use App\Http\Controllers\TrialPageController;
+use App\Http\Controllers\SalesDashboardApiController;
+use App\Http\Controllers\SalesDashboardPageController;
+use App\Http\Controllers\SalesDeskApiController;
+use App\Http\Controllers\SalesDeskPageController;
+use App\Http\Controllers\StockDeskPageController;
+use App\Http\Controllers\StockPageController;
+use App\Http\Controllers\PayrollDeskPageController;
+use App\Http\Controllers\PayrollPageController;
+use App\Http\Controllers\LetterDeskPageController;
+use App\Http\Controllers\LetterPageController;
+use App\Http\Controllers\WebsitePageController;
+use App\Http\Controllers\AdminDeskPageController;
+use App\Http\Controllers\SuggestApiController;
+use App\Http\Controllers\SuggestPageController;
+use App\Http\Controllers\CashBookApiController;
+use App\Http\Controllers\CashBookDeskPageController;
+use App\Http\Controllers\CashBookPageController;
+use App\Http\Controllers\AccountingPageController;
+use App\Http\Controllers\RevenueDeskPageController;
+use App\Http\Controllers\RevenuePageController;
+use App\Http\Controllers\AttendancePageController;
+use App\Http\Controllers\AiAgentPageController;
+use App\Http\Controllers\AiAssistantPageController;
+use App\Http\Controllers\NotificationsPageController;
+use App\Http\Controllers\WeeklyTasksPageController;
+use App\Http\Controllers\DeliveriesPageController;
+use App\Http\Controllers\DriverKpiPageController;
+use App\Http\Controllers\CreateVoucherPageController;
+use App\Http\Controllers\ViewVoucherPageController;
+use App\Domains\CashBook\DeskShell as CashBookDeskShell;
+use App\Domains\Revenue\DeskShell as RevenueDeskShell;
+use App\Http\Middleware\AttachErpContext;
+use Illuminate\Support\Facades\Route;
+
+/*
+|--------------------------------------------------------------------------
+| erp-laravel routes — Home + Trial (public) + Sales + Suggest + Stock + Payroll
+|--------------------------------------------------------------------------
+*/
+
+// Public marketing homepage (no ERP session required)
+Route::get('/home', [HomePageController::class, 'show'])->name('home.page');
+Route::get('/pricing', [HomePageController::class, 'show'])->name('home.pricing');
+
+// Public free-trial signup (POST stays on free-trial.php; GET shell via Laravel)
+Route::get('/free-trial', [TrialPageController::class, 'show'])->name('trial.page');
+
+// Public XML sitemap (root sitemap.php bridge; /sitemap.xml rewrites there)
+Route::get('/sitemap.xml', [SitemapController::class, 'show'])->name('sitemap');
+
+Route::middleware([AttachErpContext::class])->group(function () {
+    // Sales
+    Route::get('/sales/dashboard', [SalesDashboardPageController::class, 'show'])->name('sales.page.dashboard');
+
+    Route::get('/sales/desk/{desk}', [SalesDeskPageController::class, 'show'])
+        ->where('desk', DeskShell::deskRegex())
+        ->name('sales.page.desk');
+
+    Route::get('/api/dashboard', [SalesDashboardApiController::class, 'init'])->name('sales.api.dashboard');
+    Route::get('/api/dashboard/init', [SalesDashboardApiController::class, 'init'])->name('sales.api.dashboard.init');
+
+    Route::match(['get', 'post'], '/api/desk/{desk}', [SalesDeskApiController::class, 'desk'])
+        ->where('desk', LegacyApiBridge::deskRegex())
+        ->name('sales.api.desk');
+
+    // Suggest
+    Route::get('/suggest', [SuggestPageController::class, 'show'])->name('suggest.page');
+    Route::get('/api/suggestions', [SuggestApiController::class, 'index'])->name('suggest.api.index');
+    Route::post('/api/suggestions', [SuggestApiController::class, 'store'])->name('suggest.api.store');
+
+    // Payroll
+    Route::get('/payroll', [PayrollPageController::class, 'show'])->name('payroll.page');
+    Route::match(['get', 'post'], '/payroll/desk/{desk}', [PayrollDeskPageController::class, 'show'])
+        ->where('desk', PayrollDeskShell::deskRegex())
+        ->name('payroll.page.desk');
+
+    // Website (Ultimate shop sync)
+    Route::match(['get', 'post'], '/website', [WebsitePageController::class, 'show'])->name('website.page');
+    Route::match(['get', 'post'], '/website/dashboard', [WebsitePageController::class, 'show'])->defaults('view', 'dashboard')->name('website.dashboard');
+    Route::match(['get', 'post'], '/website/quotes', [WebsitePageController::class, 'show'])->defaults('view', 'quotes')->name('website.quotes');
+    Route::match(['get', 'post'], '/website/web-sales', [WebsitePageController::class, 'show'])->defaults('view', 'web-sales')->name('website.web-sales');
+
+    // Letter
+    Route::get('/letter', [LetterPageController::class, 'show'])->name('letter.page');
+    Route::match(['get', 'post'], '/letter/desk/{desk}', [LetterDeskPageController::class, 'show'])
+        ->where('desk', LetterDeskShell::deskRegex())
+        ->name('letter.page.desk');
+
+    // Admin
+    Route::match(['get', 'post'], '/admin/desk/{desk}', [AdminDeskPageController::class, 'show'])
+        ->where('desk', AdminDeskShell::deskRegex())
+        ->name('admin.page.desk');
+
+    // Stock (full module via legacy desk bridge)
+    Route::match(['get', 'post'], '/stock', [StockPageController::class, 'show'])->name('stock.page');
+    Route::match(['get', 'post'], '/stock/desk/{desk}', [StockDeskPageController::class, 'show'])
+        ->where('desk', StockDeskShell::deskRegex())
+        ->name('stock.page.desk');
+
+    // Cash Book (replaces Petty Cash voucher workflow)
+    Route::get('/cashbook', [CashBookPageController::class, 'show'])->name('cashbook.page');
+    Route::match(['get', 'post'], '/cashbook/desk/{desk}', [CashBookDeskPageController::class, 'show'])
+        ->where('desk', CashBookDeskShell::deskRegex())
+        ->name('cashbook.page.desk');
+    Route::match(['get', 'post', 'put', 'delete'], '/api/cashbook/{resource}/{id?}', [CashBookApiController::class, 'handle'])
+        ->where('resource', 'init|books|entries|categories|reports|import|delete-requests')
+        ->where('id', '[0-9]+')
+        ->name('cashbook.api');
+
+    // Create / View Payment Voucher (React UIs; POST actions stay on PHP entry scripts)
+    Route::get('/voucher/create', [CreateVoucherPageController::class, 'show'])->name('voucher.page.create');
+    Route::get('/voucher/view', [ViewVoucherPageController::class, 'show'])->name('voucher.page.view');
+
+    // Accounting hub
+    Route::get('/accounting', [AccountingPageController::class, 'show'])->name('accounting.page');
+
+    // Revenue (existing React UI via Laravel shell; APIs stay under modules/revenue/api)
+    Route::get('/revenue', [RevenuePageController::class, 'show'])->name('revenue.page');
+    Route::match(['get', 'post'], '/revenue/desk/{desk}', [RevenueDeskPageController::class, 'show'])
+        ->where('desk', RevenueDeskShell::deskRegex())
+        ->name('revenue.page.desk');
+
+    // Attendance (React clock desk + analytics; actions stay under attendance/api)
+    Route::get('/attendance', [AttendancePageController::class, 'show'])->name('attendance.page');
+    Route::get('/attendance/analytics', [AttendancePageController::class, 'analytics'])->name('attendance.page.analytics');
+    Route::get('/attendance/overtime', [AttendancePageController::class, 'overtime'])->name('attendance.page.overtime');
+
+    // Weekly tasks dashboard (React; plans and reports stay on weekly_tasks/*.php)
+    Route::get('/weekly-tasks/dashboard', [WeeklyTasksPageController::class, 'show'])->name('weekly-tasks.page.dashboard');
+
+    // AI Agent (React receivables + briefing; chat API stays on modules/ai-agent/api.php)
+    Route::get('/ai-agent', [AiAgentPageController::class, 'show'])->name('ai-agent.page');
+
+    // AI Assistant chat (React; commands stay on modules/ai-agent/api.php)
+    Route::get('/ai-assistant', [AiAssistantPageController::class, 'show'])->name('ai-assistant.page');
+
+    // Notifications centre (React; mark-read APIs stay on PHP includes/api)
+    Route::get('/notifications', [NotificationsPageController::class, 'show'])->name('notifications.page');
+    Route::get('/notifications/settings', [NotificationsPageController::class, 'settings'])->name('notifications.page.settings');
+
+    // Deliveries (React hub + dashboard; desk APIs stay under deliveries/deliveries-ui/api)
+    Route::get('/deliveries/hub', [DeliveriesPageController::class, 'hub'])->name('deliveries.page.hub');
+    Route::get('/deliveries', [DeliveriesPageController::class, 'hub'])->name('deliveries.page');
+    Route::get('/deliveries/index', [DeliveriesPageController::class, 'dashboard'])->name('deliveries.page.dashboard');
+    Route::get('/deliveries/dashboard', [DeliveriesPageController::class, 'dashboard'])->name('deliveries.page.dashboard.alias');
+    Route::get('/deliveries/create_delivery', [DeliveriesPageController::class, 'createDelivery'])->name('deliveries.page.create');
+    Route::get('/deliveries/create-delivery', [DeliveriesPageController::class, 'createDelivery'])->name('deliveries.page.create.alias');
+    Route::get('/deliveries/order_details', [DeliveriesPageController::class, 'orderDetails'])->name('deliveries.page.order_details');
+    Route::get('/deliveries/order-details', [DeliveriesPageController::class, 'orderDetails'])->name('deliveries.page.order_details.alias');
+    Route::get('/deliveries/delivery_notes', [DeliveriesPageController::class, 'deliveryNotes'])->name('deliveries.page.delivery_notes');
+    Route::get('/deliveries/delivery-notes', [DeliveriesPageController::class, 'deliveryNotes'])->name('deliveries.page.delivery_notes.alias');
+    Route::get('/deliveries/create_delivery_note', [DeliveriesPageController::class, 'createDeliveryNote'])->name('deliveries.page.create_delivery_note');
+    Route::get('/deliveries/create-delivery-note', [DeliveriesPageController::class, 'createDeliveryNote'])->name('deliveries.page.create_delivery_note.alias');
+
+    // Driver KPI (Delivery / Ride recordings; API stays under driver-kpi/api)
+    Route::get('/driver-kpi', [DriverKpiPageController::class, 'show'])->name('driver-kpi.page');
+    Route::get('/driver-kpi/index', [DriverKpiPageController::class, 'show'])->name('driver-kpi.page.index');
+});

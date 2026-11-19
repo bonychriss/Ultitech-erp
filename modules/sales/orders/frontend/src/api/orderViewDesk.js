@@ -97,3 +97,33 @@ export async function submitEmailWithPdf(targetUrl, pdfDataUri) {
   document.body.appendChild(form);
   form.submit();
 }
+
+export async function fetchRevenuePaymentInit(entryId) {
+  const id = encodeURIComponent(String(entryId));
+  const res = await fetch(`${getApiBase()}/revenue-payment-init.php?id=${id}`, {
+    credentials: 'same-origin',
+  });
+  const data = await parseJson(res);
+  if (!res.ok || !data.ok) {
+    throw new Error(data.error || `Request failed (${res.status})`);
+  }
+  return data;
+}
+
+export async function submitRevenuePayment(formData) {
+  const res = await fetch(`${getApiBase()}/revenue-record-payment.php`, {
+    method: 'POST',
+    body: formData,
+    credentials: 'same-origin',
+  });
+  const data = await parseJson(res);
+  if (!res.ok && !data.ok) {
+    if (Array.isArray(data.errors) && data.errors.length) {
+      const err = new Error(data.errors.join(' '));
+      err.errors = data.errors;
+      throw err;
+    }
+    throw new Error(data.error || data.errors?.[0] || `Request failed (${res.status})`);
+  }
+  return data;
+}

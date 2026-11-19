@@ -295,6 +295,9 @@ function loginUserById(int $userId, string $companySlug): bool
         @session_start();
     }
     @session_regenerate_id(true);
+    if (function_exists('ultitechEmitSessionCookie')) {
+        ultitechEmitSessionCookie();
+    }
 
     $_SESSION['user_id'] = (int) $user['id'];
     $_SESSION['username'] = (string) ($user['username'] ?? '');

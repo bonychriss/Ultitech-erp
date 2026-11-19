@@ -20,7 +20,19 @@ if (!function_exists('mediaPathCompanyIdsToTry')) {
             return [$companyId];
         }
 
-        return [];
+        // When company context is missing (e.g. /proxy_pdf.php outside /ultimate/),
+        // still probe tenant voucher folders so proofs saved under storage/tenant_* resolve.
+        $ids = [];
+        $storageRoot = mediaPathProjectRoot() . '/storage';
+        if (is_dir($storageRoot)) {
+            foreach (glob($storageRoot . '/tenant_*', GLOB_ONLYDIR) ?: [] as $dir) {
+                if (preg_match('/tenant_(\d+)$/', str_replace('\\', '/', $dir), $m)) {
+                    $ids[] = (int) $m[1];
+                }
+            }
+        }
+
+        return $ids;
     }
 }
 

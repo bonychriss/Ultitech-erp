@@ -1,0 +1,119 @@
+<?php
+
+declare(strict_types=1);
+
+/**
+ * ERP platform config for erp-laravel (module-by-module migration).
+ */
+return [
+    'app_root' => dirname(__DIR__, 2),
+
+    'modules' => [
+        'home' => [
+            'enabled' => true,
+            'legacy_api' => false,
+            'entry' => 'index.php',
+        ],
+        'trial' => [
+            'enabled' => true,
+            'legacy_api' => false,
+            'entry' => 'free-trial.php',
+        ],
+        'sales' => [
+            'enabled' => true,
+            'legacy_api' => true, // Phase 1: include modules/sales/**/api/*.php
+            'entry' => 'sales.php',
+        ],
+        'suggest' => [
+            'enabled' => true,
+            'legacy_api' => false,
+            'entry' => 'suggest.php',
+        ],
+        'stock' => [
+            'enabled' => true,
+            'legacy_api' => true, // Phase 1: stock/dashboard.php via LegacyDashboardBridge
+            'entry' => 'stock.php',
+        ],
+        'payroll' => [
+            'enabled' => true,
+            'legacy_api' => true, // desk APIs stay under modules/payroll/api
+            'entry' => 'payroll.php',
+        ],
+        'letter' => [
+            'enabled' => true,
+            'legacy_api' => false,
+            'entry' => 'letter.php',
+        ],
+        'cashbook' => [
+            'enabled' => true,
+            'legacy_api' => false,
+            'entry' => 'cashbook.php',
+        ],
+        'accounting' => [
+            'enabled' => true,
+            'legacy_api' => false,
+            'entry' => 'accounting.php',
+        ],
+        'revenue' => [
+            'enabled' => true,
+            'legacy_api' => true, // desk APIs stay under modules/revenue/api
+            'entry' => 'revenue_entries.php',
+        ],
+        'attendance' => [
+            'enabled' => true,
+            'legacy_api' => true, // clock actions stay under attendance/api
+            'entry' => 'attendance.php',
+        ],
+        'deliveries' => [
+            'enabled' => true,
+            'legacy_api' => true, // desk APIs stay under deliveries/deliveries-ui/api
+            'entry' => 'deliveries.php',
+        ],
+        'driver_kpi' => [
+            'enabled' => true,
+            'legacy_api' => true, // JSON stays under driver-kpi/api
+            'entry' => 'driver-kpi/index.php',
+        ],
+    ],
+
+    'react_dist' => [
+        'home' => 'home-ui/frontend/dist',
+        'trial' => 'login-ui/frontend/dist',
+        'sales_dashboard' => 'modules/sales/dashboard/frontend/dist',
+        'sales_invoices' => 'modules/sales/invoices/frontend/dist',
+        'sales_orders' => 'modules/sales/orders/frontend/dist',
+        'sales_customers' => 'modules/sales/customers/frontend/dist',
+        'sales_my_sales' => 'modules/sales/my-sales/frontend/dist',
+        'sales_pricelist' => 'modules/sales/pricelist/frontend/dist',
+        'sales_settings' => 'modules/sales/settings/frontend/dist',
+        'suggest' => 'suggest-laravel/frontend/dist',
+        'stock' => 'stock/stock-ui/dist',
+        'payroll' => 'modules/payroll/frontend/dist',
+        'letter' => 'modules/letter/frontend/dist',
+        'cashbook' => 'modules/petty-cash/frontend/dist',
+        'accounting' => 'modules/accounting/frontend/dist',
+        'revenue' => 'modules/revenue/frontend/dist',
+        'attendance' => 'attendance/attendance-ui/dist',
+        'notifications' => 'notifications-ui/frontend/dist',
+        'deliveries' => 'deliveries/deliveries-ui/frontend/dist',
+        'voucher' => 'employee/create-voucher-ui/frontend/dist',
+        'view_voucher' => 'view-voucher-ui/frontend/dist',
+    ],
+
+    'sales_laravel_desks' => [
+        'invoices',
+        'orders',
+        'quotations',
+        'quote-requests',
+        'customers',
+        'my-sales',
+        'pricelist',
+        'settings',
+        'quote-create',
+        'invoice-create',
+        'order-view',
+        'invoice-view',
+        'invoice-edit',
+        'quote-edit',
+    ],
+];

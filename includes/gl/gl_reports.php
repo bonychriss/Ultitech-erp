@@ -94,6 +94,98 @@ if (!function_exists('gl_profit_and_loss')) {
     }
 }
 
+if (!function_exists('gl_bs_classify')) {
+    /**
+     * Map a GL account to a classic balance-sheet subsection.
+     *
+     * @param array{code?:string,name?:string,type?:string} $account
+     */
+    function gl_bs_classify(array $account): string
+    {
+        $type = gl_normal_type((string) ($account['type'] ?? ''));
+        $name = strtolower(trim((string) ($account['name'] ?? '')));
+        $code = preg_replace('/\D+/', '', (string) ($account['code'] ?? '')) ?? '';
+        $n = $code !== '' ? (int) $code : 0;
+        // Keep short codes (1001) and longer ones (101005) comparable by leading digits.
+        if ($n >= 100000) {
+            $n = (int) substr((string) $n, 0, 4);
+        }
+
+        if ($type === 'asset') {
+            if (preg_match('/accumulat\w*\s+deprec|depreciation/i', $name)) {
+                return 'fixed_assets';
+            }
+            if (preg_match('/suspense|deferred\s+(income\s+)?tax|other\s+asset/i', $name)
+                || ($n >= 1600 && $n < 1700)
+                || ($n >= 1900 && $n < 2000)) {
+                return 'other_assets';
+            }
+            if (preg_match('/fixed\s*asset|property|plant|equipment|\bppe\b|intangible|long[-\s]?term\s+invest/i', $name)
+                || ($n >= 1500 && $n < 1900)) {
+                return 'fixed_assets';
+            }
+
+            return 'current_assets';
+        }
+
+        if ($type === 'liability') {
+            if (preg_match('/accounts\s+payable/i', $name) || $n === 2000) {
+                return 'current_liabilities';
+            }
+            if (preg_match('/long[-\s]?term|mortgage|bond|deferred\s+(income\s+)?tax|\bloans?\b/i', $name)
+                || ($n >= 2500 && $n < 3000)
+                || $n === 2100) {
+                return 'long_term_liabilities';
+            }
+
+            return 'current_liabilities';
+        }
+
+        return 'equity';
+    }
+}
+
+if (!function_exists('gl_bs_ensure_accounts')) {
+    /** Create the standard balance-sheet system accounts if they are missing. */
+    function gl_bs_ensure_accounts(PDO $pdo): void
+    {
+        static $done = [];
+        $oid = spl_object_id($pdo);
+        if (!empty($done[$oid])) {
+            return;
+        }
+        if (!function_exists('gl_system_account')) {
+            require_once __DIR__ . '/gl_core.php';
+        }
+        foreach ([
+            'accounts_receivable', 'short_term_investments', 'inventory', 'prepaid_expenses',
+            'fixed_assets', 'accumulated_depreciation', 'deferred_tax_asset', 'suspense',
+            'accounts_payable', 'long_term_loans', 'vat_payable', 'accrued_salaries',
+            'unearned_revenue', 'deferred_tax_liability', 'owners_capital', 'retained_earnings',
+            'opening_balance_equity',
+        ] as $key) {
+            try {
+                gl_system_account($pdo, $key);
+            } catch (Throwable $e) {
+                error_log('gl_bs_ensure_accounts: ' . $key . ' ' . $e->getMessage());
+            }
+        }
+        $done[$oid] = true;
+    }
+}
+
+if (!function_exists('gl_bs_placeholder_keys')) {
+    /** System accounts always listed on the statement, even at zero. */
+    function gl_bs_placeholder_keys(): array
+    {
+        return [
+            'short_term_investments', 'prepaid_expenses', 'fixed_assets', 'accumulated_depreciation',
+            'deferred_tax_asset', 'accounts_payable', 'long_term_loans', 'accrued_salaries',
+            'unearned_revenue', 'deferred_tax_liability', 'owners_capital', 'retained_earnings',
+        ];
+    }
+}
+
 if (!function_exists('gl_balance_sheet')) {
     /**
      * Balance sheet as at a date. Profit not yet closed to retained earnings is shown as current earnings.
@@ -102,7 +194,18 @@ if (!function_exists('gl_balance_sheet')) {
      */
     function gl_balance_sheet(PDO $pdo, string $asOf): array
     {
+        gl_bs_ensure_accounts($pdo);
+
         $groups = ['asset' => [], 'liability' => [], 'equity' => []];
+        $sections = [
+            'current_assets' => [],
+            'fixed_assets' => [],
+            'other_assets' => [],
+            'current_liabilities' => [],
+            'long_term_liabilities' => [],
+            'equity' => [],
+        ];
+        $seen = [];
         $earnings = 0.0;
         foreach (gl_account_movements($pdo, null, $asOf) as $a) {
             $bal = $a['closing'];
@@ -110,22 +213,75 @@ if (!function_exists('gl_balance_sheet')) {
                 continue;
             }
             if ($a['type'] === 'asset') {
-                $groups['asset'][] = $a + ['amount' => $bal];
+                $row = $a + ['amount' => $bal, 'section' => gl_bs_classify($a)];
+                $groups['asset'][] = $row;
+                $sections[$row['section']][] = $row;
+                $seen[(int) $a['id']] = true;
             } elseif ($a['type'] === 'liability' || $a['type'] === 'equity') {
-                $groups[$a['type']][] = $a + ['amount' => -$bal];
+                $section = $a['type'] === 'equity' ? 'equity' : gl_bs_classify($a);
+                $row = $a + ['amount' => -$bal, 'section' => $section];
+                $groups[$a['type']][] = $row;
+                $sections[$section][] = $row;
+                $seen[(int) $a['id']] = true;
             } elseif ($a['type'] === 'revenue' || $a['type'] === 'expense') {
                 $earnings -= $bal;
             }
         }
+
+        // Keep classic template lines visible even when the balance is still zero.
+        foreach (gl_bs_placeholder_keys() as $key) {
+            try {
+                $id = gl_system_account($pdo, $key);
+            } catch (Throwable $e) {
+                continue;
+            }
+            if (isset($seen[$id])) {
+                continue;
+            }
+            $st = $pdo->prepare('SELECT id, COALESCE(code, \'\') AS code, name, type FROM erp_accounts WHERE id = ? LIMIT 1');
+            $st->execute([$id]);
+            $acc = $st->fetch(PDO::FETCH_ASSOC);
+            if (!$acc) {
+                continue;
+            }
+            $type = gl_normal_type((string) $acc['type']);
+            if (!in_array($type, ['asset', 'liability', 'equity'], true)) {
+                continue;
+            }
+            $section = $type === 'equity' ? 'equity' : gl_bs_classify($acc);
+            $row = [
+                'id' => $id,
+                'code' => (string) $acc['code'],
+                'name' => (string) $acc['name'],
+                'type' => $type,
+                'opening' => 0.0,
+                'debit' => 0.0,
+                'credit' => 0.0,
+                'closing' => 0.0,
+                'amount' => 0.0,
+                'section' => $section,
+                'placeholder' => true,
+            ];
+            $groups[$type === 'asset' ? 'asset' : $type][] = $row;
+            $sections[$section][] = $row;
+        }
+
         $ta = round(array_sum(array_column($groups['asset'], 'amount')), 2);
         $tl = round(array_sum(array_column($groups['liability'], 'amount')), 2);
         $teAcc = round(array_sum(array_column($groups['equity'], 'amount')), 2);
         $earnings = round($earnings, 2);
         $te = round($teAcc + $earnings, 2);
+        $sectionTotals = [];
+        foreach ($sections as $key => $rows) {
+            $sectionTotals[$key] = round(array_sum(array_column($rows, 'amount')), 2);
+        }
+
         return [
             'assets' => $groups['asset'],
             'liabilities' => $groups['liability'],
             'equity' => $groups['equity'],
+            'sections' => $sections,
+            'section_totals' => $sectionTotals,
             'current_earnings' => $earnings,
             'total_assets' => $ta,
             'total_liabilities' => $tl,

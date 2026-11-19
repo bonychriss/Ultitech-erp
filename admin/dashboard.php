@@ -493,6 +493,16 @@ $dashboardConfig = [
     'share' => false,
     'module' => $qsModule,
     'myVouchersUrl' => $adminBase . '/all-vouchers.php',
+    'creditVouchersUrl' => function_exists('company_url')
+        ? (string) company_url('admin/dashboard.php') . '?module=voucher&payment=credit'
+        : (function_exists('app_url')
+            ? app_url('/admin/dashboard.php') . '?module=voucher&payment=credit'
+            : 'dashboard.php?module=voucher&payment=credit'),
+    'creditMode' => (isset($_GET['payment']) && strtolower((string) $_GET['payment']) === 'credit'),
+    'hideKpis' => false,
+    'listTitle' => (isset($_GET['payment']) && strtolower((string) $_GET['payment']) === 'credit')
+        ? 'Credit Vouchers'
+        : 'All Vouchers',
     'createUrl' => $employeeBase . '/create-voucher.php',
     'viewUrl' => $employeeBase . '/view-voucher.php',
     'editUrl' => $employeeBase . '/edit-voucher.php',
@@ -526,11 +536,20 @@ $employeeHeaderSubtitle = '<nav class="vv-breadcrumb exp-desk-breadcrumb dashboa
 $dashboardHomeUrl = function_exists('company_url')
     ? company_url('select-module')
     : (function_exists('app_url') ? app_url('/select-module.php') : '../select-module.php');
-$dashboardBreadcrumbLabel = $qsModule === 'voucher' ? 'Payment Vouchers' : 'Dashboard';
+$isCreditPaymentView = isset($_GET['payment']) && strtolower((string) $_GET['payment']) === 'credit';
+$dashboardBreadcrumbLabel = $isCreditPaymentView
+    ? 'Credit Vouchers'
+    : ($qsModule === 'voucher' ? 'Payment Vouchers' : 'Dashboard');
+$employeeHeaderTitle = $isCreditPaymentView ? 'Credit Vouchers' : 'Dashboard';
+$voucherDashHref = htmlspecialchars($adminBase . '/dashboard.php?module=' . rawurlencode($qsModule !== '' ? $qsModule : 'voucher'), ENT_QUOTES, 'UTF-8');
 $employeeHeaderSubtitle = '<nav class="vv-breadcrumb exp-desk-breadcrumb dashboard-breadcrumb" aria-label="Breadcrumb">'
     . '<a class="vv-breadcrumb-link erp-nav-back-ignore" href="' . htmlspecialchars($dashboardHomeUrl, ENT_QUOTES, 'UTF-8') . '">Home</a>'
     . '<span class="vv-breadcrumb-sep">/</span>'
-    . '<span class="vv-breadcrumb-current">' . htmlspecialchars($dashboardBreadcrumbLabel, ENT_QUOTES, 'UTF-8') . '</span>'
+    . ($isCreditPaymentView
+        ? '<a class="vv-breadcrumb-link erp-nav-back-ignore" href="' . $voucherDashHref . '">Payment Vouchers</a>'
+            . '<span class="vv-breadcrumb-sep">/</span>'
+            . '<span class="vv-breadcrumb-current">Credit Vouchers</span>'
+        : '<span class="vv-breadcrumb-current">' . htmlspecialchars($dashboardBreadcrumbLabel, ENT_QUOTES, 'UTF-8') . '</span>')
     . '</nav>';
 $createHref = htmlspecialchars($employeeBase . '/create-voucher.php?module=' . rawurlencode($qsModule), ENT_QUOTES, 'UTF-8');
 
@@ -570,18 +589,48 @@ $employeeHeaderRightHtml = null;
     <?php require __DIR__ . '/../includes/nav-back-script.php'; ?>
     <style>
         :root { --bg-body: #f1f5f9; --header-height: 72px; }
-        body.dashboard { background-color: #f1f5f9; font-family: 'Inter', sans-serif; }
+        html {
+            height: 100%;
+            background: #f1f5f9 !important;
+        }
+        body.dashboard {
+            min-height: 100%;
+            background-color: #f1f5f9 !important;
+            font-family: 'Inter', sans-serif;
+        }
         html, body.dashboard, .main-content, .layout-main-wrapper { scrollbar-width: none !important; -ms-overflow-style: none !important; }
         html::-webkit-scrollbar, body.dashboard::-webkit-scrollbar, .main-content::-webkit-scrollbar, .layout-main-wrapper::-webkit-scrollbar { width: 0 !important; height: 0 !important; display: none !important; }
 
+        /* Fill viewport so no white strip shows under short content. */
+        body.dashboard .layout-main-wrapper {
+            min-height: 100vh !important;
+            align-items: stretch !important;
+            background: #f1f5f9 !important;
+        }
+        body.dashboard .layout-main-wrapper > .flex-grow-1 {
+            display: flex !important;
+            flex-direction: column !important;
+            min-height: 100vh !important;
+            background: #f1f5f9 !important;
+        }
         .main-content.dashboard-react-root {
             width: 100% !important;
             max-width: none !important;
             padding: 0.5rem 0.75rem 2rem !important;
             box-sizing: border-box;
             background: #f1f5f9 !important;
+            flex: 1 1 auto !important;
+            min-height: calc(100vh - var(--ad-header-h, 72px)) !important;
         }
-        .main-content.dashboard-react-root #root { width: 100%; max-width: none; margin: 0; }
+        .main-content.dashboard-react-root #root {
+            width: 100%;
+            max-width: none;
+            margin: 0;
+            min-height: 100%;
+        }
+        .main-content.dashboard-react-root #root .ed-page {
+            min-height: calc(100vh - var(--ad-header-h, 72px) - 1.5rem);
+        }
 
         body.dashboard .header.admin-header .vv-breadcrumb,
         body.dashboard .header.admin-header .exp-desk-breadcrumb {
@@ -720,6 +769,16 @@ $employeeHeaderRightHtml = null;
             color: #0f172a !important;
             white-space: nowrap;
             line-height: 1.2 !important;
+        }
+        body.dashboard--credit .header.admin-header .employee-header-page-title {
+            font-weight: 500 !important;
+        }
+        body.dashboard--credit .header.admin-header .vv-breadcrumb-link,
+        body.dashboard--credit .header.admin-header .vv-breadcrumb-current {
+            font-weight: 500 !important;
+        }
+        body.dashboard--credit .ad-chip-btn {
+            font-weight: 500 !important;
         }
         body.dashboard .admin-header-center-slot {
             grid-column: 2;
@@ -931,7 +990,10 @@ html[data-theme="dark"] body.dashboard .ed-sticky-top::before {
             background: #0f172a !important;
         }
 
+        html[data-theme="dark"],
         html[data-theme="dark"] body.dashboard,
+        html[data-theme="dark"] body.dashboard .layout-main-wrapper,
+        html[data-theme="dark"] body.dashboard .layout-main-wrapper > .flex-grow-1,
         html[data-theme="dark"] .main-content.dashboard-react-root,
         html[data-theme="dark"] body.dashboard .header.admin-header {
             background: #0f172a !important;
@@ -1076,14 +1138,14 @@ html[data-theme="dark"] body.dashboard .ed-sticky-top::before {
         }
     </style>
 </head>
-<body class="dashboard">
+<body class="dashboard<?= !empty($isCreditPaymentView) ? ' dashboard--credit' : '' ?>">
     <?php require_once __DIR__ . '/../includes/header_admin.php'; ?>
 
     <main class="main-content dashboard-react-root">
         <noscript>
             <div class="alert alert-warning">JavaScript is required to use the Admin Dashboard.</div>
         </noscript>
-        <div id="root"></div>
+        <div id="root" data-dashboard-api="<?= htmlspecialchars((string) ($assets['apiUrl'] ?? ''), ENT_QUOTES, 'UTF-8') ?>"></div>
     </main>
 
     <script type="module" crossorigin src="<?= htmlspecialchars($assets['assetBase'] . $assets['jsFile'] . '?v=' . $assets['jsVersion'], ENT_QUOTES, 'UTF-8') ?>"></script>

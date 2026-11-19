@@ -215,7 +215,7 @@ body.vv-view-voucher-page .vv-purchases-back {
     display: inline-flex;
     align-items: center;
     gap: 0.4rem;
-    font-weight: 700;
+    font-weight: 500;
     color: #2563eb !important;
     text-decoration: none !important;
 }

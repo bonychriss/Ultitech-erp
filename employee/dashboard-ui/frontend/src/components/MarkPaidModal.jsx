@@ -25,6 +25,14 @@ function formatMoney(currency, value) {
   return `${currency} ${toNumber(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 }
 
+function formatPayDate(value) {
+  const raw = String(value || '').trim()
+  if (!raw) return ''
+  const d = new Date(`${raw}T00:00:00`)
+  if (Number.isNaN(d.getTime())) return raw
+  return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+}
+
 function isVoucherPageRedirect(xhr) {
   try {
     return new URL(xhr.responseURL, window.location.href).pathname.endsWith('/view-voucher.php')
@@ -39,14 +47,33 @@ export default function MarkPaidModal({ voucher, accounts, actionUrl, module, fo
   const pickerRef = useRef(null)
   const xhrRef = useRef(null)
   const reloadTimerRef = useRef(null)
+  const totalAmount = toNumber(voucher?.total_amount)
+  const priorPayments = Array.isArray(voucher?.prior_payments) ? voucher.prior_payments : []
+  const paidSoFar = Math.max(
+    0,
+    priorPayments.length > 0
+      ? priorPayments.reduce((sum, row) => sum + toNumber(row?.amount), 0)
+      : toNumber(voucher?.paid_so_far),
+  )
+  const balanceDue = Math.max(0, Math.round((totalAmount - paidSoFar) * 100) / 100)
+  const defaultPayAmount = balanceDue > 0 ? balanceDue : totalAmount
   const [accountId, setAccountId] = useState('')
   const [accountError, setAccountError] = useState('')
+  const [payAmount, setPayAmount] = useState(
+    defaultPayAmount > 0
+      ? defaultPayAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).replace(/,/g, '')
+      : '',
+  )
+  const [amountError, setAmountError] = useState('')
   const [proofName, setProofName] = useState('')
   const [isDragging, setIsDragging] = useState(false)
   const [uploadState, setUploadState] = useState('idle')
   const [uploadProgress, setUploadProgress] = useState(0)
   const [uploadError, setUploadError] = useState('')
   const isUploading = uploadState === 'uploading' || uploadState === 'saving'
+  const enteredAmount = toNumber(payAmount)
+  const amountMeetsBalance = enteredAmount > 0 && enteredAmount >= balanceDue - 0.009
+  const currency = String(voucher?.currency || 'TZS')
 
   function closeModal() {
     if (!isUploading) onClose()
@@ -98,9 +125,19 @@ export default function MarkPaidModal({ voucher, accounts, actionUrl, module, fo
       pickerRef.current?.querySelector('summary')?.focus()
       return
     }
+    const amountValue = toNumber(payAmount)
+    if (!(amountValue > 0)) {
+      setAmountError('Enter a valid amount to pay.')
+      return
+    }
+    if (balanceDue > 0 && amountValue > balanceDue + 0.009) {
+      setAmountError(`Amount cannot exceed the balance due of ${formatMoney(currency, balanceDue)}.`)
+      return
+    }
     if (!form.reportValidity()) return
 
     setAccountError('')
+    setAmountError('')
     setUploadError('')
     setUploadProgress(0)
     setUploadState('uploading')
@@ -165,7 +202,7 @@ export default function MarkPaidModal({ voucher, accounts, actionUrl, module, fo
           <div className="vv-pay-modal__icon"><CheckCircle2 size={27} strokeWidth={2.2} /></div>
           <div className="vv-pay-modal__heading">
             <h3>Mark Voucher as Paid</h3>
-            <p>Select the source account and attach the payment proof.</p>
+            <p>Enter the amount to pay, select the source account, and attach the payment proof.</p>
           </div>
           <button type="button" className="vv-pay-modal__close" onClick={closeModal} disabled={isUploading} aria-label="Close dialog">
             <X size={21} />
@@ -174,13 +211,70 @@ export default function MarkPaidModal({ voucher, accounts, actionUrl, module, fo
         <div className="vv-pay-modal__summary">
           <div><strong>Voucher:</strong> {voucher.voucher_no}</div>
           <div><strong>{supplierLabel ? 'Supplier' : 'Payee'}:</strong> {voucher.payee_name}</div>
-          <div><strong>Amount:</strong> {formatAmount(voucher.currency, voucher.total_amount)}</div>
+          <div><strong>Voucher total:</strong> {formatAmount(voucher.currency, voucher.total_amount)}</div>
+          {paidSoFar > 0.009 && (
+            <div><strong>Paid so far:</strong> {formatAmount(voucher.currency, paidSoFar)}</div>
+          )}
+          <div><strong>Balance due:</strong> {formatAmount(voucher.currency, balanceDue)}</div>
         </div>
+        {priorPayments.length > 0 && (
+          <div className="vv-pay-modal__prior" aria-label="Previous payments">
+            <div className="vv-pay-modal__prior-title">
+              Previous payment{priorPayments.length > 1 ? 's' : ''}
+            </div>
+            <ul className="vv-pay-modal__prior-list">
+              {priorPayments.map((row, idx) => {
+                const when = formatPayDate(row?.date)
+                const accountName = String(row?.account_name || '').trim()
+                return (
+                  <li key={`${row?.date || 'pay'}-${idx}`}>
+                    <span className="vv-pay-modal__prior-amount">
+                      {formatAmount(voucher.currency, row?.amount)}
+                    </span>
+                    <span className="vv-pay-modal__prior-meta">
+                      {[when ? `on ${when}` : '', accountName ? `via ${accountName}` : '']
+                        .filter(Boolean)
+                        .join(' · ') || `Installment ${idx + 1}`}
+                    </span>
+                  </li>
+                )
+              })}
+            </ul>
+          </div>
+        )}
         <form action={actionUrl} method="POST" encType="multipart/form-data" onSubmit={handleSubmit}>
           <input type="hidden" name="voucher_id" value={voucher.id} />
           <input type="hidden" name="mark_paid" value="1" />
           <input type="hidden" name="account_id" value={accountId} />
           {module ? <input type="hidden" name="module" value={module} /> : null}
+          <div className="vv-pay-modal__field">
+            <label htmlFor="ed-pay-amount">Amount to pay</label>
+            <div className="vv-pay-modal__amount-wrap">
+              <span className="vv-pay-modal__amount-currency" aria-hidden="true">{currency}</span>
+              <input
+                id="ed-pay-amount"
+                type="number"
+                name="payment_amount"
+                className={`vv-pay-modal__amount-input${amountError ? ' has-error' : ''}${amountMeetsBalance ? ' is-full' : ' is-partial'}`}
+                min="0.01"
+                step="0.01"
+                max={balanceDue > 0 ? balanceDue : undefined}
+                value={payAmount}
+                required
+                disabled={isUploading}
+                onChange={(e) => {
+                  setPayAmount(e.target.value)
+                  setAmountError('')
+                }}
+              />
+            </div>
+            <small className="vv-pay-modal__amount-hint">
+              {amountMeetsBalance
+                ? 'Full payment — voucher (and linked purchase, if any) will be marked paid.'
+                : 'Partial payment — remaining balance stays open for later.'}
+            </small>
+            {amountError && <span className="vv-pay-modal__account-error" role="alert">{amountError}</span>}
+          </div>
           <div className="vv-pay-modal__field">
             <label id="ed-pay-account-label">Source Account</label>
             <details className={`vv-pay-modal__account-picker${accountError ? ' has-error' : ''}`} ref={pickerRef}>

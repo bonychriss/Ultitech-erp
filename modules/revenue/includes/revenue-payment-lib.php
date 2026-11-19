@@ -31,12 +31,21 @@ function revenue_payment_fetch_accounts(PDO $pdo): array
             $bucket = function_exists('balancesAccountLiquidityBucket')
                 ? balancesAccountLiquidityBucket($type)
                 : 'bank';
+            $logoUrl = '';
+            if (function_exists('balances_account_logo_url')) {
+                $logoUrl = (string) balances_account_logo_url([
+                    'name' => $name,
+                    'type' => $type,
+                    'account_image' => (string) ($row['account_image'] ?? $row['image'] ?? ''),
+                ], $pdo);
+            }
             $accounts[] = [
                 'id' => $id,
                 'name' => $name,
                 'currency' => (string) ($row['currency'] ?? 'TZS'),
                 'type' => $type,
                 'bucket' => $bucket,
+                'logo_url' => $logoUrl,
             ];
         }
         if ($accounts !== []) {
@@ -48,7 +57,7 @@ function revenue_payment_fetch_accounts(PDO $pdo): array
     // Fallback when Balances helpers are unavailable: filter active FA rows by deposit type.
     try {
         $rows = $pdo->query(
-            "SELECT id, name, currency, type FROM financial_accounts WHERE status = 'active' ORDER BY name ASC"
+            "SELECT id, name, currency, type, account_image FROM financial_accounts WHERE status = 'active' ORDER BY name ASC"
         )->fetchAll(PDO::FETCH_ASSOC) ?: [];
         foreach ($rows as $row) {
             $type = (string) ($row['type'] ?? '');
@@ -61,12 +70,22 @@ function revenue_payment_fetch_accounts(PDO $pdo): array
             $bucket = function_exists('balancesAccountLiquidityBucket')
                 ? balancesAccountLiquidityBucket($type !== '' ? $type : 'bank')
                 : 'bank';
+            $name = (string) ($row['name'] ?? '');
+            $logoUrl = '';
+            if (function_exists('balances_account_logo_url')) {
+                $logoUrl = (string) balances_account_logo_url([
+                    'name' => $name,
+                    'type' => $type,
+                    'account_image' => (string) ($row['account_image'] ?? ''),
+                ], $pdo);
+            }
             $accounts[] = [
                 'id' => (int) ($row['id'] ?? 0),
-                'name' => (string) ($row['name'] ?? ''),
+                'name' => $name,
                 'currency' => (string) ($row['currency'] ?? 'TZS'),
                 'type' => $type,
                 'bucket' => $bucket,
+                'logo_url' => $logoUrl,
             ];
         }
     } catch (Throwable $e) {
@@ -75,12 +94,22 @@ function revenue_payment_fetch_accounts(PDO $pdo): array
                 "SELECT id, account_name AS name FROM erp_bank_accounts WHERE status = 'active' ORDER BY account_name ASC"
             )->fetchAll(PDO::FETCH_ASSOC) ?: [];
             foreach ($rows as $row) {
+                $name = (string) ($row['name'] ?? '');
+                $logoUrl = '';
+                if (function_exists('balances_account_logo_url')) {
+                    $logoUrl = (string) balances_account_logo_url([
+                        'name' => $name,
+                        'type' => 'bank',
+                        'account_image' => '',
+                    ], $pdo);
+                }
                 $accounts[] = [
                     'id' => (int) ($row['id'] ?? 0),
-                    'name' => (string) ($row['name'] ?? ''),
+                    'name' => $name,
                     'currency' => 'TZS',
                     'type' => 'bank',
                     'bucket' => 'bank',
+                    'logo_url' => $logoUrl,
                 ];
             }
         } catch (Throwable $e2) {

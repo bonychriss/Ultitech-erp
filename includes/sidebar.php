@@ -377,6 +377,7 @@ switch ($active_module) {
             addItem($menuItems, 'ai_assistant', 'AI Assistant', 'robot', $prefix . 'admin/ai_assistant.php?module=voucher');
             addItem($menuItems, 'create', 'Create Voucher', 'document-text', $prefix . 'employee/create-voucher.php?module=voucher');
             addItem($menuItems, 'all', 'View All', 'clipboard', $prefix . 'admin/all-vouchers.php?module=voucher');
+            addItem($menuItems, 'credit-vouchers', 'Credit Vouchers', 'credit-card', $prefix . 'admin/dashboard.php?module=voucher&payment=credit');
             addItem($menuItems, 'users', 'Manage Users', 'users', $prefix . 'admin/manage-users.php?module=voucher');
             addItem($menuItems, 'reports', 'Reports', 'presentation', $prefix . 'admin/reports.php?module=voucher');
             addItem($menuItems, 'payees', 'Manage Payees', 'users', $prefix . 'admin/manage-payees.php?module=voucher');
@@ -385,6 +386,7 @@ switch ($active_module) {
             addItem($menuItems, 'create', 'Create Voucher', 'document-text', $prefix . 'employee/create-voucher.php?module=voucher');
             addItem($menuItems, 'create-payee', 'Create Payee', 'users', $prefix . 'employee/create-voucher.php?module=voucher&action=create_payee');
             addItem($menuItems, 'view', 'View Vouchers', 'ticket', $prefix . 'employee/my-vouchers.php?module=voucher');
+            addItem($menuItems, 'credit-vouchers', 'Credit Vouchers', 'credit-card', $prefix . 'admin/dashboard.php?module=voucher&payment=credit');
             addItem($menuItems, 'export', 'Export Excel', 'archive', $prefix . 'export_vouchers_list.php');
         }
         break;

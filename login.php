@@ -5,10 +5,48 @@ require_once __DIR__ . '/includes/functions.php';
 
 unset($_SESSION['login_pending_confirmation']);
 
+// Bare /login.php?next=/ultimate/admin/... must use the company login URL.
+// Without a company slug the React form posts company_slug="" and login never sticks.
+if (
+    $_SERVER['REQUEST_METHOD'] !== 'POST'
+    && function_exists('getRequestedCompanySlug')
+    && getRequestedCompanySlug() === ''
+    && function_exists('extractCompanySlugFromNextPath')
+) {
+    $nextForSlug = trim((string) ($_GET['next'] ?? ''));
+    $slugFromNext = $nextForSlug !== '' ? extractCompanySlugFromNextPath($nextForSlug) : '';
+    if ($slugFromNext !== '' && function_exists('company_login_url')) {
+        $qs = ['next' => $nextForSlug];
+        if (isset($_GET['error']) && trim((string) $_GET['error']) !== '') {
+            $qs['error'] = trim((string) $_GET['error']);
+        }
+        header('Location: ' . company_login_url($slugFromNext) . '?' . http_build_query($qs));
+        exit;
+    }
+}
+
 // If already logged in, route out immediately (honour ?next= for admin tools)
 if (isset($_SESSION['user_id'])) {
   $mustHaveCompany = function_exists('isCompanyScopingEnabled') ? isCompanyScopingEnabled() : false;
   $sessionCompanyId = (int) ($_SESSION['company_id'] ?? 0);
+  // Hydrate company from URL or ?next= before deciding the session is broken.
+  if ($sessionCompanyId <= 0) {
+    $loginSlug = function_exists('getRequestedCompanySlug') ? getRequestedCompanySlug() : '';
+    if ($loginSlug === '' && function_exists('extractCompanySlugFromNextPath')) {
+      $loginSlug = extractCompanySlugFromNextPath((string) ($_GET['next'] ?? ''));
+    }
+    if ($loginSlug !== '' && function_exists('findCompanyBySlug')) {
+      $loginCompany = findCompanyBySlug($loginSlug);
+      if (is_array($loginCompany) && !empty($loginCompany['id'])) {
+        $_SESSION['company_id'] = (int) $loginCompany['id'];
+        $_SESSION['company_slug'] = (string) ($loginCompany['company_slug'] ?? $loginSlug);
+        if (empty($_SESSION['company_name'])) {
+          $_SESSION['company_name'] = (string) ($loginCompany['company_name'] ?? '');
+        }
+        $sessionCompanyId = (int) $_SESSION['company_id'];
+      }
+    }
+  }
   if ($mustHaveCompany && $sessionCompanyId <= 0) {
     if (function_exists('clearAuthSession')) {
       clearAuthSession();
@@ -19,6 +57,20 @@ if (isset($_SESSION['user_id'])) {
         ? company_login_url(getRequestedCompanySlug()) . '?error=company_context'
         : (function_exists('app_url') ? app_url('/login.php?error=company_context') : 'login.php?error=company_context')));
     exit();
+  }
+  // Hydrate company_id from URL slug when session is partial (prevents login↔dashboard bounce).
+  if ((int) ($_SESSION['company_id'] ?? 0) <= 0 && function_exists('getRequestedCompanySlug')) {
+    $loginSlug = getRequestedCompanySlug();
+    if ($loginSlug !== '' && function_exists('findCompanyBySlug')) {
+      $loginCompany = findCompanyBySlug($loginSlug);
+      if (is_array($loginCompany) && !empty($loginCompany['id'])) {
+        $_SESSION['company_id'] = (int) $loginCompany['id'];
+        $_SESSION['company_slug'] = (string) ($loginCompany['company_slug'] ?? $loginSlug);
+        if (empty($_SESSION['company_name'])) {
+          $_SESSION['company_name'] = (string) ($loginCompany['company_name'] ?? '');
+        }
+      }
+    }
   }
   $nextAfterLogin = trim((string) ($_GET['next'] ?? ''));
   if ($nextAfterLogin !== '' && function_exists('resolvePostLoginRedirectUrl')) {
@@ -54,6 +106,9 @@ if (isset($_GET['error'])) {
 }
 
 $companySlug = getRequestedCompanySlug();
+if ($companySlug === '' && function_exists('extractCompanySlugFromNextPath')) {
+    $companySlug = extractCompanySlugFromNextPath((string) ($_GET['next'] ?? $_POST['next'] ?? ''));
+}
 $selectedCompany = null;
 $selectedCompanyLogo = '';
 $selectedCompanyName = '';
@@ -85,12 +140,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $user = trim((string) ($_POST['user'] ?? $_POST['email'] ?? ''));
     $password = (string) ($_POST['password'] ?? '');
     $submittedCompanySlug = strtolower(trim((string) ($_POST['company_slug'] ?? $companySlug)));
+    $nextAfterLogin = trim((string) ($_POST['next'] ?? $_GET['next'] ?? ''));
+    // Recover company from next= when the form was posted from bare /login.php.
+    if ($submittedCompanySlug === '' && $nextAfterLogin !== '' && function_exists('extractCompanySlugFromNextPath')) {
+        $submittedCompanySlug = extractCompanySlugFromNextPath($nextAfterLogin);
+    }
 
     if ($user === '' && $password === '') {
         // Ignore empty POST (browser prefetch, back/forward, or accidental resubmit).
     } else {
     $authOk = performIndexedLogin($user, $password, $submittedCompanySlug);
-    $winningSlug = function_exists('resolvePostLoginCompanySlug') ? resolvePostLoginCompanySlug(null) : '';
+    $winningSlug = function_exists('resolvePostLoginCompanySlug') ? resolvePostLoginCompanySlug($submittedCompanySlug) : $submittedCompanySlug;
 
     if ($authOk) {
         // Always issue a remember token so updates/navigation do not force re-login
@@ -102,8 +162,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $user
             );
         }
-        $resolvedSlug = $winningSlug !== '' ? $winningSlug : '';
-        $nextAfterLogin = trim((string) ($_POST['next'] ?? $_GET['next'] ?? ''));
+        $resolvedSlug = $winningSlug !== '' ? $winningSlug : $submittedCompanySlug;
+        if ($resolvedSlug === '' && $nextAfterLogin !== '' && function_exists('extractCompanySlugFromNextPath')) {
+            $resolvedSlug = extractCompanySlugFromNextPath($nextAfterLogin);
+        }
         $redirectAfterLogin = resolvePostLoginRedirectUrl($resolvedSlug, $nextAfterLogin);
         header('Location: ' . $redirectAfterLogin);
         exit;

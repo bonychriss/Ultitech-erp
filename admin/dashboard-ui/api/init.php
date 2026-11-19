@@ -3,12 +3,19 @@
  * JSON API for the Admin Dashboard React app.
  * Company-scoped stats + recent vouchers with admin action flags.
  */
+if (!defined('ERP_FORCE_JSON_RESPONSE')) {
+    define('ERP_FORCE_JSON_RESPONSE', true);
+}
 require_once __DIR__ . '/../../../includes/functions.php';
 $balancesFns = __DIR__ . '/../../../modules/balances/functions.php';
 if (is_file($balancesFns)) {
     require_once $balancesFns;
 }
 requireAdmin();
+// Release the session lock so parallel desk/notifications requests do not block or race.
+if (session_status() === PHP_SESSION_ACTIVE) {
+    session_write_close();
+}
 
 header('Content-Type: application/json; charset=utf-8');
 
@@ -86,6 +93,75 @@ try {
     $stmt->execute(array_merge($companyParams, $privateDraftParams));
     $statsRow = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
 
+    // Credit / payables work queue:
+    // - lines marked Credit/payable, OR
+    // - approved vouchers not yet paid (supplier credit / pay later in practice).
+    $creditCount = 0;
+    $creditUnpaid = 0;
+    $creditAmountTzs = 0.0;
+    $creditAmountUsd = 0.0;
+    $creditUnpaidAmountTzs = 0.0;
+    $creditUnpaidAmountUsd = 0.0;
+    try {
+        $creditWhere = ($companySql !== '' ? $companySql : ' WHERE 1=1') . $privateDraftSql
+            . " AND (
+                (
+                    LOWER(TRIM(pv.status)) = 'approved'
+                    AND IFNULL(pv.is_paid, 0) = 0
+                    AND IFNULL(pv.is_posted, 0) = 0
+                )
+                OR EXISTS (
+                    SELECT 1 FROM voucher_items vi
+                    WHERE vi.voucher_id = pv.id
+                      AND (
+                        LOWER(vi.payment_type) LIKE '%credit%'
+                        OR LOWER(vi.payment_type) LIKE '%payable%'
+                      )
+                )
+            )";
+        $creditStmt = $pdo->prepare(
+            'SELECT
+                COUNT(DISTINCT pv.id) AS credit_total,
+                COUNT(DISTINCT CASE
+                    WHEN IFNULL(pv.is_paid, 0) = 0 AND IFNULL(pv.is_posted, 0) = 0 THEN pv.id
+                END) AS credit_unpaid,
+                COALESCE(SUM(CASE
+                    WHEN UPPER(TRIM(IFNULL(pv.currency, \'TZS\'))) = \'USD\' THEN 0
+                    ELSE pv.total_amount
+                END), 0) AS credit_amount_tzs,
+                COALESCE(SUM(CASE
+                    WHEN UPPER(TRIM(IFNULL(pv.currency, \'TZS\'))) = \'USD\' THEN pv.total_amount
+                    ELSE 0
+                END), 0) AS credit_amount_usd,
+                COALESCE(SUM(CASE
+                    WHEN IFNULL(pv.is_paid, 0) = 0 AND IFNULL(pv.is_posted, 0) = 0
+                         AND UPPER(TRIM(IFNULL(pv.currency, \'TZS\'))) <> \'USD\'
+                    THEN pv.total_amount ELSE 0
+                END), 0) AS credit_unpaid_amount_tzs,
+                COALESCE(SUM(CASE
+                    WHEN IFNULL(pv.is_paid, 0) = 0 AND IFNULL(pv.is_posted, 0) = 0
+                         AND UPPER(TRIM(IFNULL(pv.currency, \'TZS\'))) = \'USD\'
+                    THEN pv.total_amount ELSE 0
+                END), 0) AS credit_unpaid_amount_usd
+             FROM payment_vouchers pv' . $creditWhere
+        );
+        $creditStmt->execute(array_merge($companyParams, $privateDraftParams));
+        $creditRow = $creditStmt->fetch(PDO::FETCH_ASSOC) ?: [];
+        $creditCount = (int) ($creditRow['credit_total'] ?? 0);
+        $creditUnpaid = (int) ($creditRow['credit_unpaid'] ?? 0);
+        $creditAmountTzs = (float) ($creditRow['credit_amount_tzs'] ?? 0);
+        $creditAmountUsd = (float) ($creditRow['credit_amount_usd'] ?? 0);
+        $creditUnpaidAmountTzs = (float) ($creditRow['credit_unpaid_amount_tzs'] ?? 0);
+        $creditUnpaidAmountUsd = (float) ($creditRow['credit_unpaid_amount_usd'] ?? 0);
+    } catch (Throwable $e) {
+        $creditCount = 0;
+        $creditUnpaid = 0;
+        $creditAmountTzs = 0.0;
+        $creditAmountUsd = 0.0;
+        $creditUnpaidAmountTzs = 0.0;
+        $creditUnpaidAmountUsd = 0.0;
+    }
+
     $stats = [
         'total' => (int) ($statsRow['total'] ?? 0),
         'pending' => (int) ($statsRow['pending'] ?? 0),
@@ -95,6 +171,12 @@ try {
         'paid' => (int) ($statsRow['paid'] ?? 0),
         'posted' => (int) ($statsRow['posted'] ?? 0),
         'draft' => (int) ($statsRow['draft'] ?? 0),
+        'credit' => $creditCount,
+        'credit_unpaid' => $creditUnpaid,
+        'credit_amount_tzs' => $creditAmountTzs,
+        'credit_amount_usd' => $creditAmountUsd,
+        'credit_unpaid_amount_tzs' => $creditUnpaidAmountTzs,
+        'credit_unpaid_amount_usd' => $creditUnpaidAmountUsd,
         'approved_amount_tzs' => (float) ($statsRow['approved_amount_tzs'] ?? 0),
         'approved_amount_usd' => (float) ($statsRow['approved_amount_usd'] ?? 0),
         'total_value' => (float) ($statsRow['total_value'] ?? 0),
@@ -138,6 +220,26 @@ try {
                 IFNULL(pv.is_reference,0) AS is_reference,
                 IFNULL(pv.is_draft,0) AS is_draft,
                 (SELECT COUNT(*) FROM voucher_items vi WHERE vi.voucher_id = pv.id) AS item_count,
+                (
+                    SELECT vi.payment_type FROM voucher_items vi
+                    WHERE vi.voucher_id = pv.id
+                    ORDER BY vi.id ASC LIMIT 1
+                ) AS item_payment_type,
+                (
+                    EXISTS (
+                        SELECT 1 FROM voucher_items vi
+                        WHERE vi.voucher_id = pv.id
+                          AND (
+                            LOWER(vi.payment_type) LIKE '%credit%'
+                            OR LOWER(vi.payment_type) LIKE '%payable%'
+                          )
+                    )
+                    OR (
+                        LOWER(TRIM(pv.status)) = 'approved'
+                        AND IFNULL(pv.is_paid, 0) = 0
+                        AND IFNULL(pv.is_posted, 0) = 0
+                    )
+                ) AS is_credit,
                 $attachmentCountSql
                 $purposeSelectSql,
                 u.full_name AS creator_name, u.department
@@ -223,7 +325,14 @@ try {
             'purpose' => function_exists('resolvePaymentVoucherPurposeFromRow')
                 ? resolvePaymentVoucherPurposeFromRow($v)
                 : 'general',
+            'payment_type' => (string) ($v['item_payment_type'] ?? ''),
+            'is_credit' => (int) ($v['is_credit'] ?? 0) === 1,
             'paid_so_far' => 0.0,
+            'prior_payments' => [],
+            'display_status_key' => $isPostedFlag
+                ? 'posted'
+                : ($isPaidFlag ? 'paid' : strtolower((string) $derivedStatus)),
+            'payment_execution_status' => '',
         ];
     }
 
@@ -234,26 +343,72 @@ try {
         $balancesPdo = $pdo;
     }
 
-    $openStockIds = [];
+    // Prior installment totals + line details for any unpaid approved voucher.
+    $openPayIds = [];
     foreach ($recent as $idx => $r) {
-        if ($r['purpose'] === 'stock_purchase' && $r['can_mark_paid']) {
-            $openStockIds[(int) $r['id']] = $idx;
+        if (!empty($r['can_mark_paid'])) {
+            $openPayIds[(int) $r['id']] = $idx;
         }
     }
-    if ($openStockIds !== [] && function_exists('tableExists') && tableExists('account_transactions', $balancesPdo)) {
+    if ($openPayIds !== [] && function_exists('tableExists') && tableExists('account_transactions', $balancesPdo)) {
         try {
-            $ph = implode(',', array_fill(0, count($openStockIds), '?'));
+            $ph = implode(',', array_fill(0, count($openPayIds), '?'));
             $paidStmt = $balancesPdo->prepare(
                 "SELECT reference_id, COALESCE(SUM(amount), 0) AS paid FROM account_transactions
                  WHERE reference_type = 'payment_voucher' AND type = 'debit' AND reference_id IN ($ph)
                  GROUP BY reference_id"
             );
-            $paidStmt->execute(array_keys($openStockIds));
+            $paidStmt->execute(array_keys($openPayIds));
             foreach ($paidStmt->fetchAll(PDO::FETCH_ASSOC) as $pr) {
                 $rid = (int) ($pr['reference_id'] ?? 0);
-                if (isset($openStockIds[$rid])) {
-                    $recent[$openStockIds[$rid]]['paid_so_far'] = (float) ($pr['paid'] ?? 0);
+                if (isset($openPayIds[$rid])) {
+                    $recent[$openPayIds[$rid]]['paid_so_far'] = (float) ($pr['paid'] ?? 0);
                 }
+            }
+
+            $hasAccounts = tableExists('financial_accounts', $balancesPdo);
+            $detailSql = $hasAccounts
+                ? "SELECT t.reference_id, t.amount, t.transaction_date, t.description,
+                          COALESCE(a.name, '') AS account_name, COALESCE(a.type, '') AS account_type
+                   FROM account_transactions t
+                   LEFT JOIN financial_accounts a ON a.id = t.account_id
+                   WHERE t.reference_type = 'payment_voucher' AND t.type = 'debit' AND t.reference_id IN ($ph)
+                   ORDER BY t.transaction_date ASC, t.id ASC"
+                : "SELECT t.reference_id, t.amount, t.transaction_date, t.description,
+                          '' AS account_name, '' AS account_type
+                   FROM account_transactions t
+                   WHERE t.reference_type = 'payment_voucher' AND t.type = 'debit' AND t.reference_id IN ($ph)
+                   ORDER BY t.transaction_date ASC, t.id ASC";
+            $detailStmt = $balancesPdo->prepare($detailSql);
+            $detailStmt->execute(array_keys($openPayIds));
+            foreach ($detailStmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+                $rid = (int) ($row['reference_id'] ?? 0);
+                if (!isset($openPayIds[$rid])) {
+                    continue;
+                }
+                $txDate = substr(trim((string) ($row['transaction_date'] ?? '')), 0, 10);
+                $recent[$openPayIds[$rid]]['prior_payments'][] = [
+                    'amount' => (float) ($row['amount'] ?? 0),
+                    'date' => $txDate,
+                    'account_name' => (string) ($row['account_name'] ?? ''),
+                    'account_type' => (string) ($row['account_type'] ?? ''),
+                    'description' => (string) ($row['description'] ?? ''),
+                ];
+            }
+
+            // Partial installments stay is_paid=0; surface Partially paid from ledger totals.
+            foreach ($openPayIds as $vid => $idx) {
+                $paidSoFar = (float) ($recent[$idx]['paid_so_far'] ?? 0);
+                $totalAmt = (float) ($recent[$idx]['total_amount'] ?? 0);
+                if ($paidSoFar <= 0.009 || !empty($recent[$idx]['is_paid'])) {
+                    continue;
+                }
+                if ($totalAmt > 0 && $paidSoFar >= ($totalAmt - 0.009)) {
+                    continue;
+                }
+                $recent[$idx]['display_status'] = 'Partially paid';
+                $recent[$idx]['display_status_key'] = 'partially_paid';
+                $recent[$idx]['payment_execution_status'] = 'partially_paid';
             }
         } catch (Throwable $ePaid) {
             // optional

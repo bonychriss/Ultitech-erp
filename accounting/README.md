@@ -1,84 +1,81 @@
-# Accounting & Financial Reporting README
+# Accounting folder — technical map
 
-This document explains the workflow for **Journal Entries** and how they flow into your **Profit & Loss (P&L)** statement.
+Canonical product guide: **[`../ACCOUNTING-README.md`](../ACCOUNTING-README.md)**  
+Settings detail: **[`SETTINGS-README.md`](SETTINGS-README.md)**
 
-## 1. The Core Concept: Double-Entry Bookkeeping
+This folder holds Accounting screens (settings, journals, VAT, statement routers) and ledger-mode report UIs. The double-entry **engine** lives under `includes/gl/`.
 
-Every financial transaction in the system is recorded as a **Journal Entry**. A Journal Entry consists of at least two "line items" (debits and credits) that must balance (Total Debit = Total Credit).
+---
 
-- **Debits** increase Assets and Expenses.
-- **Credits** increase Liabilities, Equity, and Revenue.
+## Layout
 
-## 2. Journal Entry Workflow
+```text
+accounting/
+  settings.php                 Accounting Settings (tabs)
+  journal-entries.php          Manual / listed journals
+  journal-configuration.php    Journal profiles
+  vat-control.php              VAT control desk
+  reconciliation.php           Bank reconciliation entry
+  gl-reconciliation.php        GL sync / autosync tools
+  trial-balance.php            Router → gl-views or legacy
+  profit-loss.php
+  balance-sheet.php
+  cash-flow.php
+  ledger.php
+  chart-of-accounts.php
+  gl-category-map.php          PV budget category → expense GL
+  exchange-rates.php
+  fa-gl-sync.php               Financial account ↔ GL link tools
+  posting-approvals.php
+  settings-ui/                 React build for settings
+  vat-control-ui/              React build for VAT
+  gl-views/                    Ledger-mode statement pages
+    trial-balance.php
+    profit-loss.php
+    balance-sheet.php          Comparative multi-year BS
+    cash-flow.php
+    ledger.php
+    export-csv.php
+    export-pdf.php
+```
 
-Journal Entries (JEs) are the source of truth for all reports.
+Report routers choose **ledger** vs **legacy** via `gl_report_source($pdo)`. Use `?legacy=1` only to force old `erp_journal_*` pages.
 
-### A. Automated Entries (from Sales)
-When you use the Sales module, the system automatically creates JEs for you:
+---
 
-1.  **Invoice Posting**:
-    - **Dr** Accounts Receivable (Asset)
-    - **Cr** Product Sales (Revenue)
-    - **Cr** Tax Payable (Liability)
-    
-2.  **Payment Registration**:
-    - **Dr** Bank (Asset)
-    - **Cr** Accounts Receivable (Asset)
+## GL engine (`includes/gl/`)
 
-### B. Manual Entries
-For other transactions (e.g., Expenses, Salaries, Capital Injection), you must create manual JEs.
+| File | Role |
+|------|------|
+| `gl_core.php` | Schema ensure, `gl_post_entry`, system accounts, period locks |
+| `gl_bridge.php` | `gl_bridge_sync_all` — openings, AP accrual, bank tx, revenue, … |
+| `gl_reports.php` | Trial balance, P&L, Balance Sheet, cash flow builders |
+| `gl_year_end.php` | Close books → Retained Earnings |
+| `gl_fx_auto.php` | FX rate helpers |
+| `gl_page_style.php` / `gl_view_helpers.php` | Shared report chrome |
 
-- **Navigate**: Accounting > Journal Entries > New Entry
-- **Example: Paying Rent**
-    - **Dr** Rent Expense (Expense Account)
-    - **Cr** Bank (Asset Account)
+Primary tables: `gl_journal_entries`, `gl_journal_lines`, `gl_source_links`, `erp_accounts`.
 
-## 3. Profit & Loss Statement (Income Statement)
+---
 
-The Profit & Loss statement tells you how much money you made or lost over a period.
+## Balance Sheet (ledger mode)
 
-- **Navigate**: Accounting > Profit & Loss
+- Multi-year comparative columns (`years=1..5`)
+- Always shows ASSETS and LIABILITIES & EQUITY section shells
+- Placeholder zero lines for template accounts (prepaid, fixed assets, AP, loans, capital, RE, …)
+- On open: `gl_bridge_sync_accounts_payable()` so unpaid approved vouchers accrue to AP (code **2000**)
 
-### Revenue Recognition (Important!)
-Your P&L uses **Accrual Accounting Principles**.
+---
 
-- **When is Revenue Recognized?**
-    - Revenue is recognized the moment you **POST** an Invoice.
-    - It does **NOT** wait for the customer to pay.
-    - This gives you a true picture of "Sales made this month" regardless of when cash arrives.
+## Access
 
-- **Do Paid Invoices appear in P&L?**
-    - **YES**. But they appeared the moment they were Posted.
-    - Marking an invoice as "Paid" creates a journal entry affecting the **Balance Sheet** (Cash increases, Accounts Receivable decreases). It does **not** change the Revenue (P&L) amount, because the sale was already recorded.
+Admin or Finance. Prefer `company_url('accounting/…')` for tenant-safe links.
 
-### Period Filtering
-The P&L is always calculated for a specific time window (e.g., "This Month", "Year to Date").
-- Make sure you are viewing the correct period.
-- An invoice posted in January will appear in the January P&L, even if paid in February.
+---
 
-### How it is calculated
-1.  **Revenue**: Sum of CREDITS to 'Revenue' accounts.
-2.  **Expenses**: Sum of DEBITS to 'Expense' accounts.
-3.  **Net Income** = Total Revenue - Total Expenses.
+## Further reading
 
-## 4. Troubleshooting
-
-**"Not Balanced" Error**:
-- Total Debits must equal total Credits. You cannot save an unbalanced manual entry.
-
-**"Invoice not showing in P&L"**:
-- Ensure the Invoice status is at least **Posted**. Drafts are ignored.
-- Check the **Date** of the Invoice relative to the P&L period you are viewing.
-
-## 5. Future Enhancements
-
-We are planning the following improvements to the accounting engine:
-
-1.  **Per-Product Revenue Accounts**:
-    - Ability to map different products to different accounts (e.g., "Service Revenue" vs "Hardware Sales") instead of a single global "Product Sales" account.
-    
-2.  **Purchase Automation**:
-    - Automatically create Expense Journals when a Purchase Order is billed.
-    
-3.  **Advanced Accrual Accounting**:
-    - Handling deferred revenue and prepaid expenses.
+- [`../ACCOUNTING-README.md`](../ACCOUNTING-README.md) — full module guide  
+- [`SETTINGS-README.md`](SETTINGS-README.md) — mappings, periods, year-end  
+- [`../BALANCES-README.md`](../BALANCES-README.md) — cash book  
+- [`../README-STOCK-PURCHASE-PAYMENT-WORKFLOW.md`](../README-STOCK-PURCHASE-PAYMENT-WORKFLOW.md) — PO payment flow  

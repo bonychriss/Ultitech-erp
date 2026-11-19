@@ -32,7 +32,7 @@ export default function VoucherPreview({ data }) {
           style={{ maxHeight: 60, maxWidth: 140, objectFit: 'contain', marginRight: 40 }}
           onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = media.fallbackLogoUrl }}
         />
-        <h1 style={{ fontSize: 24, fontWeight: 'bold', margin: 0, color: '#000', letterSpacing: 2, flexGrow: 1, textAlign: 'center', textTransform: 'uppercase' }}>
+        <h1 style={{ fontSize: 24, fontWeight: 500, margin: 0, color: '#000', letterSpacing: 2, flexGrow: 1, textAlign: 'center', textTransform: 'uppercase' }}>
           {`${data.voucher?.voucher_type_label || 'Payment'} VOUCHER`.toUpperCase()}
         </h1>
       </div>

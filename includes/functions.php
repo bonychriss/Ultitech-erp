@@ -5928,16 +5928,118 @@ function buildLoginAttemptSlugs(string $preferredSlug, $controlPdo = null): arra
 /**
  * Safe post-login redirect: optional ?next= path, else company module picker.
  */
+/**
+ * Pull a tenant slug out of a post-login ?next= path such as
+ * /ultimate/admin/dashboard.php?module=voucher → "ultimate".
+ */
+function extractCompanySlugFromNextPath(string $next): string
+{
+    $next = str_replace('\\', '/', trim($next));
+    if ($next === '' || preg_match('#^https?://#i', $next) || str_starts_with($next, '//') || str_contains($next, '..')) {
+        return '';
+    }
+    $path = (string) (parse_url($next, PHP_URL_PATH) ?? $next);
+    if (defined('APP_BASE_PATH')) {
+        $base = trim((string) APP_BASE_PATH, '/');
+        if ($base !== '') {
+            $prefix = '/' . $base;
+            if ($path === $prefix) {
+                $path = '/';
+            } elseif (str_starts_with($path, $prefix . '/')) {
+                $path = substr($path, strlen($prefix));
+                if ($path === '' || ($path[0] ?? '') !== '/') {
+                    $path = '/' . ltrim($path, '/');
+                }
+            }
+        }
+    }
+    if (!preg_match('#^/([A-Za-z0-9][A-Za-z0-9_-]*)(/|$)#', $path, $m)) {
+        return '';
+    }
+    $cand = strtolower($m[1]);
+    if (function_exists('ultitechReservedPathSegments') && in_array($cand, ultitechReservedPathSegments(), true)) {
+        return '';
+    }
+    if (function_exists('findCompanyBySlug')) {
+        $company = findCompanyBySlug($cand);
+        if (!is_array($company) || strtolower((string) ($company['status'] ?? 'inactive')) !== 'active') {
+            return '';
+        }
+    }
+    return $cand;
+}
+
+/**
+ * Turn /{company}/admin/dashboard.php?module=voucher into
+ * ['path' => 'admin/dashboard.php', 'query' => 'module=voucher'].
+ *
+ * @return array{path:string,query:string}
+ */
+function splitTenantNextPath(string $next, string $companySlug = ''): array
+{
+    $empty = ['path' => '', 'query' => ''];
+    $next = str_replace('\\', '/', trim($next));
+    if ($next === '' || str_contains($next, '..') || preg_match('#^https?://#i', $next) || str_starts_with($next, '//')) {
+        return $empty;
+    }
+    $path = (string) (parse_url($next, PHP_URL_PATH) ?? $next);
+    $query = (string) (parse_url($next, PHP_URL_QUERY) ?? '');
+    if (defined('APP_BASE_PATH')) {
+        $base = trim((string) APP_BASE_PATH, '/');
+        if ($base !== '') {
+            $prefix = '/' . $base;
+            if ($path === $prefix) {
+                $path = '/';
+            } elseif (str_starts_with($path, $prefix . '/')) {
+                $path = substr($path, strlen($prefix));
+                if ($path === '' || ($path[0] ?? '') !== '/') {
+                    $path = '/' . ltrim($path, '/');
+                }
+            }
+        }
+    }
+    $slug = strtolower(trim($companySlug));
+    if ($slug === '') {
+        $slug = extractCompanySlugFromNextPath($next);
+    }
+    if ($slug !== '') {
+        $prefix = '/' . $slug;
+        if (strcasecmp($path, $prefix) === 0) {
+            $path = '/';
+        } elseif (stripos($path, $prefix . '/') === 0) {
+            $path = substr($path, strlen($prefix));
+            if ($path === '' || ($path[0] ?? '') !== '/') {
+                $path = '/' . ltrim((string) $path, '/');
+            }
+        }
+    }
+    return [
+        'path' => ltrim($path, '/'),
+        'query' => $query,
+    ];
+}
+
 function resolvePostLoginRedirectUrl(string $companySlug = '', string $next = ''): string
 {
     $next = trim($next);
     $slug = strtolower(trim($companySlug));
+    if ($slug === '' && $next !== '') {
+        $slug = extractCompanySlugFromNextPath($next);
+    }
     if ($next !== '') {
         if (preg_match('#^https?://#i', $next) || str_starts_with($next, '//')) {
             $next = '';
         } else {
             $next = str_replace('\\', '/', $next);
             if ($next !== '' && !str_contains($next, '..')) {
+                $parts = splitTenantNextPath($next, $slug);
+                if ($slug !== '' && $parts['path'] !== '') {
+                    $url = company_url($parts['path'], $slug);
+                    if ($parts['query'] !== '') {
+                        $url .= (str_contains($url, '?') ? '&' : '?') . $parts['query'];
+                    }
+                    return $url;
+                }
                 $path = (string) (parse_url($next, PHP_URL_PATH) ?? $next);
                 $query = (string) (parse_url($next, PHP_URL_QUERY) ?? '');
                 $rel = function_exists('ultitechTenantAppPathPrefix') ? ultitechTenantAppPathPrefix($path) : '';
@@ -5999,6 +6101,36 @@ function resolvePostLoginCompanySlug($submittedSlug = null): string
     return $slug;
 }
 
+/**
+ * Manually emit PVSSESSID. Session uses use_cookies=false so regenerate_id
+ * does not update the browser cookie by itself — without this, login sticks
+ * for one HTML paint then the next click hits a deleted session file.
+ */
+if (!function_exists('ultitechEmitSessionCookie')) {
+    function ultitechEmitSessionCookie(): void
+    {
+        if (headers_sent() || session_status() !== PHP_SESSION_ACTIVE) {
+            return;
+        }
+        $sid = (string) session_id();
+        $name = (string) session_name();
+        if ($sid === '' || $name === '') {
+            return;
+        }
+        $life = 12 * 60 * 60;
+        $secure = !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off';
+        $cookie = rawurlencode($name) . '=' . rawurlencode($sid)
+            . '; Expires=' . gmdate('D, d M Y H:i:s', time() + $life) . ' GMT'
+            . '; Max-Age=' . $life
+            . '; Path=/'
+            . '; HttpOnly; SameSite=Lax';
+        if ($secure) {
+            $cookie .= '; Secure';
+        }
+        header('Set-Cookie: ' . $cookie, false);
+    }
+}
+
 function clearAuthSession()
 {
     if (session_status() !== PHP_SESSION_ACTIVE) {
@@ -6015,6 +6147,9 @@ function clearAuthSession()
         $_SESSION['company_slug']
     );
     @session_regenerate_id(true);
+    if (function_exists('ultitechEmitSessionCookie')) {
+        ultitechEmitSessionCookie();
+    }
 }
 
 require_once __DIR__ . '/auth_remember.php';
@@ -7385,6 +7520,11 @@ function authenticate($userOrEmail, $password, $companySlug = null)
                 session_start();
             }
             @session_regenerate_id(true);
+            // use_cookies=false — must re-emit PVSSESSID after regenerate or the
+            // next click (select-module → any module) lands on a deleted session.
+            if (function_exists('ultitechEmitSessionCookie')) {
+                ultitechEmitSessionCookie();
+            }
             $_SESSION['user_id'] = $user['id'];
             $_SESSION['username'] = $user['username'];
             $_SESSION['full_name'] = $user['full_name'];
@@ -7695,13 +7835,25 @@ function isFinance()
 
 function erpRequestWantsJson(): bool
 {
+    if (defined('ERP_FORCE_JSON_RESPONSE') && ERP_FORCE_JSON_RESPONSE) {
+        return true;
+    }
     $accept = strtolower((string) ($_SERVER['HTTP_ACCEPT'] ?? ''));
     if (str_contains($accept, 'application/json')) {
         return true;
     }
     $xrw = strtolower((string) ($_SERVER['HTTP_X_REQUESTED_WITH'] ?? ''));
+    if ($xrw === 'xmlhttprequest') {
+        return true;
+    }
+    // Dashboard React APIs must never receive HTML login redirects.
+    $uri = strtolower((string) ($_SERVER['REQUEST_URI'] ?? ''));
+    $script = strtolower((string) ($_SERVER['SCRIPT_NAME'] ?? ''));
+    if (str_contains($uri, '/dashboard-ui/api/') || str_contains($script, '/dashboard-ui/api/')) {
+        return true;
+    }
 
-    return $xrw === 'xmlhttprequest';
+    return false;
 }
 
 function erpJsonAuthFailure(string $message = 'Session expired. Please refresh and log in again.', int $status = 401): void
@@ -7759,7 +7911,15 @@ function requireLogin()
         } elseif ($requestedCompanySlug !== '') {
             $loginTarget = $appendNext(company_login_url($requestedCompanySlug));
         } else {
-            $loginTarget = $appendNext(app_url('/login.php'));
+            $slugFromUri = function_exists('extractCompanySlugFromNextPath')
+                ? extractCompanySlugFromNextPath((string) ($_SERVER['REQUEST_URI'] ?? ''))
+                : '';
+            if ($slugFromUri === '' && function_exists('extractCompanySlugFromNextPath')) {
+                $slugFromUri = extractCompanySlugFromNextPath((string) ($_GET['next'] ?? ''));
+            }
+            $loginTarget = $slugFromUri !== ''
+                ? $appendNext(company_login_url($slugFromUri))
+                : $appendNext(app_url('/login.php'));
         }
         // BOM / early echo can mark headers sent (esp. when php.ini output_buffering=Off).
         if (!headers_sent()) {
@@ -7776,17 +7936,53 @@ function requireLogin()
     }
     if (isCompanyScopingEnabled() && empty($_SESSION['company_id'])) {
         $resolvedCompanyId = currentCompanyId();
-        if (empty($resolvedCompanyId)) {
-            clearAuthSession();
-            if ($wantsJson) {
-                erpJsonAuthFailure('Company context missing. Please refresh and log in again.');
+        if (!empty($resolvedCompanyId)) {
+            // Hydrate missing company context from URL/session instead of bouncing to login.
+            $_SESSION['company_id'] = (int) $resolvedCompanyId;
+            if ($requestedCompanySlug !== '' && empty($_SESSION['company_slug'])) {
+                $_SESSION['company_slug'] = $requestedCompanySlug;
             }
-            if (!headers_sent()) {
-                header('Location: ' . app_url('/login.php?error=company_context'));
-            } else {
-                echo "<script>window.location.href='" . app_url('/login.php?error=company_context') . "';</script>";
+            if (empty($_SESSION['company_name']) && $requestedCompanySlug !== '') {
+                $hydrateCompany = findCompanyBySlug($requestedCompanySlug);
+                if (is_array($hydrateCompany)) {
+                    $_SESSION['company_name'] = (string) ($hydrateCompany['company_name'] ?? '');
+                    if (empty($_SESSION['company_slug'])) {
+                        $_SESSION['company_slug'] = (string) ($hydrateCompany['company_slug'] ?? $requestedCompanySlug);
+                    }
+                }
             }
-            exit;
+        } else {
+            // Prefer hydrating from the URL slug over wiping a still-valid login.
+            if ($requestedCompanySlug !== '' && function_exists('findCompanyBySlug')) {
+                $slugCompany = findCompanyBySlug($requestedCompanySlug);
+                if (is_array($slugCompany) && !empty($slugCompany['id'])) {
+                    $_SESSION['company_id'] = (int) $slugCompany['id'];
+                    $_SESSION['company_slug'] = $requestedCompanySlug;
+                    if (empty($_SESSION['company_name'])) {
+                        $_SESSION['company_name'] = (string) ($slugCompany['company_name'] ?? '');
+                    }
+                }
+            }
+            if (empty($_SESSION['company_id'])) {
+                // JSON/XHR must not wipe a still-valid login — concurrent desk APIs were
+                // logging users out while the HTML shell still showed their name.
+                if ($wantsJson) {
+                    erpJsonAuthFailure('Company context missing. Please refresh and log in again.');
+                }
+                clearAuthSession();
+                if (function_exists('clearRememberMeToken')) {
+                    clearRememberMeToken();
+                }
+                $companyContextLogin = $requestedCompanySlug !== ''
+                    ? company_login_url($requestedCompanySlug) . '?error=company_context'
+                    : app_url('/login.php?error=company_context');
+                if (!headers_sent()) {
+                    header('Location: ' . $companyContextLogin);
+                } else {
+                    echo "<script>window.location.href=" . json_encode($companyContextLogin, JSON_UNESCAPED_SLASHES) . ";</script>";
+                }
+                exit;
+            }
         }
     }
     // Force first-time company admin onboarding before normal module usage.
@@ -7794,16 +7990,28 @@ function requireLogin()
         if ($requestedCompanySlug !== '') {
             $requestedCompany = findCompanyBySlug($requestedCompanySlug);
             if (!$requestedCompany || strtolower((string) ($requestedCompany['status'] ?? 'inactive')) !== 'active') {
+                if ($wantsJson) {
+                    erpJsonAuthFailure('Company not found.', 404);
+                }
                 renderCompanyNotFoundPage('Company not found.');
             }
             $requestedCompanyId = (int) ($requestedCompany['id'] ?? 0);
             $sessionCompanyId = (int) ($_SESSION['company_id'] ?? 0);
+            if ($sessionCompanyId <= 0 && $requestedCompanyId > 0) {
+                $_SESSION['company_id'] = $requestedCompanyId;
+                $_SESSION['company_slug'] = $requestedCompanySlug;
+                $_SESSION['company_name'] = (string) ($requestedCompany['company_name'] ?? ($_SESSION['company_name'] ?? ''));
+                $sessionCompanyId = $requestedCompanyId;
+            }
             if ($requestedCompanyId <= 0 || $sessionCompanyId <= 0) {
-                clearAuthSession();
                 if ($wantsJson) {
-                    erpJsonAuthFailure();
+                    erpJsonAuthFailure('Company context missing. Please refresh and log in again.');
                 }
-                header('Location: ' . company_login_url($requestedCompanySlug));
+                clearAuthSession();
+                if (function_exists('clearRememberMeToken')) {
+                    clearRememberMeToken();
+                }
+                header('Location: ' . company_login_url($requestedCompanySlug) . '?error=company_context');
                 exit;
             }
             // Wrong company URL while already logged in elsewhere: bounce home, do not wipe session.
@@ -7813,8 +8021,15 @@ function requireLogin()
                     $ownSlug = resolveCompanySlugById($sessionCompanyId);
                 }
                 if ($ownSlug !== '') {
-                    header('Location: ' . company_url('select-module.php', $ownSlug));
+                    $homeUrl = company_url('select-module.php', $ownSlug);
+                    if ($wantsJson) {
+                        erpJsonAuthFailure('Wrong company context. Open ' . $ownSlug . ' instead.', 409);
+                    }
+                    header('Location: ' . $homeUrl);
                     exit;
+                }
+                if ($wantsJson) {
+                    erpJsonAuthFailure('Company context mismatch. Please refresh and log in again.');
                 }
                 clearAuthSession();
                 header('Location: ' . company_login_url($requestedCompanySlug));
@@ -7975,6 +8190,9 @@ function requireAdmin()
 {
     requireLogin();
     if (!isAdmin()) {
+        if (function_exists('erpRequestWantsJson') && erpRequestWantsJson()) {
+            erpJsonAuthFailure('Admin access required.', 403);
+        }
         $dashboardUrl = company_url('employee/dashboard');
         $qs = $_SERVER['QUERY_STRING'] ?? '';
         if ($qs !== '') {
@@ -10253,8 +10471,17 @@ function getNotificationsForCurrentUser($limit = 10)
     ensureNotificationsSchema();
     $rows = [];
     if (isAdmin()) {
-        $stmt = $pdo->prepare("SELECT id, title, message, type, voucher_id, is_read, COALESCE(updated_at, created_at) AS created_at FROM notifications WHERE audience IN ('admin','all') ORDER BY COALESCE(updated_at, created_at) DESC LIMIT ?");
-        $stmt->bindValue(1, (int) $limit, PDO::PARAM_INT);
+        $uid = (int) ($_SESSION['user_id'] ?? 0);
+        $stmt = $pdo->prepare(
+            "SELECT id, title, message, type, voucher_id, is_read, COALESCE(updated_at, created_at) AS created_at
+             FROM notifications
+             WHERE audience IN ('admin','all')
+                OR (audience IN ('user','all') AND user_id = ?)
+             ORDER BY COALESCE(updated_at, created_at) DESC
+             LIMIT ?"
+        );
+        $stmt->bindValue(1, $uid, PDO::PARAM_INT);
+        $stmt->bindValue(2, (int) $limit, PDO::PARAM_INT);
         $stmt->execute();
         $rows = $stmt->fetchAll() ?: [];
     } else if (isLoggedIn()) {
@@ -10288,9 +10515,18 @@ function getNotificationsForCurrentUserPaged($limit = 20, $offset = 0)
     $limit = (int) $limit;
     $offset = (int) $offset;
     if (isAdmin()) {
-        $stmt = $pdo->prepare("SELECT id, title, message, type, voucher_id, is_read, COALESCE(updated_at, created_at) AS created_at FROM notifications WHERE audience IN ('admin','all') ORDER BY COALESCE(updated_at, created_at) DESC LIMIT ? OFFSET ?");
-        $stmt->bindValue(1, $limit, PDO::PARAM_INT);
-        $stmt->bindValue(2, $offset, PDO::PARAM_INT);
+        $uid = (int) ($_SESSION['user_id'] ?? 0);
+        $stmt = $pdo->prepare(
+            "SELECT id, title, message, type, voucher_id, is_read, COALESCE(updated_at, created_at) AS created_at
+             FROM notifications
+             WHERE audience IN ('admin','all')
+                OR (audience IN ('user','all') AND user_id = ?)
+             ORDER BY COALESCE(updated_at, created_at) DESC
+             LIMIT ? OFFSET ?"
+        );
+        $stmt->bindValue(1, $uid, PDO::PARAM_INT);
+        $stmt->bindValue(2, $limit, PDO::PARAM_INT);
+        $stmt->bindValue(3, $offset, PDO::PARAM_INT);
         $stmt->execute();
         return $stmt->fetchAll();
     } else if (isLoggedIn()) {
@@ -10406,6 +10642,7 @@ function getNotificationCentreFeedPaged(int $limit = 20, int $offset = 0, bool $
     $uid = (int) ($_SESSION['user_id'] ?? 0);
 
     if (isAdmin()) {
+        // Admins see company-wide admin notices AND personal user-targeted notices.
         $sql = "
             SELECT * FROM (
                 SELECT 'core' AS src, n.id, n.title, n.message, n.type, n.is_read,
@@ -10413,6 +10650,7 @@ function getNotificationCentreFeedPaged(int $limit = 20, int $offset = 0, bool $
                     n.voucher_id, CAST(NULL AS CHAR(512)) AS link_url
                 FROM notifications n
                 WHERE n.audience IN ('admin','all')
+                   OR (n.audience IN ('user','all') AND n.user_id = ?)
                 UNION ALL
                 SELECT 'system' AS src, s.id, s.title, s.message, s.type, s.is_read, s.created_at,
                     CAST(NULL AS SIGNED) AS voucher_id, COALESCE(s.link, '') AS link_url
@@ -10422,7 +10660,7 @@ function getNotificationCentreFeedPaged(int $limit = 20, int $offset = 0, bool $
             ORDER BY u.created_at DESC
             LIMIT " . (int) $limit . " OFFSET " . (int) $offset;
         $stmt = $pdo->prepare($sql);
-        $stmt->execute([$uid]);
+        $stmt->execute([$uid, $uid]);
     } else {
         $sql = "
             SELECT * FROM (
@@ -10477,7 +10715,16 @@ function getUnreadCountForCurrentUser()
             return 0;
         }
         if (isAdmin()) {
-            $stmt = $pdo->query("SELECT COUNT(*) AS c FROM notifications WHERE audience IN ('admin','all') AND is_read = 0");
+            $uid = (int) ($_SESSION['user_id'] ?? 0);
+            $stmt = $pdo->prepare(
+                "SELECT COUNT(*) AS c FROM notifications
+                 WHERE is_read = 0
+                   AND (
+                        audience IN ('admin','all')
+                     OR (audience IN ('user','all') AND user_id = ?)
+                   )"
+            );
+            $stmt->execute([$uid]);
             return (int) $stmt->fetchColumn();
         }
         if (isLoggedIn()) {
@@ -10496,7 +10743,13 @@ function markAllNotificationsReadForCurrentUser()
     global $pdo;
     ensureNotificationsSchema();
     if (isAdmin()) {
-        $pdo->exec("UPDATE notifications SET is_read = 1 WHERE audience IN ('admin','all')");
+        $uid = (int) ($_SESSION['user_id'] ?? 0);
+        $stmt = $pdo->prepare(
+            "UPDATE notifications SET is_read = 1
+             WHERE audience IN ('admin','all')
+                OR (audience IN ('user','all') AND user_id = ?)"
+        );
+        $stmt->execute([$uid]);
     } else if (isLoggedIn()) {
         $stmt = $pdo->prepare("UPDATE notifications SET is_read = 1 WHERE (user_id = ? OR audience='all') AND audience IN ('user','all')");
         $stmt->execute([$_SESSION['user_id']]);
@@ -10577,8 +10830,16 @@ function getHeaderNotificationsMerged(int $limit = 12, bool $includeCoreVoucherF
     if ($includeCoreVoucherFeed && tableExists('notifications', $pdo)) {
         try {
             if (isAdmin()) {
-                $stmt = $pdo->prepare("SELECT id, title, message, type, voucher_id, is_read, COALESCE(updated_at, created_at) AS created_at FROM notifications WHERE audience IN ('admin','all') ORDER BY COALESCE(updated_at, created_at) DESC LIMIT " . (int) $take);
-                $stmt->execute();
+                $uid = (int) ($_SESSION['user_id'] ?? 0);
+                $stmt = $pdo->prepare(
+                    "SELECT id, title, message, type, voucher_id, is_read, COALESCE(updated_at, created_at) AS created_at
+                     FROM notifications
+                     WHERE audience IN ('admin','all')
+                        OR (audience IN ('user','all') AND user_id = ?)
+                     ORDER BY COALESCE(updated_at, created_at) DESC
+                     LIMIT " . (int) $take
+                );
+                $stmt->execute([$uid]);
                 $core = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
             } else {
                 $stmt = $pdo->prepare("SELECT id, title, message, type, voucher_id, is_read, COALESCE(updated_at, created_at) AS created_at FROM notifications WHERE (audience IN ('user','all') AND (user_id = ? OR audience='all')) ORDER BY COALESCE(updated_at, created_at) DESC LIMIT " . (int) $take);
@@ -10681,8 +10942,18 @@ function getUnreadCoreNotificationsForPoll(int $userId, int $limit = 15): array
     ensureNotificationsSchema();
     $limit = max(1, min(50, $limit));
     if (isAdmin()) {
-        $stmt = $pdo->prepare("SELECT id, title, message, type, voucher_id, is_read, created_at FROM notifications WHERE audience IN ('admin','all') AND is_read = 0 ORDER BY created_at DESC LIMIT " . (int) $limit);
-        $stmt->execute();
+        $stmt = $pdo->prepare(
+            "SELECT id, title, message, type, voucher_id, is_read, created_at
+             FROM notifications
+             WHERE is_read = 0
+               AND (
+                    audience IN ('admin','all')
+                 OR (audience IN ('user','all') AND user_id = ?)
+               )
+             ORDER BY created_at DESC
+             LIMIT " . (int) $limit
+        );
+        $stmt->execute([$userId]);
 
         return filterOutDismissedNotifications($stmt->fetchAll(PDO::FETCH_ASSOC) ?: [], 'core', $userId);
     }

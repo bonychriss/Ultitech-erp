@@ -215,6 +215,9 @@ RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{DOCUMENT_ROOT}/admin/$1.php -f
 RewriteRule ^admin/([^./]+)/?$ ../admin/$1.php?company_slug=ultimate [L,QSA]
 
+# Payment Vouchers React API — always parent admin API (avoid nested session store).
+RewriteRule ^admin/dashboard-ui/api/([^/]+\.php)$ ../admin/dashboard-ui/api/$1?company_slug=ultimate [L,QSA,NC]
+
 # Missing admin/* under ultimate/ → parent admin/ (voucher desks, APIs, assets)
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteRule ^admin/(.+)$ ../admin/$1?company_slug=ultimate [L,QSA]

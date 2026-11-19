@@ -36,6 +36,66 @@ try {
 
     $deskMode = strtolower(trim((string) ($_GET['desk'] ?? '')));
     $isPurchasesDesk = ($deskMode === 'purchases');
+    $isCreditDesk = ($deskMode === 'credit');
+
+    if ($isCreditDesk) {
+        // Match list default: unpaid credit vouchers (work queue).
+        $voucherRows = expenses_fetch_credit_vouchers_as_list_rows($pdo, ['only_unpaid' => '1']);
+        $statusBreakdown = [];
+        $counts = [];
+        $totalInclusive = 0.0;
+        $totalUnpaid = 0.0;
+        foreach ($voucherRows as $row) {
+            $key = strtolower(trim((string) ($row['display_status'] ?? $row['status'] ?? 'pending')));
+            $counts[$key] = ($counts[$key] ?? 0) + 1;
+            $amount = (float) ($row['amount'] ?? 0);
+            $totalInclusive += $amount;
+            $isPaid = (int) ($row['is_paid'] ?? 0) === 1
+                || in_array($key, ['paid', 'posted'], true);
+            if (! $isPaid) {
+                $totalUnpaid += $amount;
+            }
+        }
+        foreach (['posted', 'paid', 'approved', 'pending', 'confirming', 'draft', 'rejected'] as $key) {
+            if (($counts[$key] ?? 0) > 0) {
+                $statusBreakdown[] = [
+                    'key' => $key,
+                    'label' => ucfirst($key),
+                    'count' => (int) $counts[$key],
+                ];
+            }
+        }
+
+        echo json_encode([
+            'desk' => 'credit',
+            'categories' => [],
+            'paymentMethods' => [
+                ['value' => 'credit', 'label' => 'Credit'],
+            ],
+            'stats' => [
+                'posted_month_count' => (int) (($counts['posted'] ?? 0) + ($counts['paid'] ?? 0)),
+                'spend_month' => $totalInclusive,
+                'total_count' => count($voucherRows),
+                'current_month' => $currentMonth,
+                'current_month_label' => date('F Y'),
+                'status_breakdown' => $statusBreakdown,
+                'trend' => [],
+                'trend_from' => $currentMonth . '-01',
+                'trend_to' => date('Y-m-t'),
+                'total_exclusive' => $totalInclusive,
+                'input_vat' => 0,
+                'total_inclusive' => $totalInclusive,
+                'total_bank' => 0,
+                'total_cash' => 0,
+                'total_payables' => $totalUnpaid,
+            ],
+            'updateBadge' => null,
+            'summaryTraces' => new stdClass(),
+            'aiAvailable' => false,
+            'csrf_token' => csrf_token(),
+        ]);
+        exit;
+    }
 
     if ($isPurchasesDesk) {
         $voucherRows = expenses_fetch_stock_purchase_vouchers_as_list_rows($pdo, []);

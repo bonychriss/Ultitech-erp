@@ -312,7 +312,7 @@
   text-align: left;
   padding: 0.5rem 0.65rem;
   font-size: 0.8125rem;
-  font-weight: 500;
+  font-weight: 400;
   color: #1e293b;
   text-decoration: none;
   border: 0;
@@ -322,12 +322,48 @@
   gap: 0.5rem;
 }
 
+.ov-actions-item i {
+  width: 1.1rem;
+  text-align: center;
+  font-weight: 400;
+  font-style: normal;
+  -webkit-text-stroke: 0;
+}
+
 .ov-actions-item:hover {
   background: #f8fafc;
 }
 
+.ov-actions-item--pay i { color: #059669; }
+.ov-actions-item--pay:hover { background: rgba(5, 150, 105, 0.1); }
+
+.ov-actions-item--edit i { color: #2563eb; }
+.ov-actions-item--edit:hover { background: rgba(37, 99, 235, 0.1); }
+
+.ov-actions-item--order i { color: #2563eb; }
+.ov-actions-item--order:hover { background: rgba(37, 99, 235, 0.1); }
+
+.ov-actions-item--products i { color: #7c3aed; }
+.ov-actions-item--products:hover { background: rgba(124, 58, 237, 0.1); }
+
+.ov-actions-item--delivery i { color: #d97706; }
+.ov-actions-item--delivery:hover { background: rgba(217, 119, 6, 0.11); }
+
+.ov-actions-item--pdf i { color: #e11d48; }
+.ov-actions-item--pdf:hover { background: rgba(225, 29, 72, 0.08); }
+
+.ov-actions-item--whatsapp i { color: #16a34a; }
+.ov-actions-item--whatsapp:hover { background: rgba(22, 163, 74, 0.1); }
+
+.ov-actions-item--email i { color: #2563eb; }
+.ov-actions-item--email:hover { background: rgba(37, 99, 235, 0.1); }
+
 .ov-actions-item--danger {
   color: #dc2626 !important;
+}
+
+.ov-actions-item--danger i {
+  color: #dc2626;
 }
 
 .ov-actions-divider {
@@ -1580,6 +1616,139 @@ body.ov-inv-transform-lock {
   .ov-inv-transform__beam {
     width: 48px;
   }
+}
+
+.ov-pay-card {
+  margin: 0.85rem 1.25rem 1.25rem;
+  border: 1px solid var(--odoo-border, #e2e8f0);
+  border-radius: 12px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.ov-pay-head {
+  padding: 0.8rem 1rem;
+  border-bottom: 1px solid #eef2f7;
+}
+
+.ov-pay-title {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: #0f172a;
+}
+
+.ov-pay-count {
+  color: #94a3b8;
+  font-weight: 400;
+}
+
+.ov-pay-list {
+  display: grid;
+}
+
+.ov-pay-row {
+  display: grid;
+  gap: 0.65rem;
+  padding: 0.85rem 1rem;
+  border-top: 1px solid #f1f5f9;
+}
+
+.ov-pay-row:first-child {
+  border-top: 0;
+}
+
+.ov-pay-row-main {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.35rem 1rem;
+}
+
+.ov-pay-amount {
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: #0f172a;
+  font-variant-numeric: tabular-nums;
+}
+
+.ov-pay-meta {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.8125rem;
+  font-weight: 400;
+  color: #64748b;
+}
+
+.ov-pay-dot {
+  color: #cbd5e1;
+}
+
+.ov-pay-atts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.ov-pay-atts--empty {
+  font-size: 0.75rem;
+  color: #94a3b8;
+}
+
+.ov-pay-att {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  max-width: 100%;
+  padding: 0.3rem 0.5rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.ov-pay-att.is-missing {
+  opacity: 0.7;
+}
+
+.ov-pay-att-type {
+  flex-shrink: 0;
+  font-size: 0.65rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: #64748b;
+}
+
+.ov-pay-att-type--pdf { color: #e11d48; }
+.ov-pay-att-type--image { color: #2563eb; }
+.ov-pay-att-type--doc { color: #7c3aed; }
+
+.ov-pay-att-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.75rem;
+  color: #334155;
+}
+
+.ov-pay-att-link {
+  flex-shrink: 0;
+  font-size: 0.75rem;
+  color: #0f766e;
+  text-decoration: none;
+}
+
+.ov-pay-att-link:hover {
+  text-decoration: underline;
+}
+
+.ov-pay-att-missing {
+  flex-shrink: 0;
+  font-size: 0.7rem;
+  color: #94a3b8;
 }
 
 @media print {

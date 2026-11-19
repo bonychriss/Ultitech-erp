@@ -699,42 +699,36 @@ function vv_load_view_payload(PDO $pdo, int $voucherId, array $opts = []): array
         unset($approvalSlots[$idx]['approver_id']);
     }
 
-    // Swift proxy
-    $swiftProxy = null;
-    if (!empty($voucher['swift_document'])) {
-        $p = (string) $voucher['swift_document'];
-        if (strpos($p, 'assets/') === 0) {
-            $relForProxy = $p;
-        } elseif (preg_match('#^https?://#i', $p)) {
-            $relForProxy = $p;
-        } else {
-            $relForProxy = 'assets/uploads/vouchers/' . ltrim($p, '/');
-        }
-        $swiftProxy = preg_match('#^https?://#i', $relForProxy)
-            ? $relForProxy
-            : (app_url('/proxy_pdf.php') . '?file=' . urlencode(ltrim($relForProxy, '/')));
-    }
-
-    // Format attachments for frontend
+    // Format attachments + SWIFT payment proofs for frontend (kept as separate lists).
     if (!function_exists('resolveStoredMediaFilePath')) {
         $resolver = dirname(__DIR__) . '/includes/media_path_resolver.php';
         if (is_file($resolver)) {
             require_once $resolver;
         }
     }
-    $attachmentCompanyId = (int) ($_SESSION['company_id'] ?? ($voucher['company_id'] ?? 0));
-    $attachmentRows = [];
-    foreach ($attachments as $att) {
-        $rel = ltrim((string) ($att['file_path'] ?? ''), '/');
-        $name = (string) ($att['original_name'] ?? basename($rel));
-        $mime = strtolower((string) ($att['mime_type'] ?? ''));
-        $isImg = strpos($mime, 'image/') === 0 || preg_match('/\.(jpg|jpeg|png|gif|webp)$/i', $rel);
-        $ext = strtoupper(pathinfo($name, PATHINFO_EXTENSION) ?: ($isImg ? 'IMG' : 'FILE'));
+    $attachmentCompanyId = $companyId > 0
+        ? $companyId
+        : (int) ($voucher['company_id'] ?? ($_SESSION['company_id'] ?? 0));
+
+    $vvIsSwiftProofName = static function (string $name): bool {
+        $base = strtolower(basename($name));
+        return str_starts_with($base, 'swift-proof')
+            || str_starts_with($base, 'swift_proof')
+            || str_contains($base, 'swift payment proof')
+            || str_contains($base, 'payment-proof')
+            || str_contains($base, 'payment_proof');
+    };
+
+    $vvResolveAttachmentMeta = static function (string $rel, string $name, string $mime = '') use ($attachmentCompanyId): array {
+        $rel = ltrim($rel, '/');
+        $mime = strtolower($mime);
+        $isImg = str_starts_with($mime, 'image/') || (bool) preg_match('/\.(jpg|jpeg|png|gif|webp)$/i', $rel !== '' ? $rel : $name);
+        $ext = strtoupper(pathinfo($name !== '' ? $name : $rel, PATHINFO_EXTENSION) ?: ($isImg ? 'IMG' : 'FILE'));
         $diskPath = '';
-        if (function_exists('resolveStoredMediaFilePath')) {
+        if ($rel !== '' && function_exists('resolveStoredMediaFilePath')) {
             $diskPath = resolveStoredMediaFilePath($rel, $attachmentCompanyId);
         }
-        if ($diskPath === '') {
+        if ($diskPath === '' && $rel !== '') {
             $fallbackDisk = dirname(__DIR__) . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $rel);
             if (is_file($fallbackDisk)) {
                 $diskPath = $fallbackDisk;
@@ -745,26 +739,312 @@ function vv_load_view_payload(PDO $pdo, int $voucherId, array $opts = []): array
         if (!$missing) {
             $bytes = (int) filesize($diskPath);
             if ($bytes > 0) {
-                $fileSizeLabel = $bytes < 1024 ? ($bytes . ' B') : ($bytes < 1048576 ? ((int) round($bytes / 1024) . ' KB') : (number_format($bytes / 1048576, 1) . ' MB'));
+                $fileSizeLabel = $bytes < 1024
+                    ? ($bytes . ' B')
+                    : ($bytes < 1048576
+                        ? ((int) round($bytes / 1024) . ' KB')
+                        : (number_format($bytes / 1048576, 1) . ' MB'));
             }
         } else {
             $fileSizeLabel = 'File missing on this server';
         }
-        $attachmentRows[] = [
-            'id' => (int) ($att['id'] ?? 0),
-            'name' => $name,
-            'fileName' => basename($rel),
-            'proxyLink' => $missing ? null : (app_url('/proxy_pdf.php') . '?file=' . urlencode($rel)),
+        $proxyLink = null;
+        if (!$missing) {
+            if (preg_match('#^https?://#i', $rel)) {
+                $proxyLink = $rel;
+            } else {
+                $proxyLink = app_url('/proxy_pdf.php') . '?file=' . urlencode($rel);
+            }
+        }
+        return [
+            'name' => $name !== '' ? $name : basename($rel),
+            'fileName' => basename($rel !== '' ? $rel : $name),
+            'proxyLink' => $proxyLink,
             'isImage' => $isImg,
             'typeLabel' => $isImg ? 'Image' : ($ext === 'PDF' ? 'PDF' : $ext),
             'fileSizeLabel' => $fileSizeLabel,
             'missing' => $missing,
         ];
+    };
+
+    $vvNormalizeSwiftRel = static function (string $p): string {
+        $p = trim($p);
+        if ($p === '') {
+            return '';
+        }
+        if (strpos($p, 'assets/') === 0 || strpos($p, 'storage/') === 0 || preg_match('#^https?://#i', $p)) {
+            return $p;
+        }
+        return 'assets/uploads/vouchers/' . ltrim($p, '/');
+    };
+
+    $attachmentRows = [];
+    $swiftProofRows = [];
+    $seenSwiftKeys = [];
+
+    $vvPushSwift = static function (array $row) use (&$swiftProofRows, &$seenSwiftKeys): void {
+        $key = strtolower((string) ($row['fileName'] ?? $row['name'] ?? ''));
+        $proxy = (string) ($row['proxyLink'] ?? '');
+        if ($key === '' && $proxy === '') {
+            return;
+        }
+        $dedupe = $key !== '' ? $key : strtolower($proxy);
+        if (isset($seenSwiftKeys[$dedupe])) {
+            $idx = (int) $seenSwiftKeys[$dedupe];
+            // Prefer a resolvable file over a stale missing DB path for the same proof.
+            if (!empty($swiftProofRows[$idx]['missing']) && empty($row['missing'])) {
+                $swiftProofRows[$idx] = $row;
+            }
+            return;
+        }
+        $seenSwiftKeys[$dedupe] = count($swiftProofRows);
+        $swiftProofRows[] = $row;
+    };
+
+    foreach ($attachments as $att) {
+        $rel = ltrim((string) ($att['file_path'] ?? ''), '/');
+        $name = (string) ($att['original_name'] ?? basename($rel));
+        $meta = $vvResolveAttachmentMeta($rel, $name, (string) ($att['mime_type'] ?? ''));
+        $row = array_merge([
+            'id' => (int) ($att['id'] ?? 0),
+        ], $meta);
+        if ($vvIsSwiftProofName($name) || $vvIsSwiftProofName($rel)) {
+            $vvPushSwift($row);
+            continue;
+        }
+        $attachmentRows[] = $row;
+    }
+
+    // Column-backed SWIFT proof (mark-paid stores a single path today).
+    if (!empty($voucher['swift_document'])) {
+        $swiftRel = $vvNormalizeSwiftRel((string) $voucher['swift_document']);
+        if ($swiftRel !== '') {
+            $swiftName = basename(parse_url($swiftRel, PHP_URL_PATH) ?: $swiftRel);
+            if ($swiftName === '' || $swiftName === '/' || $swiftName === '.') {
+                $swiftName = 'SWIFT Payment Proof.pdf';
+            }
+            $meta = $vvResolveAttachmentMeta($swiftRel, $swiftName);
+            $vvPushSwift(array_merge(['id' => 0], $meta));
+        }
+    }
+
+    // Extra SWIFT proofs on disk (supports multiple partial-payment proofs).
+    $swiftScanDirs = [];
+    if ($attachmentCompanyId > 0) {
+        $swiftScanDirs[] = [
+            'abs' => dirname(__DIR__) . '/storage/tenant_' . $attachmentCompanyId . '/vouchers/' . $voucherId,
+            'relPrefix' => 'storage/tenant_' . $attachmentCompanyId . '/vouchers/' . $voucherId . '/',
+        ];
+    }
+    $swiftScanDirs[] = [
+        'abs' => dirname(__DIR__) . '/assets/uploads/vouchers/' . $voucherId,
+        'relPrefix' => 'assets/uploads/vouchers/' . $voucherId . '/',
+    ];
+    foreach ($swiftScanDirs as $scanSpec) {
+        $diskDir = (string) ($scanSpec['abs'] ?? '');
+        $relPrefix = (string) ($scanSpec['relPrefix'] ?? '');
+        if ($diskDir === '' || !is_dir($diskDir)) {
+            continue;
+        }
+        $scan = @scandir($diskDir) ?: [];
+        foreach ($scan as $fileName) {
+            if ($fileName === '.' || $fileName === '..') {
+                continue;
+            }
+            if (!$vvIsSwiftProofName($fileName)) {
+                continue;
+            }
+            $abs = $diskDir . DIRECTORY_SEPARATOR . $fileName;
+            if (!is_file($abs)) {
+                continue;
+            }
+            $rel = $relPrefix . $fileName;
+            $meta = $vvResolveAttachmentMeta($rel, $fileName);
+            $vvPushSwift(array_merge(['id' => 0], $meta));
+        }
+    }
+
+    $vvParseSwiftPaidAt = static function (array $row): ?string {
+        $candidates = [
+            (string) ($row['fileName'] ?? ''),
+            (string) ($row['name'] ?? ''),
+        ];
+        foreach ($candidates as $name) {
+            if (preg_match('/(?:swift[_-]?proof[_-]?)(\d{14})/i', $name, $m)) {
+                $raw = $m[1];
+                $dt = \DateTimeImmutable::createFromFormat('YmdHis', $raw);
+                if ($dt instanceof \DateTimeImmutable) {
+                    return $dt->format('Y-m-d H:i:s');
+                }
+            }
+        }
+        return null;
+    };
+
+    // Attach paid-at hints from filenames (supports multiple proofs on different dates).
+    foreach ($swiftProofRows as &$swiftRow) {
+        $paidAtHint = $vvParseSwiftPaidAt($swiftRow);
+        if ($paidAtHint !== null) {
+            $swiftRow['paidAt'] = $paidAtHint;
+        }
+    }
+    unset($swiftRow);
+
+    // Sort proofs oldest → newest by paidAt / name.
+    usort($swiftProofRows, static function (array $a, array $b): int {
+        $da = (string) ($a['paidAt'] ?? '');
+        $db = (string) ($b['paidAt'] ?? '');
+        if ($da !== '' && $db !== '' && $da !== $db) {
+            return strcmp($da, $db);
+        }
+        return strcmp((string) ($a['fileName'] ?? $a['name'] ?? ''), (string) ($b['fileName'] ?? $b['name'] ?? ''));
+    });
+
+    // Friendly labels when multiple proofs exist (Payment 1, Payment 2…).
+    if (count($swiftProofRows) > 1) {
+        foreach ($swiftProofRows as $i => &$swiftRow) {
+            $orig = (string) ($swiftRow['name'] ?? 'SWIFT Payment Proof');
+            $ext = pathinfo($orig, PATHINFO_EXTENSION);
+            $swiftRow['name'] = 'SWIFT Payment Proof ' . ($i + 1) . ($ext !== '' ? ('.' . $ext) : '');
+            $dateBit = !empty($swiftRow['paidAt'])
+                ? date('d M Y', strtotime((string) $swiftRow['paidAt']))
+                : '';
+            $swiftRow['label'] = $dateBit !== '' ? ('Payment ' . ($i + 1) . ' · ' . $dateBit) : ('Payment ' . ($i + 1));
+        }
+        unset($swiftRow);
+    } elseif (count($swiftProofRows) === 1) {
+        $swiftProofRows[0]['name'] = 'SWIFT Payment Proof'
+            . (($ext = pathinfo((string) ($swiftProofRows[0]['name'] ?? ''), PATHINFO_EXTENSION)) !== '' ? ('.' . $ext) : '.pdf');
+        $dateBit = !empty($swiftProofRows[0]['paidAt'])
+            ? date('d M Y', strtotime((string) $swiftProofRows[0]['paidAt']))
+            : '';
+        $swiftProofRows[0]['label'] = $dateBit !== '' ? ('Payment proof · ' . $dateBit) : 'Payment proof';
+    }
+
+    $swiftProxy = !empty($swiftProofRows[0]['proxyLink']) ? (string) $swiftProofRows[0]['proxyLink'] : null;
+
+    // Payment details (dates / amounts / account) for display under SWIFT proofs.
+    $paymentDetails = [];
+    $paidByName = '';
+    $paidById = (int) ($voucher['paid_by'] ?? 0);
+    if ($paidById > 0) {
+        try {
+            $pb = $pdo->prepare('SELECT full_name, username FROM users WHERE id = ? LIMIT 1');
+            $pb->execute([$paidById]);
+            $pbRow = $pb->fetch(PDO::FETCH_ASSOC) ?: [];
+            $paidByName = trim((string) ($pbRow['full_name'] ?? ''));
+            if ($paidByName === '') {
+                $paidByName = trim((string) ($pbRow['username'] ?? ''));
+            }
+        } catch (Throwable $e) {
+            $paidByName = '';
+        }
+    }
+
+    $payAccountId = (int) ($voucher['payment_account_id'] ?? 0);
+    $payAccountName = '';
+    if ($payAccountId > 0) {
+        try {
+            $accSt = $pdo->prepare('SELECT name, type FROM financial_accounts WHERE id = ? LIMIT 1');
+            $accSt->execute([$payAccountId]);
+            $accRow = $accSt->fetch(PDO::FETCH_ASSOC) ?: [];
+            $payAccountName = trim((string) ($accRow['name'] ?? ''));
+            $accType = trim((string) ($accRow['type'] ?? ''));
+            if ($payAccountName !== '' && $accType !== '') {
+                $payAccountName .= ' (' . $accType . ')';
+            }
+        } catch (Throwable $e) {
+            $payAccountName = '';
+        }
+    }
+
+    $currencyCode = (string) ($voucher['currency'] ?? 'TZS');
+    try {
+        $txSql = 'SELECT at.id, at.transaction_date, at.amount, at.description, at.account_id, at.created_by,
+                         fa.name AS account_name, fa.type AS account_type,
+                         u.full_name AS paid_by_name, u.username AS paid_by_username
+                  FROM account_transactions at
+                  LEFT JOIN financial_accounts fa ON fa.id = at.account_id
+                  LEFT JOIN users u ON u.id = at.created_by
+                  WHERE at.reference_id = ?
+                    AND at.reference_type IN (\'payment_voucher\', \'voucher\', \'expense_voucher\')
+                    AND LOWER(at.type) = \'debit\'
+                  ORDER BY at.transaction_date ASC, at.id ASC';
+        $txSt = $pdo->prepare($txSql);
+        $txSt->execute([$voucherId]);
+        $txRows = $txSt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        foreach ($txRows as $i => $tx) {
+            $who = trim((string) ($tx['paid_by_name'] ?? ''));
+            if ($who === '') {
+                $who = trim((string) ($tx['paid_by_username'] ?? ''));
+            }
+            if ($who === '') {
+                $who = $paidByName;
+            }
+            $accName = trim((string) ($tx['account_name'] ?? ''));
+            $accType = trim((string) ($tx['account_type'] ?? ''));
+            if ($accName !== '' && $accType !== '') {
+                $accName .= ' (' . $accType . ')';
+            }
+            if ($accName === '') {
+                $accName = $payAccountName;
+            }
+            $paymentDetails[] = [
+                'id' => (int) ($tx['id'] ?? 0),
+                'seq' => $i + 1,
+                'paidAt' => (string) ($tx['transaction_date'] ?? ''),
+                'amount' => (float) ($tx['amount'] ?? 0),
+                'currency' => $currencyCode,
+                'paidBy' => $who,
+                'account' => $accName,
+                'description' => (string) ($tx['description'] ?? ''),
+                'proofName' => $swiftProofRows[$i]['name'] ?? null,
+            ];
+        }
+    } catch (Throwable $e) {
+        $paymentDetails = [];
+    }
+
+    // Fallback: voucher paid_at / proofs when no ledger rows exist yet.
+    if ($paymentDetails === [] && ($isPaid || !empty($swiftProofRows))) {
+        if (!empty($swiftProofRows)) {
+            foreach ($swiftProofRows as $i => $proof) {
+                $paidAt = (string) ($proof['paidAt'] ?? ($voucher['paid_at'] ?? ''));
+                $isLast = ($i === count($swiftProofRows) - 1);
+                $paymentDetails[] = [
+                    'id' => 0,
+                    'seq' => $i + 1,
+                    'paidAt' => $paidAt,
+                    'amount' => ($isLast && $isPaid) ? (float) ($voucher['total_amount'] ?? 0) : null,
+                    'currency' => $currencyCode,
+                    'paidBy' => $isLast ? $paidByName : '',
+                    'account' => $isLast ? $payAccountName : '',
+                    'description' => '',
+                    'proofName' => (string) ($proof['name'] ?? ''),
+                ];
+            }
+        } elseif ($isPaid) {
+            $paymentDetails[] = [
+                'id' => 0,
+                'seq' => 1,
+                'paidAt' => (string) ($voucher['paid_at'] ?? ''),
+                'amount' => (float) ($voucher['total_amount'] ?? 0),
+                'currency' => $currencyCode,
+                'paidBy' => $paidByName,
+                'account' => $payAccountName,
+                'description' => '',
+                'proofName' => null,
+            ];
+        }
     }
 
     // Approval comments only (typed notes on approve/reject — not activity like attachment deletes).
     $comments = [];
+    $commentReactionsByLog = [];
+    $commentRepliesByLog = [];
     try {
+        require_once __DIR__ . '/comment-interactions.php';
+        vv_ensure_approval_comment_tables($pdo);
         $stmtC = $pdo->prepare(
             'SELECT al.*, u.full_name, u.role FROM approval_logs al '
             . 'LEFT JOIN users u ON al.user_id = u.id '
@@ -774,6 +1054,15 @@ function vv_load_view_payload(PDO $pdo, int $voucherId, array $opts = []): array
         );
         $stmtC->execute([$voucherId]);
         $comments = $stmtC->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        $logIds = array_values(array_filter(array_map(
+            static fn ($row) => (int) ($row['id'] ?? 0),
+            $comments
+        )));
+        $viewerIdForComments = function_exists('resolveVoucherSessionUserId')
+            ? (int) resolveVoucherSessionUserId($pdo)
+            : (int) ($_SESSION['user_id'] ?? 0);
+        $commentReactionsByLog = vv_load_comment_reactions($pdo, $logIds, $viewerIdForComments);
+        $commentRepliesByLog = vv_load_comment_replies($pdo, $logIds);
     } catch (Throwable $e) { /* ignore */ }
 
     // Permissions + URLs (tenant-prefixed so Back never drops /{company}/)
@@ -974,7 +1263,7 @@ function vv_load_view_payload(PDO $pdo, int $voucherId, array $opts = []): array
 
     $declaredCount = isset($voucher['supporting_documents']) ? (int) $voucher['supporting_documents'] : 0;
     $uploadedFileCount = count($attachmentRows);
-    $visibleAttachmentCount = $uploadedFileCount + count($purchaseOrderDocs) + count($salesOrderDocs) + ($swiftProxy ? 1 : 0);
+    $visibleAttachmentCount = $uploadedFileCount + count($purchaseOrderDocs) + count($salesOrderDocs) + count($swiftProofRows);
     // Heal ghost qty: form posted a file count but nothing was stored on disk/DB.
     if ($declaredCount !== $uploadedFileCount) {
         try {
@@ -1036,6 +1325,10 @@ function vv_load_view_payload(PDO $pdo, int $voucherId, array $opts = []): array
                 'supporting_documents' => (string) $visibleAttachmentCount,
                 'currency' => (string) ($voucher['currency'] ?? 'TZS'),
                 'total_amount' => (float) ($voucher['total_amount'] ?? 0),
+                'paid_so_far' => (float) array_sum(array_map(
+                    static fn ($row) => (float) ($row['amount'] ?? 0),
+                    $paymentDetails
+                )),
                 'date_created' => (string) ($voucher['date_created'] ?? ''),
                 'status' => $statusLower,
                 'applicant' => (string) ($voucher['applicant'] ?? ''),
@@ -1067,21 +1360,43 @@ function vv_load_view_payload(PDO $pdo, int $voucherId, array $opts = []): array
             'attachments' => $attachmentRows,
             'salesOrderDocs' => $salesOrderDocs,
             'purchaseOrderDocs' => $purchaseOrderDocs,
+            'swiftProofs' => $swiftProofRows,
             'swiftProxy' => $swiftProxy,
+            'paymentDetails' => $paymentDetails,
             'documents' => [
                 'headerCount' => $headerCount,
                 'declaredCount' => $declaredCount,
                 'mismatch' => $mismatch,
-                'hasSupporting' => !empty($attachmentRows) || !empty($purchaseOrderDocs) || !empty($salesOrderDocs) || !empty($swiftProxy) || $declaredCount > 0,
+                'hasSupporting' => !empty($attachmentRows) || !empty($purchaseOrderDocs) || !empty($salesOrderDocs) || !empty($swiftProofRows) || $declaredCount > 0,
             ],
-            'comments' => array_map(static function ($vc) {
+            'comments' => array_map(static function ($vc) use ($commentReactionsByLog, $commentRepliesByLog) {
+                $logId = (int) ($vc['id'] ?? 0);
                 return [
+                    'id' => $logId,
+                    'user_id' => (int) ($vc['user_id'] ?? 0),
                     'full_name' => (string) ($vc['full_name'] ?? ''),
                     'action' => (string) ($vc['action'] ?? ''),
                     'comments' => (string) ($vc['comments'] ?? ''),
                     'created_at' => (string) ($vc['created_at'] ?? ''),
+                    'reactions' => $commentReactionsByLog[$logId] ?? [],
+                    'replies' => $commentRepliesByLog[$logId] ?? [],
                 ];
             }, $comments),
+            'viewer' => [
+                'id' => function_exists('resolveVoucherSessionUserId')
+                    ? (int) resolveVoucherSessionUserId($pdo)
+                    : (int) ($_SESSION['user_id'] ?? 0),
+                'full_name' => (string) ($_SESSION['full_name'] ?? ''),
+            ],
+            'reactionCatalog' => function_exists('vv_approval_reaction_catalog')
+                ? array_map(static function ($key, $meta) {
+                    return [
+                        'key' => (string) $key,
+                        'emoji' => (string) ($meta['emoji'] ?? ''),
+                        'label' => (string) ($meta['label'] ?? ''),
+                    ];
+                }, array_keys(vv_approval_reaction_catalog()), array_values(vv_approval_reaction_catalog()))
+                : [],
             'status' => [
                 'label' => $statusLabel,
                 'key' => is_array($statusResolved) ? (string) ($statusResolved['key'] ?? $statusLower) : $statusLower,
@@ -1114,6 +1429,8 @@ function vv_load_view_payload(PDO $pdo, int $voucherId, array $opts = []): array
             ],
             'actions' => [
                 'sendToPayablesUrl' => app_url('/view-voucher-ui/api/voucher/send-to-payables.php'),
+                'commentReactUrl' => app_url('/view-voucher-ui/api/comment-react.php'),
+                'commentReplyUrl' => app_url('/view-voucher-ui/api/comment-reply.php'),
                 'csrfToken' => csrf_token(),
                 'backUrl' => $backLink,
                 'backLabel' => $fromPurchases ? 'Back to Purchases' : 'Back',

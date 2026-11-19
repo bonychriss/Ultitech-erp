@@ -119,27 +119,27 @@ export default function InvoiceViewToolbar({
                     onRegisterPayment ? (
                       <button
                         type="button"
-                        className="ov-actions-item"
+                        className="ov-actions-item ov-actions-item--pay"
                         onClick={() => { onCloseDesktopActions(); onRegisterPayment(); }}
                       >
                         <i className="fas fa-money-bill-wave" aria-hidden="true" />
-                        Register Payment
+                        Pay invoice
                       </button>
                     ) : (
-                      <a className="ov-actions-item" href={urls.register_payment} onClick={onCloseDesktopActions}>
+                      <a className="ov-actions-item ov-actions-item--pay" href={urls.register_payment} onClick={onCloseDesktopActions}>
                         <i className="fas fa-money-bill-wave" aria-hidden="true" />
-                        Register Payment
+                        Pay invoice
                       </a>
                     )
                   ) : null}
                   {flags.has_order && urls.order_view ? (
-                    <a className="ov-actions-item" href={urls.order_view} onClick={onCloseDesktopActions}>
+                    <a className="ov-actions-item ov-actions-item--order" href={urls.order_view} onClick={onCloseDesktopActions}>
                       <i className="fas fa-file-alt" aria-hidden="true" />
                       View Order
                     </a>
                   ) : null}
                   {flags.has_products && urls.products ? (
-                    <a className="ov-actions-item" href={urls.products} onClick={onCloseDesktopActions}>
+                    <a className="ov-actions-item ov-actions-item--products" href={urls.products} onClick={onCloseDesktopActions}>
                       <i className="fas fa-images" aria-hidden="true" />
                       View Products
                     </a>
@@ -147,7 +147,7 @@ export default function InvoiceViewToolbar({
                   {flags.has_order && urls.delivery_note ? (
                     <button
                       type="button"
-                      className="ov-actions-item"
+                      className="ov-actions-item ov-actions-item--delivery"
                       disabled={pdfDownloading || Boolean(busyAction)}
                       onClick={() => { onCloseDesktopActions(); onDownloadDeliveryNote(); }}
                     >
@@ -158,35 +158,41 @@ export default function InvoiceViewToolbar({
                   <hr className="ov-actions-divider" />
                   <button
                     type="button"
-                    className="ov-actions-item"
+                    className="ov-actions-item ov-actions-item--pdf"
                     disabled={pdfDownloading}
                     onClick={() => { onCloseDesktopActions(); onDownloadPdf(); }}
                   >
                     <i className={`fas ${pdfDownloading ? 'fa-spinner fa-spin' : 'fa-download'}`} aria-hidden="true" />
                     Download PDF
                   </button>
+                  {share.whatsapp_url ? (
+                    <a
+                      className="ov-actions-item ov-actions-item--whatsapp"
+                      href={share.whatsapp_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      onClick={onCloseDesktopActions}
+                    >
+                      <i className="fab fa-whatsapp" aria-hidden="true" />
+                      WhatsApp
+                    </a>
+                  ) : null}
+                  {invoice?.email && urls.send_email ? (
+                    <a
+                      className="ov-actions-item ov-actions-item--email"
+                      href={urls.send_email}
+                      onClick={(event) => {
+                        onCloseDesktopActions();
+                        onEmail(event, urls.send_email, invoice.email);
+                      }}
+                    >
+                      <i className="fas fa-envelope" aria-hidden="true" />
+                      Email
+                    </a>
+                  ) : null}
                 </div>
               </details>
             </div>
-
-            <span className="ov-btn-divider" aria-hidden="true" />
-
-            {share.whatsapp_url ? (
-              <a href={share.whatsapp_url} target="_blank" rel="noreferrer" className="ov-btn ov-btn-secondary ov-btn-icon text-success" title="WhatsApp">
-                <i className="fab fa-whatsapp" aria-hidden="true" />
-              </a>
-            ) : null}
-
-            {invoice?.email && urls.send_email ? (
-              <a
-                href={urls.send_email}
-                className="ov-btn ov-btn-secondary ov-btn-icon text-primary"
-                title="Email"
-                onClick={(event) => onEmail(event, urls.send_email, invoice.email)}
-              >
-                <i className="fas fa-envelope" aria-hidden="true" />
-              </a>
-            ) : null}
           </div>
 
           <details
@@ -214,12 +220,12 @@ export default function InvoiceViewToolbar({
                     onClick={() => { onMobileActionsToggle(false); onRegisterPayment(); }}
                   >
                     <i className="fas fa-money-bill-wave" aria-hidden="true" />
-                    Register Payment
+                    Pay invoice
                   </button>
                 ) : (
                   <a className="ov-mobile-item ov-mobile-item--confirm" href={urls.register_payment}>
                     <i className="fas fa-money-bill-wave" aria-hidden="true" />
-                    Register Payment
+                    Pay invoice
                   </a>
                 )
               ) : null}

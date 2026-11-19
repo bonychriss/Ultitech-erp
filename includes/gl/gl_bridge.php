@@ -502,6 +502,18 @@ if (!function_exists('gl_bridge_counterpart_lines')) {
             return [$line(gl_system_account($pdo, 'accounts_receivable'), 'Customer receipt: ' . $label)];
         }
         if ($rt === 'payment_voucher' && $needDebit) {
+            // If the voucher was accrued to Accounts Payable while unpaid, clear AP instead of re-expensing.
+            if ($refId > 0) {
+                try {
+                    $st = $pdo->prepare("SELECT 1 FROM gl_source_links WHERE source_table = 'payment_vouchers_payable' AND source_id = ? AND active = 1 LIMIT 1");
+                    $st->execute([$refId]);
+                    if ($st->fetchColumn()) {
+                        return [$line(gl_system_account($pdo, 'accounts_payable'), 'Clear accounts payable: ' . $label)];
+                    }
+                } catch (Throwable $e) {
+                }
+            }
+
             return gl_bridge_pv_allocation($pdo, $refId, $amt);
         }
         if (in_array($rt, ['purchase_order', 'supplier_payment'], true) && $needDebit) {
@@ -830,6 +842,103 @@ if (!function_exists('gl_bridge_sync_revenue')) {
 /* Vouchers paid before money accounts were kept                       */
 /* ------------------------------------------------------------------ */
 
+if (!function_exists('gl_bridge_sync_accounts_payable')) {
+    /**
+     * Accrue approved unpaid payment vouchers: Dr expense/inventory, Cr Accounts Payable.
+     * When the voucher is later paid through the bank, the payment entry clears AP (see counterpart lines).
+     */
+    function gl_bridge_sync_accounts_payable(PDO $pdo, array &$stats): void
+    {
+        if (!gl_table_exists($pdo, 'payment_vouchers')) {
+            return;
+        }
+        $rows = [];
+        $sql = "SELECT pv.id, pv.voucher_no, pv.payee_name, pv.total_amount, pv.status, pv.is_paid,
+                       DATE(COALESCE(pv.approved_at, pv.date_created, pv.created_at)) AS accrue_date,
+                       EXISTS (SELECT 1 FROM account_transactions t WHERE t.reference_type = 'payment_voucher' AND t.reference_id = pv.id) AS has_tx
+                FROM payment_vouchers pv";
+        try {
+            foreach ($pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC) as $r) {
+                $rows[(int) $r['id']] = $r;
+            }
+        } catch (Throwable $e) {
+            $stats['errors'][] = 'Accounts payable sync: ' . $e->getMessage();
+
+            return;
+        }
+
+        $qualifies = static function (array $r): bool {
+            return strtolower(trim((string) $r['status'])) === 'approved'
+                && (int) $r['is_paid'] === 0
+                && !(int) $r['has_tx']
+                && (string) $r['accrue_date'] !== ''
+                && round((float) $r['total_amount'], 2) > 0;
+        };
+        $fingerprint = static function (array $r) use ($pdo): string {
+            $cents = gl_to_cents($r['total_amount']);
+            $parts = [(string) $r['accrue_date'], number_format((float) $r['total_amount'], 2, '.', '')];
+            foreach (gl_bridge_pv_allocation($pdo, (int) $r['id'], $cents) as $line) {
+                $parts[] = (int) $line['account_id'] . ':' . number_format((float) $line['debit'], 2, '.', '');
+            }
+
+            return md5(implode('|', $parts));
+        };
+
+        $linked = [];
+        try {
+            foreach ($pdo->query("SELECT source_id, entry_id, fingerprint FROM gl_source_links WHERE source_table = 'payment_vouchers_payable' AND active = 1")->fetchAll(PDO::FETCH_ASSOC) as $l) {
+                $linked[(int) $l['source_id']] = $l;
+            }
+        } catch (Throwable $e) {
+            $stats['errors'][] = 'Accounts payable sync links: ' . $e->getMessage();
+
+            return;
+        }
+
+        foreach ($linked as $id => $l) {
+            $r = $rows[$id] ?? null;
+            // Paid vouchers that already have a bank movement keep their accrual so the payment can clear AP.
+            if ($r && (int) $r['is_paid'] === 1 && (int) $r['has_tx'] === 1) {
+                continue;
+            }
+            if (!$r || !$qualifies($r) || $fingerprint($r) !== $l['fingerprint']) {
+                $reason = !$r
+                    ? "voucher #{$id} was deleted"
+                    : ($qualifies($r) ? "voucher #{$id} allocation changed" : "voucher #{$id} is no longer an unpaid approved payable");
+                gl_bridge_reverse_and_unlink($pdo, (int) $l['entry_id'], $reason, $stats);
+                unset($linked[$id]);
+            }
+        }
+
+        $ap = gl_system_account($pdo, 'accounts_payable');
+        foreach ($rows as $id => $r) {
+            if (isset($linked[$id]) || !$qualifies($r)) {
+                continue;
+            }
+            $cents = gl_to_cents($r['total_amount']);
+            $lines = gl_bridge_pv_allocation($pdo, $id, $cents);
+            $label = (string) $r['voucher_no'] . ' - ' . (string) $r['payee_name'];
+            $lines[] = ['account_id' => $ap, 'debit' => 0, 'credit' => $cents / 100, 'memo' => 'Accounts payable: ' . $label];
+            $res = gl_post_entry($pdo, [
+                'date' => (string) $r['accrue_date'],
+                'description' => mb_substr('Accrue payable: ' . $label, 0, 400),
+                'source_type' => 'payment_voucher_payable',
+                'source_key' => 'pvap:' . $id . ':v' . gl_bridge_link_version($pdo, 'payment_vouchers_payable', [$id]),
+                'source_ref' => 'payment_voucher#' . $id,
+            ], $lines);
+            if (!$res['ok']) {
+                $stats['errors'][] = "Voucher #{$id} (accounts payable): " . $res['error'];
+                continue;
+            }
+            gl_bridge_link($pdo, 'payment_vouchers_payable', $id, $res['entry_id'], $fingerprint($r));
+            if (!$res['existing']) {
+                $stats['posted']++;
+                $stats['by_type']['payment_voucher_payable'] = ($stats['by_type']['payment_voucher_payable'] ?? 0) + 1;
+            }
+        }
+    }
+}
+
 if (!function_exists('gl_bridge_sync_unbanked_vouchers')) {
     /**
      * Approved vouchers marked paid on or before gl_meta 'unbanked_pv_cutoff' with no money movement recorded:
@@ -986,13 +1095,17 @@ if (!function_exists('gl_bridge_sync_all')) {
             $stats['errors'][] = 'Ledger tables are not available.';
             return $stats;
         }
-        $only = $options['only'] ?? ['openings', 'transactions', 'reclass', 'revenue', 'unbanked'];
+        $only = $options['only'] ?? ['openings', 'transactions', 'reclass', 'revenue', 'payable', 'unbanked'];
 
         $pdo->beginTransaction();
         try {
             gl_bridge_fa_rows($pdo, true);
             if (in_array('openings', $only, true)) {
                 gl_bridge_sync_openings($pdo, $stats);
+            }
+            // Accrue unpaid vouchers before posting bank payments so payments can clear AP.
+            if (in_array('payable', $only, true)) {
+                gl_bridge_sync_accounts_payable($pdo, $stats);
             }
             if (in_array('transactions', $only, true)) {
                 gl_bridge_sync_transactions($pdo, $stats);

@@ -38,11 +38,23 @@ function formatDate(dateStr) {
   return `${dd}/${mm}/${d.getFullYear()}`
 }
 
+function isCreditDesk() {
+  try {
+    const cfg = (typeof window !== 'undefined' && window.__DASHBOARD_CFG__) || {}
+    if (cfg.creditMode === true) return true
+    if (typeof window === 'undefined') return false
+    return String(new URLSearchParams(window.location.search).get('payment') || '').toLowerCase() === 'credit'
+  } catch {
+    return false
+  }
+}
+
 function voucherStatusLabel(row) {
   if (row.is_posted) return 'Posted'
   if (row.is_paid) return 'Paid'
-  if (row.display_status) return String(row.display_status)
   const s = String(row.display_status_key || row.derived_status || row.status || '').toLowerCase()
+  if (isCreditDesk() && s === 'approved') return 'Unpaid'
+  if (row.display_status) return String(row.display_status)
   if (!s) return 'Pending'
   return s.charAt(0).toUpperCase() + s.slice(1)
 }

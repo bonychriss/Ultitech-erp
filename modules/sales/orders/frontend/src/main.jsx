@@ -7,6 +7,8 @@ import '../../../../expenses/frontend/src/expenses-dark.css';
 import '../../../../../stock/stock-ui/src/pages/products-desk.css';
 import './quotations-list.css';
 import './order-view.css';
+import '../../../invoices/frontend/src/invoice-documents.css';
+import '../../../invoices/frontend/src/invoice-pay-modal.css';
 import ErrorBoundary from './ErrorBoundary.jsx';
 
 ReactDOM.createRoot(document.getElementById('root')).render(

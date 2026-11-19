@@ -17,9 +17,11 @@ export default function OrderViewToolbar({
   onDownloadPdf,
   onEmail,
   onInvoiceNavigate,
+  onRegisterPayment,
 }) {
   const canConvertInvoice = Boolean(flags.can_create_invoice);
   const convertHref = urls.create_invoice || '';
+  const canRegisterPayment = Boolean(flags.can_register_payment && (onRegisterPayment || urls.register_payment));
 
   const handleInvoiceClick = (event) => {
     if (!convertHref || !canConvertInvoice) return;
@@ -106,20 +108,37 @@ export default function OrderViewToolbar({
                   <i className="fas fa-caret-down" aria-hidden="true" />
                 </summary>
                 <div className="ov-actions-panel">
+                  {canRegisterPayment ? (
+                    onRegisterPayment ? (
+                      <button
+                        type="button"
+                        className="ov-actions-item ov-actions-item--pay"
+                        onClick={() => { onCloseDesktopActions(); onRegisterPayment(); }}
+                      >
+                        <i className="fas fa-money-bill-wave" aria-hidden="true" />
+                        Pay invoice
+                      </button>
+                    ) : (
+                      <a className="ov-actions-item ov-actions-item--pay" href={urls.register_payment} onClick={onCloseDesktopActions}>
+                        <i className="fas fa-money-bill-wave" aria-hidden="true" />
+                        Pay invoice
+                      </a>
+                    )
+                  ) : null}
                   {urls.edit ? (
-                    <a className="ov-actions-item" href={urls.edit} onClick={onCloseDesktopActions}>
+                    <a className="ov-actions-item ov-actions-item--edit" href={urls.edit} onClick={onCloseDesktopActions}>
                       <i className="fas fa-edit" aria-hidden="true" />
                       Edit Order
                     </a>
                   ) : null}
                   {urls.products ? (
-                    <a className="ov-actions-item" href={urls.products} onClick={onCloseDesktopActions}>
+                    <a className="ov-actions-item ov-actions-item--products" href={urls.products} onClick={onCloseDesktopActions}>
                       <i className="fas fa-images" aria-hidden="true" />
                       View Products
                     </a>
                   ) : null}
                   {canConvertInvoice && convertHref ? (
-                    <a className="ov-actions-item" href={convertHref} onClick={handleInvoiceClick}>
+                    <a className="ov-actions-item ov-actions-item--pay" href={convertHref} onClick={handleInvoiceClick}>
                       <i className="fas fa-file-invoice-dollar" aria-hidden="true" />
                       Invoice
                     </a>
@@ -145,35 +164,41 @@ export default function OrderViewToolbar({
                   <hr className="ov-actions-divider" />
                   <button
                     type="button"
-                    className="ov-actions-item"
+                    className="ov-actions-item ov-actions-item--pdf"
                     disabled={pdfDownloading}
                     onClick={() => { onCloseDesktopActions(); onDownloadPdf(); }}
                   >
                     <i className={`fas ${pdfDownloading ? 'fa-spinner fa-spin' : 'fa-download'}`} aria-hidden="true" />
                     Download PDF
                   </button>
+                  {share.whatsapp_url ? (
+                    <a
+                      className="ov-actions-item ov-actions-item--whatsapp"
+                      href={share.whatsapp_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      onClick={onCloseDesktopActions}
+                    >
+                      <i className="fab fa-whatsapp" aria-hidden="true" />
+                      WhatsApp
+                    </a>
+                  ) : null}
+                  {order?.email && urls.send_email ? (
+                    <a
+                      className="ov-actions-item ov-actions-item--email"
+                      href={urls.send_email}
+                      onClick={(event) => {
+                        onCloseDesktopActions();
+                        onEmail(event, urls.send_email, order.email);
+                      }}
+                    >
+                      <i className="fas fa-envelope" aria-hidden="true" />
+                      Email
+                    </a>
+                  ) : null}
                 </div>
               </details>
             </div>
-
-            <span className="ov-btn-divider" aria-hidden="true" />
-
-            {share.whatsapp_url ? (
-              <a href={share.whatsapp_url} target="_blank" rel="noreferrer" className="ov-btn ov-btn-secondary ov-btn-icon text-success" title="WhatsApp">
-                <i className="fab fa-whatsapp" aria-hidden="true" />
-              </a>
-            ) : null}
-
-            {order?.email && urls.send_email ? (
-              <a
-                href={urls.send_email}
-                className="ov-btn ov-btn-secondary ov-btn-icon text-primary"
-                title="Email"
-                onClick={(event) => onEmail(event, urls.send_email, order.email)}
-              >
-                <i className="fas fa-envelope" aria-hidden="true" />
-              </a>
-            ) : null}
           </div>
 
           <details
@@ -198,6 +223,23 @@ export default function OrderViewToolbar({
                   <i className="fas fa-check-circle" aria-hidden="true" />
                   Confirm Order
                 </button>
+              ) : null}
+              {canRegisterPayment ? (
+                onRegisterPayment ? (
+                  <button
+                    type="button"
+                    className="ov-mobile-item ov-mobile-item--confirm"
+                    onClick={() => { onMobileActionsToggle(false); onRegisterPayment(); }}
+                  >
+                    <i className="fas fa-money-bill-wave" aria-hidden="true" />
+                    Pay invoice
+                  </button>
+                ) : (
+                  <a className="ov-mobile-item ov-mobile-item--confirm" href={urls.register_payment}>
+                    <i className="fas fa-money-bill-wave" aria-hidden="true" />
+                    Pay invoice
+                  </a>
+                )
               ) : null}
               {canConvertInvoice && convertHref ? (
                 <a className="ov-mobile-item ov-mobile-item--confirm" href={convertHref} onClick={handleInvoiceClick}>

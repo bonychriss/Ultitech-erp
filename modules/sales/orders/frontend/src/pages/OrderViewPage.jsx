@@ -19,6 +19,8 @@ import {
 import OrderViewToolbar from '../components/OrderViewToolbar.jsx';
 import OrderDownloadModal from '../components/OrderDownloadModal.jsx';
 import OrderDocumentPane from '../components/OrderDocumentPane.jsx';
+import OrderRegisterPaymentModal from '../components/OrderRegisterPaymentModal.jsx';
+import OrderPaymentsCard from '../components/OrderPaymentsCard.jsx';
 import {
   resolveInvoiceSourceLabel,
   runInvoiceTransformThenNavigate,
@@ -64,6 +66,7 @@ export default function OrderViewPage() {
   const [pdfProgress, setPdfProgress] = useState(0);
   const [pdfMessage, setPdfMessage] = useState('Preparing document...');
   const [pdfFileName, setPdfFileName] = useState('');
+  const [payEntryId, setPayEntryId] = useState(null);
   const pdfCloseTimer = useRef(null);
   const desktopDropdownRef = useRef(null);
 
@@ -277,6 +280,31 @@ export default function OrderViewPage() {
     setDesktopActionsOpen(false);
   };
 
+  const revenueEntryId = Number(data?.revenue_entry_id || 0);
+
+  const openRegisterPayment = () => {
+    if (revenueEntryId > 0) {
+      setPayEntryId(revenueEntryId);
+      return;
+    }
+    if (urls.register_payment) {
+      window.location.href = urls.register_payment;
+    }
+  };
+
+  const handlePaymentSuccess = async (result) => {
+    setPayEntryId(null);
+    showToast('success', result?.message || 'Payment recorded successfully.');
+    try {
+      const params = new URLSearchParams(window.location.search);
+      if (!params.get('module') && deskCfg.module) params.set('module', deskCfg.module);
+      if (!params.get('id') && deskCfg.order_id) params.set('id', String(deskCfg.order_id));
+      await loadData(params);
+    } catch (err) {
+      showToast('error', err.message || 'Payment saved but order could not refresh.', 5000);
+    }
+  };
+
   const handleInvoiceNavigate = (href) => {
     if (!flags.can_create_invoice) {
       return;
@@ -346,6 +374,7 @@ export default function OrderViewPage() {
         onDownloadPdf={handleDownloadPdf}
         onEmail={handleEmail}
         onInvoiceNavigate={handleInvoiceNavigate}
+        onRegisterPayment={flags.can_register_payment && revenueEntryId > 0 ? openRegisterPayment : undefined}
       />
 
       <OrderDocumentPane
@@ -353,11 +382,24 @@ export default function OrderViewPage() {
         fontFamily={documentFontFamily}
       />
 
+      <OrderPaymentsCard
+        payments={data?.payments}
+        currency={order?.currency || 'TZS'}
+      />
+
       {catalogHtml ? (
         <OrderDocumentPane
           html={catalogHtml}
           fontFamily={documentFontFamily}
           className="ov-catalog-pane"
+        />
+      ) : null}
+
+      {payEntryId ? (
+        <OrderRegisterPaymentModal
+          entryId={payEntryId}
+          onClose={() => setPayEntryId(null)}
+          onSuccess={handlePaymentSuccess}
         />
       ) : null}
     </div>

@@ -1,19 +1,4 @@
-function fileKind(name = '') {
-  const lower = String(name).toLowerCase();
-  if (/\.(png|jpe?g|gif|webp|bmp)$/i.test(lower)) {
-    return { label: 'IMG', tone: 'image' };
-  }
-  if (/\.(xlsx?|csv)$/i.test(lower)) return { label: 'XLS', tone: 'sheet' };
-  if (/\.(docx?)$/i.test(lower)) return { label: 'DOC', tone: 'doc' };
-  if (/\.pdf$/i.test(lower)) return { label: 'PDF', tone: 'pdf' };
-  return { label: 'FILE', tone: 'file' };
-}
-
-function pdfPreviewUrl(url) {
-  if (!url) return url;
-  const base = String(url).split('#')[0];
-  return `${base}#page=1&view=FitH&toolbar=0&navpanes=0&scrollbar=0`;
-}
+import FileTypeIcon, { fileKind } from './FileTypeIcon.jsx';
 
 function truncateName(name, max = 28) {
   const s = String(name || '');
@@ -27,14 +12,9 @@ function truncateName(name, max = 28) {
   return `${s.slice(0, max - 1)}…`;
 }
 
-function DocPreviewThumb({ isImage, previewUrl, missing, kindLabel }) {
+function DocPreviewThumb({ isImage, previewUrl, missing, kind }) {
   if (missing) {
-    return (
-      <div className="inv-gmail-thumb inv-gmail-thumb--empty">
-        <i className="fas fa-exclamation-triangle" aria-hidden="true" />
-        <span>Unavailable</span>
-      </div>
-    );
+    return <FileTypeIcon missing />;
   }
   if (isImage && previewUrl) {
     return (
@@ -43,26 +23,7 @@ function DocPreviewThumb({ isImage, previewUrl, missing, kindLabel }) {
       </div>
     );
   }
-  if (previewUrl && kindLabel === 'PDF') {
-    return (
-      <div className="inv-gmail-thumb inv-gmail-thumb--pdf">
-        <iframe
-          src={pdfPreviewUrl(previewUrl)}
-          title="PDF preview"
-          loading="lazy"
-          tabIndex={-1}
-          scrolling="no"
-        />
-      </div>
-    );
-  }
-  return (
-    <div className="inv-gmail-thumb inv-gmail-thumb--placeholder">
-      <span className={`inv-gmail-thumb-badge inv-gmail-thumb-badge--${String(kindLabel).toLowerCase()}`}>
-        {kindLabel}
-      </span>
-    </div>
-  );
+  return <FileTypeIcon tone={kind.tone} label={kind.label} />;
 }
 
 function AttachCard({
@@ -82,7 +43,7 @@ function AttachCard({
 
   return (
     <article
-      className={`inv-gmail-card${missing ? ' inv-gmail-card--missing' : ''}`}
+      className={`inv-gmail-card inv-file-card${missing ? ' inv-gmail-card--missing' : ''}`}
       title={sub ? `${name}\n${sub}` : name}
       role="listitem"
     >
@@ -91,14 +52,11 @@ function AttachCard({
           isImage={!!isImage}
           previewUrl={previewUrl || downloadHref || undefined}
           missing={missing}
-          kindLabel={kind.label}
+          kind={kind}
         />
       </button>
 
       <div className="inv-gmail-card-foot">
-        <span className={`inv-gmail-type inv-gmail-type--${kind.tone}`} aria-hidden="true">
-          {kind.label}
-        </span>
         <span className="inv-gmail-fname">{truncateName(name)}</span>
         {!missing && downloadHref ? (
           <a

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { ArrowLeft, BarChart3, BookOpen, Landmark, Scale, Search, Wallet } from 'lucide-react'
+import { ArrowLeft, BarChart3, BookOpen, CreditCard, Landmark, LayoutDashboard, Scale, Search, Wallet } from 'lucide-react'
 import balancesIcon from '../assets/balances-icon.png'
 import revenueIcon from '../assets/revenue-icon.png'
 import expensesIcon from '../assets/expenses-icon.png'
@@ -31,6 +31,8 @@ const SECTION_GLYPHS = {
   'balance-sheet': Landmark,
   'cash-flow': Wallet,
   'general-ledger': BookOpen,
+  'ultitech-accounting': LayoutDashboard,
+  'credit-vouchers': CreditCard,
 }
 
 function readBoot() {
@@ -83,11 +85,17 @@ function SectionIcon({ id, iconUrl, title, tone }) {
 function SectionCard({ section }) {
   const folder = hasChildren(section)
   const href = folder ? `#${section.id}` : section.href
+  const external =
+    Boolean(section?.external) ||
+    (!folder && typeof href === 'string' && /^https?:\/\//i.test(href))
   return (
     <a
       key={section.id || section.title}
       className={`acct-card${section.tone ? ` acct-card--${section.tone}` : ''}`}
       href={href || '#'}
+      {...(external
+        ? { target: section?.target || '_blank', rel: 'noopener noreferrer' }
+        : {})}
     >
       <SectionIcon
         id={section.id}

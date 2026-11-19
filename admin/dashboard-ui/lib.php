@@ -61,13 +61,24 @@ function adminDashboardUiLoadReactAssets(): ?array
 
     $cssPath = $distDir . '/assets/' . $cssFile;
     $jsPath = $distDir . '/assets/' . $jsFile;
-    // Static Vite assets are physical paths (/{base}/employee/...), not /{company}/...
-    $assetBase = function_exists('app_url')
-        ? app_url('/employee/dashboard-ui/frontend/dist/assets/')
-        : '/employee/dashboard-ui/frontend/dist/assets/';
-    // JSON API must be company-prefixed or bare /admin/... redirects to the wrong tenant.
-    $apiUrl = function_exists('company_url')
-        ? rtrim((string) company_url('admin/dashboard-ui/api'), '/')
+    $slug = function_exists('getRequestedCompanySlug') ? getRequestedCompanySlug() : '';
+    if ($slug === '' && !empty($_SESSION['company_slug'])) {
+        $slug = strtolower(trim((string) $_SESSION['company_slug']));
+    }
+    // Prefer /{company}/employee/... so physical tenant folders (e.g. /ultimate/) resolve assets.
+    // Bare /employee/... 404s when the install lives under a company directory.
+    if (function_exists('company_url') && $slug !== '') {
+        $assetBase = rtrim((string) company_url('employee/dashboard-ui/frontend/dist/assets', $slug), '/') . '/';
+    } elseif (function_exists('app_url')) {
+        $assetBase = app_url('/employee/dashboard-ui/frontend/dist/assets/');
+    } else {
+        $assetBase = '/employee/dashboard-ui/frontend/dist/assets/';
+    }
+    // Use physical /admin/dashboard-ui/api (not /{company}/admin/...).
+    // On StackCP, /ultimate/admin/dashboard-ui/api returned 401 for a valid PVSSESSID while
+    // /admin/dashboard-ui/api returned 200 with the same cookie (nested session path / auth wipe).
+    $apiUrl = function_exists('app_url')
+        ? rtrim((string) app_url('/admin/dashboard-ui/api'), '/')
         : adminDashboardUiPublicUrl('api');
 
     return [

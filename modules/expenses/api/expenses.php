@@ -56,6 +56,7 @@ try {
         $deskMode = strtolower(trim((string) ($_GET['desk'] ?? '')));
         $purposeMode = strtolower(trim((string) ($_GET['purpose'] ?? '')));
         $isPurchasesDesk = ($deskMode === 'purchases' || $purposeMode === 'stock_purchase');
+        $isCreditDesk = ($deskMode === 'credit' || $purposeMode === 'credit');
         $sourceFilter = strtolower(trim((string) ($filters['source_type'] ?? '')));
 
         if ($isPurchasesDesk) {
@@ -65,6 +66,23 @@ try {
                 'data' => $voucherRows,
                 'total' => count($voucherRows),
                 'desk' => 'purchases',
+            ]);
+            exit;
+        }
+
+        if ($isCreditDesk) {
+            $filters['source_type'] = 'voucher';
+            // Credit desk defaults to unpaid (pay-later work queue).
+            if (! array_key_exists('only_unpaid', $_GET) || (string) ($_GET['only_unpaid'] ?? '') === '') {
+                $filters['only_unpaid'] = '1';
+            } elseif ((string) ($_GET['only_unpaid'] ?? '') === '0') {
+                $filters['only_unpaid'] = '';
+            }
+            $voucherRows = expenses_fetch_credit_vouchers_as_list_rows($pdo, $filters);
+            echo json_encode([
+                'data' => $voucherRows,
+                'total' => count($voucherRows),
+                'desk' => 'credit',
             ]);
             exit;
         }

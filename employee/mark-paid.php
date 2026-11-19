@@ -84,19 +84,77 @@ try {
     }
 
     $pay_account_id = isset($_POST['account_id']) ? (int) $_POST['account_id'] : 0;
-    $amount = (float) ($v['total_amount'] ?? 0);
+    $totalAmount = round((float) ($v['total_amount'] ?? 0), 2);
+    $companyId = (int) (currentCompanyId() ?? 0);
+
+    $balancesPdo = function_exists('balances_resolve_pdo') ? balances_resolve_pdo() : null;
+    if (!($balancesPdo instanceof PDO)) {
+        $balancesPdo = $pdo;
+    }
+    $alreadyPaid = 0.0;
+    if (function_exists('tableExists') && tableExists('account_transactions', $balancesPdo)) {
+        try {
+            $scoped = function_exists('balancesUseCompanyScope') && balancesUseCompanyScope($balancesPdo) && $companyId > 0
+                && function_exists('columnExists') && columnExists('account_transactions', 'company_id', $balancesPdo);
+            if ($scoped) {
+                $paidStmt = $balancesPdo->prepare(
+                    "SELECT COALESCE(SUM(amount), 0) FROM account_transactions
+                     WHERE reference_type = 'payment_voucher' AND reference_id = ? AND company_id = ? AND type = 'debit'"
+                );
+                $paidStmt->execute([$voucher_id, $companyId]);
+            } else {
+                $paidStmt = $balancesPdo->prepare(
+                    "SELECT COALESCE(SUM(amount), 0) FROM account_transactions
+                     WHERE reference_type = 'payment_voucher' AND reference_id = ? AND type = 'debit'"
+                );
+                $paidStmt->execute([$voucher_id]);
+            }
+            $alreadyPaid = round((float) $paidStmt->fetchColumn(), 2);
+        } catch (Throwable $ePaid) {
+            $alreadyPaid = 0.0;
+        }
+    }
+    $balanceDue = max(0.0, round($totalAmount - $alreadyPaid, 2));
+
+    $paymentAmountRaw = trim((string) ($_POST['payment_amount'] ?? ''));
+    if ($paymentAmountRaw === '') {
+        $amount = $balanceDue > 0 ? $balanceDue : $totalAmount;
+    } elseif (!is_numeric($paymentAmountRaw)) {
+        http_response_code(400);
+        echo 'Enter a valid amount to pay.';
+        exit;
+    } else {
+        $amount = round((float) $paymentAmountRaw, 2);
+    }
+
     if ($pay_account_id <= 0) {
         http_response_code(400);
         echo 'Select a payment account so marking this voucher paid updates Balances.';
         exit;
     }
-    if ($amount <= 0) {
+    if ($totalAmount <= 0) {
         http_response_code(400);
         echo 'Voucher amount must be greater than zero.';
         exit;
     }
+    if ($balanceDue <= 0) {
+        http_response_code(400);
+        echo 'This voucher has no remaining balance due.';
+        exit;
+    }
+    if ($amount <= 0) {
+        http_response_code(400);
+        echo 'Amount to pay must be greater than zero.';
+        exit;
+    }
+    if ($amount > $balanceDue + 0.009) {
+        http_response_code(400);
+        echo 'Amount to pay cannot exceed the balance due of ' . number_format($balanceDue, 2) . '.';
+        exit;
+    }
+    $newPaidTotal = round($alreadyPaid + $amount, 2);
+    $markFullyPaid = $newPaidTotal >= ($totalAmount - 0.009);
 
-    $companyId = (int) (currentCompanyId() ?? 0);
     if (function_exists('balancesUseCompanyScope') && balancesUseCompanyScope($pdo) && $companyId > 0) {
         $accountStmt = $pdo->prepare("SELECT id, type FROM financial_accounts WHERE id = ? AND company_id = ? AND status = 'active' LIMIT 1");
         $accountStmt->execute([$pay_account_id, $companyId]);
@@ -179,8 +237,8 @@ try {
         exit;
     }
 
-    // Prepare destination path
-    $baseDir = ensureVoucherUploadsDir(); // .../assets/uploads/vouchers
+    // Prepare destination path (tenant storage when company-scoped).
+    $baseDir = ensureVoucherUploadsDir($companyId > 0 ? $companyId : null);
     $voucherDir = $baseDir . '/' . $voucher_id;
     if (!is_dir($voucherDir)) { @mkdir($voucherDir, 0775, true); }
     if (is_dir($voucherDir) && !is_writable($voucherDir)) { @chmod($voucherDir, 0775); }
@@ -194,8 +252,16 @@ try {
         exit;
     }
     $uploadedProofPath = $destPath;
-    // Build relative path to serve via web
-    $relPath = 'assets/uploads/vouchers/' . $voucher_id . '/' . $filename;
+    $appRootNorm = rtrim(str_replace('\\', '/', dirname(__DIR__)), '/');
+    $baseDirNorm = str_replace('\\', '/', $baseDir);
+    if (str_starts_with($baseDirNorm, $appRootNorm . '/')) {
+        $relBase = substr($baseDirNorm, strlen($appRootNorm) + 1);
+    } elseif ($companyId > 0) {
+        $relBase = 'storage/tenant_' . $companyId . '/vouchers';
+    } else {
+        $relBase = 'assets/uploads/vouchers';
+    }
+    $relPath = $relBase . '/' . $voucher_id . '/' . $filename;
 
     $pdo->beginTransaction();
     $lockStmt = $pdo->prepare('SELECT is_paid, status FROM payment_vouchers WHERE id = ? LIMIT 1 FOR UPDATE');
@@ -232,8 +298,22 @@ try {
         throw new RuntimeException('Failed to deduct amount from the selected account.');
     }
 
-    $upd = $pdo->prepare('UPDATE payment_vouchers SET swift_document = ?, is_paid = 1, paid_by = ?, payment_account_id = ?, paid_at = NOW(), updated_at = NOW() WHERE id = ?');
-    $upd->execute([$relPath, (int)$_SESSION['user_id'], $pay_account_id > 0 ? $pay_account_id : null, $voucher_id]);
+    $pvColsLive = $pdo->query('SHOW COLUMNS FROM payment_vouchers')->fetchAll(PDO::FETCH_COLUMN) ?: [];
+    $sets = [
+        'swift_document = ?',
+        $markFullyPaid ? 'is_paid = 1' : 'is_paid = 0',
+        'paid_by = ?',
+        'payment_account_id = ?',
+        'paid_at = NOW()',
+        'updated_at = NOW()',
+    ];
+    $vals = [$relPath, (int) $_SESSION['user_id'], $pay_account_id > 0 ? $pay_account_id : null];
+    if (in_array('payment_execution_status', $pvColsLive, true)) {
+        $sets[] = $markFullyPaid ? "payment_execution_status = 'paid'" : "payment_execution_status = 'partially_paid'";
+    }
+    $vals[] = $voucher_id;
+    $upd = $pdo->prepare('UPDATE payment_vouchers SET ' . implode(', ', $sets) . ' WHERE id = ?');
+    $upd->execute($vals);
     balancesRecalculateAccount($pdo, $pay_account_id, $companyId > 0 ? $companyId : null);
     $pdo->commit();
     $paymentCommitted = true;
@@ -242,7 +322,7 @@ try {
     if ($voucherPurpose === 'stock_purchase' && function_exists('syncLinkedStockPurchasesAfterVoucherPaid')) {
         syncLinkedStockPurchasesAfterVoucherPaid($pdo, $voucher_id, [
             'amount' => $amount,
-            'fully_paid' => true,
+            'fully_paid' => $markFullyPaid,
             'account_id' => $pay_account_id,
             'swift_path' => $relPath,
             'user_id' => (int) ($_SESSION['user_id'] ?? 0),
@@ -276,11 +356,20 @@ try {
         ]);
     } catch (Throwable $e) { /* ignore */ }
 
-    $_SESSION['success_msg'] = "Voucher marked as paid. Deducted: {$currency} " . number_format($amount, 2) . ". New Balance: {$currency} " . number_format($newBal, 2);
-    if ($voucherPurpose === 'stock_purchase') {
-        $_SESSION['success_msg'] .= ' Linked purchase payment status updated.';
+    if ($markFullyPaid) {
+        $_SESSION['success_msg'] = "Voucher marked as paid. Deducted: {$currency} " . number_format($amount, 2) . ". New Balance: {$currency} " . number_format($newBal, 2);
+    } else {
+        $remaining = max(0.0, round($totalAmount - $newPaidTotal, 2));
+        $_SESSION['success_msg'] = "Partial payment recorded: {$currency} " . number_format($amount, 2)
+            . ". Remaining: {$currency} " . number_format($remaining, 2)
+            . ". New Balance: {$currency} " . number_format($newBal, 2);
     }
-    
+    if ($voucherPurpose === 'stock_purchase') {
+        $_SESSION['success_msg'] .= $markFullyPaid
+            ? ' Linked purchase payment status updated.'
+            : ' Linked purchase marked partially paid.';
+    }
+
     $redirectUrl = 'view-voucher.php?id=' . $voucher_id . '&paid=1&deducted=' . $amount . '&balance=' . $newBal . '&currency=' . urlencode($currency);
     header('Location: ' . $redirectUrl);
     exit;

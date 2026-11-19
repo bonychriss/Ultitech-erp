@@ -246,13 +246,24 @@ if (!function_exists('gl_system_account_defs')) {
     {
         return [
             'accounts_receivable' => ['1200', 'Accounts Receivable', 'asset'],
+            'short_term_investments' => ['1150', 'Short-Term Investments', 'asset'],
             'inventory' => ['1300', 'Inventory / Stock Purchases', 'asset'],
+            'prepaid_expenses' => ['1400', 'Prepaid Expenses', 'asset'],
+            'fixed_assets' => ['1500', 'Fixed Assets', 'asset'],
+            'accumulated_depreciation' => ['1501', 'Accumulated Depreciation', 'asset'],
+            'deferred_tax_asset' => ['1600', 'Deferred Income Tax Asset', 'asset'],
             'transfer_clearing' => ['1950', 'Inter-Account Transfers Clearing', 'asset'],
             'suspense' => ['1999', 'Suspense - Items Awaiting Classification', 'asset'],
-            'accounts_payable' => ['2100', 'Accounts Payable', 'liability'],
+            // 2100 is already used by Loans Payable on many tenants — AP uses 2000.
+            'accounts_payable' => ['2000', 'Accounts Payable', 'liability'],
+            'long_term_loans' => ['2100', 'Loans Payable', 'liability'],
             'vat_payable' => ['2200', 'Tax Payable', 'liability'],
-            'opening_balance_equity' => ['3900', 'Opening Balance Equity', 'equity'],
+            'accrued_salaries' => ['2300', 'Accrued Salaries and Wages', 'liability'],
+            'unearned_revenue' => ['2400', 'Unearned Revenue', 'liability'],
+            'deferred_tax_liability' => ['2600', 'Deferred Income Tax Liability', 'liability'],
+            'owners_capital' => ['3100', "Owner's Capital", 'equity'],
             'retained_earnings' => ['3200', 'Retained Earnings', 'equity'],
+            'opening_balance_equity' => ['3900', 'Opening Balance Equity', 'equity'],
             'sales_revenue' => ['4002', 'Sales Revenue', 'revenue'],
             'levies_licences' => ['5013', 'Taxes, Levies & Licences', 'expense'],
             'income_tax_expense' => ['5900', 'Income Tax Expense', 'expense'],
@@ -373,9 +384,15 @@ if (!function_exists('gl_system_account')) {
         if ($id <= 0) {
             // Only adopt an untagged account by code when its name also fits (e.g. 2100 "Loans Payable" is not Accounts Payable).
             $nameHints = [
-                'accounts_receivable' => 'receivable', 'inventory' => 'inventor', 'transfer_clearing' => 'transfer',
-                'suspense' => 'suspense', 'accounts_payable' => 'accounts payable', 'vat_payable' => 'tax',
-                'opening_balance_equity' => 'opening', 'retained_earnings' => 'retained', 'sales_revenue' => 'revenue', 'fx_gain_loss' => 'exchange',
+                'accounts_receivable' => 'receivable', 'short_term_investments' => 'short-term invest',
+                'inventory' => 'inventor', 'prepaid_expenses' => 'prepaid', 'fixed_assets' => 'fixed asset',
+                'accumulated_depreciation' => 'accumulat', 'deferred_tax_asset' => 'deferred',
+                'transfer_clearing' => 'transfer', 'suspense' => 'suspense',
+                'accounts_payable' => 'accounts payable', 'long_term_loans' => 'loan',
+                'vat_payable' => 'tax', 'accrued_salaries' => 'accrued', 'unearned_revenue' => 'unearned',
+                'deferred_tax_liability' => 'deferred', 'owners_capital' => 'capital',
+                'opening_balance_equity' => 'opening', 'retained_earnings' => 'retained',
+                'sales_revenue' => 'revenue', 'fx_gain_loss' => 'exchange',
             ];
             $st = $pdo->prepare('SELECT id FROM erp_accounts WHERE code = ? AND LOWER(type) = ? AND system_key IS NULL AND LOWER(name) LIKE ? ORDER BY id LIMIT 1');
             $st->execute([$code, $type, '%' . ($nameHints[$key] ?? strtolower($name)) . '%']);

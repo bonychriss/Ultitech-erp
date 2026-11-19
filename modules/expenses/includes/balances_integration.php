@@ -2311,6 +2311,14 @@ function expenses_map_general_voucher_to_list_row(array $voucher, ?array $firstI
         'sub_account_name' => '-',
         'payment_method' => strtolower(str_replace(' ', '_', $paymentType)),
         'payment_method_label' => $paymentLabel,
+        'due_date' => (static function () use ($voucher): string {
+            $raw = trim((string) ($voucher['due_date'] ?? ''));
+            if ($raw === '') {
+                return '';
+            }
+
+            return strlen($raw) > 10 ? substr($raw, 0, 10) : $raw;
+        })(),
         'source_account_name' => '',
         'status' => $status !== '' ? $status : 'pending',
         'display_status' => $displayStatus,
@@ -2430,6 +2438,15 @@ function expenses_fetch_vouchers_as_list_rows(PDO $pdo, array $filters = [], str
                 OR LOWER(vi.payment_type) LIKE '%cheque%'
               )
         )";
+    } elseif (in_array((string) ($filters['payment_method'] ?? ''), ['credit', 'payables'], true)) {
+        $where[] = "EXISTS (
+            SELECT 1 FROM voucher_items vi
+            WHERE vi.voucher_id = pv.id
+              AND (
+                LOWER(vi.payment_type) LIKE '%credit%'
+                OR LOWER(vi.payment_type) LIKE '%payable%'
+              )
+        )";
     }
 
     if (($filters['amount_min'] ?? '') !== '' && is_numeric($filters['amount_min'])) {
@@ -2538,6 +2555,23 @@ function expenses_fetch_general_vouchers_as_list_rows(PDO $pdo, array $filters =
 function expenses_fetch_stock_purchase_vouchers_as_list_rows(PDO $pdo, array $filters = []): array
 {
     return expenses_fetch_vouchers_as_list_rows($pdo, $filters, 'stock_purchase');
+}
+
+/**
+ * Credit / pay-later payment vouchers (general + stock purchase).
+ *
+ * @param array<string, string> $filters
+ * @return list<array<string, mixed>>
+ */
+function expenses_fetch_credit_vouchers_as_list_rows(PDO $pdo, array $filters = []): array
+{
+    $filters['payment_method'] = 'credit';
+    $filters['source_type'] = 'voucher';
+
+    $general = expenses_fetch_vouchers_as_list_rows($pdo, $filters, 'general');
+    $stock = expenses_fetch_vouchers_as_list_rows($pdo, $filters, 'stock_purchase');
+
+    return expenses_merge_list_rows($general, $stock);
 }
 
 /**

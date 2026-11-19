@@ -39,11 +39,15 @@ function WhatsAppIcon({ size = 16 }) {
 const CFG = getConfig()
 const IS_ADMIN = CFG.role === 'admin' || CFG.inlineApproveReject === true
 const MOUNT_SEARCH_IN_HEADER = CFG.mountSearchInHeader === true || IS_ADMIN
-const HIDE_KPIS = CFG.hideKpis === true
-const LIST_TITLE = CFG.listTitle || 'All Vouchers'
+const CREDIT_MODE = CFG.creditMode === true
+  || (typeof window !== 'undefined'
+    && String(new URLSearchParams(window.location.search).get('payment') || '').toLowerCase() === 'credit')
+const HIDE_KPIS = CFG.hideKpis === true && !CREDIT_MODE
+const LIST_TITLE = CFG.listTitle || (CREDIT_MODE ? 'Credit Vouchers' : 'All Vouchers')
 const URLS = {
   myVouchers: CFG.myVouchersUrl || (IS_ADMIN ? 'all-vouchers.php' : 'my-vouchers.php'),
   allVouchers: CFG.allVouchersUrl || CFG.myVouchersUrl || (IS_ADMIN ? 'all-vouchers.php' : 'my-vouchers.php'),
+  creditVouchers: CFG.creditVouchersUrl || 'dashboard.php?module=voucher&payment=credit',
   create: CFG.createUrl || 'create-voucher.php',
   view: CFG.viewUrl || '../view-voucher.php',
   edit: CFG.editUrl || 'edit-voucher.php',
@@ -391,18 +395,18 @@ function RowActionsMenu({
 
 function AdminPayModal({ voucher, accounts, onClose }) {
   if (!voucher) return null
-  // Stock purchase PVs go through mark-paid.php (same as the voucher page) so linked purchases are updated.
-  const stockPurchase = voucher.purpose === 'stock_purchase' && Boolean(URLS.voucherMarkPaid)
+  // Prefer mark-paid.php so amount/partial pay + linked stock PO sync stay on one path.
+  const useMarkPaidPhp = Boolean(URLS.voucherMarkPaid)
   return (
     <MarkPaidModal
       voucher={voucher}
       accounts={accounts}
-      actionUrl={stockPurchase ? URLS.voucherMarkPaid : URLS.markPaid}
+      actionUrl={useMarkPaidPhp ? URLS.voucherMarkPaid : URLS.markPaid}
       module={MODULE}
       formatAmount={formatAmount}
       onClose={onClose}
       supplierLabel={voucher.purpose === 'stock_purchase'}
-      redirectEndpoint={stockPurchase}
+      redirectEndpoint={useMarkPaidPhp}
     />
   )
 }
@@ -414,7 +418,7 @@ function shareOnWhatsApp(v) {
     `Voucher No: ${v.voucher_no}`,
     `Payee: ${v.payee_name}`,
     `Amount: ${formatAmount(v.currency, v.total_amount)}`,
-    `Status: ${v.display_status}`,
+    `Status: ${statusPill(v).label}`,
     `Details: ${viewUrl}`,
   ]
   window.open(`https://wa.me/?text=${encodeURIComponent(lines.join('\n'))}`, '_blank', 'noopener')
@@ -433,6 +437,20 @@ function statusPill(row) {
   if (row.is_posted) return { label: 'Posted', cls: 'ed-vbadge ed-vbadge--posted' }
   if (row.is_paid) return { label: 'Paid', cls: 'ed-vbadge ed-vbadge--paid' }
   const key = String(row.display_status_key || row.derived_status || row.status || '').toLowerCase()
+  const exec = String(row.payment_execution_status || '').toLowerCase()
+  const paidSoFar = Number(row.paid_so_far || 0)
+  const hasPrior = Array.isArray(row.prior_payments) && row.prior_payments.length > 0
+  const isPartial = key === 'partially_paid'
+    || exec === 'partially_paid'
+    || paidSoFar > 0.009
+    || hasPrior
+  if (isPartial) {
+    return { label: 'Partially paid', cls: 'ed-vbadge ed-vbadge--partial' }
+  }
+  // Credit desk: settlement label — approved & unpaid reads as Unpaid (not Approved).
+  if (CREDIT_MODE && key === 'approved') {
+    return { label: 'Unpaid', cls: 'ed-vbadge ed-vbadge--unpaid' }
+  }
   const label = row.display_status
     ? String(row.display_status)
     : (key ? cap(key) : 'Pending')
@@ -480,6 +498,7 @@ const MONTHS = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 
 function voucherText(v) {
   const d = v.date_created ? new Date((v.date_created.includes('T') ? v.date_created : v.date_created.replace(' ', 'T'))) : null
   const monthName = d && !Number.isNaN(d.getTime()) ? MONTHS[d.getMonth()] : ''
+  const statusLabel = statusPill(v).label
   return [
     v.voucher_no,
     v.payee_name,
@@ -488,6 +507,7 @@ function voucherText(v) {
     v.description,
     v.display_status,
     v.status,
+    statusLabel,
     formatDate(v.date_created),
     monthName,
     d && !Number.isNaN(d.getTime()) ? String(d.getFullYear()) : '',
@@ -826,7 +846,18 @@ export default function DashboardPage() {
   const accounts = data?.accounts || []
   const total = num(stats.total)
 
-  const allVouchers = useMemo(() => data?.recent || [], [data])
+  const allVouchers = useMemo(() => {
+    const rows = data?.recent || []
+    if (!CREDIT_MODE) return rows
+    // Credit desk work queue: unpaid Credit lines, or approved unpaid (pay later).
+    return rows.filter((v) => {
+      if (v.is_paid || v.is_posted) return false
+      if (v.is_credit) return true
+      const pay = String(v.payment_type || '').toLowerCase()
+      if (pay.includes('credit') || pay.includes('payable')) return true
+      return String(v.status || '').toLowerCase() === 'approved'
+    })
+  }, [data])
   const filteredVouchers = useMemo(
     () => allVouchers.filter(
       (v) => matchesSearch(v, searchInput)
@@ -914,8 +945,31 @@ export default function DashboardPage() {
   }, [currencyTotals, stats])
 
   const listBase = `${URLS.myVouchers}${URLS.myVouchers.includes('?') ? '&' : '?'}`
+  const creditTotal = Number(stats.credit || 0)
+  const creditUnpaid = Number(stats.credit_unpaid || 0)
+  const creditPaid = Math.max(0, creditTotal - creditUnpaid)
+  const creditHref = URLS.creditVouchers
+  const creditAmountTzs = Number(stats.credit_amount_tzs || 0)
+  const creditAmountUsd = Number(stats.credit_amount_usd || 0)
+  const creditValueLabel = (() => {
+    const parts = []
+    if (creditAmountTzs > 0 || creditAmountUsd <= 0) {
+      parts.push(`TZS ${formatMoney(creditAmountTzs)}`)
+    }
+    if (creditAmountUsd > 0) {
+      parts.push(`USD ${formatMoney(creditAmountUsd)}`)
+    }
+    return parts.join(' / ') || 'TZS 0'
+  })()
   const kpis = IS_ADMIN
-    ? [
+    ? (CREDIT_MODE
+      ? [
+          { key: 'credit-total', label: 'Credit Vouchers', value: formatInt(creditTotal), sub: 'All credit', subCls: '', color: 'indigo', icon: <FileText size={14} />, href: creditHref },
+          { key: 'credit-unpaid', label: 'Unpaid', value: formatInt(creditUnpaid), sub: 'Action needed', subCls: 'ed-sub--amber', color: 'amber', icon: <Clock size={14} />, href: creditHref },
+          { key: 'credit-paid', label: 'Paid', value: formatInt(creditPaid), sub: creditTotal ? `${pct(creditPaid, creditTotal)}% of credit` : '0% of credit', subCls: 'ed-sub--blue', color: 'blue', icon: <CreditCard size={14} />, href: `${URLS.myVouchers}${PREPEND_MODULE}` },
+          { key: 'credit-value', label: 'Credit Value', value: creditValueLabel, sub: 'All credit', subCls: '', color: 'green', icon: <DollarSign size={14} />, href: creditHref },
+        ]
+      : [
         { key: 'total', label: 'Total Vouchers', value: formatInt(stats.total), sub: 'All time', subCls: '', color: 'indigo', icon: <FileText size={14} />, href: `${URLS.myVouchers}${PREPEND_MODULE}` },
         { key: 'pending', label: 'Pending', value: formatInt(stats.pending), sub: 'Action needed', subCls: 'ed-sub--amber', color: 'amber', icon: <Clock size={14} />, href: `${listBase}status=pending${APPEND_MODULE}` },
         { key: 'approved', label: 'Approved', value: formatInt(stats.approved), sub: `${pct(stats.approved, total)}% of total`, subCls: 'ed-sub--green', color: 'green', icon: <CheckCircle2 size={14} />, href: `${listBase}status=approved${APPEND_MODULE}` },
@@ -923,8 +977,18 @@ export default function DashboardPage() {
         { key: 'paid', label: 'Paid', value: formatInt(stats.paid), sub: `${pct(stats.paid, total)}% of total`, subCls: 'ed-sub--blue', color: 'blue', icon: <CreditCard size={14} />, href: `${listBase}status=paid${APPEND_MODULE}` },
         { key: 'posted', label: 'Posted', value: formatInt(stats.posted), sub: 'Ledger sync', subCls: 'ed-sub--green', color: 'indigo', icon: <Upload size={14} />, href: `${listBase}status=posted${APPEND_MODULE}` },
         { key: 'draft', label: 'Needs Info', value: formatInt(stats.draft + stats.confirming), sub: 'Drafts', subCls: '', color: 'amber', icon: <FileText size={14} />, href: `${listBase}status=draft${APPEND_MODULE}` },
+        {
+          key: 'credit',
+          label: 'Credit Vouchers',
+          value: formatInt(creditTotal),
+          sub: creditUnpaid > 0 ? `${formatInt(creditUnpaid)} unpaid` : 'All credit',
+          subCls: creditUnpaid > 0 ? 'ed-sub--amber' : '',
+          color: 'indigo',
+          icon: <CreditCard size={14} />,
+          href: creditHref,
+        },
         { key: 'amount', label: 'Approved Volume', value: totalAmountLabel, sub: 'TZS / USD', subCls: '', color: 'blue', icon: <DollarSign size={14} />, href: `${listBase}status=approved${APPEND_MODULE}`, wide: true },
-      ]
+      ])
     : [
         { key: 'total', label: 'Total Vouchers', value: formatInt(stats.total), sub: 'All time', subCls: '', color: 'indigo', icon: <FileText size={14} />, href: URLS.myVouchers },
         { key: 'pending', label: 'Pending Approval', value: formatInt(stats.pending), sub: `${pct(stats.pending, total)}% of total`, subCls: 'ed-sub--amber', color: 'amber', icon: <Clock size={14} />, href: `${URLS.myVouchers}?status=pending` },
@@ -1116,7 +1180,7 @@ export default function DashboardPage() {
   ) : null
 
   return (
-    <div className="ed-page">
+    <div className={`ed-page${CREDIT_MODE ? ' ed-page--credit' : ''}`}>
       {flash && <div className="ed-flash ed-flash--success" role="status">{flash}</div>}
       {error && <div className="ed-flash ed-flash--error" role="alert">{error}</div>}
       {headerSearchSlot ? createPortal(searchBar, headerSearchSlot) : null}
@@ -1156,13 +1220,16 @@ export default function DashboardPage() {
 
       {/* Voucher table */}
       <div className={`ed-card ed-card--list${HIDE_KPIS ? ' ed-card--table-only' : ''}`}>
-        {!HIDE_KPIS && (
-        <div className="ed-card-head">
-          <h3 className="ed-card-title">
-            <a href={allVouchersHref} className="ed-card-title-link">
-              {LIST_TITLE}
-            </a>
-          </h3>
+        <div className={`ed-card-head${CREDIT_MODE ? ' ed-card-head--export-only' : ''}`}>
+          {!CREDIT_MODE ? (
+            <h3 className="ed-card-title">
+              <a href={allVouchersHref} className="ed-card-title-link">
+                {LIST_TITLE}
+              </a>
+            </h3>
+          ) : (
+            <span className="ed-card-title-spacer" aria-hidden="true" />
+          )}
           {IS_ADMIN && (
             <ExportMenu
               exportingExcel={exportingExcel}
@@ -1174,11 +1241,18 @@ export default function DashboardPage() {
             />
           )}
         </div>
-        )}
         {allVouchers.length === 0 ? (
-          <div className="ed-empty">No vouchers created yet.</div>
+          <div className="ed-table-wrap ed-table-wrap--empty">
+            <div className="ed-empty">
+              {CREDIT_MODE ? 'No unpaid credit / approved vouchers awaiting payment.' : 'No vouchers created yet.'}
+            </div>
+          </div>
         ) : filteredVouchers.length === 0 ? (
-          <div className="ed-empty">No vouchers match your search.</div>
+          <div className="ed-table-wrap ed-table-wrap--empty">
+            <div className="ed-empty">
+              {CREDIT_MODE ? 'No matching unpaid credit / approved vouchers.' : 'No vouchers match your search.'}
+            </div>
+          </div>
         ) : (
             <>
             {selectedCount > 0 ? (

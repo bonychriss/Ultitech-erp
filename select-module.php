@@ -184,7 +184,9 @@ $push([
     'id' => 'accounting',
     'label' => 'Accounting',
     'desc' => 'Balances, revenue, expenses, journals & reports',
-    'href' => $companyRoute('accounting'),
+    // Prefer accounting.php — physical ultimate/accounting/ dir otherwise 301s to
+    // /ultimate/accounting/ (no index) and requireLogin bounces to login.
+    'href' => $companyRoute('accounting.php'),
     'icon' => 'accounting',
     'color' => '#0f172a',
     'badge' => $expensesModuleUpdateBadge ? (string) ($expensesModuleUpdateBadge['label'] ?? 'New') : null,

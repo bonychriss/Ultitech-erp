@@ -1,4 +1,4 @@
-/* Supporting documents under invoice view ó Gmail-style cards (matches voucher view) */
+/* Supporting documents under invoice view ù Gmail-style cards (matches voucher view) */
 
 .ov-page-root .inv-docs-card {
   width: 100%;
@@ -149,6 +149,142 @@
   letter-spacing: 0.04em;
 }
 
+/* Office-style file type icons (Word / PPT / Exl / PDF) */
+.ov-page-root .inv-file-card {
+  width: 120px;
+  max-width: calc(50% - 6px);
+  flex: 0 0 120px;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+}
+
+.ov-page-root .inv-file-card:hover {
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.ov-page-root .inv-file-card .inv-gmail-card-hit {
+  background: transparent;
+  border-radius: 4px;
+}
+
+.ov-page-root .inv-file-card .inv-gmail-card-foot,
+.ov-page-root .inv-file-card .inv-pay-card-foot {
+  background: transparent;
+  border-top: 0;
+  padding: 0.35rem 0.15rem 0.15rem;
+  min-height: 0;
+}
+
+.ov-page-root .inv-file-card .inv-gmail-fname {
+  font-size: 11px;
+  color: #3c4043;
+  text-align: center;
+}
+
+.ov-page-root .inv-file-thumb {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 108px;
+  max-height: 108px;
+  background: transparent;
+}
+
+.ov-page-root .inv-file-icon {
+  position: relative;
+  width: 72px;
+  height: 92px;
+  filter: drop-shadow(0 1px 2px rgba(60, 64, 67, 0.18));
+}
+
+.ov-page-root .inv-file-icon-sheet {
+  position: absolute;
+  inset: 0;
+  background: #f3f4f6;
+  border: 1px solid #d7dbe0;
+  border-radius: 2px;
+  clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 0 100%);
+  overflow: hidden;
+}
+
+.ov-page-root .inv-file-icon-fold {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 2;
+  width: 16px;
+  height: 16px;
+  background: #e5e7eb;
+  clip-path: polygon(0 0, 100% 100%, 0 100%);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.04);
+}
+
+.ov-page-root .inv-file-icon-glyph {
+  position: absolute;
+  top: 18px;
+  left: 10px;
+  right: 10px;
+  height: 34px;
+  opacity: 0.28;
+  background-repeat: no-repeat;
+  background-position: center top;
+  background-size: contain;
+}
+
+.ov-page-root .inv-file-icon-glyph--doc {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 36'%3E%3Crect x='4' y='4' width='40' height='3' rx='1' fill='%239aa0a6'/%3E%3Crect x='4' y='12' width='36' height='3' rx='1' fill='%239aa0a6'/%3E%3Crect x='4' y='20' width='32' height='3' rx='1' fill='%239aa0a6'/%3E%3Crect x='4' y='28' width='28' height='3' rx='1' fill='%239aa0a6'/%3E%3C/svg%3E");
+}
+
+.ov-page-root .inv-file-icon-glyph--ppt {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 36'%3E%3Ccircle cx='24' cy='18' r='12' fill='none' stroke='%239aa0a6' stroke-width='3'/%3E%3Cpath d='M24 18 L24 8 A10 10 0 0 1 33 23 Z' fill='%239aa0a6'/%3E%3C/svg%3E");
+}
+
+.ov-page-root .inv-file-icon-glyph--sheet {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 36'%3E%3Crect x='6' y='4' width='36' height='28' rx='1' fill='none' stroke='%239aa0a6' stroke-width='2'/%3E%3Cpath d='M6 12 H42 M6 20 H42 M6 28 H42 M18 4 V32 M30 4 V32' stroke='%239aa0a6' stroke-width='2'/%3E%3C/svg%3E");
+}
+
+.ov-page-root .inv-file-icon-glyph--pdf {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 36'%3E%3Crect x='6' y='4' width='14' height='10' rx='1' fill='%239aa0a6'/%3E%3Crect x='24' y='5' width='18' height='2.5' rx='1' fill='%239aa0a6'/%3E%3Crect x='24' y='11' width='14' height='2.5' rx='1' fill='%239aa0a6'/%3E%3Crect x='6' y='18' width='36' height='2.5' rx='1' fill='%239aa0a6'/%3E%3Crect x='6' y='24' width='30' height='2.5' rx='1' fill='%239aa0a6'/%3E%3Crect x='6' y='30' width='24' height='2.5' rx='1' fill='%239aa0a6'/%3E%3C/svg%3E");
+}
+
+.ov-page-root .inv-file-icon-glyph--image {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 36'%3E%3Crect x='6' y='4' width='36' height='28' rx='2' fill='none' stroke='%239aa0a6' stroke-width='2'/%3E%3Ccircle cx='16' cy='14' r='4' fill='%239aa0a6'/%3E%3Cpath d='M8 28 L18 18 L26 24 L32 16 L40 28 Z' fill='%239aa0a6'/%3E%3C/svg%3E");
+}
+
+.ov-page-root .inv-file-icon-glyph--file {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 36'%3E%3Crect x='4' y='6' width='40' height='3' rx='1' fill='%239aa0a6'/%3E%3Crect x='4' y='14' width='34' height='3' rx='1' fill='%239aa0a6'/%3E%3Crect x='4' y='22' width='38' height='3' rx='1' fill='%239aa0a6'/%3E%3Crect x='4' y='30' width='22' height='3' rx='1' fill='%239aa0a6'/%3E%3C/svg%3E");
+}
+
+.ov-page-root .inv-file-icon-label {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 22px;
+  padding: 0 4px;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  font-family: Inter, system-ui, sans-serif;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.ov-page-root .inv-file-icon--doc .inv-file-icon-label { background: #2b579a; }
+.ov-page-root .inv-file-icon--ppt .inv-file-icon-label { background: #c43e1c; }
+.ov-page-root .inv-file-icon--sheet .inv-file-icon-label { background: #217346; }
+.ov-page-root .inv-file-icon--pdf .inv-file-icon-label { background: #e5252a; }
+.ov-page-root .inv-file-icon--image .inv-file-icon-label { background: #4285f4; }
+.ov-page-root .inv-file-icon--file .inv-file-icon-label { background: #5f6368; }
+
+.ov-page-root .inv-gmail-type--ppt { background: #c43e1c; }
+
 .ov-page-root .inv-gmail-card-foot {
   display: flex;
   flex-direction: row;
@@ -216,16 +352,131 @@
   text-decoration: none;
 }
 
+.ov-page-root .inv-pay-card-foot {
+  align-items: stretch;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-height: auto;
+  padding: 0.45rem 0.5rem 0.55rem;
+}
+
+.ov-page-root .inv-pay-card-foot-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  width: 100%;
+}
+
+.ov-page-root .inv-pay-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 11px;
+  line-height: 1.25;
+  color: #5f6368;
+  font-weight: 400;
+}
+
+.ov-page-root .inv-pay-card-dot {
+  color: #dadce0;
+}
+
+.ov-page-root .inv-pay-thumb-note {
+  display: block;
+  margin-top: 0.45rem;
+  font-size: 11px;
+  font-weight: 400;
+  color: #80868b;
+  line-height: 1.2;
+}
+
+/* Compact row when a payment has no proof attachment */
+.ov-page-root .inv-pay-plain {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  max-width: 100%;
+  flex: 1 1 100%;
+  margin: 0;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid #dadce0;
+  border-radius: 8px;
+  background: #fff;
+  box-sizing: border-box;
+  box-shadow: 0 1px 2px rgba(60, 64, 67, 0.08);
+}
+
+.ov-page-root .inv-pay-plain-icon {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: #e8f0fe;
+  color: #1a73e8;
+  font-size: 14px;
+}
+
+.ov-page-root .inv-pay-plain-body {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.ov-page-root .inv-pay-plain-amount {
+  font-size: 14px;
+  font-weight: 600;
+  color: #202124;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+}
+
+.ov-page-root .inv-pay-plain-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 12px;
+  line-height: 1.3;
+  color: #5f6368;
+}
+
+html[data-theme="dark"] .ov-page-root .inv-pay-plain {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+html[data-theme="dark"] .ov-page-root .inv-pay-plain-icon {
+  background: #1e3a5f;
+  color: #93c5fd;
+}
+
+html[data-theme="dark"] .ov-page-root .inv-pay-plain-amount {
+  color: #e2e8f0;
+}
+
+html[data-theme="dark"] .ov-page-root .inv-pay-plain-meta {
+  color: #94a3b8;
+}
+
 @media (max-width: 640px) {
   .ov-page-root .inv-docs-card {
     padding-left: 0.75rem;
     padding-right: 0.75rem;
   }
 
-  .ov-page-root .inv-gmail-card {
-    width: calc(50% - 6px);
-    max-width: calc(50% - 6px);
-    flex-basis: calc(50% - 6px);
+  .ov-page-root .inv-gmail-card,
+  .ov-page-root .inv-file-card {
+    width: calc(33.333% - 8px);
+    max-width: calc(33.333% - 8px);
+    flex-basis: calc(33.333% - 8px);
   }
 }
 

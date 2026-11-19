@@ -186,4 +186,44 @@ export function summaryRowsForTrace(expenses = []) {
   return (Array.isArray(expenses) ? expenses : []).filter(inSummary);
 }
 
+/**
+ * Credit vouchers desk KPIs: total credit, unpaid, paid, overdue unpaid.
+ */
+export function buildCreditSummaryStats(expenses = []) {
+  let totalCredit = 0;
+  let unpaid = 0;
+  let paid = 0;
+  let overdue = 0;
+  let count = 0;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  for (const row of Array.isArray(expenses) ? expenses : []) {
+    if (!isPurchasesKpiRow(row)) continue;
+    const amount = Number(row.amount) || 0;
+    if (amount <= 0) continue;
+    count += 1;
+    totalCredit += amount;
+    if (isPurchaseUnpaid(row)) {
+      unpaid += amount;
+      const due = purchaseDueDate(row);
+      if (due && due < today) overdue += amount;
+    } else {
+      paid += amount;
+    }
+  }
+
+  const pctBase = totalCredit > 0.009 ? totalCredit : 0;
+  return {
+    total_credit: Math.round(totalCredit * 100) / 100,
+    unpaid: Math.round(unpaid * 100) / 100,
+    paid: Math.round(paid * 100) / 100,
+    overdue: Math.round(overdue * 100) / 100,
+    voucher_count: count,
+    pct_unpaid: pctBase > 0.009 ? (unpaid / pctBase) * 100 : 0,
+    pct_overdue: pctBase > 0.009 ? (overdue / pctBase) * 100 : 0,
+  };
+}
+
 export { paymentBucket, inSummary };

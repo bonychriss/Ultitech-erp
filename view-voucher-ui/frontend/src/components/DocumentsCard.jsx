@@ -97,10 +97,18 @@ function DocPreviewThumb({ isImage, previewUrl, missing, kindLabel, htmlEmbed })
   )
 }
 
+function paymentInstallmentLabel(index, total) {
+  if (total <= 1) return 'Payment proof'
+  const ordinals = ['First', 'Second', 'Third', 'Fourth', 'Fifth', 'Sixth', 'Seventh', 'Eighth', 'Ninth', 'Tenth']
+  const head = ordinals[index] || `${index + 1}th`
+  return `${head} payment`
+}
+
 function GmailAttachCard({
   iconClass,
   name,
   sub,
+  caption,
   onView,
   viewHref,
   downloadHref,
@@ -122,10 +130,11 @@ function GmailAttachCard({
   }
 
   const thumbUrl = previewUrl || viewHref || downloadHref || undefined
+  const captionText = String(caption || '').trim()
 
   return (
     <article
-      className={`vv-gmail-card${missing ? ' vv-gmail-card--missing' : ''}`}
+      className={`vv-gmail-card${missing ? ' vv-gmail-card--missing' : ''}${captionText ? ' vv-gmail-card--captioned' : ''}`}
       title={sub ? `${name}\n${sub}` : name}
       role="listitem"
     >
@@ -172,33 +181,70 @@ function GmailAttachCard({
           </button>
         ) : null}
       </div>
+      <div className={`vv-gmail-card-caption${captionText ? '' : ' is-empty'}`} aria-hidden={!captionText}>
+        {captionText || '\u00a0'}
+      </div>
     </article>
   )
 }
 
-export default function DocumentsCard({ data, onPreview, onDeleteAttachment, onUnlinkOrder }) {
-  const { attachments, purchaseOrderDocs, salesOrderDocs, swiftProxy, documents, permissions } = data
-  const poDocs = Array.isArray(purchaseOrderDocs) ? purchaseOrderDocs : []
-  const soDocs = Array.isArray(salesOrderDocs) ? salesOrderDocs : []
-  const fileCount = (Array.isArray(attachments) ? attachments.length : 0)
-    + soDocs.length
-    + poDocs.length
-    + (swiftProxy ? 1 : 0)
-  if (fileCount === 0 && !documents?.mismatch) return null
-
-  const count = fileCount
-  const countLabel = count === 1 ? '1 attachment' : `${count} attachments`
-
+function DocsSection({ id, title, countLabel, children, footer }) {
   return (
-    <section className="vv-card vv-card-docs documents-card no-print" id="attachments">
+    <section className="vv-card vv-card-docs documents-card no-print" id={id}>
       <div className="vv-card-head vv-gmail-head">
         <h2 className="vv-card-title vv-gmail-title">
-          Supporting Documents
-          <span className="vv-gmail-count"> · {countLabel}</span>
+          {title}
+          {countLabel ? <span className="vv-gmail-count"> · {countLabel}</span> : null}
         </h2>
       </div>
       <div className="vv-card-body">
         <div className="vv-gmail-list" role="list">
+          {children}
+        </div>
+        {footer || null}
+      </div>
+    </section>
+  )
+}
+
+export default function DocumentsCard({ data, onPreview, onDeleteAttachment, onUnlinkOrder }) {
+  const {
+    attachments,
+    purchaseOrderDocs,
+    salesOrderDocs,
+    swiftProofs,
+    swiftProxy,
+    documents,
+    permissions,
+  } = data
+  const poDocs = Array.isArray(purchaseOrderDocs) ? purchaseOrderDocs : []
+  const soDocs = Array.isArray(salesOrderDocs) ? salesOrderDocs : []
+  const supportFiles = Array.isArray(attachments) ? attachments : []
+  const proofs = Array.isArray(swiftProofs) && swiftProofs.length > 0
+    ? swiftProofs
+    : (swiftProxy
+      ? [{
+          id: 0,
+          name: 'SWIFT Payment Proof.pdf',
+          proxyLink: swiftProxy,
+          isImage: false,
+          typeLabel: 'PDF',
+          label: 'Payment proof',
+          missing: false,
+        }]
+      : [])
+
+  const supportCount = supportFiles.length + soDocs.length + poDocs.length
+  const proofCount = proofs.length
+  if (supportCount === 0 && proofCount === 0 && !documents?.mismatch) return null
+
+  const supportLabel = String(supportCount)
+  const proofLabel = String(proofCount)
+
+  return (
+    <div className="vv-docs-stack no-print">
+      {(supportCount > 0 || documents?.mismatch) ? (
+        <DocsSection id="attachments" title="Supporting Documents" countLabel={supportCount > 0 ? supportLabel : null}>
           {soDocs.map((so) => {
             const viewUrl = withPoEmbed(String(so.pdfLink || '').replace(/([?&])download=1(&|$)/, '$1').replace(/[?&]$/, ''))
             const downloadUrl = (() => {
@@ -222,7 +268,7 @@ export default function DocumentsCard({ data, onPreview, onDeleteAttachment, onU
             )
           })}
 
-          {attachments.map((att) => (
+          {supportFiles.map((att) => (
             <GmailAttachCard
               key={att.id}
               iconClass={att.isImage ? 'fa-file-image' : 'fa-file-pdf'}
@@ -254,19 +300,33 @@ export default function DocumentsCard({ data, onPreview, onDeleteAttachment, onU
               onDelete={onUnlinkOrder ? () => onUnlinkOrder('purchase', po) : undefined}
             />
           ))}
+        </DocsSection>
+      ) : null}
 
-          {swiftProxy && (
+      {proofCount > 0 ? (
+        <DocsSection
+          id="swift-proofs"
+          title="SWIFT Payment Proofs"
+          countLabel={proofLabel}
+        >
+          {proofs.map((proof, idx) => (
             <GmailAttachCard
-              iconClass="fa-file-pdf"
-              name="SWIFT Payment Proof.pdf"
-              sub="PDF"
-              onView={() => onPreview(swiftProxy, 'swift', false)}
-              downloadHref={swiftProxy}
-              previewUrl={swiftProxy}
+              key={`swift-${proof.id || proof.fileName || idx}`}
+              iconClass={proof.isImage ? 'fa-file-image' : 'fa-file-pdf'}
+              name={proof.name || `SWIFT Payment Proof ${idx + 1}.pdf`}
+              sub={proof.label || proof.fileSizeLabel || proof.typeLabel || 'Payment proof'}
+              caption={paymentInstallmentLabel(idx, proofs.length)}
+              isImage={!!proof.isImage}
+              missing={!!proof.missing}
+              onView={proof.missing || !proof.proxyLink
+                ? undefined
+                : () => onPreview(proof.proxyLink, 'swift', !!proof.isImage)}
+              downloadHref={proof.missing ? undefined : proof.proxyLink}
+              previewUrl={proof.missing ? undefined : proof.proxyLink}
             />
-          )}
-        </div>
-      </div>
-    </section>
+          ))}
+        </DocsSection>
+      ) : null}
+    </div>
   )
 }

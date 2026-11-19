@@ -16,6 +16,15 @@ export function isPurchasesDesk() {
   return getDeskMode() === 'purchases';
 }
 
+export function isCreditDesk() {
+  return getDeskMode() === 'credit';
+}
+
+/** Purchases + Credit desks are voucher-centric lists. */
+export function isVoucherListDesk() {
+  return isPurchasesDesk() || isCreditDesk();
+}
+
 async function parseJson(response) {
   const text = await response.text();
   try {
@@ -35,6 +44,7 @@ async function parseJson(response) {
 export async function fetchDeskInit(filters = {}) {
   const params = new URLSearchParams();
   if (isPurchasesDesk()) params.set('desk', 'purchases');
+  if (isCreditDesk()) params.set('desk', 'credit');
   Object.entries(filters || {}).forEach(([key, value]) => {
     if (value !== '' && value != null) params.set(key, String(value));
   });
@@ -52,6 +62,10 @@ export async function fetchDeskExpenses(filters = {}) {
   if (isPurchasesDesk()) {
     params.set('desk', 'purchases');
     params.set('purpose', 'stock_purchase');
+  }
+  if (isCreditDesk()) {
+    params.set('desk', 'credit');
+    params.set('purpose', 'credit');
   }
   if (filters.search) params.set('search', filters.search);
   if (filters.status) params.set('status', filters.status);
@@ -93,6 +107,9 @@ export function deskPageUrl(file, extraParams = {}) {
       return `../purchases/index.php?${params.toString()}`;
     }
   }
+  if (isCreditDesk() && String(file || '').toLowerCase() === 'index.php') {
+    return `./credit-vouchers.php?${params.toString()}`;
+  }
   return `./${file}?${params.toString()}`;
 }
 
@@ -119,7 +136,7 @@ export async function fetchPurchasesVoucherPreview(pvId) {
 
 export function purchasesVoucherViewUrl(expense) {
   if (!expense || typeof expense !== 'object') return '';
-  const fromDesk = isPurchasesDesk() ? 'purchases' : 'expenses';
+  const fromDesk = isPurchasesDesk() ? 'purchases' : (isCreditDesk() ? 'credit' : 'expenses');
   const boot = typeof expense.voucher_url === 'string' ? expense.voucher_url.trim() : '';
   const withFrom = (url) => {
     if (!url) return '';

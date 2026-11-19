@@ -22,7 +22,7 @@
     color: #fff !important;
     font-family: 'Poppins', system-ui, sans-serif;
     font-size: 13px;
-    font-weight: 600;
+    font-weight: 500;
     cursor: pointer;
     box-shadow: 0 2px 8px rgba(124, 58, 237, 0.2);
     line-height: 1;
@@ -199,7 +199,7 @@
     cursor: default;
     background: #fffbeb;
     color: #92400e;
-    font-weight: 700;
+    font-weight: 500;
 }
 
 .vv-actions-menu .dropdown-item--pending i {
@@ -280,7 +280,7 @@
     margin: 0;
     font-size: 1.25rem;
     color: #111827;
-    font-weight: 700;
+    font-weight: 500;
 }
 
 .modal-header-clean p {
@@ -313,7 +313,7 @@
 
 .signature-label-clean {
     font-size: 0.75rem;
-    font-weight: 600;
+    font-weight: 500;
     text-transform: uppercase;
     color: #9ca3af;
     letter-spacing: 0.05em;
@@ -357,7 +357,7 @@
 
 .warning-alert-clean__title {
     font-size: 0.875rem;
-    font-weight: 700;
+    font-weight: 500;
     color: #c53030;
     margin-bottom: 4px;
 }
@@ -400,7 +400,7 @@
     color: #374151;
     border: 1px solid #d1d5db;
     border-radius: 9999px !important;
-    font-weight: 600;
+    font-weight: 500;
     cursor: pointer;
     transition: background 0.2s;
 }
@@ -415,7 +415,7 @@
     color: #fff;
     border: none;
     border-radius: 9999px !important;
-    font-weight: 600;
+    font-weight: 500;
     cursor: pointer;
     transition: background 0.2s;
 }

@@ -1582,6 +1582,15 @@ html[data-erp-hosted='1'] body {
   font-size: 0.875rem;
 }
 
+.ua-revenue-cell--balance-due {
+  color: #be123c;
+  font-weight: 500;
+}
+
+.ua-revenue-cell--balance-clear {
+  color: #64748b;
+}
+
 .ua-revenue-cell--status {
   overflow: visible;
 }

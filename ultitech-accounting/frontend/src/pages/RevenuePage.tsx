@@ -1135,7 +1135,15 @@ export function RevenuePage() {
                           {invoice.customer?.name || '—'}
                         </td>
                         <td className="ua-revenue-cell ua-revenue-cell--money">{money(invoice.total)}</td>
-                        <td className="ua-revenue-cell ua-revenue-cell--money">{money(invoice.balance_due)}</td>
+                        <td
+                          className={`ua-revenue-cell ua-revenue-cell--money${
+                            Number(invoice.balance_due) > 0.009
+                              ? ' ua-revenue-cell--balance-due'
+                              : ' ua-revenue-cell--balance-clear'
+                          }`}
+                        >
+                          {money(invoice.balance_due)}
+                        </td>
                         <td className="ua-revenue-cell ua-revenue-cell--status">
                           <span className={statusClass(bucket)}>{paymentLabel(bucket)}</span>
                         </td>

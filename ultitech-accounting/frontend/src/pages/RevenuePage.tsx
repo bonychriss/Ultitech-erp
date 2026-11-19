@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
+import { createPortal } from 'react-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { apiRequest } from '../lib/api'
 import { useAuth } from '../lib/auth'
@@ -75,6 +76,25 @@ function money(value: string | number | undefined) {
   return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
+function tzs(value: string | number | undefined) {
+  return `TZS ${money(value)}`
+}
+
+function startOfToday(): Date {
+  const d = new Date()
+  d.setHours(0, 0, 0, 0)
+  return d
+}
+
+function parseDateOnly(raw: string | null | undefined): Date | null {
+  const s = String(raw || '').trim().slice(0, 10)
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return null
+  const d = new Date(`${s}T12:00:00`)
+  if (Number.isNaN(d.getTime())) return null
+  d.setHours(0, 0, 0, 0)
+  return d
+}
+
 function paymentBucket(invoice: Invoice): 'unpaid' | 'partial' | 'paid' | 'other' {
   const status = String(invoice.status || '').toLowerCase()
   if (status === 'void' || status === 'cancelled' || status === 'canceled' || status === 'draft') {
@@ -106,12 +126,83 @@ function todayIso() {
   return new Date().toISOString().slice(0, 10)
 }
 
+function KpiIcon({ children }: { children: React.ReactNode }) {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+      {children}
+    </svg>
+  )
+}
+
+function CoinsIcon() {
+  return (
+    <KpiIcon>
+      <circle cx="8" cy="8" r="6" />
+      <path d="M18.09 10.37A6 6 0 1 1 10.34 18" />
+      <path d="M7 6h1v4" />
+      <path d="M16.71 13.88l.7.71-2.82 2.82" />
+    </KpiIcon>
+  )
+}
+
+function PercentIcon() {
+  return (
+    <KpiIcon>
+      <line x1="19" y1="5" x2="5" y2="19" />
+      <circle cx="6.5" cy="6.5" r="2.5" />
+      <circle cx="17.5" cy="17.5" r="2.5" />
+    </KpiIcon>
+  )
+}
+
+function WalletIcon() {
+  return (
+    <KpiIcon>
+      <path d="M19 7V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-1" />
+      <path d="M3 10h18v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-8Z" />
+      <path d="M17 14h.01" />
+    </KpiIcon>
+  )
+}
+
+function FileTextIcon() {
+  return (
+    <KpiIcon>
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+      <path d="M14 2v6h6" />
+      <path d="M16 13H8" />
+      <path d="M16 17H8" />
+      <path d="M10 9H8" />
+    </KpiIcon>
+  )
+}
+
+function ClockIcon() {
+  return (
+    <KpiIcon>
+      <circle cx="12" cy="12" r="10" />
+      <path d="M12 6v6l4 2" />
+    </KpiIcon>
+  )
+}
+
+function AlertIcon() {
+  return (
+    <KpiIcon>
+      <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
+      <path d="M12 9v4" />
+      <path d="M12 17h.01" />
+    </KpiIcon>
+  )
+}
+
 export function RevenuePage() {
-  const { token, companyId, bookId, embed, classicAccountingUrl } = useAuth()
+  const { token, companyId, bookId, embed, classicAccountingUrl, hostedInErp } = useAuth()
   const client = useQueryClient()
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [formOpen, setFormOpen] = useState(false)
+  const [crumbSearchHost, setCrumbSearchHost] = useState<HTMLElement | null>(null)
 
   const [revenueDate, setRevenueDate] = useState(todayIso)
   const [customerId, setCustomerId] = useState('')
@@ -130,6 +221,7 @@ export function RevenuePage() {
   const [payCashAccountId, setPayCashAccountId] = useState('')
 
   const [payFilter, setPayFilter] = useState<PayFilter>('all')
+  const [invoiceQuery, setInvoiceQuery] = useState('')
   const [openMenuId, setOpenMenuId] = useState<number | null>(null)
   const [viewInvoiceId, setViewInvoiceId] = useState<number | null>(null)
   const menuRef = useRef<HTMLDivElement | null>(null)
@@ -230,9 +322,72 @@ export function RevenuePage() {
     [receivableInvoices],
   )
   const filteredInvoices = useMemo(() => {
-    if (payFilter === 'all') return receivableInvoices
-    return receivableInvoices.filter((i) => paymentBucket(i) === payFilter)
-  }, [receivableInvoices, payFilter])
+    const byStatus =
+      payFilter === 'all'
+        ? receivableInvoices
+        : receivableInvoices.filter((i) => paymentBucket(i) === payFilter)
+    const q = invoiceQuery.trim().toLowerCase()
+    if (!q) return byStatus
+    return byStatus.filter((invoice) => {
+      const hay = [
+        invoice.invoice_number,
+        invoice.customer?.name,
+        invoice.customer?.code,
+        invoice.description,
+        invoice.erp_invoice_id,
+        String(invoice.invoice_date || '').slice(0, 10),
+        String(invoice.total || ''),
+        String(invoice.balance_due || ''),
+        paymentLabel(paymentBucket(invoice)),
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase()
+      return hay.includes(q)
+    })
+  }, [receivableInvoices, payFilter, invoiceQuery])
+
+  /** Summary cards match rows currently shown in the table (classic Revenue desk). */
+  const kpi = useMemo(() => {
+    let exclusive = 0
+    let vat = 0
+    let gross = 0
+    let outstanding = 0
+    let overdue = 0
+    const today = startOfToday()
+
+    for (const row of filteredInvoices) {
+      const total = Number(row.total) || 0
+      let vatAmt = Math.max(0, Number(row.tax_total) || 0)
+      let exclusiveAmt = Number(row.subtotal)
+      if (!Number.isFinite(exclusiveAmt) || (exclusiveAmt <= 0.009 && total > 0.009)) {
+        exclusiveAmt = Math.max(0, total - vatAmt)
+      }
+      if (vatAmt <= 0.009 && total > exclusiveAmt + 0.009) {
+        vatAmt = Math.max(0, total - exclusiveAmt)
+      }
+      exclusive += exclusiveAmt
+      vat += vatAmt
+      gross += total
+
+      const bal = Number(row.balance_due) || 0
+      if (bal > 0.009) {
+        outstanding += bal
+        const due = parseDateOnly(row.due_date)
+        if (due && due < today) overdue += bal
+      }
+    }
+
+    return {
+      exclusive,
+      vat,
+      gross,
+      invoiceTotal: gross,
+      invoiceCount: filteredInvoices.length,
+      outstanding,
+      overdue,
+    }
+  }, [filteredInvoices])
 
   const viewedInvoice = useMemo(
     () => (invoices.data?.data ?? []).find((i) => i.id === viewInvoiceId) ?? null,
@@ -406,6 +561,82 @@ export function RevenuePage() {
         </div>
       ) : null}
 
+      <div className="ua-revenue-search-wrap mb-4">
+        <input
+          type="search"
+          className="ua-revenue-search"
+          value={invoiceQuery}
+          onChange={(e) => setInvoiceQuery(e.target.value)}
+          placeholder="Search number, customer, date…"
+          aria-label="Search invoices"
+        />
+      </div>
+
+      <div className="ua-revenue-kpis mb-4" aria-label="Revenue summary">
+        <div className="ua-revenue-kpi">
+          <div className="ua-revenue-kpi__text">
+            <span className="ua-revenue-kpi__label">Total Exclusive</span>
+            <strong className="ua-revenue-kpi__value">{tzs(kpi.exclusive)}</strong>
+            <span className="ua-revenue-kpi__sub">Before VAT</span>
+          </div>
+          <span className="ua-revenue-kpi__badge ua-revenue-kpi__badge--violet" aria-hidden="true">
+            <CoinsIcon />
+          </span>
+        </div>
+        <div className="ua-revenue-kpi">
+          <div className="ua-revenue-kpi__text">
+            <span className="ua-revenue-kpi__label">VAT</span>
+            <strong className="ua-revenue-kpi__value">{tzs(kpi.vat)}</strong>
+            <span className="ua-revenue-kpi__sub">Total VAT included</span>
+          </div>
+          <span className="ua-revenue-kpi__badge ua-revenue-kpi__badge--indigo" aria-hidden="true">
+            <PercentIcon />
+          </span>
+        </div>
+        <div className="ua-revenue-kpi">
+          <div className="ua-revenue-kpi__text">
+            <span className="ua-revenue-kpi__label">Gross Total</span>
+            <strong className="ua-revenue-kpi__value">{tzs(kpi.gross)}</strong>
+            <span className="ua-revenue-kpi__sub">After tax</span>
+          </div>
+          <span className="ua-revenue-kpi__badge ua-revenue-kpi__badge--teal" aria-hidden="true">
+            <WalletIcon />
+          </span>
+        </div>
+        <div className="ua-revenue-kpi">
+          <div className="ua-revenue-kpi__text">
+            <span className="ua-revenue-kpi__label">Total Invoices</span>
+            <strong className="ua-revenue-kpi__value">{tzs(kpi.invoiceTotal)}</strong>
+            <span className="ua-revenue-kpi__sub">
+              {kpi.invoiceCount ? `${kpi.invoiceCount.toLocaleString('en-US')} in view` : 'No invoices in view'}
+            </span>
+          </div>
+          <span className="ua-revenue-kpi__badge ua-revenue-kpi__badge--blue" aria-hidden="true">
+            <FileTextIcon />
+          </span>
+        </div>
+        <div className="ua-revenue-kpi">
+          <div className="ua-revenue-kpi__text">
+            <span className="ua-revenue-kpi__label">Outstanding</span>
+            <strong className="ua-revenue-kpi__value">{tzs(kpi.outstanding)}</strong>
+            <span className="ua-revenue-kpi__sub">Balance due</span>
+          </div>
+          <span className="ua-revenue-kpi__badge ua-revenue-kpi__badge--amber" aria-hidden="true">
+            <ClockIcon />
+          </span>
+        </div>
+        <div className="ua-revenue-kpi">
+          <div className="ua-revenue-kpi__text">
+            <span className="ua-revenue-kpi__label">Overdue</span>
+            <strong className="ua-revenue-kpi__value ua-revenue-kpi__value--rose">{tzs(kpi.overdue)}</strong>
+            <span className="ua-revenue-kpi__sub">Past due date</span>
+          </div>
+          <span className="ua-revenue-kpi__badge ua-revenue-kpi__badge--rose" aria-hidden="true">
+            <AlertIcon />
+          </span>
+        </div>
+      </div>
+
       {formOpen ? (
         <div id="ua-record-revenue-panel" className="mb-2">
         <Card>
@@ -524,9 +755,12 @@ export function RevenuePage() {
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <SectionTitle>
             Invoices ({filteredInvoices.length}
-            {payFilter === 'all' ? ` · ${unpaidCount} unpaid · ${partialCount} partial · ${paidCount} paid` : ''})
+            {payFilter === 'all' && !invoiceQuery.trim()
+              ? ` · ${unpaidCount} unpaid · ${partialCount} partial · ${paidCount} paid`
+              : ''}
+            )
           </SectionTitle>
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-wrap items-center gap-1.5">
             {([
               ['all', `All (${receivableInvoices.length})`],
               ['unpaid', `Unpaid (${unpaidCount})`],
@@ -551,7 +785,7 @@ export function RevenuePage() {
 
         {invoices.isLoading ? <Card>Loading invoices…</Card> : null}
         {!invoices.isLoading && filteredInvoices.length ? (
-          <Table headers={['Number', 'Customer', 'Date', 'Total', 'Balance', 'Status', '']}>
+          <Table headers={['Number', 'Customer', 'Total', 'Balance', 'Status', '']}>
             {filteredInvoices.map((invoice) => {
               const bucket = paymentBucket(invoice)
               const canPay = bucket === 'unpaid' || bucket === 'partial'
@@ -562,11 +796,15 @@ export function RevenuePage() {
                   className="cursor-pointer border-t border-[var(--line)] hover:bg-[var(--surface)]"
                   onClick={() => openInvoice(invoice)}
                 >
-                  <td className="px-4 py-3 font-normal">{invoice.invoice_number}</td>
+                  <td className="px-4 py-3">
+                    <div className="font-normal text-[var(--ink)]">{invoice.invoice_number}</div>
+                    <div className="mt-0.5 text-xs text-[var(--muted)]">
+                      {String(invoice.invoice_date).slice(0, 10)}
+                    </div>
+                  </td>
                   <td className="max-w-[280px] truncate px-4 py-3" title={invoice.customer?.name || ''}>
                     {invoice.customer?.name}
                   </td>
-                  <td className="px-4 py-3">{String(invoice.invoice_date).slice(0, 10)}</td>
                   <td className="px-4 py-3 whitespace-nowrap">{money(invoice.total)}</td>
                   <td className="px-4 py-3 whitespace-nowrap">{money(invoice.balance_due)}</td>
                   <td className="px-4 py-3">
@@ -627,14 +865,18 @@ export function RevenuePage() {
           !invoices.isLoading && (
             <EmptyState
               title={
-                payFilter === 'all'
-                  ? 'No invoices yet'
-                  : `No ${paymentLabel(payFilter === 'partial' ? 'partial' : payFilter).toLowerCase()} invoices`
+                invoiceQuery.trim()
+                  ? 'No matching invoices'
+                  : payFilter === 'all'
+                    ? 'No invoices yet'
+                    : `No ${paymentLabel(payFilter === 'partial' ? 'partial' : payFilter).toLowerCase()} invoices`
               }
               body={
-                payFilter === 'all'
-                  ? 'ERP sales invoices appear here after sync. Use Record revenue above for other income.'
-                  : 'Try another filter to see unpaid, partially paid, or paid invoices.'
+                invoiceQuery.trim()
+                  ? 'Try a different search, or clear the search box.'
+                  : payFilter === 'all'
+                    ? 'ERP sales invoices appear here after sync. Use Record revenue above for other income.'
+                    : 'Try another filter to see unpaid, partially paid, or paid invoices.'
               }
             />
           )

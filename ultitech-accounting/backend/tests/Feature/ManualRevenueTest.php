@@ -61,6 +61,7 @@ class ManualRevenueTest extends TestCase
         $this->assertSame('paid', $invoice->status);
         $this->assertTrue(Money::isZero(Money::normalize($invoice->balance_due)));
         $this->assertSame('posted', $receipt->status);
+        $this->assertMatchesRegularExpression('/^REV-2026-3-\d+$/', (string) $invoice->invoice_number);
         $this->assertDatabaseHas('acc_customers', [
             'company_id' => $this->company->id,
             'code' => 'WALKIN',

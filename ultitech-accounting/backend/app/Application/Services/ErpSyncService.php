@@ -593,7 +593,10 @@ class ErpSyncService
                 $this->map($connection, (int) $book->company_id, 'customer', (string) $erpCustomerId, $customerId);
             }
 
-            $number = trim((string) ($row->invoice_number ?: ('INV-ERP-'.$row->id)));
+            $salesNumber = trim((string) ($row->invoice_number ?: ('INV-ERP-'.$row->id)));
+            // Prefer classic Accounting revenue voucher (REV-…) when linked via revenue_entries.
+            $revenueNumber = $this->classicRevenueVoucherForInvoice((int) $row->id);
+            $number = $revenueNumber !== null ? $revenueNumber : $salesNumber;
             $existingLocalId = $this->localId($connection, 'customer_invoice', (string) $row->id);
             $invoice = $existingLocalId
                 ? CustomerInvoice::withoutGlobalScopes()
@@ -608,6 +611,13 @@ class ErpSyncService
                     ->where('company_id', $book->company_id)
                     ->where('book_id', $book->id)
                     ->where('invoice_number', $number)
+                    ->first();
+            }
+            if (! $invoice && $salesNumber !== $number) {
+                $invoice = CustomerInvoice::withoutGlobalScopes()
+                    ->where('company_id', $book->company_id)
+                    ->where('book_id', $book->id)
+                    ->where('invoice_number', $salesNumber)
                     ->first();
             }
 
@@ -640,11 +650,16 @@ class ErpSyncService
                 'status' => $status,
                 'description' => trim((string) ($row->notes ?? '')) !== ''
                     ? (string) $row->notes
-                    : 'Imported from ERP sales invoice #'.$number,
+                    : 'Imported from ERP sales invoice #'.$salesNumber,
                 'created_by' => $user->id,
             ];
 
             if ($invoice) {
+                // Never overwrite a classic REV voucher back to INV on later syncs.
+                $currentNumber = trim((string) $invoice->invoice_number);
+                if (str_starts_with(strtoupper($currentNumber), 'REV-')) {
+                    unset($payload['invoice_number']);
+                }
                 // Keep ERP mirror numbers stable; never overwrite a manually posted Ultitech journal link.
                 $invoice->fill(collect($payload)->except(['created_by'])->all());
                 $invoice->save();
@@ -671,7 +686,9 @@ class ErpSyncService
             }
 
             $this->map($connection, (int) $book->company_id, 'customer_invoice', (string) $row->id, (int) $invoice->id, [
-                'invoice_number' => $number,
+                'invoice_number' => $salesNumber,
+                'sales_invoice_number' => $salesNumber,
+                'revenue_voucher_number' => $revenueNumber,
                 'erp_status' => (string) ($row->status ?? ''),
                 'order_id' => (int) ($row->order_id ?? 0),
             ]);
@@ -912,5 +929,38 @@ class ErpSyncService
             ->first();
 
         return $map ? (int) $map->local_id : null;
+    }
+
+    /**
+     * Classic Accounting revenue voucher for a sales invoice (revenue_entries.source_invoice_id).
+     */
+    private function classicRevenueVoucherForInvoice(int $erpInvoiceId): ?string
+    {
+        if ($erpInvoiceId <= 0 || ! $this->erp->tableExists('revenue_entries')) {
+            return null;
+        }
+
+        try {
+            $rows = $this->erp->select(
+                'SELECT voucher_number FROM revenue_entries
+                 WHERE source_invoice_id = ?
+                   AND voucher_number IS NOT NULL
+                   AND voucher_number <> \'\'
+                 ORDER BY id ASC
+                 LIMIT 5',
+                [$erpInvoiceId]
+            );
+        } catch (\Throwable $e) {
+            return null;
+        }
+
+        foreach ($rows as $row) {
+            $vn = trim((string) ($row->voucher_number ?? ''));
+            if ($vn !== '' && str_starts_with(strtoupper($vn), 'REV-')) {
+                return $vn;
+            }
+        }
+
+        return null;
     }
 }

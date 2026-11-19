@@ -845,6 +845,139 @@ html[data-erp-hosted='1'] body {
   color: var(--ink) !important;
 }
 
+/* Revenue desk search (centered above KPI cards) */
+.ua-revenue-search-wrap {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+.ua-revenue-search {
+  width: min(100%, 28rem);
+  min-height: 40px;
+  border: 1px solid var(--line);
+  border-radius: 0.65rem;
+  background: var(--surface);
+  padding: 0 0.9rem;
+  font-size: 14px;
+  color: var(--ink);
+}
+
+.ua-revenue-search:focus {
+  outline: none;
+  border-color: rgba(92, 89, 240, 0.45);
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(92, 89, 240, 0.12);
+}
+
+/* Revenue desk summary cards (classic Accounting parity) */
+.ua-revenue-kpis {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.ua-revenue-kpi {
+  min-width: 0;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid var(--line);
+  border-radius: 0.75rem;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+}
+
+.ua-revenue-kpi__text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.12rem;
+}
+
+.ua-revenue-kpi__label {
+  font-size: 11px;
+  font-weight: 500;
+  color: #0f172a;
+  line-height: 1.2;
+}
+
+.ua-revenue-kpi__value {
+  font-size: 0.98rem;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  color: #0f172a;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ua-revenue-kpi__value--rose {
+  color: #be123c;
+}
+
+.ua-revenue-kpi__sub {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--muted);
+  line-height: 1.2;
+}
+
+.ua-revenue-kpi__badge {
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.ua-revenue-kpi__badge--violet {
+  background: #f3e8ff;
+  color: #7c3aed;
+}
+
+.ua-revenue-kpi__badge--indigo {
+  background: #e0e7ff;
+  color: #4f46e5;
+}
+
+.ua-revenue-kpi__badge--teal {
+  background: #ccfbf1;
+  color: #0f766e;
+}
+
+.ua-revenue-kpi__badge--blue {
+  background: #dbeafe;
+  color: #2563eb;
+}
+
+.ua-revenue-kpi__badge--amber {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.ua-revenue-kpi__badge--rose {
+  background: #ffe4e6;
+  color: #e11d48;
+}
+
+@media (max-width: 900px) {
+  .ua-revenue-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 520px) {
+  .ua-revenue-kpis {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* PV-style KPI tiles */
 .ua-banking-kpis {
   display: grid;

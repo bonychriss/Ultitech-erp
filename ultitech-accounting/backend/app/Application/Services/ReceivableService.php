@@ -67,7 +67,15 @@ class ReceivableService
             }
 
             $total = Money::add($subtotal, $taxTotal);
-            $number = $this->numbers->next((int) $book->company_id, 'customer_invoice', 'INV');
+            $number = trim((string) ($payload['invoice_number'] ?? ''));
+            if ($number === '') {
+                $number = ! empty($payload['use_revenue_number'])
+                    ? $this->numbers->nextRevenueVoucher(
+                        (int) $book->company_id,
+                        (string) ($payload['invoice_date'] ?? '')
+                    )
+                    : $this->numbers->next((int) $book->company_id, 'customer_invoice', 'INV');
+            }
 
             $invoice = CustomerInvoice::withoutGlobalScopes()->create([
                 'uuid' => (string) Str::uuid(),
@@ -211,6 +219,7 @@ class ReceivableService
                 'invoice_date' => $date,
                 'currency_code' => $currency,
                 'description' => $description,
+                'use_revenue_number' => true,
                 'lines' => [[
                     'description' => $description,
                     'quantity' => 1,

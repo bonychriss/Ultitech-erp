@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { apiRequest } from '../lib/api'
 import { useAuth } from '../lib/auth'
-import { Button, EmptyState, ErrorBanner, Input, Label, PageHeader, Select, Table } from '../components/ui'
+import { Button, EmptyState, ErrorBanner, Input, Label, PageHeader, Select } from '../components/ui'
 
 type Customer = { id: number; code: string; name: string }
 type Account = { id: number; code: string; name: string }
@@ -133,6 +133,61 @@ function todayIso() {
   return new Date().toISOString().slice(0, 10)
 }
 
+function monthRangeIso(ref = new Date()) {
+  const y = ref.getFullYear()
+  const m = ref.getMonth()
+  const from = new Date(y, m, 1)
+  const to = new Date(y, m + 1, 0)
+  const iso = (d: Date) => {
+    const yy = d.getFullYear()
+    const mm = String(d.getMonth() + 1).padStart(2, '0')
+    const dd = String(d.getDate()).padStart(2, '0')
+    return `${yy}-${mm}-${dd}`
+  }
+  return { from: iso(from), to: iso(to) }
+}
+
+type RevenueFilterPrefs = {
+  payFilter?: PayFilter
+  dateFrom?: string
+  dateTo?: string
+  invoiceQuery?: string
+}
+
+function revenueFilterStorageKey(companyId: number | string | null | undefined) {
+  return `ua.revenue.filters.v1.${companyId || 'default'}`
+}
+
+function isPayFilter(value: unknown): value is PayFilter {
+  return value === 'all' || value === 'unpaid' || value === 'partial' || value === 'paid'
+}
+
+function isIsoDate(value: unknown): value is string {
+  return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)
+}
+
+function loadRevenueFilterPrefs(companyId: number | string | null | undefined): RevenueFilterPrefs {
+  try {
+    const raw = localStorage.getItem(revenueFilterStorageKey(companyId))
+    if (!raw) return {}
+    const parsed = JSON.parse(raw) as RevenueFilterPrefs
+    return parsed && typeof parsed === 'object' ? parsed : {}
+  } catch {
+    return {}
+  }
+}
+
+function saveRevenueFilterPrefs(
+  companyId: number | string | null | undefined,
+  prefs: RevenueFilterPrefs,
+) {
+  try {
+    localStorage.setItem(revenueFilterStorageKey(companyId), JSON.stringify(prefs))
+  } catch {
+    // ignore quota / private mode
+  }
+}
+
 function KpiIcon({ children }: { children: React.ReactNode }) {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
@@ -205,16 +260,13 @@ function AlertIcon() {
 
 function FilterIcon() {
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" aria-hidden="true">
-      <path d="M4 21v-7" />
-      <path d="M4 10V3" />
-      <path d="M12 21v-9" />
-      <path d="M12 8V3" />
-      <path d="M20 21v-5" />
-      <path d="M20 12V3" />
-      <path d="M2 14h4" />
-      <path d="M10 8h4" />
-      <path d="M18 16h4" />
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+      <line x1="4" y1="6" x2="20" y2="6" />
+      <line x1="4" y1="12" x2="20" y2="12" />
+      <line x1="4" y1="18" x2="20" y2="18" />
+      <circle cx="8" cy="6" r="2.25" fill="#fff" />
+      <circle cx="16" cy="12" r="2.25" fill="#fff" />
+      <circle cx="12" cy="18" r="2.25" fill="#fff" />
     </svg>
   )
 }
@@ -244,16 +296,75 @@ export function RevenuePage() {
   const [payCashAccountId, setPayCashAccountId] = useState('')
 
   const [payFilter, setPayFilter] = useState<PayFilter>('all')
+  const [dateFrom, setDateFrom] = useState(() => monthRangeIso().from)
+  const [dateTo, setDateTo] = useState(() => monthRangeIso().to)
+  const [filtersOpen, setFiltersOpen] = useState(false)
   const [invoiceQuery, setInvoiceQuery] = useState('')
+  const [filtersHydrated, setFiltersHydrated] = useState(false)
   const [openMenuId, setOpenMenuId] = useState<number | null>(null)
   const [viewInvoiceId, setViewInvoiceId] = useState<number | null>(null)
   const menuRef = useRef<HTMLDivElement | null>(null)
+  const filterRef = useRef<HTMLDivElement | null>(null)
+  const filterBtnRef = useRef<HTMLButtonElement | null>(null)
+  const [filterPanelPos, setFilterPanelPos] = useState<{ top: number; right: number } | null>(null)
 
   useEffect(() => {
-    if (openMenuId == null && viewInvoiceId == null && payInvoiceId == null && !formOpen) return
+    const month = monthRangeIso()
+    const saved = loadRevenueFilterPrefs(companyId)
+    setPayFilter(isPayFilter(saved.payFilter) ? saved.payFilter : 'all')
+    setDateFrom(isIsoDate(saved.dateFrom) ? saved.dateFrom : month.from)
+    setDateTo(isIsoDate(saved.dateTo) ? saved.dateTo : month.to)
+    setInvoiceQuery(typeof saved.invoiceQuery === 'string' ? saved.invoiceQuery : '')
+    setFiltersHydrated(true)
+  }, [companyId])
+
+  useEffect(() => {
+    if (!filtersHydrated) return
+    saveRevenueFilterPrefs(companyId, {
+      payFilter,
+      dateFrom,
+      dateTo,
+      invoiceQuery,
+    })
+  }, [filtersHydrated, companyId, payFilter, dateFrom, dateTo, invoiceQuery])
+
+  useEffect(() => {
+    if (!filtersOpen) {
+      setFilterPanelPos(null)
+      return
+    }
+    const place = () => {
+      const btn = filterBtnRef.current
+      if (!btn) return
+      const rect = btn.getBoundingClientRect()
+      setFilterPanelPos({
+        top: rect.bottom + 8,
+        right: Math.max(12, window.innerWidth - rect.right),
+      })
+    }
+    place()
+    window.addEventListener('resize', place)
+    window.addEventListener('scroll', place, true)
+    return () => {
+      window.removeEventListener('resize', place)
+      window.removeEventListener('scroll', place, true)
+    }
+  }, [filtersOpen])
+
+  useEffect(() => {
+    if (openMenuId == null && viewInvoiceId == null && payInvoiceId == null && !formOpen && !filtersOpen) return
     const onDoc = (e: MouseEvent) => {
       if (openMenuId != null && menuRef.current && !menuRef.current.contains(e.target as Node)) {
         setOpenMenuId(null)
+      }
+      if (
+        filtersOpen &&
+        filterRef.current &&
+        !filterRef.current.contains(e.target as Node) &&
+        filterBtnRef.current &&
+        !filterBtnRef.current.contains(e.target as Node)
+      ) {
+        setFiltersOpen(false)
       }
     }
     const onKey = (e: KeyboardEvent) => {
@@ -261,6 +372,7 @@ export function RevenuePage() {
       if (payInvoiceId != null) setPayInvoiceId(null)
       else if (viewInvoiceId != null) setViewInvoiceId(null)
       else if (openMenuId != null) setOpenMenuId(null)
+      else if (filtersOpen) setFiltersOpen(false)
       else if (formOpen) setFormOpen(false)
     }
     document.addEventListener('mousedown', onDoc)
@@ -269,7 +381,7 @@ export function RevenuePage() {
       document.removeEventListener('mousedown', onDoc)
       document.removeEventListener('keydown', onKey)
     }
-  }, [openMenuId, viewInvoiceId, payInvoiceId, formOpen])
+  }, [openMenuId, viewInvoiceId, payInvoiceId, formOpen, filtersOpen])
 
   useEffect(() => {
     if (!hostedInErp) {
@@ -385,23 +497,40 @@ export function RevenuePage() {
     () => (invoices.data?.data ?? []).filter((i) => paymentBucket(i) !== 'other'),
     [invoices.data],
   )
+  const dateFilteredInvoices = useMemo(() => {
+    const from = dateFrom.trim()
+    const to = dateTo.trim()
+    if (!from && !to) return receivableInvoices
+    return receivableInvoices.filter((invoice) => {
+      const d = String(invoice.invoice_date || '').slice(0, 10)
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) return false
+      if (from && d < from) return false
+      if (to && d > to) return false
+      return true
+    })
+  }, [receivableInvoices, dateFrom, dateTo])
   const unpaidCount = useMemo(
-    () => receivableInvoices.filter((i) => paymentBucket(i) === 'unpaid').length,
-    [receivableInvoices],
+    () => dateFilteredInvoices.filter((i) => paymentBucket(i) === 'unpaid').length,
+    [dateFilteredInvoices],
   )
   const partialCount = useMemo(
-    () => receivableInvoices.filter((i) => paymentBucket(i) === 'partial').length,
-    [receivableInvoices],
+    () => dateFilteredInvoices.filter((i) => paymentBucket(i) === 'partial').length,
+    [dateFilteredInvoices],
   )
   const paidCount = useMemo(
-    () => receivableInvoices.filter((i) => paymentBucket(i) === 'paid').length,
-    [receivableInvoices],
+    () => dateFilteredInvoices.filter((i) => paymentBucket(i) === 'paid').length,
+    [dateFilteredInvoices],
   )
+  const thisMonth = useMemo(() => monthRangeIso(), [])
+  const hasDateFilter = Boolean(dateFrom.trim() || dateTo.trim())
+  const isDefaultMonth =
+    dateFrom === thisMonth.from && dateTo === thisMonth.to
+  const hasActiveFilters = payFilter !== 'all' || (hasDateFilter && !isDefaultMonth)
   const filteredInvoices = useMemo(() => {
     const byStatus =
       payFilter === 'all'
-        ? receivableInvoices
-        : receivableInvoices.filter((i) => paymentBucket(i) === payFilter)
+        ? dateFilteredInvoices
+        : dateFilteredInvoices.filter((i) => paymentBucket(i) === payFilter)
     const q = invoiceQuery.trim().toLowerCase()
     if (!q) return byStatus
     return byStatus.filter((invoice) => {
@@ -421,7 +550,7 @@ export function RevenuePage() {
         .toLowerCase()
       return hay.includes(q)
     })
-  }, [receivableInvoices, payFilter, invoiceQuery])
+  }, [dateFilteredInvoices, payFilter, invoiceQuery])
 
   /** Summary cards match rows currently shown in the table (classic Revenue desk). */
   const kpi = useMemo(() => {
@@ -623,11 +752,18 @@ export function RevenuePage() {
   )
 
   const filterOptions = [
-    ['all', 'All', receivableInvoices.length],
+    ['all', 'All', dateFilteredInvoices.length],
     ['unpaid', 'Unpaid', unpaidCount],
     ['partial', 'Partial', partialCount],
     ['paid', 'Paid', paidCount],
   ] as const
+
+  const clearFilters = () => {
+    const month = monthRangeIso()
+    setPayFilter('all')
+    setDateFrom(month.from)
+    setDateTo(month.to)
+  }
 
   return (
     <div className="ua-revenue">
@@ -650,19 +786,103 @@ export function RevenuePage() {
           )
         }
         actions={
-          <Button
-            type="button"
-            aria-expanded={formOpen}
-            aria-controls="ua-record-revenue-panel"
-            onClick={() => {
-              setFormOpen((open) => !open)
-              if (formOpen) setError('')
-            }}
-          >
-            {formOpen ? 'Close' : 'Create revenue'}
-          </Button>
+          <div className="ua-revenue-header-actions">
+            <div className={`ua-revenue-filter-dropdown${filtersOpen ? ' is-open' : ''}`}>
+              <button
+                ref={filterBtnRef}
+                type="button"
+                className={`ua-revenue-filter-btn${filtersOpen || hasActiveFilters ? ' is-active' : ''}`}
+                aria-label="Filters"
+                title="Filters"
+                aria-expanded={filtersOpen}
+                aria-haspopup="dialog"
+                onClick={() => setFiltersOpen((open) => !open)}
+              >
+                <FilterIcon />
+                {hasActiveFilters ? <span className="ua-revenue-filter-dot" aria-hidden="true" /> : null}
+              </button>
+            </div>
+            <Button
+              type="button"
+              aria-expanded={formOpen}
+              aria-controls="ua-record-revenue-panel"
+              onClick={() => {
+                setFormOpen((open) => !open)
+                if (formOpen) setError('')
+              }}
+            >
+              {formOpen ? 'Close' : 'Create revenue'}
+            </Button>
+          </div>
         }
       />
+      {filtersOpen && filterPanelPos
+        ? createPortal(
+            <div
+              ref={filterRef}
+              className="ua-revenue-filter-panel"
+              role="dialog"
+              aria-label="Filter invoices"
+              style={{ top: filterPanelPos.top, right: filterPanelPos.right }}
+            >
+              <div className="ua-revenue-filter-panel__head">
+                <div className="ua-revenue-filter-panel__heading">Filters</div>
+                <button
+                  type="button"
+                  className="ua-revenue-filter-clear"
+                  disabled={!hasActiveFilters && isDefaultMonth}
+                  onClick={clearFilters}
+                >
+                  Reset
+                </button>
+              </div>
+
+              <div className="ua-revenue-filter-panel__title">Date range</div>
+              <div className="ua-revenue-filter-dates">
+                <div>
+                  <Label>From</Label>
+                  <Input
+                    type="date"
+                    value={dateFrom}
+                    max={dateTo || undefined}
+                    onChange={(e) => setDateFrom(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label>To</Label>
+                  <Input
+                    type="date"
+                    value={dateTo}
+                    min={dateFrom || undefined}
+                    onChange={(e) => setDateTo(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="ua-revenue-filter-panel__title">Payment status</div>
+              <div className="ua-revenue-filter-panel__options">
+                {filterOptions.map(([key, label, count]) => (
+                  <button
+                    key={key}
+                    type="button"
+                    className={`ua-revenue-filter-option${payFilter === key ? ' is-active' : ''}`}
+                    onClick={() => setPayFilter(key)}
+                  >
+                    <span>{label}</span>
+                    <span className="ua-revenue-filter-option__count">{count}</span>
+                  </button>
+                ))}
+              </div>
+
+              <div className="ua-revenue-filter-panel__footer">
+                <Button type="button" className="w-full" onClick={() => setFiltersOpen(false)}>
+                  Done
+                </Button>
+              </div>
+            </div>,
+            document.body,
+          )
+        : null}
       {crumbSearchHost
         ? createPortal(
             <div className="ua-revenue-search-wrap ua-revenue-search-wrap--crumb">{searchField}</div>,
@@ -859,112 +1079,126 @@ export function RevenuePage() {
             <h2 className="ua-revenue-desk__title">Invoices</h2>
             <p className="ua-revenue-desk__meta">
               {filteredInvoices.length.toLocaleString('en-US')} shown
-              {payFilter === 'all' && !invoiceQuery.trim()
-                ? ` · ${unpaidCount} unpaid · ${partialCount} partial · ${paidCount} paid`
-                : ''}
+              {payFilter !== 'all' ? ` · ${paymentLabel(payFilter === 'partial' ? 'partial' : payFilter)}` : ''}
+              {hasDateFilter
+                ? ` · ${dateFrom || '…'} → ${dateTo || '…'}`
+                : payFilter === 'all' && !invoiceQuery.trim()
+                  ? ` · ${unpaidCount} unpaid · ${partialCount} partial · ${paidCount} paid`
+                  : ''}
             </p>
-          </div>
-          <div className="ua-revenue-filters" role="tablist" aria-label="Payment status">
-            {filterOptions.map(([key, label, count]) => (
-              <button
-                key={key}
-                type="button"
-                role="tab"
-                aria-selected={payFilter === key}
-                onClick={() => setPayFilter(key)}
-                className={`ua-revenue-filter${payFilter === key ? ' is-active' : ''}`}
-              >
-                <span>{label}</span>
-                <span className="ua-revenue-filter__count">{count}</span>
-              </button>
-            ))}
           </div>
         </div>
 
         <div className="ua-revenue-desk__body">
           {invoices.isLoading ? (
-            <div className="ua-revenue-loading">Loading invoices…</div>
+            <div className="ua-revenue-table-card ua-revenue-loading">Loading invoices…</div>
           ) : null}
           {!invoices.isLoading && filteredInvoices.length ? (
-            <Table headers={['Number', 'Customer', 'Total', 'Balance', 'Status', '']} scrollable={false}>
-              {filteredInvoices.map((invoice) => {
-                const bucket = paymentBucket(invoice)
-                const canPay = bucket === 'unpaid' || bucket === 'partial'
-                const menuOpen = openMenuId === invoice.id
-                return (
-                  <tr
-                    key={invoice.id}
-                    className="ua-revenue-row"
-                    onClick={() => openInvoice(invoice)}
-                  >
-                    <td className="ua-revenue-cell ua-revenue-cell--doc">
-                      <div className="ua-revenue-docnum">{invoice.invoice_number}</div>
-                      <div className="ua-revenue-docdate">{String(invoice.invoice_date).slice(0, 10)}</div>
-                    </td>
-                    <td className="ua-revenue-cell ua-revenue-cell--customer" title={invoice.customer?.name || ''}>
-                      {invoice.customer?.name || '—'}
-                    </td>
-                    <td className="ua-revenue-cell ua-revenue-cell--money">{money(invoice.total)}</td>
-                    <td className="ua-revenue-cell ua-revenue-cell--money">{money(invoice.balance_due)}</td>
-                    <td className="ua-revenue-cell">
-                      <span className={statusClass(bucket)}>{paymentLabel(bucket)}</span>
-                    </td>
-                    <td className="ua-revenue-cell ua-revenue-cell--actions" onClick={(e) => e.stopPropagation()}>
-                      <div className="ua-revenue-menu" ref={menuOpen ? menuRef : undefined}>
-                        <button
-                          type="button"
-                          className="ua-revenue-menu__btn"
-                          aria-label={`Actions for ${invoice.invoice_number}`}
-                          aria-haspopup="menu"
-                          aria-expanded={menuOpen}
-                          onClick={() => setOpenMenuId(menuOpen ? null : invoice.id)}
-                        >
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                            <circle cx="12" cy="5" r="1.8" />
-                            <circle cx="12" cy="12" r="1.8" />
-                            <circle cx="12" cy="19" r="1.8" />
-                          </svg>
-                        </button>
-                        {menuOpen ? (
-                          <div role="menu" className="ua-revenue-menu__panel">
-                            {canPay ? (
-                              <button
-                                type="button"
-                                role="menuitem"
-                                className="ua-revenue-menu__item"
-                                onClick={() => startPayInvoice(invoice)}
-                              >
-                                Pay invoice
-                              </button>
-                            ) : (
-                              <div className="ua-revenue-menu__item ua-revenue-menu__item--muted">Already paid</div>
-                            )}
-                          </div>
-                        ) : null}
-                      </div>
-                    </td>
+            <div className="ua-revenue-table-card">
+              <table className="ua-revenue-table">
+                <colgroup>
+                  <col className="ua-revenue-col-number" />
+                  <col className="ua-revenue-col-customer" />
+                  <col className="ua-revenue-col-money" />
+                  <col className="ua-revenue-col-money" />
+                  <col className="ua-revenue-col-status" />
+                  <col className="ua-revenue-col-actions" />
+                </colgroup>
+                <thead>
+                  <tr>
+                    <th scope="col">Number</th>
+                    <th scope="col">Customer</th>
+                    <th scope="col" className="is-num">Total</th>
+                    <th scope="col" className="is-num">Balance</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">
+                      <span className="sr-only">Actions</span>
+                    </th>
                   </tr>
-                )
-              })}
-            </Table>
+                </thead>
+                <tbody>
+                  {filteredInvoices.map((invoice) => {
+                    const bucket = paymentBucket(invoice)
+                    const canPay = bucket === 'unpaid' || bucket === 'partial'
+                    const menuOpen = openMenuId === invoice.id
+                    return (
+                      <tr
+                        key={invoice.id}
+                        className="ua-revenue-row"
+                        onClick={() => openInvoice(invoice)}
+                      >
+                        <td className="ua-revenue-cell ua-revenue-cell--doc">
+                          <div className="ua-revenue-docnum">{invoice.invoice_number}</div>
+                          <div className="ua-revenue-docdate">{String(invoice.invoice_date).slice(0, 10)}</div>
+                        </td>
+                        <td className="ua-revenue-cell ua-revenue-cell--customer" title={invoice.customer?.name || ''}>
+                          {invoice.customer?.name || '—'}
+                        </td>
+                        <td className="ua-revenue-cell ua-revenue-cell--money">{money(invoice.total)}</td>
+                        <td className="ua-revenue-cell ua-revenue-cell--money">{money(invoice.balance_due)}</td>
+                        <td className="ua-revenue-cell ua-revenue-cell--status">
+                          <span className={statusClass(bucket)}>{paymentLabel(bucket)}</span>
+                        </td>
+                        <td className="ua-revenue-cell ua-revenue-cell--actions" onClick={(e) => e.stopPropagation()}>
+                          <div className="ua-revenue-menu" ref={menuOpen ? menuRef : undefined}>
+                            <button
+                              type="button"
+                              className="ua-revenue-menu__btn"
+                              aria-label={`Actions for ${invoice.invoice_number}`}
+                              aria-haspopup="menu"
+                              aria-expanded={menuOpen}
+                              onClick={() => setOpenMenuId(menuOpen ? null : invoice.id)}
+                            >
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                <circle cx="12" cy="5" r="1.8" />
+                                <circle cx="12" cy="12" r="1.8" />
+                                <circle cx="12" cy="19" r="1.8" />
+                              </svg>
+                            </button>
+                            {menuOpen ? (
+                              <div role="menu" className="ua-revenue-menu__panel">
+                                {canPay ? (
+                                  <button
+                                    type="button"
+                                    role="menuitem"
+                                    className="ua-revenue-menu__item"
+                                    onClick={() => startPayInvoice(invoice)}
+                                  >
+                                    Pay invoice
+                                  </button>
+                                ) : (
+                                  <div className="ua-revenue-menu__item ua-revenue-menu__item--muted">Already paid</div>
+                                )}
+                              </div>
+                            ) : null}
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
           ) : (
             !invoices.isLoading && (
-              <EmptyState
-                title={
-                  invoiceQuery.trim()
-                    ? 'No matching invoices'
-                    : payFilter === 'all'
-                      ? 'No invoices yet'
-                      : `No ${paymentLabel(payFilter === 'partial' ? 'partial' : payFilter).toLowerCase()} invoices`
-                }
-                body={
-                  invoiceQuery.trim()
-                    ? 'Try a different search, or clear the search box.'
-                    : payFilter === 'all'
-                      ? 'ERP sales invoices appear here after sync. Use Create revenue for other income.'
-                      : 'Switch filter to see unpaid, partial, or paid invoices.'
-                }
-              />
+              <div className="ua-revenue-table-card ua-revenue-table-card--empty">
+                <EmptyState
+                  title={
+                    invoiceQuery.trim()
+                      ? 'No matching revenue'
+                      : payFilter === 'all'
+                        ? 'No revenue'
+                        : `No ${paymentLabel(payFilter).toLowerCase()} revenue`
+                  }
+                  body={
+                    invoiceQuery.trim()
+                      ? 'Try a different search, or clear the search box.'
+                      : payFilter === 'all' && !hasDateFilter
+                        ? 'Use Create revenue to record other income, or wait for sales to sync.'
+                        : 'Switch filter or clear the date range to see more.'
+                  }
+                />
+              </div>
             )
           )}
         </div>

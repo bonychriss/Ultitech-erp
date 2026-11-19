@@ -71,6 +71,7 @@ Route::prefix('v1')->group(function () {
             Route::post('/customer-invoices', [CustomerController::class, 'storeInvoice'])->middleware(EnsurePermission::class.':ar.invoice');
             Route::get('/customer-receipts', [CustomerController::class, 'receipts'])->middleware(EnsurePermission::class.':ar.view');
             Route::post('/customer-receipts', [CustomerController::class, 'storeReceipt'])->middleware(EnsurePermission::class.':ar.receipt');
+            Route::post('/manual-revenues', [CustomerController::class, 'storeManualRevenue'])->middleware(EnsurePermission::class.':ar.receipt');
 
             Route::get('/suppliers', [SupplierController::class, 'index'])->middleware(EnsurePermission::class.':ap.view');
             Route::post('/suppliers', [SupplierController::class, 'store'])->middleware(EnsurePermission::class.':ap.manage');

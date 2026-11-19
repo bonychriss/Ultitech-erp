@@ -63,8 +63,10 @@ function erpOrderViewUrl(slug: string, orderId: number, hintUrl = ''): string {
   const base = companyRootPath(slug, hintUrl).replace(/\/+$/, '')
   return `${base}/sales/order-view?module=sales&id=${orderId}`
 }
-type BankAccount = {id: number; code: string; name: string }
+type BankAccount = { id: number; code: string; name: string; account_type?: string }
+type CashAccount = { id: number; code: string; name: string }
 type PayFilter = 'all' | 'unpaid' | 'partial' | 'paid'
+type DepositKind = 'bank' | 'cash'
 
 function money(value: string | number | undefined) {
   const n = Number(value || 0)
@@ -99,17 +101,31 @@ function paymentLabel(bucket: ReturnType<typeof paymentBucket>) {
   return '—'
 }
 
+function todayIso() {
+  return new Date().toISOString().slice(0, 10)
+}
+
 export function RevenuePage() {
-  const { token, companyId, embed, classicAccountingUrl } = useAuth()
+  const { token, companyId, bookId, embed, classicAccountingUrl } = useAuth()
   const client = useQueryClient()
   const [error, setError] = useState('')
   const [customerId, setCustomerId] = useState('')
-  const [amount, setAmount] = useState('250000')
-  const [description, setDescription] = useState('Consulting services')
+  const [amount, setAmount] = useState('')
+  const [description, setDescription] = useState('')
   const [revenueAccountId, setRevenueAccountId] = useState('')
   const [receiptInvoiceId, setReceiptInvoiceId] = useState('')
   const [receiptAmount, setReceiptAmount] = useState('')
   const [bankAccountId, setBankAccountId] = useState('')
+  const [manualDate, setManualDate] = useState(todayIso)
+  const [manualCustomerId, setManualCustomerId] = useState('')
+  const [manualDescription, setManualDescription] = useState('')
+  const [manualAmount, setManualAmount] = useState('')
+  const [manualRevenueAccountId, setManualRevenueAccountId] = useState('')
+  const [manualDepositKind, setManualDepositKind] = useState<DepositKind>('bank')
+  const [manualBankAccountId, setManualBankAccountId] = useState('')
+  const [manualCashAccountId, setManualCashAccountId] = useState('')
+  const [manualReference, setManualReference] = useState('')
+  const [manualNotice, setManualNotice] = useState('')
   const [payFilter, setPayFilter] = useState<PayFilter>('all')
   const [openMenuId, setOpenMenuId] = useState<number | null>(null)
   const [viewInvoiceId, setViewInvoiceId] = useState<number | null>(null)
@@ -164,28 +180,55 @@ export function RevenuePage() {
   const customers = useQuery({
     queryKey: ['customers', companyId],
     enabled: Boolean(token && companyId),
-    queryFn: () => apiRequest<{data: Customer[] }>('/customers', {token, companyId }),
+    queryFn: () => apiRequest<{ data: Customer[] }>('/customers', { token, companyId }),
   })
   const accounts = useQuery({
     queryKey: ['accounts', companyId],
     enabled: Boolean(token && companyId),
-    queryFn: () => apiRequest<{data: Account[] }>('/accounts', {token, companyId }),
+    queryFn: () => apiRequest<{ data: Account[] }>('/accounts', { token, companyId }),
   })
   const invoices = useQuery({
     queryKey: ['customer-invoices', companyId],
     enabled: Boolean(token && companyId),
-    queryFn: () => apiRequest<{data: Invoice[] }>('/customer-invoices', {token, companyId }),
+    queryFn: () => apiRequest<{ data: Invoice[] }>('/customer-invoices', { token, companyId }),
   })
   const banks = useQuery({
-    queryKey: ['bank-accounts', companyId],
+    queryKey: ['bank-accounts', companyId, bookId],
     enabled: Boolean(token && companyId),
-    queryFn: () => apiRequest<{data: BankAccount[] }>('/bank-accounts', {token, companyId }),
+    queryFn: () => apiRequest<{ data: BankAccount[] }>('/bank-accounts', { token, companyId, bookId }),
+  })
+  const cashAccounts = useQuery({
+    queryKey: ['cash-accounts', companyId, bookId],
+    enabled: Boolean(token && companyId),
+    queryFn: () => apiRequest<{ data: CashAccount[] }>('/cash-accounts', { token, companyId, bookId }),
   })
 
   const revenueAccounts = useMemo(
     () => (accounts.data?.data ?? []).filter((a) => a.code.startsWith('4')),
     [accounts.data],
   )
+  const otherIncomeAccount = useMemo(
+    () => revenueAccounts.find((a) => a.code === '4003') ?? revenueAccounts[0] ?? null,
+    [revenueAccounts],
+  )
+
+  useEffect(() => {
+    if (!manualRevenueAccountId && otherIncomeAccount) {
+      setManualRevenueAccountId(String(otherIncomeAccount.id))
+    }
+  }, [manualRevenueAccountId, otherIncomeAccount])
+
+  useEffect(() => {
+    if (!manualBankAccountId && (banks.data?.data?.length ?? 0) > 0) {
+      setManualBankAccountId(String(banks.data!.data[0].id))
+    }
+  }, [manualBankAccountId, banks.data])
+
+  useEffect(() => {
+    if (!manualCashAccountId && (cashAccounts.data?.data?.length ?? 0) > 0) {
+      setManualCashAccountId(String(cashAccounts.data!.data[0].id))
+    }
+  }, [manualCashAccountId, cashAccounts.data])
   const receivableInvoices = useMemo(
     () => (invoices.data?.data ?? []).filter((i) => paymentBucket(i) !== 'other'),
     [invoices.data],
@@ -226,9 +269,10 @@ export function RevenuePage() {
         method: 'POST',
         token,
         companyId,
+        bookId,
         body: {
           customer_id: Number(customerId),
-          invoice_date: new Date().toISOString().slice(0, 10),
+          invoice_date: todayIso(),
           currency_code: 'TZS',
           description,
           lines: [
@@ -243,10 +287,12 @@ export function RevenuePage() {
       }),
     onSuccess: async () => {
       setError('')
+      setDescription('')
+      setAmount('')
       await Promise.all([
-        client.invalidateQueries({queryKey: ['customer-invoices', companyId] }),
-        client.invalidateQueries({queryKey: ['trial-balance', companyId] }),
-        client.invalidateQueries({queryKey: ['journals', companyId] }),
+        client.invalidateQueries({ queryKey: ['customer-invoices', companyId] }),
+        client.invalidateQueries({ queryKey: ['trial-balance', companyId] }),
+        client.invalidateQueries({ queryKey: ['journals', companyId] }),
       ])
     },
     onError: (err) => setError((err as Error).message),
@@ -260,9 +306,10 @@ export function RevenuePage() {
         method: 'POST',
         token,
         companyId,
+        bookId,
         body: {
           customer_id: invoice.customer?.id,
-          receipt_date: new Date().toISOString().slice(0, 10),
+          receipt_date: todayIso(),
           currency_code: 'TZS',
           amount: receiptAmount || invoice.balance_due,
           bank_account_id: Number(bankAccountId),
@@ -278,12 +325,60 @@ export function RevenuePage() {
     onSuccess: async () => {
       setError('')
       await Promise.all([
-        client.invalidateQueries({queryKey: ['customer-invoices', companyId] }),
-        client.invalidateQueries({queryKey: ['trial-balance', companyId] }),
-        client.invalidateQueries({queryKey: ['bank-transactions', companyId] }),
+        client.invalidateQueries({ queryKey: ['customer-invoices', companyId] }),
+        client.invalidateQueries({ queryKey: ['trial-balance', companyId] }),
+        client.invalidateQueries({ queryKey: ['bank-transactions', companyId] }),
       ])
     },
     onError: (err) => setError((err as Error).message),
+  })
+
+  const createManualRevenue = useMutation({
+    mutationFn: () => {
+      const body: Record<string, unknown> = {
+        revenue_date: manualDate || todayIso(),
+        currency_code: 'TZS',
+        description: manualDescription.trim(),
+        amount: manualAmount,
+        revenue_account_id: Number(manualRevenueAccountId),
+        reference: manualReference.trim() || undefined,
+      }
+      if (manualCustomerId) body.customer_id = Number(manualCustomerId)
+      if (manualDepositKind === 'bank') {
+        body.bank_account_id = Number(manualBankAccountId)
+      } else {
+        body.cash_account_id = Number(manualCashAccountId)
+      }
+      return apiRequest<{ data: { invoice: Invoice } }>('/manual-revenues', {
+        method: 'POST',
+        token,
+        companyId,
+        bookId,
+        body,
+      })
+    },
+    onSuccess: async (res) => {
+      setError('')
+      const number = res?.data?.invoice?.invoice_number
+      setManualNotice(number ? `Recorded as ${number} (paid).` : 'Manual revenue recorded.')
+      setManualDescription('')
+      setManualAmount('')
+      setManualReference('')
+      setManualCustomerId('')
+      setManualDate(todayIso())
+      await Promise.all([
+        client.invalidateQueries({ queryKey: ['customer-invoices', companyId] }),
+        client.invalidateQueries({ queryKey: ['customers', companyId] }),
+        client.invalidateQueries({ queryKey: ['trial-balance', companyId] }),
+        client.invalidateQueries({ queryKey: ['journals', companyId] }),
+        client.invalidateQueries({ queryKey: ['bank-transactions', companyId] }),
+      ])
+      setPayFilter('paid')
+    },
+    onError: (err) => {
+      setManualNotice('')
+      setError((err as Error).message)
+    },
   })
 
   const onInvoice = (e: FormEvent) => {
@@ -296,14 +391,34 @@ export function RevenuePage() {
     createReceipt.mutate()
   }
 
+  const onManualRevenue = (e: FormEvent) => {
+    e.preventDefault()
+    setManualNotice('')
+    if (manualDepositKind === 'bank' && !manualBankAccountId) {
+      setError('Select a bank or mobile account to deposit into.')
+      return
+    }
+    if (manualDepositKind === 'cash' && !manualCashAccountId) {
+      setError('Select a cash account to deposit into.')
+      return
+    }
+    createManualRevenue.mutate()
+  }
+
   return (
     <div>
-      <PageHeader title="Revenue" subtitle="ERP sales invoices, customers and receipts" />
+      <PageHeader
+        title="Revenue"
+        subtitle="Sales invoices sync from ERP. Receive payments on open AR, or record manual / other income here."
+      />
       {error ? <ErrorBanner message={error} /> : null}
 
       <div className="grid gap-6 xl:grid-cols-2">
         <Card>
           <SectionTitle>Post sales invoice</SectionTitle>
+          <p className="mb-3 text-sm text-[var(--muted)]">
+            Billed revenue on account (AR). Use when the customer will pay later.
+          </p>
           <form className="space-y-3" onSubmit={onInvoice}>
             <div>
               <Label>Customer</Label>
@@ -339,39 +454,160 @@ export function RevenuePage() {
           </form>
         </Card>
 
-        <Card className="scroll-mt-4" >
+        <Card className="scroll-mt-4">
           <div ref={receiptCardRef}>
-          <SectionTitle>Receive payment</SectionTitle>
-          <form className="space-y-3" onSubmit={onReceipt}>
-            <div>
-              <Label>Open invoice</Label>
-              <Select value={receiptInvoiceId} onChange={(e) => setReceiptInvoiceId(e.target.value)} required>
-                <option value="">Select invoice</option>
-                {openInvoices.map((invoice) => (
-                  <option key={invoice.id} value={invoice.id}>
-                    {invoice.invoice_number} — {invoice.customer?.name} — due {invoice.balance_due}
-                  </option>
-                ))}
-              </Select>
-            </div>
-            <div>
-              <Label>Bank account</Label>
-              <Select value={bankAccountId} onChange={(e) => setBankAccountId(e.target.value)} required>
-                <option value="">Select bank</option>
-                {(banks.data?.data ?? []).map((b) => (
-                  <option key={b.id} value={b.id}>
-                    {b.code} — {b.name}
-                  </option>
-                ))}
-              </Select>
-            </div>
-            <div>
-              <Label>Amount (optional = full balance)</Label>
-              <Input value={receiptAmount} onChange={(e) => setReceiptAmount(e.target.value)} />
-            </div>
-            <Button disabled={createReceipt.isPending}>{createReceipt.isPending ? 'Posting…' : 'Create & post receipt'}</Button>
-          </form>
+            <SectionTitle>Receive payment</SectionTitle>
+            <p className="mb-3 text-sm text-[var(--muted)]">
+              Collect against an open sales invoice (including ERP-synced invoices).
+            </p>
+            <form className="space-y-3" onSubmit={onReceipt}>
+              <div>
+                <Label>Open invoice</Label>
+                <Select value={receiptInvoiceId} onChange={(e) => setReceiptInvoiceId(e.target.value)} required>
+                  <option value="">Select invoice</option>
+                  {openInvoices.map((invoice) => (
+                    <option key={invoice.id} value={invoice.id}>
+                      {invoice.invoice_number} — {invoice.customer?.name} — due {invoice.balance_due}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+              <div>
+                <Label>Bank account</Label>
+                <Select value={bankAccountId} onChange={(e) => setBankAccountId(e.target.value)} required>
+                  <option value="">Select bank</option>
+                  {(banks.data?.data ?? []).map((b) => (
+                    <option key={b.id} value={b.id}>
+                      {b.code} — {b.name}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+              <div>
+                <Label>Amount (optional = full balance)</Label>
+                <Input value={receiptAmount} onChange={(e) => setReceiptAmount(e.target.value)} />
+              </div>
+              <Button disabled={createReceipt.isPending}>{createReceipt.isPending ? 'Posting…' : 'Create & post receipt'}</Button>
+            </form>
           </div>
+        </Card>
+      </div>
+
+      <div className="mt-6">
+        <Card>
+          <SectionTitle>Manual revenue</SectionTitle>
+          <p className="mb-3 text-sm text-[var(--muted)]">
+            Other income or cash sale paid now — posts income and deposits to bank/mobile/cash in one step.
+            Leave customer blank for walk-in / other income.
+          </p>
+          {manualNotice ? (
+            <div className="mb-3 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+              {manualNotice}
+            </div>
+          ) : null}
+          <form className="grid gap-3 md:grid-cols-2" onSubmit={onManualRevenue}>
+            <div>
+              <Label>Date</Label>
+              <Input type="date" value={manualDate} onChange={(e) => setManualDate(e.target.value)} required />
+            </div>
+            <div>
+              <Label>Customer (optional)</Label>
+              <Select value={manualCustomerId} onChange={(e) => setManualCustomerId(e.target.value)}>
+                <option value="">Walk-in / Other income</option>
+                {(customers.data?.data ?? []).map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.code} — {c.name}
+                  </option>
+                ))}
+              </Select>
+            </div>
+            <div className="md:col-span-2">
+              <Label>Description</Label>
+              <Input
+                value={manualDescription}
+                onChange={(e) => setManualDescription(e.target.value)}
+                placeholder="e.g. Scrap sale, service fee, interest"
+                required
+              />
+            </div>
+            <div>
+              <Label>Revenue account</Label>
+              <Select
+                value={manualRevenueAccountId}
+                onChange={(e) => setManualRevenueAccountId(e.target.value)}
+                required
+              >
+                <option value="">Select account</option>
+                {revenueAccounts.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.code} — {a.name}
+                  </option>
+                ))}
+              </Select>
+            </div>
+            <div>
+              <Label>Amount (TZS)</Label>
+              <Input value={manualAmount} onChange={(e) => setManualAmount(e.target.value)} required />
+            </div>
+            <div>
+              <Label>Deposit to</Label>
+              <Select
+                value={manualDepositKind}
+                onChange={(e) => setManualDepositKind(e.target.value as DepositKind)}
+              >
+                <option value="bank">Bank / mobile</option>
+                <option value="cash">Cash</option>
+              </Select>
+            </div>
+            <div>
+              {manualDepositKind === 'bank' ? (
+                <>
+                  <Label>Bank / mobile account</Label>
+                  <Select
+                    value={manualBankAccountId}
+                    onChange={(e) => setManualBankAccountId(e.target.value)}
+                    required
+                  >
+                    <option value="">Select account</option>
+                    {(banks.data?.data ?? []).map((b) => (
+                      <option key={b.id} value={b.id}>
+                        {b.code} — {b.name}
+                      </option>
+                    ))}
+                  </Select>
+                </>
+              ) : (
+                <>
+                  <Label>Cash account</Label>
+                  <Select
+                    value={manualCashAccountId}
+                    onChange={(e) => setManualCashAccountId(e.target.value)}
+                    required
+                  >
+                    <option value="">Select cash account</option>
+                    {(cashAccounts.data?.data ?? []).map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.code} — {c.name}
+                      </option>
+                    ))}
+                  </Select>
+                </>
+              )}
+            </div>
+            <div className="md:col-span-2">
+              <Label>Reference (optional)</Label>
+              <Input
+                value={manualReference}
+                onChange={(e) => setManualReference(e.target.value)}
+                placeholder="Receipt no. / narration"
+              />
+            </div>
+            <div className="md:col-span-2">
+              <Button disabled={createManualRevenue.isPending}>
+                {createManualRevenue.isPending ? 'Posting…' : 'Record manual revenue'}
+              </Button>
+            </div>
+          </form>
         </Card>
       </div>
 

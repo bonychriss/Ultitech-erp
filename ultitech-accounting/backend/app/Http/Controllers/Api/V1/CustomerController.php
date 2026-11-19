@@ -142,4 +142,41 @@ class CustomerController extends Controller
 
         return response()->json(['data' => $receipt], 201);
     }
+
+    /**
+     * Immediate cash / other income (invoice + full receipt in one step).
+     */
+    public function storeManualRevenue(Request $request): JsonResponse
+    {
+        $payload = $request->validate([
+            'revenue_date' => ['required', 'date'],
+            'currency_code' => ['nullable', 'string', 'size:3'],
+            'description' => ['required', 'string', 'max:500'],
+            'amount' => ['required', 'numeric', 'gt:0'],
+            'revenue_account_id' => ['required', 'integer', 'exists:acc_accounts,id'],
+            'customer_id' => ['nullable', 'integer', 'exists:acc_customers,id'],
+            'bank_account_id' => ['nullable', 'integer', 'exists:acc_bank_accounts,id'],
+            'cash_account_id' => ['nullable', 'integer', 'exists:acc_cash_accounts,id'],
+            'reference' => ['nullable', 'string', 'max:100'],
+        ]);
+
+        if (empty($payload['bank_account_id']) && empty($payload['cash_account_id'])) {
+            return response()->json([
+                'message' => 'Choose a bank/mobile or cash account to deposit into.',
+            ], 422);
+        }
+        if (! empty($payload['bank_account_id']) && ! empty($payload['cash_account_id'])) {
+            return response()->json([
+                'message' => 'Choose either a bank/mobile account or a cash account, not both.',
+            ], 422);
+        }
+
+        $result = $this->receivables->createAndPostManualRevenue(
+            $request->attributes->get('book'),
+            $request->user(),
+            $payload
+        );
+
+        return response()->json(['data' => $result], 201);
+    }
 }

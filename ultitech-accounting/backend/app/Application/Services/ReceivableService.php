@@ -7,6 +7,7 @@ use App\Models\AccountingBook;
 use App\Models\BankAccount;
 use App\Models\BankTransaction;
 use App\Models\CashAccount;
+use App\Models\Customer;
 use App\Models\CustomerInvoice;
 use App\Models\CustomerInvoiceLine;
 use App\Models\CustomerReceipt;
@@ -161,6 +162,95 @@ class ReceivableService
         });
     }
 
+    /**
+     * Cash / other income: post AR invoice then settle it immediately (Dr bank/cash, Cr revenue).
+     *
+     * @param  array{
+     *   revenue_date:string,
+     *   currency_code?:string,
+     *   description:string,
+     *   amount:float|string,
+     *   revenue_account_id:int,
+     *   customer_id?:int|null,
+     *   bank_account_id?:int|null,
+     *   cash_account_id?:int|null,
+     *   reference?:string|null
+     * }  $payload
+     * @return array{invoice:CustomerInvoice,receipt:CustomerReceipt}
+     */
+    public function createAndPostManualRevenue(AccountingBook $book, User $user, array $payload): array
+    {
+        $amount = Money::normalize($payload['amount'] ?? 0);
+        if (Money::isZero($amount) || bccomp($amount, '0', 4) !== 1) {
+            throw ValidationException::withMessages(['amount' => 'Amount must be greater than zero.']);
+        }
+
+        $hasBank = ! empty($payload['bank_account_id']);
+        $hasCash = ! empty($payload['cash_account_id']);
+        if ($hasBank === $hasCash) {
+            throw ValidationException::withMessages([
+                'bank_account_id' => 'Choose either a bank/mobile account or a cash account.',
+            ]);
+        }
+
+        $customerId = (int) ($payload['customer_id'] ?? 0);
+        if ($customerId <= 0) {
+            $customerId = (int) $this->ensureWalkInCustomer($book)->id;
+        }
+
+        $date = (string) $payload['revenue_date'];
+        $currency = strtoupper((string) ($payload['currency_code'] ?? 'TZS'));
+        $description = trim((string) ($payload['description'] ?? ''));
+        if ($description === '') {
+            throw ValidationException::withMessages(['description' => 'Description is required.']);
+        }
+
+        return DB::transaction(function () use ($book, $user, $payload, $amount, $customerId, $date, $currency, $description, $hasBank) {
+            $invoice = $this->createAndPostInvoice($book, $user, [
+                'customer_id' => $customerId,
+                'invoice_date' => $date,
+                'currency_code' => $currency,
+                'description' => $description,
+                'lines' => [[
+                    'description' => $description,
+                    'quantity' => 1,
+                    'unit_price' => $amount,
+                    'revenue_account_id' => (int) $payload['revenue_account_id'],
+                ]],
+            ]);
+
+            $receiptPayload = [
+                'customer_id' => $customerId,
+                'receipt_date' => $date,
+                'currency_code' => $currency,
+                'amount' => $amount,
+                'reference' => $payload['reference'] ?? null,
+                'allocations' => [[
+                    'invoice_id' => (int) $invoice->id,
+                    'amount' => $amount,
+                ]],
+            ];
+            if ($hasBank) {
+                $receiptPayload['bank_account_id'] = (int) $payload['bank_account_id'];
+            } else {
+                $receiptPayload['cash_account_id'] = (int) $payload['cash_account_id'];
+            }
+
+            $receipt = $this->createAndPostReceipt($book, $user, $receiptPayload);
+
+            $this->audit->record('manual_revenue.posted', 'customer_invoice', $invoice->id, null, [
+                'invoice_number' => $invoice->invoice_number,
+                'receipt_number' => $receipt->receipt_number,
+                'amount' => $amount,
+            ]);
+
+            return [
+                'invoice' => $invoice->fresh(['lines', 'customer']) ?? $invoice,
+                'receipt' => $receipt,
+            ];
+        });
+    }
+
     public function createAndPostReceipt(AccountingBook $book, User $user, array $payload): CustomerReceipt
     {
         $arAccountId = $this->mappedAccountId((int) $book->company_id, (int) $book->id, 'accounts_receivable');
@@ -281,6 +371,25 @@ class ReceivableService
 
             return $receipt->load(['allocations', 'customer']);
         });
+    }
+
+    private function ensureWalkInCustomer(AccountingBook $book): Customer
+    {
+        $existing = Customer::withoutGlobalScopes()
+            ->where('company_id', $book->company_id)
+            ->where('code', 'WALKIN')
+            ->first();
+        if ($existing) {
+            return $existing;
+        }
+
+        return Customer::withoutGlobalScopes()->create([
+            'company_id' => $book->company_id,
+            'code' => 'WALKIN',
+            'name' => 'Walk-in / Other income',
+            'currency_code' => 'TZS',
+            'status' => 'active',
+        ]);
     }
 
     private function mappedAccountId(int $companyId, int $bookId, string $key): int

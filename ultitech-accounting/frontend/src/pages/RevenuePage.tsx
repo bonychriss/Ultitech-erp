@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { apiRequest } from '../lib/api'
 import { useAuth } from '../lib/auth'
-import { Button, Card, EmptyState, ErrorBanner, Input, Label, PageHeader, Select, Table, SectionTitle } from '../components/ui'
+import { Button, EmptyState, ErrorBanner, Input, Label, PageHeader, Select, Table } from '../components/ui'
 
 type Customer = { id: number; code: string; name: string }
 type Account = { id: number; code: string; name: string }
@@ -122,6 +122,13 @@ function paymentLabel(bucket: ReturnType<typeof paymentBucket>) {
   return '—'
 }
 
+function statusClass(bucket: ReturnType<typeof paymentBucket>) {
+  if (bucket === 'paid') return 'ua-revenue-status ua-revenue-status--paid'
+  if (bucket === 'partial') return 'ua-revenue-status ua-revenue-status--partial'
+  if (bucket === 'unpaid') return 'ua-revenue-status ua-revenue-status--unpaid'
+  return 'ua-revenue-status'
+}
+
 function todayIso() {
   return new Date().toISOString().slice(0, 10)
 }
@@ -196,6 +203,22 @@ function AlertIcon() {
   )
 }
 
+function FilterIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" aria-hidden="true">
+      <path d="M4 21v-7" />
+      <path d="M4 10V3" />
+      <path d="M12 21v-9" />
+      <path d="M12 8V3" />
+      <path d="M20 21v-5" />
+      <path d="M20 12V3" />
+      <path d="M2 14h4" />
+      <path d="M10 8h4" />
+      <path d="M18 16h4" />
+    </svg>
+  )
+}
+
 export function RevenuePage() {
   const { token, companyId, bookId, embed, classicAccountingUrl, hostedInErp } = useAuth()
   const client = useQueryClient()
@@ -247,6 +270,59 @@ export function RevenuePage() {
       document.removeEventListener('keydown', onKey)
     }
   }, [openMenuId, viewInvoiceId, payInvoiceId, formOpen])
+
+  useEffect(() => {
+    if (!hostedInErp) {
+      setCrumbSearchHost(null)
+      return
+    }
+
+    const crumb = document.getElementById('erp-auto-breadcrumb')
+    if (!crumb?.parentElement) {
+      setCrumbSearchHost(null)
+      return
+    }
+
+    const crumbVisible = () => {
+      const style = window.getComputedStyle(crumb)
+      return style.display !== 'none' && style.visibility !== 'hidden'
+    }
+
+    let row = document.getElementById('ua-revenue-crumb-row')
+    let slot = document.getElementById('ua-revenue-crumb-search') as HTMLElement | null
+    let createdRow = false
+
+    if (!row) {
+      row = document.createElement('div')
+      row.id = 'ua-revenue-crumb-row'
+      row.className = 'ua-revenue-crumb-row'
+      crumb.parentElement.insertBefore(row, crumb)
+      row.appendChild(crumb)
+      slot = document.createElement('div')
+      slot.id = 'ua-revenue-crumb-search'
+      slot.className = 'ua-revenue-crumb-search'
+      row.appendChild(slot)
+      createdRow = true
+    } else if (!slot) {
+      slot = document.createElement('div')
+      slot.id = 'ua-revenue-crumb-search'
+      slot.className = 'ua-revenue-crumb-search'
+      row.appendChild(slot)
+    }
+
+    const syncHost = () => setCrumbSearchHost(crumbVisible() && slot ? slot : null)
+    syncHost()
+    window.addEventListener('resize', syncHost)
+
+    return () => {
+      window.removeEventListener('resize', syncHost)
+      if (createdRow && row?.parentElement && crumb.parentElement === row) {
+        row.parentElement.insertBefore(crumb, row)
+        row.remove()
+      }
+      setCrumbSearchHost(null)
+    }
+  }, [hostedInErp])
 
   const customers = useQuery({
     queryKey: ['customers', companyId],
@@ -535,11 +611,44 @@ export function RevenuePage() {
     createReceipt.mutate()
   }
 
+  const searchField = (
+    <input
+      type="search"
+      className="ua-revenue-search"
+      value={invoiceQuery}
+      onChange={(e) => setInvoiceQuery(e.target.value)}
+      placeholder="Search number, customer, date…"
+      aria-label="Search invoices"
+    />
+  )
+
+  const filterOptions = [
+    ['all', 'All', receivableInvoices.length],
+    ['unpaid', 'Unpaid', unpaidCount],
+    ['partial', 'Partial', partialCount],
+    ['paid', 'Paid', paidCount],
+  ] as const
+
   return (
-    <div>
+    <div className="ua-revenue">
       <PageHeader
         title="Revenue"
-        subtitle="Sales invoices come from ERP. Create revenue for other income, or pay open invoices from the list."
+        breadcrumb={
+          crumbSearchHost ? undefined : (
+            <>
+              <span>Accounting</span>
+              <span className="ua-breadcrumb__sep" aria-hidden="true">
+                /
+              </span>
+              <span className="ua-breadcrumb__current">Revenue</span>
+            </>
+          )
+        }
+        crumbExtra={
+          crumbSearchHost ? undefined : (
+            <div className="ua-revenue-search-wrap ua-revenue-search-wrap--crumb">{searchField}</div>
+          )
+        }
         actions={
           <Button
             type="button"
@@ -550,188 +659,182 @@ export function RevenuePage() {
               if (formOpen) setError('')
             }}
           >
-            {formOpen ? 'Close form' : 'Create revenue'}
+            {formOpen ? 'Close' : 'Create revenue'}
           </Button>
         }
       />
+      {crumbSearchHost
+        ? createPortal(
+            <div className="ua-revenue-search-wrap ua-revenue-search-wrap--crumb">{searchField}</div>,
+            crumbSearchHost,
+          )
+        : null}
       {error ? <ErrorBanner message={error} /> : null}
       {notice && !formOpen ? (
-        <div className="mb-4 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+        <div className="ua-revenue-notice" role="status">
           {notice}
         </div>
       ) : null}
 
-      <div className="ua-revenue-search-wrap mb-4">
-        <input
-          type="search"
-          className="ua-revenue-search"
-          value={invoiceQuery}
-          onChange={(e) => setInvoiceQuery(e.target.value)}
-          placeholder="Search number, customer, date…"
-          aria-label="Search invoices"
-        />
-      </div>
-
-      <div className="ua-revenue-kpis mb-4" aria-label="Revenue summary">
-        <div className="ua-revenue-kpi">
+      <section className="ua-revenue-kpis" aria-label="Revenue summary">
+        <article className="ua-revenue-kpi">
           <div className="ua-revenue-kpi__text">
-            <span className="ua-revenue-kpi__label">Total Exclusive</span>
+            <span className="ua-revenue-kpi__label">Exclusive</span>
             <strong className="ua-revenue-kpi__value">{tzs(kpi.exclusive)}</strong>
-            <span className="ua-revenue-kpi__sub">Before VAT</span>
           </div>
           <span className="ua-revenue-kpi__badge ua-revenue-kpi__badge--violet" aria-hidden="true">
             <CoinsIcon />
           </span>
-        </div>
-        <div className="ua-revenue-kpi">
+        </article>
+        <article className="ua-revenue-kpi">
           <div className="ua-revenue-kpi__text">
             <span className="ua-revenue-kpi__label">VAT</span>
             <strong className="ua-revenue-kpi__value">{tzs(kpi.vat)}</strong>
-            <span className="ua-revenue-kpi__sub">Total VAT included</span>
           </div>
           <span className="ua-revenue-kpi__badge ua-revenue-kpi__badge--indigo" aria-hidden="true">
             <PercentIcon />
           </span>
-        </div>
-        <div className="ua-revenue-kpi">
+        </article>
+        <article className="ua-revenue-kpi">
           <div className="ua-revenue-kpi__text">
-            <span className="ua-revenue-kpi__label">Gross Total</span>
+            <span className="ua-revenue-kpi__label">Gross</span>
             <strong className="ua-revenue-kpi__value">{tzs(kpi.gross)}</strong>
-            <span className="ua-revenue-kpi__sub">After tax</span>
           </div>
           <span className="ua-revenue-kpi__badge ua-revenue-kpi__badge--teal" aria-hidden="true">
             <WalletIcon />
           </span>
-        </div>
-        <div className="ua-revenue-kpi">
+        </article>
+        <article className="ua-revenue-kpi">
           <div className="ua-revenue-kpi__text">
-            <span className="ua-revenue-kpi__label">Total Invoices</span>
-            <strong className="ua-revenue-kpi__value">{tzs(kpi.invoiceTotal)}</strong>
-            <span className="ua-revenue-kpi__sub">
-              {kpi.invoiceCount ? `${kpi.invoiceCount.toLocaleString('en-US')} in view` : 'No invoices in view'}
+            <span className="ua-revenue-kpi__label">
+              Invoices{kpi.invoiceCount ? ` · ${kpi.invoiceCount.toLocaleString('en-US')}` : ''}
             </span>
+            <strong className="ua-revenue-kpi__value">{tzs(kpi.invoiceTotal)}</strong>
           </div>
           <span className="ua-revenue-kpi__badge ua-revenue-kpi__badge--blue" aria-hidden="true">
             <FileTextIcon />
           </span>
-        </div>
-        <div className="ua-revenue-kpi">
+        </article>
+        <article className="ua-revenue-kpi">
           <div className="ua-revenue-kpi__text">
             <span className="ua-revenue-kpi__label">Outstanding</span>
             <strong className="ua-revenue-kpi__value">{tzs(kpi.outstanding)}</strong>
-            <span className="ua-revenue-kpi__sub">Balance due</span>
           </div>
           <span className="ua-revenue-kpi__badge ua-revenue-kpi__badge--amber" aria-hidden="true">
             <ClockIcon />
           </span>
-        </div>
-        <div className="ua-revenue-kpi">
+        </article>
+        <article className="ua-revenue-kpi">
           <div className="ua-revenue-kpi__text">
             <span className="ua-revenue-kpi__label">Overdue</span>
             <strong className="ua-revenue-kpi__value ua-revenue-kpi__value--rose">{tzs(kpi.overdue)}</strong>
-            <span className="ua-revenue-kpi__sub">Past due date</span>
           </div>
           <span className="ua-revenue-kpi__badge ua-revenue-kpi__badge--rose" aria-hidden="true">
             <AlertIcon />
           </span>
-        </div>
-      </div>
+        </article>
+      </section>
 
       {formOpen ? (
-        <div id="ua-record-revenue-panel" className="mb-2">
-        <Card>
-          <SectionTitle>Record revenue</SectionTitle>
-          <p className="mb-3 text-sm text-[var(--muted)]">
-            Cash sale or other income paid now. Leave customer blank for walk-in.
-          </p>
+        <section id="ua-record-revenue-panel" className="ua-revenue-compose" aria-label="Create revenue">
+          <div className="ua-revenue-compose__head">
+            <div>
+              <h2 className="ua-revenue-compose__title">Create revenue</h2>
+              <p className="ua-revenue-compose__sub">
+                Other income paid now. Leave customer blank for walk-in.
+              </p>
+            </div>
+          </div>
           {notice ? (
-            <div className="mb-3 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+            <div className="ua-revenue-notice ua-revenue-notice--inpanel" role="status">
               {notice}
             </div>
           ) : null}
-          <form className="grid gap-3 md:grid-cols-2" onSubmit={onRecordRevenue}>
-            <div>
-              <Label>Date</Label>
-              <Input type="date" value={revenueDate} onChange={(e) => setRevenueDate(e.target.value)} required />
+          <form className="ua-revenue-compose__form" onSubmit={onRecordRevenue}>
+            <div className="ua-revenue-compose__grid">
+              <div>
+                <Label>Date</Label>
+                <Input type="date" value={revenueDate} onChange={(e) => setRevenueDate(e.target.value)} required />
+              </div>
+              <div>
+                <Label>Customer (optional)</Label>
+                <Select value={customerId} onChange={(e) => setCustomerId(e.target.value)}>
+                  <option value="">Walk-in / Other income</option>
+                  {(customers.data?.data ?? []).map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.code} — {c.name}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+              <div className="ua-revenue-compose__span2">
+                <Label>Description</Label>
+                <Input
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="e.g. Scrap sale, service fee, interest"
+                  required
+                />
+              </div>
+              <div>
+                <Label>Revenue account</Label>
+                <Select value={revenueAccountId} onChange={(e) => setRevenueAccountId(e.target.value)} required>
+                  <option value="">Select account</option>
+                  {revenueAccounts.map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {a.code} — {a.name}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+              <div>
+                <Label>Amount (TZS)</Label>
+                <Input value={amount} onChange={(e) => setAmount(e.target.value)} required />
+              </div>
+              <div>
+                <Label>Deposit to</Label>
+                <Select value={depositKind} onChange={(e) => setDepositKind(e.target.value as DepositKind)}>
+                  <option value="bank">Bank / mobile</option>
+                  <option value="cash">Cash</option>
+                </Select>
+              </div>
+              <div>
+                {depositKind === 'bank' ? (
+                  <>
+                    <Label>Bank / mobile account</Label>
+                    <Select value={bankAccountId} onChange={(e) => setBankAccountId(e.target.value)} required>
+                      <option value="">Select account</option>
+                      {(banks.data?.data ?? []).map((b) => (
+                        <option key={b.id} value={b.id}>
+                          {b.code} — {b.name}
+                        </option>
+                      ))}
+                    </Select>
+                  </>
+                ) : (
+                  <>
+                    <Label>Cash account</Label>
+                    <Select value={cashAccountId} onChange={(e) => setCashAccountId(e.target.value)} required>
+                      <option value="">Select cash account</option>
+                      {(cashAccounts.data?.data ?? []).map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.code} — {c.name}
+                        </option>
+                      ))}
+                    </Select>
+                  </>
+                )}
+              </div>
+              <div className="ua-revenue-compose__span2">
+                <Label>Reference (optional)</Label>
+                <Input
+                  value={reference}
+                  onChange={(e) => setReference(e.target.value)}
+                  placeholder="Receipt no. / narration"
+                />
+              </div>
             </div>
-            <div>
-              <Label>Customer (optional)</Label>
-              <Select value={customerId} onChange={(e) => setCustomerId(e.target.value)}>
-                <option value="">Walk-in / Other income</option>
-                {(customers.data?.data ?? []).map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.code} — {c.name}
-                  </option>
-                ))}
-              </Select>
-            </div>
-            <div className="md:col-span-2">
-              <Label>Description</Label>
-              <Input
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="e.g. Scrap sale, service fee, interest"
-                required
-              />
-            </div>
-            <div>
-              <Label>Revenue account</Label>
-              <Select value={revenueAccountId} onChange={(e) => setRevenueAccountId(e.target.value)} required>
-                <option value="">Select account</option>
-                {revenueAccounts.map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.code} — {a.name}
-                  </option>
-                ))}
-              </Select>
-            </div>
-            <div>
-              <Label>Amount (TZS)</Label>
-              <Input value={amount} onChange={(e) => setAmount(e.target.value)} required />
-            </div>
-            <div>
-              <Label>Deposit to</Label>
-              <Select value={depositKind} onChange={(e) => setDepositKind(e.target.value as DepositKind)}>
-                <option value="bank">Bank / mobile</option>
-                <option value="cash">Cash</option>
-              </Select>
-            </div>
-            <div>
-              {depositKind === 'bank' ? (
-                <>
-                  <Label>Bank / mobile account</Label>
-                  <Select value={bankAccountId} onChange={(e) => setBankAccountId(e.target.value)} required>
-                    <option value="">Select account</option>
-                    {(banks.data?.data ?? []).map((b) => (
-                      <option key={b.id} value={b.id}>
-                        {b.code} — {b.name}
-                      </option>
-                    ))}
-                  </Select>
-                </>
-              ) : (
-                <>
-                  <Label>Cash account</Label>
-                  <Select value={cashAccountId} onChange={(e) => setCashAccountId(e.target.value)} required>
-                    <option value="">Select cash account</option>
-                    {(cashAccounts.data?.data ?? []).map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.code} — {c.name}
-                      </option>
-                    ))}
-                  </Select>
-                </>
-              )}
-            </div>
-            <div className="md:col-span-2">
-              <Label>Reference (optional)</Label>
-              <Input
-                value={reference}
-                onChange={(e) => setReference(e.target.value)}
-                placeholder="Receipt no. / narration"
-              />
-            </div>
-            <div className="md:col-span-2 flex flex-wrap gap-2">
+            <div className="ua-revenue-compose__actions">
               <Button disabled={createRevenue.isPending}>
                 {createRevenue.isPending ? 'Posting…' : 'Record revenue'}
               </Button>
@@ -747,141 +850,125 @@ export function RevenuePage() {
               </Button>
             </div>
           </form>
-        </Card>
-        </div>
+        </section>
       ) : null}
 
-      <div className="mt-6">
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <SectionTitle>
-            Invoices ({filteredInvoices.length}
-            {payFilter === 'all' && !invoiceQuery.trim()
-              ? ` · ${unpaidCount} unpaid · ${partialCount} partial · ${paidCount} paid`
-              : ''}
-            )
-          </SectionTitle>
-          <div className="flex flex-wrap items-center gap-1.5">
-            {([
-              ['all', `All (${receivableInvoices.length})`],
-              ['unpaid', `Unpaid (${unpaidCount})`],
-              ['partial', `Partially paid (${partialCount})`],
-              ['paid', `Paid (${paidCount})`],
-            ] as const).map(([key, label]) => (
+      <section className="ua-revenue-desk" aria-label="Invoices">
+        <div className="ua-revenue-desk__toolbar">
+          <div className="ua-revenue-desk__heading">
+            <h2 className="ua-revenue-desk__title">Invoices</h2>
+            <p className="ua-revenue-desk__meta">
+              {filteredInvoices.length.toLocaleString('en-US')} shown
+              {payFilter === 'all' && !invoiceQuery.trim()
+                ? ` · ${unpaidCount} unpaid · ${partialCount} partial · ${paidCount} paid`
+                : ''}
+            </p>
+          </div>
+          <div className="ua-revenue-filters" role="tablist" aria-label="Payment status">
+            {filterOptions.map(([key, label, count]) => (
               <button
                 key={key}
                 type="button"
+                role="tab"
+                aria-selected={payFilter === key}
                 onClick={() => setPayFilter(key)}
-                className={`rounded-full border px-3 py-1 text-xs transition ${
-                  payFilter === key
-                    ? 'border-[var(--brand)] bg-[var(--brand)] text-white'
-                    : 'border-[var(--line)] bg-white text-[var(--ink)] hover:bg-[var(--surface)]'
-                }`}
+                className={`ua-revenue-filter${payFilter === key ? ' is-active' : ''}`}
               >
-                {label}
+                <span>{label}</span>
+                <span className="ua-revenue-filter__count">{count}</span>
               </button>
             ))}
           </div>
         </div>
 
-        {invoices.isLoading ? <Card>Loading invoices…</Card> : null}
-        {!invoices.isLoading && filteredInvoices.length ? (
-          <Table headers={['Number', 'Customer', 'Total', 'Balance', 'Status', '']}>
-            {filteredInvoices.map((invoice) => {
-              const bucket = paymentBucket(invoice)
-              const canPay = bucket === 'unpaid' || bucket === 'partial'
-              const menuOpen = openMenuId === invoice.id
-              return (
-                <tr
-                  key={invoice.id}
-                  className="cursor-pointer border-t border-[var(--line)] hover:bg-[var(--surface)]"
-                  onClick={() => openInvoice(invoice)}
-                >
-                  <td className="px-4 py-3">
-                    <div className="font-normal text-[var(--ink)]">{invoice.invoice_number}</div>
-                    <div className="mt-0.5 text-xs text-[var(--muted)]">
-                      {String(invoice.invoice_date).slice(0, 10)}
-                    </div>
-                  </td>
-                  <td className="max-w-[280px] truncate px-4 py-3" title={invoice.customer?.name || ''}>
-                    {invoice.customer?.name}
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap">{money(invoice.total)}</td>
-                  <td className="px-4 py-3 whitespace-nowrap">{money(invoice.balance_due)}</td>
-                  <td className="px-4 py-3">
-                    <span
-                      className={
-                        bucket === 'paid'
-                          ? 'text-emerald-700'
-                          : bucket === 'partial'
-                            ? 'text-amber-700'
-                            : 'text-rose-700'
-                      }
-                    >
-                      {paymentLabel(bucket)}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
-                    <div className="relative inline-flex justify-end" ref={menuOpen ? menuRef : undefined}>
-                      <button
-                        type="button"
-                        className="inline-flex h-8 w-8 items-center justify-center text-[var(--muted)] hover:text-[var(--ink)]"
-                        aria-label={`Actions for ${invoice.invoice_number}`}
-                        aria-haspopup="menu"
-                        aria-expanded={menuOpen}
-                        onClick={() => setOpenMenuId(menuOpen ? null : invoice.id)}
-                      >
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                          <circle cx="12" cy="5" r="1.8" />
-                          <circle cx="12" cy="12" r="1.8" />
-                          <circle cx="12" cy="19" r="1.8" />
-                        </svg>
-                      </button>
-                      {menuOpen ? (
-                        <div
-                          role="menu"
-                          className="absolute right-0 top-full z-20 mt-1 min-w-[160px] rounded-md border border-[var(--line)] bg-white py-1 shadow-md"
+        <div className="ua-revenue-desk__body">
+          {invoices.isLoading ? (
+            <div className="ua-revenue-loading">Loading invoices…</div>
+          ) : null}
+          {!invoices.isLoading && filteredInvoices.length ? (
+            <Table headers={['Number', 'Customer', 'Total', 'Balance', 'Status', '']} scrollable={false}>
+              {filteredInvoices.map((invoice) => {
+                const bucket = paymentBucket(invoice)
+                const canPay = bucket === 'unpaid' || bucket === 'partial'
+                const menuOpen = openMenuId === invoice.id
+                return (
+                  <tr
+                    key={invoice.id}
+                    className="ua-revenue-row"
+                    onClick={() => openInvoice(invoice)}
+                  >
+                    <td className="ua-revenue-cell ua-revenue-cell--doc">
+                      <div className="ua-revenue-docnum">{invoice.invoice_number}</div>
+                      <div className="ua-revenue-docdate">{String(invoice.invoice_date).slice(0, 10)}</div>
+                    </td>
+                    <td className="ua-revenue-cell ua-revenue-cell--customer" title={invoice.customer?.name || ''}>
+                      {invoice.customer?.name || '—'}
+                    </td>
+                    <td className="ua-revenue-cell ua-revenue-cell--money">{money(invoice.total)}</td>
+                    <td className="ua-revenue-cell ua-revenue-cell--money">{money(invoice.balance_due)}</td>
+                    <td className="ua-revenue-cell">
+                      <span className={statusClass(bucket)}>{paymentLabel(bucket)}</span>
+                    </td>
+                    <td className="ua-revenue-cell ua-revenue-cell--actions" onClick={(e) => e.stopPropagation()}>
+                      <div className="ua-revenue-menu" ref={menuOpen ? menuRef : undefined}>
+                        <button
+                          type="button"
+                          className="ua-revenue-menu__btn"
+                          aria-label={`Actions for ${invoice.invoice_number}`}
+                          aria-haspopup="menu"
+                          aria-expanded={menuOpen}
+                          onClick={() => setOpenMenuId(menuOpen ? null : invoice.id)}
                         >
-                          {canPay ? (
-                            <button
-                              type="button"
-                              role="menuitem"
-                              className="block w-full px-3 py-2 text-left text-sm text-[var(--ink)] hover:bg-[var(--surface)]"
-                              onClick={() => startPayInvoice(invoice)}
-                            >
-                              Pay invoice
-                            </button>
-                          ) : (
-                            <div className="px-3 py-2 text-sm text-[var(--muted)]">Already paid</div>
-                          )}
-                        </div>
-                      ) : null}
-                    </div>
-                  </td>
-                </tr>
-              )
-            })}
-          </Table>
-        ) : (
-          !invoices.isLoading && (
-            <EmptyState
-              title={
-                invoiceQuery.trim()
-                  ? 'No matching invoices'
-                  : payFilter === 'all'
-                    ? 'No invoices yet'
-                    : `No ${paymentLabel(payFilter === 'partial' ? 'partial' : payFilter).toLowerCase()} invoices`
-              }
-              body={
-                invoiceQuery.trim()
-                  ? 'Try a different search, or clear the search box.'
-                  : payFilter === 'all'
-                    ? 'ERP sales invoices appear here after sync. Use Record revenue above for other income.'
-                    : 'Try another filter to see unpaid, partially paid, or paid invoices.'
-              }
-            />
-          )
-        )}
-      </div>
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                            <circle cx="12" cy="5" r="1.8" />
+                            <circle cx="12" cy="12" r="1.8" />
+                            <circle cx="12" cy="19" r="1.8" />
+                          </svg>
+                        </button>
+                        {menuOpen ? (
+                          <div role="menu" className="ua-revenue-menu__panel">
+                            {canPay ? (
+                              <button
+                                type="button"
+                                role="menuitem"
+                                className="ua-revenue-menu__item"
+                                onClick={() => startPayInvoice(invoice)}
+                              >
+                                Pay invoice
+                              </button>
+                            ) : (
+                              <div className="ua-revenue-menu__item ua-revenue-menu__item--muted">Already paid</div>
+                            )}
+                          </div>
+                        ) : null}
+                      </div>
+                    </td>
+                  </tr>
+                )
+              })}
+            </Table>
+          ) : (
+            !invoices.isLoading && (
+              <EmptyState
+                title={
+                  invoiceQuery.trim()
+                    ? 'No matching invoices'
+                    : payFilter === 'all'
+                      ? 'No invoices yet'
+                      : `No ${paymentLabel(payFilter === 'partial' ? 'partial' : payFilter).toLowerCase()} invoices`
+                }
+                body={
+                  invoiceQuery.trim()
+                    ? 'Try a different search, or clear the search box.'
+                    : payFilter === 'all'
+                      ? 'ERP sales invoices appear here after sync. Use Create revenue for other income.'
+                      : 'Switch filter to see unpaid, partial, or paid invoices.'
+                }
+              />
+            )
+          )}
+        </div>
+      </section>
 
       {payingInvoice ? (
         <div
@@ -979,15 +1066,7 @@ export function RevenuePage() {
                 </div>
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                <span
-                  className={
-                    viewedBucket === 'paid'
-                      ? 'text-emerald-700'
-                      : viewedBucket === 'partial'
-                        ? 'text-amber-700'
-                        : 'text-rose-700'
-                  }
-                >
+                <span className={statusClass(viewedBucket || 'other')}>
                   {paymentLabel(viewedBucket || 'other')}
                 </span>
                 <Button type="button" variant="secondary" onClick={() => setViewInvoiceId(null)}>

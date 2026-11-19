@@ -117,6 +117,23 @@ main.ultitech-accounting-root #root .ua-btn-pill {
   color: var(--muted) !important;
 }
 
+.ua-page-header__crumb-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.75rem 1rem;
+  margin-bottom: 0.35rem;
+  min-width: 0;
+  position: relative;
+}
+
+.ua-page-header__crumb-row .ua-breadcrumb {
+  margin-bottom: 0;
+  flex: 1 1 auto;
+  min-width: 0;
+  z-index: 1;
+}
+
 .ua-breadcrumb {
   display: flex;
   flex-wrap: wrap;
@@ -845,43 +862,133 @@ html[data-erp-hosted='1'] body {
   color: var(--ink) !important;
 }
 
-/* Revenue desk search (centered above KPI cards) */
+/* ——— Revenue desk ——— */
+.ua-revenue {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.ua-revenue .ua-page-header {
+  margin-bottom: 0;
+}
+
+.ua-revenue-notice {
+  border: 1px solid #a7f3d0;
+  background: #ecfdf5;
+  color: #065f46;
+  border-radius: 0.65rem;
+  padding: 0.65rem 0.85rem;
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+
+.ua-revenue-notice--inpanel {
+  margin: 0 1rem 0.85rem;
+}
+
+/* Search — centered on the breadcrumb row */
+.ua-revenue-crumb-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.75rem 1.25rem;
+  padding: 10px 1.25rem 0;
+  min-width: 0;
+  position: relative;
+}
+
+.ua-revenue-crumb-row > #erp-auto-breadcrumb {
+  padding: 0 !important;
+  flex: 1 1 auto;
+  min-width: 0;
+  z-index: 1;
+}
+
+.ua-revenue-crumb-search {
+  position: absolute;
+  left: 50%;
+  top: calc(50% + 22px);
+  transform: translate(-50%, -50%);
+  width: min(28rem, 42vw);
+  max-width: 28rem;
+  min-width: 12rem;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.ua-revenue-crumb-search .ua-revenue-search-wrap,
+.ua-revenue-crumb-search .ua-revenue-search {
+  pointer-events: auto;
+}
+
 .ua-revenue-search-wrap {
   display: flex;
   justify-content: center;
   width: 100%;
 }
 
+.ua-revenue-search-wrap--crumb {
+  position: absolute;
+  left: 50%;
+  top: calc(50% + 22px);
+  transform: translate(-50%, -50%);
+  width: min(28rem, 42vw);
+  max-width: 28rem;
+  min-width: 12rem;
+  z-index: 2;
+}
+
 .ua-revenue-search {
-  width: min(100%, 28rem);
-  min-height: 40px;
+  width: 100%;
+  min-height: 36px;
   border: 1px solid var(--line);
-  border-radius: 0.65rem;
-  background: var(--surface);
-  padding: 0 0.9rem;
-  font-size: 14px;
+  border-radius: 999px;
+  background: #fff;
+  padding: 0 1rem;
+  font-size: 13px;
   color: var(--ink);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
 }
 
 .ua-revenue-search:focus {
   outline: none;
   border-color: rgba(92, 89, 240, 0.45);
-  background: #fff;
   box-shadow: 0 0 0 3px rgba(92, 89, 240, 0.12);
 }
 
-/* Revenue desk summary cards (classic Accounting parity) */
+@media (max-width: 767.98px) {
+  .ua-revenue-crumb-row {
+    padding: 8px 0.75rem 0;
+    flex-wrap: wrap;
+  }
+
+  .ua-revenue-crumb-search,
+  .ua-revenue-search-wrap--crumb {
+    position: static;
+    transform: none;
+    left: auto;
+    top: auto;
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+    margin-top: 0.35rem;
+  }
+}
+
+/* KPI strip */
 .ua-revenue-kpis {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.55rem;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 0.6rem;
 }
 
 .ua-revenue-kpi {
   min-width: 0;
-  padding: 0.7rem 0.85rem;
+  padding: 0.85rem 0.9rem;
   border: 1px solid var(--line);
-  border-radius: 0.75rem;
+  border-radius: 0.85rem;
   background: #fff;
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
   display: flex;
@@ -894,25 +1001,28 @@ html[data-erp-hosted='1'] body {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.12rem;
+  gap: 0.15rem;
 }
 
 .ua-revenue-kpi__label {
-  font-size: 11px;
+  font-size: 9px;
   font-weight: 500;
-  color: #0f172a;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--muted);
   line-height: 1.2;
 }
 
 .ua-revenue-kpi__value {
-  font-size: 0.98rem;
+  font-size: 0.7rem;
   font-weight: 500;
-  letter-spacing: -0.02em;
-  color: #0f172a;
-  line-height: 1.25;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  letter-spacing: -0.03em;
+  color: var(--ink);
+  line-height: 1.3;
+  white-space: normal;
+  overflow: visible;
+  word-break: break-word;
+  font-variant-numeric: tabular-nums;
 }
 
 .ua-revenue-kpi__value--rose {
@@ -921,15 +1031,15 @@ html[data-erp-hosted='1'] body {
 
 .ua-revenue-kpi__sub {
   font-size: 10px;
-  font-weight: 500;
-  color: var(--muted);
+  font-weight: 400;
+  color: #94a3b8;
   line-height: 1.2;
 }
 
 .ua-revenue-kpi__badge {
-  width: 32px;
-  height: 32px;
-  border-radius: 999px;
+  width: 34px;
+  height: 34px;
+  border-radius: 0.7rem;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -966,15 +1076,376 @@ html[data-erp-hosted='1'] body {
   color: #e11d48;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 1200px) {
+  .ua-revenue-kpis {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 700px) {
   .ua-revenue-kpis {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
-@media (max-width: 520px) {
+@media (max-width: 420px) {
   .ua-revenue-kpis {
     grid-template-columns: 1fr;
+  }
+}
+
+/* Create revenue compose panel */
+.ua-revenue-compose {
+  border: 1px solid var(--line);
+  border-radius: 0.9rem;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  overflow: hidden;
+}
+
+.ua-revenue-compose__head {
+  padding: 0.9rem 1rem 0.35rem;
+  border-bottom: 1px solid transparent;
+}
+
+.ua-revenue-compose__title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+}
+
+.ua-revenue-compose__sub {
+  margin: 0.2rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--muted);
+}
+
+.ua-revenue-compose__form {
+  padding: 0.5rem 1rem 1rem;
+}
+
+.ua-revenue-compose__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem 0.85rem;
+}
+
+.ua-revenue-compose__span2 {
+  grid-column: 1 / -1;
+}
+
+.ua-revenue-compose__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.95rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--line);
+}
+
+@media (max-width: 640px) {
+  .ua-revenue-compose__grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Invoice desk panel */
+.ua-revenue-desk {
+  border: 1px solid var(--line);
+  border-radius: 0.9rem;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  overflow: hidden;
+  min-width: 0;
+}
+
+.ua-revenue-desk__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid var(--line);
+  background: linear-gradient(180deg, #fff 0%, #fbfcfe 100%);
+}
+
+.ua-revenue-desk__heading {
+  min-width: 0;
+}
+
+.ua-revenue-desk__title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+}
+
+.ua-revenue-desk__meta {
+  margin: 0.15rem 0 0;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.ua-revenue-filters {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.2rem;
+  border: 1px solid var(--line);
+  border-radius: 0.7rem;
+  background: var(--surface);
+}
+
+.ua-revenue-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  border-radius: 0.55rem;
+  padding: 0.35rem 0.65rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.ua-revenue-filter:hover {
+  color: var(--ink);
+  background: #fff;
+}
+
+.ua-revenue-filter.is-active {
+  background: #fff;
+  color: var(--brand-dark);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+}
+
+.ua-revenue-filter__count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.25rem;
+  padding: 0 0.3rem;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.18);
+  color: inherit;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+.ua-revenue-filter.is-active .ua-revenue-filter__count {
+  background: var(--brand-soft);
+  color: var(--brand-dark);
+}
+
+.ua-revenue-desk__body {
+  padding: 0;
+  min-width: 0;
+}
+
+.ua-revenue-desk__body .ua-table-scroll {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.ua-revenue-desk__body .ua-table-scroll thead {
+  background: #f8fafc;
+}
+
+.ua-revenue-desk__body .ua-table-scroll th {
+  padding: 0.65rem 1rem;
+  font-size: 0.7rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #94a3b8;
+  border-bottom: 1px solid var(--line);
+}
+
+.ua-revenue-loading {
+  padding: 1.5rem 1rem;
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.ua-revenue-desk__body .ua-empty-title,
+.ua-revenue-desk__body > .rounded-lg {
+  margin: 1rem;
+}
+
+.ua-revenue-row {
+  cursor: pointer;
+  border-top: 1px solid var(--line);
+  transition: background 0.12s ease;
+}
+
+.ua-revenue-row:first-child {
+  border-top: 0;
+}
+
+.ua-revenue-row:hover {
+  background: #f8fafc;
+}
+
+.ua-revenue-cell {
+  padding: 0.85rem 1rem;
+  vertical-align: middle;
+}
+
+.ua-revenue-cell--doc {
+  min-width: 9rem;
+}
+
+.ua-revenue-docnum {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+}
+
+.ua-revenue-docdate {
+  margin-top: 0.15rem;
+  font-size: 0.75rem;
+  color: #94a3b8;
+}
+
+.ua-revenue-cell--customer {
+  max-width: 16rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--ink);
+}
+
+.ua-revenue-cell--money {
+  white-space: nowrap;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+.ua-revenue-desk__body .ua-table-scroll th:nth-child(3),
+.ua-revenue-desk__body .ua-table-scroll th:nth-child(4) {
+  text-align: right;
+}
+
+.ua-revenue-cell--actions {
+  width: 3rem;
+  text-align: right;
+}
+
+.ua-revenue-status {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0.2rem 0.55rem;
+  font-size: 0.7rem;
+  font-weight: 500;
+  line-height: 1.3;
+  white-space: nowrap;
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.ua-revenue-status--paid {
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.ua-revenue-status--partial {
+  background: #fffbeb;
+  color: #b45309;
+}
+
+.ua-revenue-status--unpaid {
+  background: #fff1f2;
+  color: #be123c;
+}
+
+.ua-revenue-menu {
+  position: relative;
+  display: inline-flex;
+  justify-content: flex-end;
+}
+
+.ua-revenue-menu__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border: 0;
+  border-radius: 0.5rem;
+  background: transparent;
+  color: #94a3b8;
+  cursor: pointer;
+}
+
+.ua-revenue-menu__btn:hover {
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.ua-revenue-menu__panel {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 30;
+  min-width: 10rem;
+  padding: 0.3rem;
+  border: 1px solid var(--line);
+  border-radius: 0.65rem;
+  background: #fff;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
+}
+
+.ua-revenue-menu__item {
+  display: block;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  border-radius: 0.45rem;
+  padding: 0.5rem 0.65rem;
+  text-align: left;
+  font-size: 0.8125rem;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.ua-revenue-menu__item:hover {
+  background: var(--surface);
+}
+
+.ua-revenue-menu__item--muted {
+  color: var(--muted);
+  cursor: default;
+}
+
+.ua-revenue-menu__item--muted:hover {
+  background: transparent;
+}
+
+@media (max-width: 640px) {
+  .ua-revenue-desk__toolbar {
+    align-items: stretch;
+  }
+
+  .ua-revenue-filters {
+    width: 100%;
+  }
+
+  .ua-revenue-filter {
+    flex: 1 1 auto;
+    justify-content: center;
   }
 }
 

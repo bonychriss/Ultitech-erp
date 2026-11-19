@@ -5,20 +5,30 @@ export function PageHeader({
   subtitle,
   actions,
   breadcrumb,
+  crumbExtra,
 }: {
   title: string
   subtitle?: string
   actions?: ReactNode
   breadcrumb?: ReactNode
+  /** Renders on the same row as the breadcrumb (e.g. search). */
+  crumbExtra?: ReactNode
 }) {
   return (
-    <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
-      <div>
-        {breadcrumb ? <div className="ua-breadcrumb">{breadcrumb}</div> : null}
-        <div className="ua-page-title">{title}</div>
-        {subtitle ? <div className="ua-page-sub">{subtitle}</div> : null}
+    <div className="ua-page-header mb-3">
+      {breadcrumb || crumbExtra ? (
+        <div className="ua-page-header__crumb-row">
+          {breadcrumb ? <div className="ua-breadcrumb">{breadcrumb}</div> : <div />}
+          {crumbExtra}
+        </div>
+      ) : null}
+      <div className="ua-page-header__main flex flex-wrap items-end justify-between gap-2">
+        <div>
+          <div className="ua-page-title">{title}</div>
+          {subtitle ? <div className="ua-page-sub">{subtitle}</div> : null}
+        </div>
+        {actions}
       </div>
-      {actions}
     </div>
   )
 }

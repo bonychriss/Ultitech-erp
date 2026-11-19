@@ -215,7 +215,7 @@ function NavRow({ item }: { item: NavItem }) {
 }
 
 export function AppShell() {
-  const { user, companies, companyId, setCompanyId, logout, embed, hostedInErp, classicAccountingUrl } = useAuth()
+  const { user, companies, companyId, setCompanyId, logout, embed, hostedInErp } = useAuth()
   const location = useLocation()
   const erpMode = embed.mode === 'erp' || hostedInErp
   const [mobileOpen, setMobileOpen] = useState(false)
@@ -255,15 +255,6 @@ export function AppShell() {
   if (hostedInErp) {
     return (
       <div className="erp-hosted-main">
-        <div className="erp-hosted-toolbar">
-          <div className="erp-hosted-actions">
-            {classicAccountingUrl ? (
-              <a className="erp-classic-link" href={classicAccountingUrl}>
-                Classic Accounting
-              </a>
-            ) : null}
-          </div>
-        </div>
         <main className="erp-content erp-hosted-content">
           <Outlet />
         </main>

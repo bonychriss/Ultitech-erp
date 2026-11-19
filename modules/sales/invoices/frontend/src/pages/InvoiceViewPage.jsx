@@ -416,11 +416,6 @@ export default function InvoiceViewPage() {
         onRegisterPayment={flags.can_register_payment && revenueEntryId > 0 ? openRegisterPayment : undefined}
       />
 
-      <InvoiceDocumentPane
-        html={documentHtml}
-        fontFamily={documentFontFamily}
-      />
-
       <InvoicePaymentsCard
         payments={data?.payments}
         currency={invoice?.currency || 'TZS'}
@@ -429,6 +424,11 @@ export default function InvoiceViewPage() {
       <InvoiceDocumentsCard
         attachments={data?.attachments}
         documents={data?.documents}
+      />
+
+      <InvoiceDocumentPane
+        html={documentHtml}
+        fontFamily={documentFontFamily}
       />
 
       {payEntryId ? createPortal(

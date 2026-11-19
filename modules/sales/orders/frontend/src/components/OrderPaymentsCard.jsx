@@ -1,4 +1,19 @@
-import FileTypeIcon, { fileKind } from '../../../../invoices/frontend/src/components/FileTypeIcon.jsx';
+function fileKind(name = '') {
+  const lower = String(name).toLowerCase();
+  if (/\.(png|jpe?g|gif|webp|bmp)$/i.test(lower)) {
+    return { label: 'IMG', tone: 'image' };
+  }
+  if (/\.(xlsx?|csv)$/i.test(lower)) return { label: 'XLS', tone: 'sheet' };
+  if (/\.(docx?)$/i.test(lower)) return { label: 'DOC', tone: 'doc' };
+  if (/\.pdf$/i.test(lower)) return { label: 'PDF', tone: 'pdf' };
+  return { label: 'FILE', tone: 'file' };
+}
+
+function pdfPreviewUrl(url) {
+  if (!url) return url;
+  const base = String(url).split('#')[0];
+  return `${base}#page=1&view=FitH&toolbar=0&navpanes=0&scrollbar=0`;
+}
 
 function money(value, currency = 'TZS') {
   const n = Number(value || 0);
@@ -32,9 +47,21 @@ function truncateName(name, max = 28) {
   return `${s.slice(0, max - 1)}…`;
 }
 
-function DocPreviewThumb({ isImage, previewUrl, missing, kind }) {
+function paymentInstallmentLabel(index, total) {
+  if (total <= 1) return 'Payment proof';
+  const ordinals = ['First', 'Second', 'Third', 'Fourth', 'Fifth', 'Sixth', 'Seventh', 'Eighth', 'Ninth', 'Tenth'];
+  const head = ordinals[index] || `${index + 1}th`;
+  return `${head} payment`;
+}
+
+function DocPreviewThumb({ isImage, previewUrl, missing, kindLabel }) {
   if (missing) {
-    return <FileTypeIcon missing />;
+    return (
+      <div className="inv-gmail-thumb inv-gmail-thumb--empty">
+        <i className="fas fa-exclamation-triangle" aria-hidden="true" />
+        <span>Unavailable</span>
+      </div>
+    );
   }
   if (isImage && previewUrl) {
     return (
@@ -43,7 +70,26 @@ function DocPreviewThumb({ isImage, previewUrl, missing, kind }) {
       </div>
     );
   }
-  return <FileTypeIcon tone={kind.tone} label={kind.label} />;
+  if (previewUrl && kindLabel === 'PDF') {
+    return (
+      <div className="inv-gmail-thumb inv-gmail-thumb--pdf">
+        <iframe
+          src={pdfPreviewUrl(previewUrl)}
+          title="PDF preview"
+          loading="lazy"
+          tabIndex={-1}
+          scrolling="no"
+        />
+      </div>
+    );
+  }
+  return (
+    <div className="inv-gmail-thumb inv-gmail-thumb--placeholder">
+      <span className={`inv-gmail-thumb-badge inv-gmail-thumb-badge--${String(kindLabel).toLowerCase()}`}>
+        {kindLabel}
+      </span>
+    </div>
+  );
 }
 
 function PaymentPlainRow({ amountLabel, dateLabel, userLabel, reference }) {
@@ -79,30 +125,21 @@ function PaymentPlainRow({ amountLabel, dateLabel, userLabel, reference }) {
   );
 }
 
-function PaymentCard({
+function PaymentProofCard({
   amountLabel,
   dateLabel,
   userLabel,
   reference,
   attachment,
+  caption,
 }) {
   const hasFile = Boolean(attachment?.name);
-  if (!hasFile) {
-    return (
-      <PaymentPlainRow
-        amountLabel={amountLabel}
-        dateLabel={dateLabel}
-        userLabel={userLabel}
-        reference={reference}
-      />
-    );
-  }
-
-  const fileMissing = !!attachment?.missing;
-  const href = !attachment?.missing ? (attachment?.proxyLink || null) : null;
-  const kind = fileKind(attachment?.name);
-  const footName = attachment.name || 'Attachment';
+  const fileMissing = !hasFile || !!attachment?.missing;
+  const href = hasFile && !attachment?.missing ? (attachment?.proxyLink || null) : null;
+  const kind = hasFile ? fileKind(attachment?.name) : { label: 'FILE', tone: 'file' };
+  const footName = hasFile ? (attachment.name || 'Attachment') : 'No proof uploaded';
   const titleBits = [amountLabel, dateLabel, userLabel, reference].filter(Boolean).join(' · ');
+  const captionText = String(caption || '').trim();
 
   const open = () => {
     if (!href) return;
@@ -111,7 +148,7 @@ function PaymentCard({
 
   return (
     <article
-      className={`inv-gmail-card inv-file-card inv-pay-proof-card${fileMissing ? ' inv-gmail-card--missing' : ''}`}
+      className={`inv-gmail-card${fileMissing ? ' inv-gmail-card--missing' : ''}${captionText ? ' inv-gmail-card--captioned' : ''}`}
       title={titleBits ? `${footName}\n${titleBits}` : footName}
       role="listitem"
     >
@@ -120,46 +157,37 @@ function PaymentCard({
         className="inv-gmail-card-hit"
         onClick={open}
         disabled={!href}
-        aria-label={href ? `Open payment proof ${footName}` : `Payment proof ${footName} unavailable`}
+        aria-label={href ? `Open payment proof ${footName}` : `Payment proof unavailable`}
       >
         <DocPreviewThumb
-          isImage={!!attachment?.isImage}
+          isImage={!!attachment?.isImage || kind.tone === 'image'}
           previewUrl={href || undefined}
           missing={fileMissing}
-          kind={kind}
+          kindLabel={kind.label}
         />
       </button>
 
-      <div className="inv-gmail-card-foot inv-pay-card-foot">
-        <div className="inv-pay-card-foot-top">
-          <span className="inv-gmail-fname">{truncateName(footName, 28)}</span>
-          {href ? (
-            <a
-              href={href}
-              download
-              rel="noopener noreferrer"
-              className="inv-gmail-foot-action"
-              title="Download"
-              aria-label={`Download ${attachment?.name || 'attachment'}`}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <i className="fas fa-download" aria-hidden="true" />
-            </a>
-          ) : null}
-        </div>
-        <div className="inv-pay-card-meta">
-          <span>{amountLabel}</span>
-          <span className="inv-pay-card-dot" aria-hidden="true">·</span>
-          <span>{dateLabel}</span>
-          {userLabel ? (
-            <>
-              <span className="inv-pay-card-dot" aria-hidden="true">·</span>
-              <span>{userLabel}</span>
-            </>
-          ) : null}
-        </div>
-        {reference ? <div className="inv-pay-card-ref">Ref {reference}</div> : null}
-        {fileMissing ? <div className="inv-pay-card-missing">Proof file missing on this server</div> : null}
+      <div className="inv-gmail-card-foot">
+        <span className={`inv-gmail-type inv-gmail-type--${kind.tone}`} aria-hidden="true">
+          {kind.label}
+        </span>
+        <span className="inv-gmail-fname">{truncateName(footName)}</span>
+        {href ? (
+          <a
+            href={href}
+            download
+            rel="noopener noreferrer"
+            className="inv-gmail-foot-action"
+            title="Download"
+            aria-label={`Download ${attachment?.name || 'attachment'}`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <i className="fas fa-download" aria-hidden="true" />
+          </a>
+        ) : null}
+      </div>
+      <div className={`inv-gmail-card-caption${captionText ? '' : ' is-empty'}`} aria-hidden={!captionText}>
+        {captionText || '\u00a0'}
       </div>
     </article>
   );
@@ -171,12 +199,17 @@ export default function OrderPaymentsCard({ payments = [], currency = 'TZS' }) {
 
   const cards = [];
   let proofCount = 0;
-  list.forEach((payment) => {
+  list.forEach((payment, paymentIndex) => {
     const amountLabel = money(payment.amount, payment.currency || currency);
     const dateLabel = formatDate(payment.collection_date || payment.created_at);
     const userLabel = payment.user_name || 'System';
     const reference = String(payment.reference || '').trim();
     const attachments = Array.isArray(payment.attachments) ? payment.attachments : [];
+    const installment = paymentInstallmentLabel(paymentIndex, list.length);
+    const captionParts = [installment, amountLabel, dateLabel];
+    if (reference) captionParts.push(`Ref ${reference}`);
+    const caption = captionParts.filter(Boolean).join(' · ');
+
     if (attachments.length) {
       attachments.forEach((att, index) => {
         proofCount += 1;
@@ -186,6 +219,7 @@ export default function OrderPaymentsCard({ payments = [], currency = 'TZS' }) {
           dateLabel,
           userLabel,
           reference,
+          caption,
           attachment: att,
         });
       });
@@ -196,6 +230,7 @@ export default function OrderPaymentsCard({ payments = [], currency = 'TZS' }) {
         dateLabel,
         userLabel,
         reference,
+        caption,
         attachment: null,
       });
     }
@@ -203,8 +238,8 @@ export default function OrderPaymentsCard({ payments = [], currency = 'TZS' }) {
 
   const title = proofCount > 0 ? 'Payment proofs' : 'Recent payments';
   const countLabel = proofCount > 0
-    ? `${proofCount} proof${proofCount === 1 ? '' : 's'} · ${list.length} payment${list.length === 1 ? '' : 's'}`
-    : (list.length === 1 ? '1 payment' : `${list.length} payments`);
+    ? `${proofCount}`
+    : `${list.length}`;
 
   return (
     <section className="inv-docs-card ov-payments-card no-print" id="recent-payments" aria-label={title}>
@@ -217,12 +252,13 @@ export default function OrderPaymentsCard({ payments = [], currency = 'TZS' }) {
       <div className="inv-docs-body">
         <div className="inv-gmail-list" role="list">
           {cards.map((card) => (
-            <PaymentCard
+            <PaymentProofCard
               key={card.key}
               amountLabel={card.amountLabel}
               dateLabel={card.dateLabel}
               userLabel={card.userLabel}
               reference={card.reference}
+              caption={card.caption}
               attachment={card.attachment}
             />
           ))}

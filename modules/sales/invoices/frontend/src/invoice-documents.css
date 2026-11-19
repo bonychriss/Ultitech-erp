@@ -149,6 +149,32 @@
   letter-spacing: 0.04em;
 }
 
+.ov-page-root .inv-gmail-thumb-badge--pdf { background: #ea4335; }
+.ov-page-root .inv-gmail-thumb-badge--img { background: #4285f4; }
+.ov-page-root .inv-gmail-thumb-badge--xls { background: #0f9d58; }
+.ov-page-root .inv-gmail-thumb-badge--doc { background: #4285f4; }
+.ov-page-root .inv-gmail-thumb-badge--file { background: #5f6368; }
+
+.ov-page-root .inv-gmail-card--captioned {
+  height: auto;
+}
+
+.ov-page-root .inv-gmail-card-caption {
+  padding: 0.35rem 0.5rem 0.55rem;
+  font-size: 0.7rem;
+  line-height: 1.3;
+  color: #5f6368;
+  background: #fff;
+  border-top: 1px solid #f1f3f4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ov-page-root .inv-gmail-card-caption.is-empty {
+  display: none;
+}
+
 /* Office-style file type icons (Word / PPT / Exl / PDF) */
 .ov-page-root .inv-file-card {
   width: 120px;

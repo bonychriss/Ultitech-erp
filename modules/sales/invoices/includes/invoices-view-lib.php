@@ -622,14 +622,26 @@ function salesInvoiceViewCollectSupportingDocuments(PDO $salesDb, int $revEntryI
     $txnPdbs[] = $salesDb;
     foreach ($txnPdbs as $txnPdo) {
         try {
+            // revenue_* rows key off revenue entry id; invoice_payment keys off invoice id.
             $st = $txnPdo->prepare(
                 "SELECT description FROM account_transactions
-                 WHERE reference_type IN ('revenue_collection', 'revenue_entry', 'invoice_payment')
-                   AND reference_id = ?
+                 WHERE type = 'credit'
+                   AND (
+                     (reference_type IN ('revenue_collection', 'revenue_entry') AND reference_id = ?)
+                     OR (reference_type = 'invoice_payment' AND reference_id = ?)
+                   )
                  ORDER BY id DESC
                  LIMIT 50"
             );
-            $st->execute([$revEntryId]);
+            $invoiceIdForTxn = 0;
+            try {
+                $stInv = $salesDb->prepare('SELECT source_invoice_id FROM revenue_entries WHERE id = ? LIMIT 1');
+                $stInv->execute([$revEntryId]);
+                $invoiceIdForTxn = (int) $stInv->fetchColumn();
+            } catch (Throwable $e) {
+                $invoiceIdForTxn = 0;
+            }
+            $st->execute([$revEntryId, $invoiceIdForTxn > 0 ? $invoiceIdForTxn : $revEntryId]);
             foreach ($st->fetchAll(PDO::FETCH_COLUMN) ?: [] as $desc) {
                 if (!is_string($desc) || $desc === '') {
                     continue;

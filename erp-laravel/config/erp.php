@@ -92,6 +92,7 @@ return [
         'letter' => 'modules/letter/frontend/dist',
         'cashbook' => 'modules/petty-cash/frontend/dist',
         'accounting' => 'modules/accounting/frontend/dist',
+        'ultitech_accounting' => 'ultitech-accounting/frontend/dist',
         'revenue' => 'modules/revenue/frontend/dist',
         'attendance' => 'attendance/attendance-ui/dist',
         'notifications' => 'notifications-ui/frontend/dist',

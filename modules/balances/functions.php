@@ -1086,32 +1086,42 @@ function balances_ensure_custom_institutions_table(PDO $pdo): void
 }
 
 /**
- * Remember an account name + uploaded logo so it is offered in the sub-account name dropdown next time.
- * Names that match a bundled institution are skipped; an existing saved name gets its logo and type refreshed.
+ * Remember an account name (and optional uploaded logo) so it is offered in the name dropdown next time.
+ * Names that match a bundled institution are skipped; an existing saved name gets its logo/type refreshed.
+ * Logo may be empty — users can add a bank that is not in the catalog by name alone.
  */
-function balances_save_custom_institution(PDO $pdo, string $name, string $type, string $imagePath): void
+function balances_save_custom_institution(PDO $pdo, string $name, string $type, string $imagePath = ''): void
 {
     $name = trim(preg_replace('/\s+/', ' ', $name));
-    if ($name === '' || $imagePath === '' || !in_array($type, ['bank', 'mobile', 'cash'], true)) {
+    if ($name === '' || !in_array($type, ['bank', 'mobile', 'cash'], true)) {
         return;
     }
     $needle = mb_strtolower($name);
     foreach (balances_institutions() as $inst) {
+        if (!empty($inst['custom'])) {
+            continue;
+        }
         if (mb_strtolower($inst['name']) === $needle || in_array($needle, $inst['aliases'], true)) {
             return;
         }
     }
     $root = dirname(__DIR__, 2);
-    $targetDir = $root . '/uploads/balances/institutions/';
-    if (!is_file($root . '/' . $imagePath) || (!is_dir($targetDir) && !mkdir($targetDir, 0755, true) && !is_dir($targetDir))) {
-        return;
+    $logo = '';
+    $copiedFile = '';
+    $imagePath = trim($imagePath);
+    if ($imagePath !== '') {
+        $targetDir = $root . '/uploads/balances/institutions/';
+        if (!is_file($root . '/' . $imagePath) || (!is_dir($targetDir) && !mkdir($targetDir, 0755, true) && !is_dir($targetDir))) {
+            return;
+        }
+        $ext = strtolower(pathinfo($imagePath, PATHINFO_EXTENSION)) ?: 'png';
+        $fileName = 'INST_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
+        if (!copy($root . '/' . $imagePath, $targetDir . $fileName)) {
+            return;
+        }
+        $copiedFile = $targetDir . $fileName;
+        $logo = 'uploads/balances/institutions/' . $fileName;
     }
-    $ext = strtolower(pathinfo($imagePath, PATHINFO_EXTENSION)) ?: 'png';
-    $fileName = 'INST_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
-    if (!copy($root . '/' . $imagePath, $targetDir . $fileName)) {
-        return;
-    }
-    $logo = 'uploads/balances/institutions/' . $fileName;
     $companyId = function_exists('currentCompanyId') ? (int) (currentCompanyId() ?? 0) : 0;
     $companyId = $companyId > 0 ? $companyId : null;
 
@@ -1121,18 +1131,23 @@ function balances_save_custom_institution(PDO $pdo, string $name, string $type, 
         $find->execute([$companyId, $name]);
         $existing = $find->fetch(PDO::FETCH_ASSOC);
         if ($existing) {
+            $nextLogo = $logo !== '' ? $logo : (string) $existing['logo'];
             $pdo->prepare('UPDATE balances_custom_institutions SET type = ?, logo = ? WHERE id = ?')
-                ->execute([$type, $logo, (int) $existing['id']]);
-            $old = (string) $existing['logo'];
-            if (str_starts_with($old, 'uploads/balances/institutions/')) {
-                @unlink($root . '/' . $old);
+                ->execute([$type, $nextLogo, (int) $existing['id']]);
+            if ($logo !== '') {
+                $old = (string) $existing['logo'];
+                if (str_starts_with($old, 'uploads/balances/institutions/')) {
+                    @unlink($root . '/' . $old);
+                }
             }
         } else {
             $pdo->prepare('INSERT INTO balances_custom_institutions (company_id, name, type, logo, created_by) VALUES (?, ?, ?, ?, ?)')
                 ->execute([$companyId, $name, $type, $logo, isset($_SESSION['user_id']) ? (int) $_SESSION['user_id'] : null]);
         }
     } catch (Throwable $e) {
-        @unlink($targetDir . $fileName);
+        if ($copiedFile !== '') {
+            @unlink($copiedFile);
+        }
         error_log('balances_save_custom_institution: ' . $e->getMessage());
     }
 }

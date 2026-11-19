@@ -6,6 +6,7 @@ declare(strict_types=1);
  * URL: /{company}/accounting or /{company}/modules/accounting/index ? accounting.php
  */
 require_once __DIR__ . '/includes/functions.php';
+require_once __DIR__ . '/includes/ultitech_accounting_bridge.php';
 requireLogin();
 
 $userId = (int) ($_SESSION['user_id'] ?? 0);
@@ -18,6 +19,13 @@ if (!isset($_GET['module']) || (string) $_GET['module'] === '') {
     $_GET['module'] = 'accounting';
 }
 $_SESSION['active_module'] = 'accounting';
+
+// Upgrade path: when new Accounting is primary, open it by default (classic via ?engine=classic).
+$engine = strtolower(trim((string) ($_GET['engine'] ?? '')));
+if ($engine !== 'classic' && ultitech_accounting_mode() === 'primary') {
+    header('Location: ' . ultitech_accounting_bridge_path());
+    exit;
+}
 
 if (!(function_exists('isAdmin') && isAdmin()) && !(function_exists('isFinance') && isFinance())) {
     $_SESSION['error'] = 'Access denied.';

@@ -1,0 +1,206 @@
+/* Ultitech light-purple Print tip — line character + simple copy */
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500&display=swap');
+
+.inv-print-tour {
+  --inv-tour-purple: #7c3aed;
+  --inv-tour-purple-deep: #6d28d9;
+  position: fixed;
+  inset: 0;
+  z-index: 1600;
+  pointer-events: none;
+}
+
+.inv-print-tour-scrim {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: rgba(15, 23, 42, 0.4);
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.inv-print-tour-scrim.is-cutout {
+  background: transparent;
+}
+
+.inv-print-tour-hole {
+  position: fixed;
+  border-radius: 12px;
+  box-shadow: 0 0 0 9999px rgba(15, 23, 42, 0.4);
+  background: transparent;
+  pointer-events: none;
+  z-index: 1601;
+  transition: top 0.22s ease, left 0.22s ease, width 0.22s ease, height 0.22s ease;
+  outline: 2px solid rgba(124, 58, 237, 0.9);
+  outline-offset: 2px;
+}
+
+.inv-print-tour-card {
+  position: fixed;
+  z-index: 1602;
+  width: min(320px, calc(100vw - 24px));
+  background: #ffffff !important;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.06),
+    0 12px 28px rgba(15, 23, 42, 0.18);
+  padding: 1rem 1rem 0.85rem;
+  pointer-events: auto;
+  animation: inv-print-tour-in 0.28s ease-out;
+}
+
+.inv-print-tour-hero {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 0 0 0.55rem;
+}
+
+.inv-print-tour-character {
+  flex: 0 0 auto;
+  width: 88px;
+  height: 88px;
+  line-height: 0;
+  border-radius: 14px;
+  background: #ffffff !important;
+  border: 1px solid #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.inv-print-tour-character-img {
+  display: block;
+  width: 82px;
+  height: 82px;
+}
+
+.inv-print-tour-hero-copy {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.inv-print-tour-kicker {
+  margin: 0 0 0.2rem;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--inv-tour-purple);
+}
+
+.inv-print-tour-title {
+  margin: 0;
+  font-family: 'Fraunces', 'Times New Roman', serif !important;
+  font-size: 1.2rem;
+  font-weight: 400 !important;
+  font-optical-sizing: auto;
+  letter-spacing: -0.01em;
+  color: #0f172a;
+  line-height: 1.25;
+}
+
+.inv-print-tour-body {
+  margin: 0 0 1rem;
+  font-size: 0.875rem;
+  line-height: 1.45;
+  color: #64748b;
+}
+
+.inv-print-tour-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.inv-print-tour-progress {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #94a3b8;
+}
+
+.inv-print-tour-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.inv-print-tour-skip {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: #64748b;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1;
+  padding: 0.55rem 0.9rem;
+  border-radius: 9999px !important;
+  cursor: pointer;
+}
+
+.inv-print-tour-skip:hover {
+  background: #f3f4f6;
+  color: #334155;
+}
+
+.inv-print-tour-next {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0 !important;
+  background: var(--inv-tour-purple) !important;
+  color: #fff !important;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  line-height: 1;
+  min-height: 2.25rem;
+  padding: 0.55rem 1.25rem !important;
+  border-radius: 9999px !important;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(124, 58, 237, 0.28);
+}
+
+.inv-print-tour-next:hover {
+  background: var(--inv-tour-purple-deep) !important;
+}
+
+@keyframes inv-print-tour-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Step 2 only: lift the open Actions menu above the dim so Print stays visible */
+body.inv-print-tour-step-print .ov-actions-dropdown {
+  z-index: 1700 !important;
+}
+
+body.inv-print-tour-step-print .ov-actions-panel,
+body.inv-print-tour-step-print .ov-mobile-panel {
+  z-index: 1700 !important;
+  position: absolute !important;
+}
+
+body.inv-print-tour-step-print .ov-action-bar-mobile {
+  z-index: 1700 !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .inv-print-tour-card {
+    animation: none;
+  }
+  .inv-print-tour-hole {
+    transition: none;
+  }
+}

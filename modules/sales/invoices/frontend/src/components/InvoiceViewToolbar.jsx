@@ -14,6 +14,7 @@ export default function InvoiceViewToolbar({
   onMobileActionsToggle,
   onCloseDesktopActions,
   onRunStatusAction,
+  onPrint,
   onDownloadPdf,
   onDownloadDeliveryNote,
   onEmail,
@@ -108,8 +109,9 @@ export default function InvoiceViewToolbar({
                 ref={desktopDropdownRef}
                 open={desktopActionsOpen}
                 onToggle={(event) => onDesktopActionsToggle(event.currentTarget.open)}
+                data-inv-tour="actions-desktop-wrap"
               >
-                <summary className="ov-actions-summary">
+                <summary className="ov-actions-summary" data-inv-tour="actions-desktop">
                   <i className="fas fa-bars" aria-hidden="true" />
                   Actions
                   <i className="fas fa-caret-down" aria-hidden="true" />
@@ -158,6 +160,19 @@ export default function InvoiceViewToolbar({
                   <hr className="ov-actions-divider" />
                   <button
                     type="button"
+                    className="ov-actions-item ov-actions-item--print"
+                    data-inv-tour="print-desktop"
+                    onClick={() => {
+                      onCloseDesktopActions();
+                      if (typeof onPrint === 'function') onPrint();
+                      else window.print();
+                    }}
+                  >
+                    <i className="fas fa-print" aria-hidden="true" />
+                    Print
+                  </button>
+                  <button
+                    type="button"
                     className="ov-actions-item ov-actions-item--pdf"
                     disabled={pdfDownloading}
                     onClick={() => { onCloseDesktopActions(); onDownloadPdf(); }}
@@ -200,7 +215,7 @@ export default function InvoiceViewToolbar({
             open={mobileActionsOpen}
             onToggle={(event) => onMobileActionsToggle(event.currentTarget.open)}
           >
-            <summary>
+            <summary data-inv-tour="actions-mobile">
               <i className="fas fa-bars" aria-hidden="true" />
               {' '}
               Actions
@@ -271,6 +286,19 @@ export default function InvoiceViewToolbar({
                   Delivery Note
                 </button>
               ) : null}
+              <button
+                type="button"
+                className="ov-mobile-item"
+                data-inv-tour="print-mobile"
+                onClick={() => {
+                  onMobileActionsToggle(false);
+                  if (typeof onPrint === 'function') onPrint();
+                  else window.print();
+                }}
+              >
+                <i className="fas fa-print" aria-hidden="true" />
+                Print
+              </button>
               <button type="button" className="ov-mobile-item" disabled={pdfDownloading} onClick={onDownloadPdf}>
                 <i className={`fas ${pdfDownloading ? 'fa-spinner fa-spin' : 'fa-download'}`} aria-hidden="true" />
                 Download PDF

@@ -133,11 +133,22 @@ function PaymentProofCard({
   attachment,
   caption,
 }) {
-  const hasFile = Boolean(attachment?.name);
-  const fileMissing = !hasFile || !!attachment?.missing;
-  const href = hasFile && !attachment?.missing ? (attachment?.proxyLink || null) : null;
-  const kind = hasFile ? fileKind(attachment?.name) : { label: 'FILE', tone: 'file' };
-  const footName = hasFile ? (attachment.name || 'Attachment') : 'No proof uploaded';
+  // No uploaded SWIFT/slip — show a normal payment row, not a fake "unavailable" file card.
+  if (!attachment?.name) {
+    return (
+      <PaymentPlainRow
+        amountLabel={amountLabel}
+        dateLabel={dateLabel}
+        userLabel={userLabel}
+        reference={reference}
+      />
+    );
+  }
+
+  const fileMissing = !!attachment?.missing;
+  const href = !attachment?.missing ? (attachment?.proxyLink || null) : null;
+  const kind = fileKind(attachment?.name);
+  const footName = attachment.name || 'Attachment';
   const titleBits = [amountLabel, dateLabel, userLabel, reference].filter(Boolean).join(' · ');
   const captionText = String(caption || '').trim();
 
@@ -157,7 +168,7 @@ function PaymentProofCard({
         className="inv-gmail-card-hit"
         onClick={open}
         disabled={!href}
-        aria-label={href ? `Open payment proof ${footName}` : `Payment proof unavailable`}
+        aria-label={href ? `Open payment proof ${footName}` : `Payment proof ${footName} unavailable`}
       >
         <DocPreviewThumb
           isImage={!!attachment?.isImage || kind.tone === 'image'}

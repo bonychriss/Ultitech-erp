@@ -74,9 +74,17 @@ main.main-content.ov-react-root {
     width: 100% !important;
     max-width: none !important;
     padding: 0 !important;
-    overflow: auto !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
     box-sizing: border-box;
     background: #f8fafc !important;
+}
+body.page-invoice-view .ov-document-wrap .o-table th {
+    background-color: #ffd700 !important;
+    background: #ffd700 !important;
+    color: #000 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
 }
 main.main-content.ov-react-root #root {
     width: 100%;
@@ -85,9 +93,114 @@ main.main-content.ov-react-root #root {
     min-width: 0;
 }
 @media print {
-    body.page-invoice-view .employee-header,
-    body.page-invoice-view .sidebar,
-    .ov-no-print { display: none !important; }
+    @page {
+        size: A4;
+        margin: 10mm;
+    }
+
+    html body.page-invoice-view #sidebar,
+    html body.page-invoice-view .sidebar,
+    html body.page-invoice-view .sidebar-container,
+    html body.page-invoice-view .employee-header,
+    html body.page-invoice-view .mobile-footer,
+    html body.page-invoice-view .chatbot-launcher,
+    html body.page-invoice-view #chatbotLauncher,
+    html body.page-invoice-view .mobile-backdrop,
+    html body.page-invoice-view .ov-no-print,
+    html body.page-invoice-view .no-print,
+    html body.page-invoice-view .ov-chrome,
+    html body.page-invoice-view .inv-docs-card,
+    html body.page-invoice-view .ov-payments-card,
+    html body.page-invoice-view .ov-catalog-pane,
+    html body.page-invoice-view #ov-invoice-print-frame {
+        display: none !important;
+        width: 0 !important;
+        height: 0 !important;
+        max-height: 0 !important;
+        overflow: hidden !important;
+        position: absolute !important;
+        left: -9999px !important;
+    }
+
+    /* style.css hides .main-content > *:not(.voucher-container) — keep the React invoice root */
+    html body.page-invoice-view main.main-content > #root,
+    html body.page-invoice-view main.main-content.ov-react-root > #root {
+        display: block !important;
+    }
+
+    html body.page-invoice-view,
+    html body.page-invoice-view .layout-main-wrapper,
+    html body.page-invoice-view .layout-main-wrapper > .flex-grow-1,
+    html body.page-invoice-view main.main-content.ov-react-root,
+    html body.page-invoice-view #root,
+    html body.page-invoice-view .ov-page-root {
+        display: block !important;
+        background: #fff !important;
+        overflow: visible !important;
+        height: auto !important;
+        max-height: none !important;
+        min-height: 0 !important;
+        width: 100% !important;
+        max-width: none !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        box-shadow: none !important;
+        position: static !important;
+        left: auto !important;
+        transform: none !important;
+    }
+
+    html body.page-invoice-view .ov-document-wrap {
+        display: block !important;
+        visibility: visible !important;
+        padding: 0 !important;
+        background: #fff !important;
+        overflow: visible !important;
+        width: 100% !important;
+        max-width: none !important;
+    }
+
+    html body.page-invoice-view .ov-document-wrap #invoice-content,
+    html body.page-invoice-view .ov-document-wrap #pdf-content,
+    html body.page-invoice-view .ov-document-wrap .sheet-container,
+    html body.page-invoice-view .ov-document-wrap .sheet-inner,
+    html body.page-invoice-view .ov-document-wrap .spare-sheet,
+    html body.page-invoice-view .ov-document-wrap .truck-sheet,
+    html body.page-invoice-view .ov-document-wrap .truck-sheet-second,
+    html body.page-invoice-view .ov-document-wrap .doc-terms-sheet {
+        display: block !important;
+        visibility: visible !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+    }
+
+    html body.page-invoice-view .ov-document-wrap .sheet-container {
+        box-shadow: none !important;
+        margin: 0 !important;
+        min-height: auto !important;
+        padding: 0 !important;
+    }
+
+    html body.page-invoice-view .ov-document-wrap .o-table {
+        width: 100% !important;
+        table-layout: fixed !important;
+    }
+
+    html body.page-invoice-view .ov-document-wrap .o-table th,
+    html body.page-invoice-view .ov-document-wrap .o-table td {
+        word-break: normal !important;
+        overflow-wrap: break-word !important;
+        hyphens: manual !important;
+        white-space: normal !important;
+        line-height: 1.35 !important;
+    }
+
+    html body.page-invoice-view .ov-document-wrap .o-table th {
+        background: #ffd700 !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
 }
 html[data-theme="dark"] body.page-invoice-view,
 html[data-theme="dark"] body.page-invoice-view main.main-content.ov-react-root {
@@ -123,6 +236,36 @@ html body.page-invoice-view .ov-document-wrap *:not(.fa):not(.fas):not(.far):not
 html body.page-invoice-view #catalog-content,
 html body.page-invoice-view #catalog-content *:not(.fa):not(.fas):not(.far):not(.fab):not(.fal):not(.fad):not(.bi):not(svg):not(path) {
     font-family: var(--ov-doc-font-stack, inherit) !important;
+}
+</style>
+<style id="ov-invoice-print-fix">
+@media print {
+    html body.page-invoice-view .sidebar,
+    html body.page-invoice-view .sidebar-container,
+    html body.page-invoice-view #sidebar,
+    html body.page-invoice-view .employee-header,
+    html body.page-invoice-view .header,
+    html body.page-invoice-view .mobile-footer,
+    html body.page-invoice-view .ov-no-print,
+    html body.page-invoice-view .no-print {
+        display: none !important;
+    }
+    html body.page-invoice-view main.main-content > #root,
+    html body.page-invoice-view #root,
+    html body.page-invoice-view .ov-page-root,
+    html body.page-invoice-view .ov-document-wrap,
+    html body.page-invoice-view .ov-document-wrap #invoice-content,
+    html body.page-invoice-view .spare-sheet,
+    html body.page-invoice-view .truck-sheet,
+    html body.page-invoice-view .truck-sheet-second {
+        display: block !important;
+        visibility: visible !important;
+        overflow: visible !important;
+        height: auto !important;
+        max-height: none !important;
+        width: 100% !important;
+        max-width: 100% !important;
+    }
 }
 </style>
 

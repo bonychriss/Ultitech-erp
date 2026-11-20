@@ -14,6 +14,7 @@ export default function OrderViewToolbar({
   onMobileActionsToggle,
   onCloseDesktopActions,
   onRunStatusAction,
+  onPrint,
   onDownloadPdf,
   onEmail,
   onInvoiceNavigate,
@@ -101,8 +102,9 @@ export default function OrderViewToolbar({
                 ref={desktopDropdownRef}
                 open={desktopActionsOpen}
                 onToggle={(event) => onDesktopActionsToggle(event.currentTarget.open)}
+                data-ov-tour="actions-desktop-wrap"
               >
-                <summary className="ov-actions-summary">
+                <summary className="ov-actions-summary" data-ov-tour="actions-desktop">
                   <i className="fas fa-bars" aria-hidden="true" />
                   Actions
                   <i className="fas fa-caret-down" aria-hidden="true" />
@@ -164,6 +166,19 @@ export default function OrderViewToolbar({
                   <hr className="ov-actions-divider" />
                   <button
                     type="button"
+                    className="ov-actions-item ov-actions-item--print"
+                    data-ov-tour="print-desktop"
+                    onClick={() => {
+                      onCloseDesktopActions();
+                      if (typeof onPrint === 'function') onPrint();
+                      else window.print();
+                    }}
+                  >
+                    <i className="fas fa-print" aria-hidden="true" />
+                    Print
+                  </button>
+                  <button
+                    type="button"
                     className="ov-actions-item ov-actions-item--pdf"
                     disabled={pdfDownloading}
                     onClick={() => { onCloseDesktopActions(); onDownloadPdf(); }}
@@ -206,7 +221,7 @@ export default function OrderViewToolbar({
             open={mobileActionsOpen}
             onToggle={(event) => onMobileActionsToggle(event.currentTarget.open)}
           >
-            <summary>
+            <summary data-ov-tour="actions-mobile">
               <i className="fas fa-bars" aria-hidden="true" />
               {' '}
               Actions
@@ -253,6 +268,19 @@ export default function OrderViewToolbar({
                   Edit
                 </a>
               ) : null}
+              <button
+                type="button"
+                className="ov-mobile-item"
+                data-ov-tour="print-mobile"
+                onClick={() => {
+                  onMobileActionsToggle(false);
+                  if (typeof onPrint === 'function') onPrint();
+                  else window.print();
+                }}
+              >
+                <i className="fas fa-print" aria-hidden="true" />
+                Print
+              </button>
               <button type="button" className="ov-mobile-item" disabled={pdfDownloading} onClick={onDownloadPdf}>
                 <i className={`fas ${pdfDownloading ? 'fa-spinner fa-spin' : 'fa-download'}`} aria-hidden="true" />
                 Download PDF

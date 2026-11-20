@@ -63,10 +63,28 @@ export function invoicePdfCaptureElements() {
 }
 
 function invoicePdfPrepareCloneForCapture(clonedDoc) {
+  // Match print desk: one content-sized A4 sheet, no screen min-height / shadows.
   clonedDoc.querySelectorAll('.sheet, .doc-terms-sheet-inner, .sheet-container').forEach((node) => {
     node.style.minHeight = 'auto';
     node.style.height = 'auto';
-    node.style.marginTop = '0';
+    node.style.margin = '0';
+    node.style.padding = '0';
+    node.style.boxShadow = 'none';
+    node.style.width = '210mm';
+    node.style.maxWidth = '210mm';
+  });
+  clonedDoc.querySelectorAll('.sheet-inner').forEach((node) => {
+    node.style.minHeight = '0';
+    node.style.height = 'auto';
+    node.style.display = 'block';
+  });
+  clonedDoc.querySelectorAll('.o-table td img').forEach((img) => {
+    img.style.width = '40px';
+    img.style.height = '40px';
+  });
+  clonedDoc.querySelectorAll('.o-table th, .o-table td').forEach((cell) => {
+    cell.style.paddingTop = '2px';
+    cell.style.paddingBottom = '2px';
   });
 }
 
@@ -292,108 +310,41 @@ function canvasSliceToDataUrl(tempCanvas, jpegQuality) {
 }
 
 /**
- * Only shorten the page when hardEnd would cut through a row/block.
- * Otherwise use the full page window (avoids blank-page orphans).
+ * Place one invoice sheet on exactly one A4 page (same as print).
+ * Scales down to fit if needed — never splits a sheet across pages.
  */
-function pickSliceEnd(sourceY, maxEnd, bands) {
-  if (!Array.isArray(bands) || !bands.length) return maxEnd;
-
-  let cutBand = null;
-  for (let i = 0; i < bands.length; i += 1) {
-    const band = bands[i];
-    if (band.bottom <= sourceY + 1) continue;
-    if (band.top >= maxEnd) break;
-    // Any straddle: page edge lands inside this band.
-    if (band.top < maxEnd && band.bottom > maxEnd) {
-      cutBand = band;
-      break;
-    }
-  }
-  if (!cutBand) return maxEnd;
-
-  let bestBottom = 0;
-  for (let i = 0; i < bands.length; i += 1) {
-    const bottom = bands[i].bottom;
-    if (bottom > sourceY + 2 && bottom <= cutBand.top + 0.5 && bottom <= maxEnd) {
-      bestBottom = Math.max(bestBottom, bottom);
-    }
-  }
-  if (bestBottom > sourceY) return bestBottom;
-  if (cutBand.top - sourceY > 8) return Math.max(sourceY + 1, cutBand.top);
-  return maxEnd;
-}
-
-function appendRasterCanvasToPdf(doc, canvas, jpegQuality, onSliceProgress, options = {}) {
+function appendSheetCanvasAsOnePage(doc, canvas, jpegQuality, options = {}) {
   const trimmedCanvas = trimCanvasBottomWhitespace(canvas);
   if (!trimmedCanvas.width || !trimmedCanvas.height) {
     throw new Error('Document rendered empty. Refresh the page and try again.');
   }
 
-  const marginMm = 8;
+  if (canvasSliceIsMostlyBlank(trimmedCanvas)) {
+    return;
+  }
+
+  const marginMm = options.marginMm == null ? 10 : options.marginMm;
   const pageHmm = doc.internal.pageSize.getHeight();
   const pageWmm = doc.internal.pageSize.getWidth();
   const innerWmm = pageWmm - 2 * marginMm;
   const innerHmm = pageHmm - 2 * marginMm;
 
-  const sliceHeightInPixels = (trimmedCanvas.width * innerHmm) / innerWmm;
-  const totalHeightInPixels = trimmedCanvas.height;
-  const rawBands = Array.isArray(options.bands)
-    ? options.bands
-    : (Array.isArray(options.breakYs) ? options.breakYs.map((y) => ({ top: y, bottom: y })) : []);
-  const usableBands = rawBands
-    .map((b) => ({
-      top: typeof b === 'number' ? b : Number(b.top) || 0,
-      bottom: typeof b === 'number' ? b : Number(b.bottom) || 0,
-    }))
-    .filter((b) => b.bottom > b.top && b.bottom > 0 && b.top < totalHeightInPixels)
-    .map((b) => ({
-      top: Math.max(0, b.top),
-      bottom: Math.min(totalHeightInPixels, b.bottom),
-    }))
-    .sort((a, b) => a.top - b.top || a.bottom - b.bottom);
-  const totalSlices = Math.max(1, Math.ceil(totalHeightInPixels / sliceHeightInPixels));
-
-  let sourceY = 0;
-  let pageNum = 0;
-
-  while (sourceY < totalHeightInPixels) {
-    const hardEnd = Math.min(sourceY + sliceHeightInPixels, totalHeightInPixels);
-    const sliceEnd = pickSliceEnd(sourceY, hardEnd, usableBands);
-    const currentSliceHeight = Math.max(1, sliceEnd - sourceY);
-    const tempCanvas = document.createElement('canvas');
-    tempCanvas.width = trimmedCanvas.width;
-    tempCanvas.height = currentSliceHeight;
-
-    const tempCtx = tempCanvas.getContext('2d');
-    tempCtx.fillStyle = '#ffffff';
-    tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
-    tempCtx.drawImage(
-      trimmedCanvas,
-      0, sourceY, trimmedCanvas.width, currentSliceHeight,
-      0, 0, trimmedCanvas.width, currentSliceHeight,
-    );
-
-    sourceY += currentSliceHeight;
-
-    if (canvasSliceIsMostlyBlank(tempCanvas)) {
-      continue;
-    }
-
-    const needsNewPage = pageNum > 0
-      || (options.startOnNewPage === true && pageNum === 0 && doc.internal.getNumberOfPages() > 0);
-    if (needsNewPage) {
-      doc.addPage();
-    }
-
-    const sliceDataUrl = canvasSliceToDataUrl(tempCanvas, jpegQuality);
-    const destHeightMm = (currentSliceHeight * innerWmm) / trimmedCanvas.width;
-    doc.addImage(sliceDataUrl, 'JPEG', marginMm, marginMm, innerWmm, destHeightMm);
-
-    pageNum += 1;
-    if (typeof onSliceProgress === 'function') {
-      onSliceProgress(Math.min(1, pageNum / totalSlices));
-    }
+  if (options.startOnNewPage === true && doc.internal.getNumberOfPages() > 0) {
+    doc.addPage();
   }
+
+  let destW = innerWmm;
+  let destH = (trimmedCanvas.height * innerWmm) / trimmedCanvas.width;
+  if (destH > innerHmm) {
+    const scale = innerHmm / destH;
+    destH = innerHmm;
+    destW *= scale;
+  }
+
+  const x = marginMm + (innerWmm - destW) / 2;
+  const y = marginMm;
+  const dataUrl = canvasSliceToDataUrl(trimmedCanvas, jpegQuality);
+  doc.addImage(dataUrl, 'JPEG', x, y, destW, destH);
 }
 
 async function appendInvoiceElementsToPdf(doc, elements, jpegQuality, onProgress, rangeStart, rangeEnd) {
@@ -418,11 +369,10 @@ async function appendInvoiceElementsToPdf(doc, elements, jpegQuality, onProgress
       onProgress(captureDone, `Building PDF page ${index + 1} of ${total}...`);
     }
 
-    appendRasterCanvasToPdf(doc, captured.canvas, jpegQuality, (sliceRatio) => {
-      if (!onProgress) return;
-      const slicePct = captureDone + ((blockEnd - captureDone) * sliceRatio);
-      onProgress(slicePct, `Assembling page ${index + 1} of ${total}...`);
-    }, { startOnNewPage: index > 0, bands: captured.bands });
+    appendSheetCanvasAsOnePage(doc, captured.canvas, jpegQuality, {
+      startOnNewPage: index > 0,
+      marginMm: 10,
+    });
 
     if (onProgress) {
       onProgress(blockEnd, `Page ${index + 1} of ${total} ready`);
@@ -445,25 +395,13 @@ export async function generateInvoicePdf(displayInvoiceNumber, onProgress) {
   report(8, 'Document assets loaded');
 
   const doc = new JsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
+  // Same sheets as on-screen / print (invoice only — no catalogue pages).
   const elements = invoicePdfCaptureElements();
   if (!elements.length) {
     throw new Error('Nothing to capture for PDF.');
   }
 
-  const catalogElement = document.getElementById('catalog-content');
-  const bodyEnd = catalogElement ? 72 : 88;
-
-  await appendInvoiceElementsToPdf(doc, elements, 0.93, report, 10, bodyEnd);
-
-  if (catalogElement && catalogElement.offsetHeight > 0) {
-    report(74, 'Capturing product catalog...');
-    const catalogCaptured = await invoicePdfElementToCanvasWithFallback(catalogElement);
-    report(82, 'Building catalog pages...');
-    appendRasterCanvasToPdf(doc, catalogCaptured.canvas, 0.93, (sliceRatio) => {
-      report(82 + (10 * sliceRatio), 'Assembling catalog pages...');
-    }, { startOnNewPage: true, bands: catalogCaptured.bands });
-    report(92, 'Catalog added');
-  }
+  await appendInvoiceElementsToPdf(doc, elements, 0.93, report, 10, 92);
 
   report(94, 'Finalizing PDF file...');
 

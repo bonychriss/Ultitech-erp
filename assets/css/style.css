@@ -2057,10 +2057,16 @@ input[type="reset"] {
         /* Try to keep the voucher on one page */
     }
 
-    /* Hide other UI pieces for print */
+    /* Hide other UI pieces for print (vouchers only — keep React document roots) */
     .header,
-    .main-content>*:not(.voucher-container) {
+    body:not(.page-invoice-view):not(.page-order-view):not(.ov-page) .main-content>*:not(.voucher-container) {
         display: none !important;
+    }
+
+    body.page-invoice-view .main-content > #root,
+    body.page-order-view .main-content > #root,
+    body.ov-page .main-content > #root {
+        display: block !important;
     }
 
     /* Force background and color printing */

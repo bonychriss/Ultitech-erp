@@ -826,10 +826,13 @@ function salesOrderViewRenderDocumentHtml(
     string $displayOrderNumber,
     bool $isTruckOrder,
     string $signatureUrl,
-    bool $hasLinkedInvoice = false
+    bool $hasLinkedInvoice = false,
+    bool $isPaid = false
 ): string {
     $currency = $order['currency'] ?? ($company_settings['default_currency'] ?? 'TZS');
     $invoice = $order;
+    $showPaidWatermark = $isPaid
+        || strtolower(trim((string) ($order['status'] ?? ''))) === 'paid';
 
     ob_start();
     echo '<div id="order-content">';
@@ -978,6 +981,17 @@ function salesOrderViewLoadContext(int $id): array
     $linkedInvoiceNumber = trim((string) ($linkedInvoice['invoice_number'] ?? ''));
     $linkedInvoiceStatus = strtolower(trim((string) ($linkedInvoice['status'] ?? '')));
     $linkedBalanceDue = (float) ($linkedInvoice['balance_due'] ?? 0);
+    $linkedAmountPaid = (float) ($linkedInvoice['amount_paid'] ?? 0);
+    $paymentStatus = null;
+    if ($linkedInvoiceId > 0) {
+        if ($linkedInvoiceStatus === 'paid' || $linkedBalanceDue <= 0.009) {
+            $paymentStatus = 'paid';
+        } elseif ($linkedInvoiceStatus === 'partial' || $linkedAmountPaid > 0.009) {
+            $paymentStatus = 'partial';
+        } else {
+            $paymentStatus = 'unpaid';
+        }
+    }
     $documentDisplayNumber = ($linkedInvoiceId > 0 && $linkedInvoiceNumber !== '')
         ? $linkedInvoiceNumber
         : $displayOrderNumber;
@@ -1042,6 +1056,8 @@ function salesOrderViewLoadContext(int $id): array
         'linked_invoice_number' => $linkedInvoiceNumber,
         'linked_invoice_status' => $linkedInvoiceStatus,
         'linked_invoice_balance_due' => $linkedBalanceDue,
+        'linked_invoice_amount_paid' => $linkedAmountPaid,
+        'payment_status' => $paymentStatus,
         'document_label' => $documentLabel,
         'revenue_entry_id' => $revEntryId,
         'payments' => $payments,
@@ -1080,7 +1096,8 @@ function salesOrderViewLoadContext(int $id): array
             $documentDisplayNumber,
             $isTruckOrder,
             $signatureUrl,
-            $linkedInvoiceId > 0
+            $linkedInvoiceId > 0,
+            $paymentStatus === 'paid' || $statusKey === 'paid'
         ),
         'catalog_html' => $share['show_catalogue']
             ? salesOrderViewRenderCatalogHtml($order, $items, $company_settings, $displayOrderNumber)
@@ -1099,6 +1116,7 @@ function salesOrderViewLoadContext(int $id): array
             'create_invoice' => $canCreateInvoice ? $invoiceCreateUrl : '',
             'view_invoice' => $invoiceViewUrl,
             'register_payment' => $paymentUrl,
+            'print' => sales_module_url('orders/print.php', ['id' => $id, 'module' => $module]),
             'send_email' => sales_module_url('send_doc.php', ['type' => 'order', 'id' => $id, 'module' => $module]),
             'return' => $returnUrl,
         ],

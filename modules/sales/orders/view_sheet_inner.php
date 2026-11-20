@@ -27,8 +27,13 @@ if (!in_array($taxCalculationMode, ['exclusive', 'inclusive'], true)) {
 $docFontStack = function_exists('sales_document_font_family_css')
     ? sales_document_font_family_css($company_settings ?? [])
     : "'Arima', Arial, 'Helvetica Neue', Helvetica, sans-serif";
+$showPaidWatermark = !empty($showPaidWatermark)
+    || strtolower(trim((string) ($order['status'] ?? ''))) === 'paid';
 ?>
-<div class="sheet-container" style="font-family: <?= $docFontStack ?>; font-size: 12px;">
+<div class="sheet-container" style="font-family: <?= $docFontStack ?>; font-size: 12px; position: relative; overflow: hidden;">
+    <?php if ($showPaidWatermark): ?>
+    <div class="invoice-paid-watermark" aria-hidden="true"><span>PAID</span></div>
+    <?php endif; ?>
     <div class="sheet" style="display: flex; flex-direction: column; font-family: inherit;">
         <div class="sheet-header-title quot-sheet-header" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
             <h1 class="sheet-title" style="font-size: 1.15rem;">
@@ -105,14 +110,14 @@ $docFontStack = function_exists('sales_document_font_family_css')
             <div class="notebook">
                 <table class="o-table">
                     <thead>
-                        <tr>
-                            <th class="num" style="width: 6%;">S/N</th>
-                            <th style="width: 10%;">Image</th>
-                            <th style="width: 16%;">Product</th>
-                            <th style="width: 29%;">Description</th>
-                            <th class="num" style="width: 10%;">Qty</th>
-                            <th class="num" style="width: 14.5%;">Unit Price</th>
-                            <th class="num" style="width: 14.5%;">Subtotal</th>
+                        <tr style="background-color: #ffd700;">
+                            <th class="num" style="width: 6%; background-color: #ffd700; -webkit-print-color-adjust: exact; print-color-adjust: exact;">S/N</th>
+                            <th style="width: 10%; background-color: #ffd700; -webkit-print-color-adjust: exact; print-color-adjust: exact;">Image</th>
+                            <th style="width: 16%; background-color: #ffd700; -webkit-print-color-adjust: exact; print-color-adjust: exact;">Product</th>
+                            <th style="width: 29%; background-color: #ffd700; -webkit-print-color-adjust: exact; print-color-adjust: exact;">Description</th>
+                            <th class="num" style="width: 10%; background-color: #ffd700; -webkit-print-color-adjust: exact; print-color-adjust: exact;">Qty</th>
+                            <th class="num" style="width: 14.5%; background-color: #ffd700; -webkit-print-color-adjust: exact; print-color-adjust: exact;">Unit Price</th>
+                            <th class="num" style="width: 14.5%; background-color: #ffd700; -webkit-print-color-adjust: exact; print-color-adjust: exact;">Subtotal</th>
                         </tr>
                     </thead>
                     <tbody>

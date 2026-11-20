@@ -114,12 +114,12 @@ $docFontStack = function_exists('sales_document_font_family_css')
             <div class="notebook">
                 <table class="o-table" style="width: 100%; border-collapse: collapse; table-layout: fixed;">
                     <thead>
-                        <tr style="background-color: #ffcc00;">
-                            <th style="width: 70px; padding: 10px; text-align: left; border-bottom: 2px solid #000; font-weight: normal;">PHOTO</th>
-                            <th style="width: 15%; padding: 10px; text-align: left; border-bottom: 2px solid #000; font-weight: normal;">PRODUCT</th>
-                            <th style="padding: 10px; text-align: left; border-bottom: 2px solid #000; font-weight: normal;">DESCRIPTION</th>
-                            <th style="width: 80px; padding: 10px; text-align: center; border-bottom: 2px solid #000; font-weight: normal;">QTY</th>
-                            <th style="width: 210px; padding: 10px; text-align: right; border-bottom: 2px solid #000; font-weight: normal;">UNIT PRICE</th>
+                        <tr style="background-color: #ffd700;">
+                            <th style="width: 70px; padding: 10px; text-align: left; border-bottom: 2px solid #000; font-weight: normal; background-color: #ffd700; -webkit-print-color-adjust: exact; print-color-adjust: exact;">PHOTO</th>
+                            <th style="width: 15%; padding: 10px; text-align: left; border-bottom: 2px solid #000; font-weight: normal; background-color: #ffd700; -webkit-print-color-adjust: exact; print-color-adjust: exact;">PRODUCT</th>
+                            <th style="padding: 10px; text-align: left; border-bottom: 2px solid #000; font-weight: normal; background-color: #ffd700; -webkit-print-color-adjust: exact; print-color-adjust: exact;">DESCRIPTION</th>
+                            <th style="width: 80px; padding: 10px; text-align: center; border-bottom: 2px solid #000; font-weight: normal; background-color: #ffd700; -webkit-print-color-adjust: exact; print-color-adjust: exact;">QTY</th>
+                            <th style="width: 210px; padding: 10px; text-align: right; border-bottom: 2px solid #000; font-weight: normal; background-color: #ffd700; -webkit-print-color-adjust: exact; print-color-adjust: exact;">UNIT PRICE</th>
                         </tr>
                     </thead>
                     <tbody>

@@ -85,9 +85,62 @@ main.main-content.ov-react-root #root {
     min-width: 0;
 }
 @media print {
+    @page {
+        size: A4;
+        margin: 10mm;
+    }
+
     body.page-order-view .employee-header,
     body.page-order-view .sidebar,
-    .ov-no-print { display: none !important; }
+    body.page-order-view .sidebar-container,
+    body.page-order-view .mobile-footer,
+    body.page-order-view .chatbot-launcher,
+    body.page-order-view #chatbotLauncher,
+    body.page-order-view .ov-no-print,
+    body.page-order-view .no-print {
+        display: none !important;
+    }
+
+    /* style.css hides .main-content > *:not(.voucher-container) — keep the React order root */
+    html body.page-order-view main.main-content > #root,
+    html body.page-order-view main.main-content.ov-react-root > #root {
+        display: block !important;
+    }
+
+    html body.page-order-view,
+    html body.page-order-view .layout-main-wrapper,
+    html body.page-order-view .layout-main-wrapper > .flex-grow-1,
+    html body.page-order-view main.main-content.ov-react-root,
+    html body.page-order-view #root,
+    html body.page-order-view .ov-page-root {
+        display: block !important;
+        background: #fff !important;
+        overflow: visible !important;
+        height: auto !important;
+        max-height: none !important;
+        min-height: 0 !important;
+        width: auto !important;
+        max-width: none !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        box-shadow: none !important;
+    }
+
+    html body.page-order-view .ov-document-wrap,
+    html body.page-order-view .ov-document-wrap #order-content,
+    html body.page-order-view .ov-document-wrap #invoice-content,
+    html body.page-order-view .ov-document-wrap .spare-sheet,
+    html body.page-order-view .ov-document-wrap .truck-sheet,
+    html body.page-order-view .ov-document-wrap .truck-sheet-second,
+    html body.page-order-view .ov-document-wrap .sheet-container,
+    html body.page-order-view .ov-document-wrap .doc-terms-sheet {
+        display: block !important;
+        visibility: visible !important;
+    }
+
+    html body.page-order-view .ov-catalog-pane {
+        display: none !important;
+    }
 }
 html[data-theme="dark"] body.page-order-view,
 html[data-theme="dark"] body.page-order-view main.main-content.ov-react-root {

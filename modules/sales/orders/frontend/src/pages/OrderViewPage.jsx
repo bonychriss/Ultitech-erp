@@ -16,11 +16,14 @@ import {
   downloadOrderPdf,
   formatPdfError,
 } from '../utils/orderPdf.js';
+import { printOrderDirect } from '../utils/orderDirectPrint.js';
+import { orderStatusIsQuotation } from '../utils/quotationPrintTour.js';
 import OrderViewToolbar from '../components/OrderViewToolbar.jsx';
 import OrderDownloadModal from '../components/OrderDownloadModal.jsx';
 import OrderDocumentPane from '../components/OrderDocumentPane.jsx';
 import OrderRegisterPaymentModal from '../components/OrderRegisterPaymentModal.jsx';
 import OrderPaymentsCard from '../components/OrderPaymentsCard.jsx';
+import QuotationPrintFeatureTour from '../components/QuotationPrintFeatureTour.jsx';
 import {
   resolveInvoiceSourceLabel,
   runInvoiceTransformThenNavigate,
@@ -147,6 +150,8 @@ export default function OrderViewPage() {
 
   useEffect(() => {
     const onDocClick = (event) => {
+      // Keep Actions open while the Print tip is guiding the user.
+      if (document.querySelector('.inv-print-tour')) return;
       if (!desktopDropdownRef.current?.open) return;
       if (!desktopDropdownRef.current.contains(event.target)) {
         desktopDropdownRef.current.open = false;
@@ -213,6 +218,10 @@ export default function OrderViewPage() {
     setPdfFileName('');
   };
 
+  const handlePrint = () => {
+    printOrderDirect(urls.print);
+  };
+
   const handleDownloadPdf = async () => {
     if (pdfState === 'loading') return;
 
@@ -275,12 +284,32 @@ export default function OrderViewPage() {
     }
   };
 
+  const openDesktopActionsForTour = useCallback(() => {
+    setMobileActionsOpen(false);
+    setDesktopActionsOpen(true);
+    if (desktopDropdownRef.current) {
+      desktopDropdownRef.current.open = true;
+    }
+  }, []);
+
+  const openMobileActionsForTour = useCallback(() => {
+    setDesktopActionsOpen(false);
+    setMobileActionsOpen(true);
+  }, []);
+
+  const closeMenusForTour = useCallback(() => {
+    if (desktopDropdownRef.current) desktopDropdownRef.current.open = false;
+    setDesktopActionsOpen(false);
+    setMobileActionsOpen(false);
+  }, []);
+
   const closeDesktopActions = () => {
     if (desktopDropdownRef.current) desktopDropdownRef.current.open = false;
     setDesktopActionsOpen(false);
   };
 
   const revenueEntryId = Number(data?.revenue_entry_id || 0);
+  const showQuotationPrintTour = orderStatusIsQuotation(order?.status);
 
   const openRegisterPayment = () => {
     if (revenueEntryId > 0) {
@@ -371,15 +400,29 @@ export default function OrderViewPage() {
         onMobileActionsToggle={setMobileActionsOpen}
         onCloseDesktopActions={closeDesktopActions}
         onRunStatusAction={runStatusAction}
+        onPrint={handlePrint}
         onDownloadPdf={handleDownloadPdf}
         onEmail={handleEmail}
         onInvoiceNavigate={handleInvoiceNavigate}
         onRegisterPayment={flags.can_register_payment && revenueEntryId > 0 ? openRegisterPayment : undefined}
       />
 
+      {showQuotationPrintTour ? (
+        <QuotationPrintFeatureTour
+          ready={!loading && Boolean(data) && !error}
+          onOpenDesktopActions={openDesktopActionsForTour}
+          onOpenMobileActions={openMobileActionsForTour}
+          onCloseMenus={closeMenusForTour}
+          onPrint={handlePrint}
+        />
+      ) : null}
+
       <OrderPaymentsCard
         payments={data?.payments}
         currency={order?.currency || 'TZS'}
+        paymentStatus={data?.payment_status}
+        amountPaid={data?.linked_invoice_amount_paid}
+        balanceDue={data?.linked_invoice_balance_due}
       />
 
       <OrderDocumentPane

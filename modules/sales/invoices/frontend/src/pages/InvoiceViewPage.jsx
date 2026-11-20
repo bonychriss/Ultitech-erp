@@ -18,12 +18,14 @@ import {
   formatPdfError,
 } from '../utils/invoicePdf.js';
 import { downloadDeliveryNotePdfFromHtml } from '../utils/deliveryNoteOffscreenPdf.js';
+import { printInvoiceDirect } from '../utils/invoiceDirectPrint.js';
 import InvoiceViewToolbar from '../components/InvoiceViewToolbar.jsx';
 import InvoiceDownloadModal from '../components/InvoiceDownloadModal.jsx';
 import InvoiceDocumentPane from '../components/InvoiceDocumentPane.jsx';
 import InvoiceDocumentsCard from '../components/InvoiceDocumentsCard.jsx';
 import InvoicePaymentsCard from '../components/InvoicePaymentsCard.jsx';
 import InvoiceRegisterPaymentModal from '../components/InvoiceRegisterPaymentModal.jsx';
+import InvoicePrintFeatureTour from '../components/InvoicePrintFeatureTour.jsx';
 
 function getDeskCfg() {
   if (typeof window === 'undefined') return {};
@@ -159,6 +161,8 @@ export default function InvoiceViewPage() {
 
   useEffect(() => {
     const onDocClick = (event) => {
+      // Keep Actions open while the Print tip is guiding the user.
+      if (document.querySelector('.inv-print-tour')) return;
       if (!desktopDropdownRef.current?.open) return;
       if (!desktopDropdownRef.current.contains(event.target)) {
         desktopDropdownRef.current.open = false;
@@ -219,6 +223,10 @@ export default function InvoiceViewPage() {
     setPdfProgress(0);
     setPdfMessage('Preparing document...');
     setPdfFileName('');
+  };
+
+  const handlePrint = () => {
+    printInvoiceDirect(urls.print);
   };
 
   const handleDownloadPdf = async () => {
@@ -323,6 +331,25 @@ export default function InvoiceViewPage() {
     }
   };
 
+  const openDesktopActionsForTour = useCallback(() => {
+    setMobileActionsOpen(false);
+    setDesktopActionsOpen(true);
+    if (desktopDropdownRef.current) {
+      desktopDropdownRef.current.open = true;
+    }
+  }, []);
+
+  const openMobileActionsForTour = useCallback(() => {
+    setDesktopActionsOpen(false);
+    setMobileActionsOpen(true);
+  }, []);
+
+  const closeMenusForTour = useCallback(() => {
+    if (desktopDropdownRef.current) desktopDropdownRef.current.open = false;
+    setDesktopActionsOpen(false);
+    setMobileActionsOpen(false);
+  }, []);
+
   const closeDesktopActions = () => {
     if (desktopDropdownRef.current) desktopDropdownRef.current.open = false;
     setDesktopActionsOpen(false);
@@ -410,10 +437,19 @@ export default function InvoiceViewPage() {
         onMobileActionsToggle={setMobileActionsOpen}
         onCloseDesktopActions={closeDesktopActions}
         onRunStatusAction={runStatusAction}
+        onPrint={handlePrint}
         onDownloadPdf={handleDownloadPdf}
         onDownloadDeliveryNote={handleDownloadDeliveryNote}
         onEmail={handleEmail}
         onRegisterPayment={flags.can_register_payment && revenueEntryId > 0 ? openRegisterPayment : undefined}
+      />
+
+      <InvoicePrintFeatureTour
+        ready={!loading && Boolean(data) && !error}
+        onOpenDesktopActions={openDesktopActionsForTour}
+        onOpenMobileActions={openMobileActionsForTour}
+        onCloseMenus={closeMenusForTour}
+        onPrint={handlePrint}
       />
 
       <InvoicePaymentsCard

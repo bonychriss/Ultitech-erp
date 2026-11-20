@@ -133,11 +133,22 @@ function PaymentProofCard({
   attachment,
   caption,
 }) {
-  const hasFile = Boolean(attachment?.name);
-  const fileMissing = !hasFile || !!attachment?.missing;
-  const href = hasFile && !attachment?.missing ? (attachment?.proxyLink || null) : null;
-  const kind = hasFile ? fileKind(attachment?.name) : { label: 'FILE', tone: 'file' };
-  const footName = hasFile ? (attachment.name || 'Attachment') : 'No proof uploaded';
+  // No uploaded SWIFT/slip — show a normal payment row, not a fake "unavailable" file card.
+  if (!attachment?.name) {
+    return (
+      <PaymentPlainRow
+        amountLabel={amountLabel}
+        dateLabel={dateLabel}
+        userLabel={userLabel}
+        reference={reference}
+      />
+    );
+  }
+
+  const fileMissing = !!attachment?.missing;
+  const href = !attachment?.missing ? (attachment?.proxyLink || null) : null;
+  const kind = fileKind(attachment?.name);
+  const footName = attachment.name || 'Attachment';
   const titleBits = [amountLabel, dateLabel, userLabel, reference].filter(Boolean).join(' · ');
   const captionText = String(caption || '').trim();
 
@@ -157,7 +168,7 @@ function PaymentProofCard({
         className="inv-gmail-card-hit"
         onClick={open}
         disabled={!href}
-        aria-label={href ? `Open payment proof ${footName}` : `Payment proof unavailable`}
+        aria-label={href ? `Open payment proof ${footName}` : `Payment proof ${footName} unavailable`}
       >
         <DocPreviewThumb
           isImage={!!attachment?.isImage || kind.tone === 'image'}
@@ -193,9 +204,24 @@ function PaymentProofCard({
   );
 }
 
-export default function OrderPaymentsCard({ payments = [], currency = 'TZS' }) {
+function paymentStatusMeta(status) {
+  const key = String(status || '').toLowerCase();
+  if (key === 'paid') return { key: 'paid', label: 'Paid' };
+  if (key === 'partial') return { key: 'partial', label: 'Partially paid' };
+  if (key === 'unpaid') return { key: 'unpaid', label: 'Unpaid' };
+  return null;
+}
+
+export default function OrderPaymentsCard({
+  payments = [],
+  currency = 'TZS',
+  paymentStatus = null,
+  amountPaid = null,
+  balanceDue = null,
+}) {
   const list = Array.isArray(payments) ? payments : [];
-  if (!list.length) return null;
+  const statusMeta = paymentStatusMeta(paymentStatus);
+  if (!list.length && !statusMeta) return null;
 
   const cards = [];
   let proofCount = 0;
@@ -236,34 +262,53 @@ export default function OrderPaymentsCard({ payments = [], currency = 'TZS' }) {
     }
   });
 
-  const title = proofCount > 0 ? 'Payment proofs' : 'Recent payments';
+  const title = proofCount > 0 ? 'Payment proofs' : (list.length ? 'Recent payments' : 'Payment status');
   const countLabel = proofCount > 0
     ? `${proofCount}`
-    : `${list.length}`;
+    : (list.length ? `${list.length}` : '');
+  const summaryParts = [];
+  if (amountPaid != null && Number.isFinite(Number(amountPaid))) {
+    summaryParts.push(`Paid ${money(amountPaid, currency)}`);
+  }
+  if (balanceDue != null && Number.isFinite(Number(balanceDue)) && Number(balanceDue) > 0.009) {
+    summaryParts.push(`Balance ${money(balanceDue, currency)}`);
+  }
 
   return (
     <section className="inv-docs-card ov-payments-card no-print" id="recent-payments" aria-label={title}>
-      <div className="inv-docs-head">
+      <div className="inv-docs-head ov-payments-head">
         <h2 className="inv-docs-title">
           {title}
-          <span className="inv-docs-count"> · {countLabel}</span>
+          {countLabel ? <span className="inv-docs-count"> · {countLabel}</span> : null}
         </h2>
+        {statusMeta ? (
+          <span className={`ov-pay-status ov-pay-status--${statusMeta.key}`}>
+            {statusMeta.label}
+          </span>
+        ) : null}
       </div>
-      <div className="inv-docs-body">
-        <div className="inv-gmail-list" role="list">
-          {cards.map((card) => (
-            <PaymentProofCard
-              key={card.key}
-              amountLabel={card.amountLabel}
-              dateLabel={card.dateLabel}
-              userLabel={card.userLabel}
-              reference={card.reference}
-              caption={card.caption}
-              attachment={card.attachment}
-            />
-          ))}
+      {summaryParts.length ? (
+        <p className="ov-payments-summary">{summaryParts.join(' · ')}</p>
+      ) : null}
+      {cards.length ? (
+        <div className="inv-docs-body">
+          <div className="inv-gmail-list" role="list">
+            {cards.map((card) => (
+              <PaymentProofCard
+                key={card.key}
+                amountLabel={card.amountLabel}
+                dateLabel={card.dateLabel}
+                userLabel={card.userLabel}
+                reference={card.reference}
+                caption={card.caption}
+                attachment={card.attachment}
+              />
+            ))}
+          </div>
         </div>
-      </div>
+      ) : (
+        <p className="ov-payments-empty">No payment recorded yet.</p>
+      )}
     </section>
   );
 }

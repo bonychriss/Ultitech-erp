@@ -349,6 +349,9 @@
 .ov-actions-item--delivery i { color: #d97706; }
 .ov-actions-item--delivery:hover { background: rgba(217, 119, 6, 0.11); }
 
+.ov-actions-item--print i { color: #64748b; }
+.ov-actions-item--print:hover { background: rgba(100, 116, 139, 0.1); }
+
 .ov-actions-item--pdf i { color: #e11d48; }
 .ov-actions-item--pdf:hover { background: rgba(225, 29, 72, 0.08); }
 
@@ -440,15 +443,49 @@
   font-family: var(--ov-doc-font-stack, inherit);
 }
 
-  .ov-document-wrap .sheet-container {
-    width: 100%;
-    max-width: 210mm;
-    min-height: auto;
-    padding: 5mm;
-    margin: 0 auto;
+/* Screen: realistic A4 paper preview (print desk + physical page size) */
+@media screen {
+  .ov-document-wrap,
+  .ov-catalog-pane {
+    padding: 1.75rem 1rem 2.75rem;
+    background:
+      linear-gradient(180deg, #d7dbe2 0%, #cfd4dc 100%);
+    overflow-x: hidden;
+  }
+
+  .ov-document-wrap .sheet-container,
+  .ov-document-wrap .spare-sheet,
+  .ov-document-wrap .truck-sheet,
+  .ov-document-wrap .truck-sheet-second,
+  .ov-document-wrap .doc-terms-sheet,
+  .ov-catalog-pane .sheet-container,
+  .ov-catalog-pane .ov-catalog-sheet {
+    width: min(210mm, 100%) !important;
+    max-width: 100% !important;
+    min-width: 0;
+    min-height: 297mm;
+    margin: 0 auto 1.5rem;
     background: #fff;
     box-sizing: border-box;
+    box-shadow:
+      0 0 0 1px rgba(15, 23, 42, 0.06),
+      0 2px 4px rgba(15, 23, 42, 0.08),
+      0 18px 40px rgba(15, 23, 42, 0.18);
   }
+
+  .ov-document-wrap .sheet-container:last-child,
+  .ov-document-wrap .spare-sheet:last-child,
+  .ov-document-wrap .truck-sheet:last-child,
+  .ov-document-wrap .truck-sheet-second:last-child,
+  .ov-document-wrap .doc-terms-sheet:last-child,
+  .ov-catalog-pane .sheet-container:last-child {
+    margin-bottom: 0;
+  }
+
+  .ov-document-wrap .sheet-container {
+    padding: 10mm 12mm;
+  }
+}
 
   .ov-document-wrap .doc-terms-sheet {
     display: block !important;
@@ -465,6 +502,31 @@
 
 .ov-document-wrap .sheet {
   background: #fff;
+}
+
+.ov-document-wrap .sheet-container {
+  position: relative;
+  overflow: hidden;
+}
+
+.ov-document-wrap .invoice-paid-watermark {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(-32deg);
+  z-index: 6;
+  pointer-events: none;
+  user-select: none;
+}
+
+.ov-document-wrap .invoice-paid-watermark span {
+  display: inline-block;
+  font-size: clamp(3.5rem, 14vw, 6.5rem);
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  line-height: 1;
+  color: rgba(21, 128, 61, 0.22);
+  text-transform: uppercase;
 }
 
 .ov-document-wrap .sheet-title {
@@ -492,9 +554,12 @@
   text-transform: uppercase;
   font-size: 9pt;
   font-weight: 400;
-  background-color: gold;
-  color: #000;
+  background-color: #ffd700 !important;
+  background: #ffd700 !important;
+  color: #000 !important;
   padding: 10px 5px;
+  -webkit-print-color-adjust: exact !important;
+  print-color-adjust: exact !important;
 }
 
 .ov-document-wrap .o-table td {
@@ -729,16 +794,27 @@
 }
 
 /* Phone PDF export: capture the quote at A4 width so product rows stay readable. */
+html.ov-pdf-desktop-capture .ov-document-wrap,
+html.ov-pdf-desktop-capture .ov-catalog-pane {
+  padding: 0 !important;
+  background: #fff !important;
+  overflow: visible !important;
+}
+
 html.ov-pdf-desktop-capture .ov-document-wrap .sheet-container,
 html.ov-pdf-desktop-capture .ov-document-wrap .spare-sheet,
 html.ov-pdf-desktop-capture .ov-document-wrap .truck-sheet,
 html.ov-pdf-desktop-capture .ov-document-wrap .truck-sheet-second,
+html.ov-pdf-desktop-capture .ov-document-wrap .doc-terms-sheet,
 html.ov-pdf-desktop-capture .ov-catalog-pane,
 html.ov-pdf-desktop-capture .ov-catalog-pane .sheet-container,
 html.ov-pdf-desktop-capture #catalog-content {
   width: 210mm !important;
   max-width: 210mm !important;
   min-width: 210mm !important;
+  min-height: auto !important;
+  margin: 0 auto !important;
+  box-shadow: none !important;
 }
 
 html.ov-pdf-desktop-capture .ov-document-wrap .form-grid {
@@ -1022,6 +1098,174 @@ html.ov-pdf-desktop-capture .ov-catalog-table tbody tr {
 
 .ov-dl-modal-close:hover {
   background: #f8fafc;
+}
+
+/* If the parent page is printed while the print popup is open, hide the view chrome
+   so we don't get a second copy of the on-screen invoice alongside the popup. */
+@media print {
+  body.ov-print-modal-open .layout-main-wrapper,
+  body.ov-print-modal-open .sidebar,
+  body.ov-print-modal-open .sidebar-container,
+  body.ov-print-modal-open #sidebar,
+  body.ov-print-modal-open .employee-header,
+  body.ov-print-modal-open .mobile-footer,
+  body.ov-print-modal-open #root,
+  body.ov-print-modal-open .ov-print-modal-backdrop,
+  body.ov-print-modal-open .ov-print-modal-header,
+  body.ov-print-modal-open .ov-print-modal-loading,
+  body.ov-print-modal-open .ov-print-modal-empty {
+    display: none !important;
+  }
+
+  body.ov-print-modal-open .ov-print-modal,
+  body.ov-print-modal-open .ov-print-modal-card,
+  body.ov-print-modal-open .ov-print-modal-body,
+  body.ov-print-modal-open .ov-print-modal-frame {
+    display: block !important;
+    position: static !important;
+    inset: auto !important;
+    width: 100% !important;
+    height: auto !important;
+    max-height: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    background: #fff !important;
+    overflow: visible !important;
+  }
+}
+
+.ov-print-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1400;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.ov-print-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  background: rgba(15, 23, 42, 0.55);
+  cursor: pointer;
+}
+
+.ov-print-modal-card {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  width: min(960px, calc(100vw - 2rem));
+  height: min(90vh, 920px);
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.28);
+  overflow: hidden;
+  animation: ov-dl-modal-in 0.28s ease-out;
+}
+
+.ov-print-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.95rem 1.1rem;
+  border-bottom: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+.ov-print-modal-title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.ov-print-modal-sub {
+  margin: 0.25rem 0 0;
+  font-size: 0.82rem;
+  color: #64748b;
+}
+
+.ov-print-modal-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.ov-print-modal-close {
+  width: 2.25rem;
+  height: 2.25rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #fff;
+  color: #475569;
+  cursor: pointer;
+}
+
+.ov-print-modal-close:hover {
+  background: #f1f5f9;
+}
+
+.ov-print-modal-body {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  background: #525659;
+}
+
+.ov-print-modal-frame {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: #fff;
+}
+
+.ov-print-modal-loading,
+.ov-print-modal-empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  color: #e2e8f0;
+  font-size: 0.9rem;
+  pointer-events: none;
+}
+
+.ov-print-modal-empty {
+  color: #f8fafc;
+}
+
+@media (max-width: 720px) {
+  .ov-print-modal {
+    padding: 0.5rem;
+  }
+
+  .ov-print-modal-card {
+    width: calc(100vw - 1rem);
+    height: calc(100vh - 1rem);
+    border-radius: 10px;
+  }
+
+  .ov-print-modal-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .ov-print-modal-actions {
+    justify-content: flex-end;
+  }
 }
 
 .ov-modal-backdrop {
@@ -1755,6 +1999,55 @@ body.ov-inv-transform-lock {
   margin: 0 0 1rem;
 }
 
+.ov-payments-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.ov-payments-summary {
+  margin: 0 0 0.55rem;
+  font-size: 0.78rem;
+  color: #64748b;
+}
+
+.ov-payments-empty {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: #94a3b8;
+}
+
+.ov-pay-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  min-height: 1.5rem;
+  padding: 0.15rem 0.55rem;
+  border-radius: 9999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.ov-pay-status--paid {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.ov-pay-status--partial {
+  background: #ffedd5;
+  color: #9a3412;
+}
+
+.ov-pay-status--unpaid {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
 .ov-page-root .inv-pay-card-ref {
   margin-top: 0.2rem;
   font-size: 0.72rem;
@@ -1771,21 +2064,75 @@ body.ov-inv-transform-lock {
 }
 
 @media print {
-  .ov-no-print {
+  .ov-no-print,
+  .no-print {
     display: none !important;
   }
 
+  .ov-page-root,
+  .ov-document-wrap,
+  .ov-document-wrap #invoice-content,
+  .ov-document-wrap #order-content {
+    display: block !important;
+    visibility: visible !important;
+  }
+
+  .ov-document-wrap,
+  .ov-catalog-pane {
+    padding: 0 !important;
+    background: #fff !important;
+    overflow: visible !important;
+  }
+
+  .ov-document-wrap .sheet-container,
+  .ov-document-wrap .spare-sheet,
+  .ov-document-wrap .truck-sheet,
+  .ov-document-wrap .truck-sheet-second,
+  .ov-document-wrap .doc-terms-sheet,
+  .ov-catalog-pane .sheet-container {
+    display: block !important;
+    visibility: visible !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    min-height: auto !important;
+    margin: 0 auto !important;
+    box-shadow: none !important;
+  }
+
   .ov-document-wrap .sheet-container {
-    width: 100%;
-    max-width: none;
-    margin: 0;
-    box-shadow: none;
-    padding: 10mm;
+    padding: 0 !important;
+  }
+
+  .ov-document-wrap .o-table {
+    width: 100% !important;
+    table-layout: fixed !important;
+  }
+
+  .ov-document-wrap .o-table th,
+  .ov-document-wrap .o-table td {
+    word-break: normal !important;
+    overflow-wrap: break-word !important;
+    hyphens: manual !important;
+    white-space: normal !important;
+    line-height: 1.35 !important;
+  }
+
+  .ov-document-wrap .o-table th {
+    background-color: #ffd700 !important;
+    background: #ffd700 !important;
+    color: #000 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
   .ov-document-wrap .doc-terms-sheet {
     page-break-before: always;
     break-before: page;
     margin-top: 0 !important;
+  }
+
+  .ov-catalog-pane {
+    display: none !important;
   }
 }

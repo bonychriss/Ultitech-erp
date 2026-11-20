@@ -17,6 +17,8 @@ if (!($salesDb instanceof PDO)) {
 $id = isset($_GET['id']) ? (int) $_GET['id'] : 0;
 $auto_print = isset($_GET['download']);
 $embedMode = isset($_GET['embed']) && (string) $_GET['embed'] === '1';
+$autoBrowserPrint = !$auto_print && isset($_GET['autoprint']) && (string) $_GET['autoprint'] === '1';
+$invoiceOnly = isset($_GET['invoice_only']) && (string) $_GET['invoice_only'] === '1';
 
 try {
     ensureCustomerColumnsExist();
@@ -111,6 +113,11 @@ $company_settings = array_merge([
     'company_website' => '',
     'include_catalogue' => 0,
 ], $company_settings);
+
+if ($invoiceOnly) {
+    // Popup / direct print: invoice sheets only (no catalogue pages).
+    $company_settings['include_catalogue'] = 0;
+}
 
 if (($nameVal = getCompanySetting('company_name')) && trim($nameVal) !== '') {
     $company_settings['company_name'] = $nameVal;
@@ -266,19 +273,170 @@ $currency = $invoice['currency'] ?? ($company_settings['default_currency'] ?? 'T
 
         .sheet-container {
             width: 210mm;
-            min-height: 270mm; /* Reduced to prevent browser margin overflow */
-            padding: 10mm 15mm;
-            margin: 10mm auto;
+            min-height: auto;
+            padding: 8mm 12mm 10mm;
+            margin: 4mm auto;
             background: white;
-            box-shadow: 0 0 0.5cm rgba(0,0,0,0.1);
+            box-shadow: 0 0 0.35cm rgba(0,0,0,0.12);
             position: relative;
-            /* Page break handling for html2pdf/print */
             page-break-after: always;
+            break-after: page;
+            box-sizing: border-box;
         }
 
-        /* Remove page break from the last container */
         .sheet-container:last-child {
-            page-break-after: auto; 
+            page-break-after: auto;
+            break-after: auto;
+            margin-bottom: 4mm;
+        }
+
+        /* Screen preview: compact gaps between pages; fill sheet without huge empty tails */
+        @media screen {
+            body {
+                padding: 4mm 0;
+            }
+            .sheet-container {
+                min-height: 270mm;
+                margin: 3mm auto;
+            }
+            .sheet-inner {
+                display: flex;
+                flex-direction: column;
+                min-height: 252mm;
+            }
+            .sheet-page-footer,
+            .document-footer-wrap {
+                margin-top: auto;
+            }
+        }
+
+        .sheet-inner {
+            width: 100%;
+        }
+
+        .sheet-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 12px;
+        }
+
+        .sheet-header--continued {
+            margin-bottom: 8px;
+        }
+
+        .sheet-page-footer {
+            padding-top: 6px;
+            margin-top: 8px;
+            border-top: none;
+            text-align: center;
+            font-size: 9pt;
+            color: #64748b;
+            width: 100%;
+        }
+
+        .document-footer-wrap {
+            padding-top: 8px;
+            width: 100%;
+        }
+
+        .avoid-break,
+        .document-footer-closing {
+            page-break-inside: avoid;
+            break-inside: avoid;
+        }
+
+        /* Print: one physical page per logical sheet */
+        @media print {
+            @page {
+                size: A4;
+                margin: 10mm;
+            }
+            html, body {
+                height: auto !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                background: #fff !important;
+            }
+            #pdf-content {
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+            .sheet-container {
+                width: 100% !important;
+                max-width: 100% !important;
+                min-height: auto !important;
+                height: auto !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                box-shadow: none !important;
+                page-break-after: always;
+                break-after: page;
+                page-break-inside: avoid;
+                break-inside: avoid-page;
+            }
+            .sheet-container:last-child {
+                page-break-after: auto !important;
+                break-after: auto !important;
+            }
+            .sheet-inner {
+                display: block !important;
+                min-height: 0 !important;
+                height: auto !important;
+            }
+            .o-table td img {
+                width: 40px !important;
+                height: 40px !important;
+            }
+            .o-table td,
+            .o-table th {
+                padding-top: 2px !important;
+                padding-bottom: 2px !important;
+            }
+            .document-footer-wrap {
+                margin-top: 8px !important;
+                padding-top: 6px !important;
+                page-break-before: avoid;
+                break-before: avoid;
+                page-break-inside: avoid;
+                break-inside: avoid;
+            }
+            .document-footer-closing {
+                margin-top: 4px !important;
+            }
+            .sheet-page-footer {
+                margin-top: 8px !important;
+                padding-top: 6px !important;
+                border-top: none !important;
+                page-break-inside: avoid;
+                break-inside: avoid;
+            }
+            .sheet-header {
+                margin-bottom: 8px !important;
+            }
+            .o-table {
+                margin-bottom: 6px !important;
+            }
+            .o-table th {
+                background-color: #ffd700 !important;
+                background: #ffd700 !important;
+                color: #000 !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+                color-adjust: exact !important;
+            }
+            .o-table td {
+                padding: 2px 4px !important;
+            }
+            .o-table td img {
+                width: 48px !important;
+                height: 48px !important;
+            }
+            /* Keep logos / header fills / paid watermark colors */
+            img, .invoice-paid-watermark span {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
         }
 
         .sheet-title { font-size: 16pt; font-weight: bold; color: #333; margin: 0; }
@@ -290,12 +448,26 @@ $currency = $invoice['currency'] ?? ($company_settings['default_currency'] ?? 'T
             text-transform: uppercase; 
             font-size: 9pt; 
             font-weight: 400;
-            background-color: gold; 
-            color: #000;
+            background-color: #ffd700 !important; /* gold — match on-screen invoice */
+            background: #ffd700 !important;
+            color: #000 !important;
             padding: 4px 5px;
             vertical-align: middle;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            color-adjust: exact !important;
         }
-        .o-table td { padding: 3px 5px; border-bottom: 1px solid #eee; vertical-align: middle; font-size: 9.5pt; }
+        .o-table td {
+            padding: 3px 5px;
+            border-bottom: 1px solid #eee;
+            vertical-align: middle;
+            font-size: 9.5pt;
+            word-break: normal;
+            overflow-wrap: break-word;
+            hyphens: manual;
+            white-space: normal;
+            line-height: 1.35;
+        }
         .o-table .num { text-align: right; }
         .o-table th.num { text-align: right; }
         
@@ -340,31 +512,60 @@ $currency = $invoice['currency'] ?? ($company_settings['default_currency'] ?? 'T
         }
         .sheet-container { position: relative; overflow: hidden; }
 
-        /* PDF Generation Mode */
+        /* PDF Generation Mode — match print: one sheet = one A4 page */
         body.pdf-mode { background: white; }
         body.pdf-mode .sheet-container { 
             box-shadow: none; 
             margin: 0; 
             border: none;
-            width: 100% !important; /* Ensure it takes full width of pdf context */
-            min-height: auto !important; /* Let content dictate height to avoid forcing overflow */
-            padding-top: 5mm !important; /* Reduce padding to ensure fit */
-            padding-bottom: 5mm !important; 
+            width: 210mm !important;
+            max-width: 210mm !important;
+            min-height: auto !important;
+            padding: 0 !important;
+            overflow: visible !important;
+            page-break-after: always;
+            break-after: page;
+        }
+        body.pdf-mode .sheet-container:last-child {
+            page-break-after: auto;
+            break-after: auto;
+        }
+        body.pdf-mode .sheet-inner {
+            min-height: 0 !important;
+            display: block !important;
+        }
+        body.pdf-mode .o-table td img {
+            width: 40px !important;
+            height: 40px !important;
+        }
+        body.pdf-mode .document-footer-wrap {
+            margin-top: 10px !important;
         }
         body.pdf-mode .no-print { display: none; }
         body.pdf-mode #downloadBtn { display: none; }
         
         /* Prevent table row breaking */
-        tr { page-break-inside: avoid; }
+        tr { page-break-inside: avoid; break-inside: avoid; }
 
         @media print {
             body { background: white; }
-            .sheet-container { width: 100%; margin: 0; box-shadow: none; padding: 0mm; }
-            .no-print { display: none; }
+            .sheet-container { overflow: visible !important; }
+            .no-print, #downloadBtn { display: none !important; }
         }
+
+        <?php if ($embedMode || $invoiceOnly): ?>
+        /* Embedded in invoice-view popup: invoice paper only */
+        #downloadBtn,
+        .no-print {
+            display: none !important;
+        }
+        body {
+            background: #525659 !important;
+        }
+        <?php endif; ?>
     </style>
 </head>
-<body <?php if(!$auto_print) echo ''; ?>>
+<body class="<?php echo trim(($embedMode ? 'embed-mode' : '') . ($invoiceOnly ? ' invoice-only' : '')); ?>">
     <!-- Include html2pdf.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script>
@@ -385,12 +586,12 @@ $currency = $invoice['currency'] ?? ($company_settings['default_currency'] ?? 'T
             }
             
             const opt = {
-                margin:       [0, 0, 0, 0], // Explicit zero margins
+                margin:       [10, 10, 10, 10], // Match @page print margins
                 filename:     'Invoice_<?php echo $invoice['invoice_number']; ?>.pdf',
                 image:        { type: 'jpeg', quality: 0.98 },
                 html2canvas:  { scale: 2, useCORS: true, scrollY: 0 },
                 jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
-                pagebreak:    { mode: ['css', 'legacy'] }
+                pagebreak:    { mode: ['css'], after: '.sheet-container' }
             };
 
             // Hide the download button during generation (redundant via CSS but safe)
@@ -446,12 +647,26 @@ $currency = $invoice['currency'] ?? ($company_settings['default_currency'] ?? 'T
                 }
                 downloadPDF();
             }, 1500);
+            <?php elseif ($autoBrowserPrint): ?>
+            setTimeout(function() {
+                try {
+                    window.focus();
+                    window.print();
+                } catch (e) {}
+            }, 400);
+            window.addEventListener('afterprint', function() {
+                try {
+                    if (window.opener) {
+                        window.close();
+                    }
+                } catch (e) {}
+            });
             <?php endif; ?>
         });
     </script>
     
-    <?php if(!$auto_print && empty($embedMode)): ?>
-    <button id="downloadBtn" onclick="downloadPDF()" style="
+    <?php if (!$auto_print && !$embedMode && !$invoiceOnly): ?>
+    <button id="downloadBtn" class="no-print" onclick="downloadPDF()" style="
         position: fixed; 
         top: 20px; 
         right: 20px; 
@@ -472,8 +687,9 @@ $currency = $invoice['currency'] ?? ($company_settings['default_currency'] ?? 'T
 
     <?php
     // Pagination Logic
-    $first_page_limit = 8;
-    $subsequent_page_limit = 12;
+    // Keep each logical sheet within one printed A4 page (header + photos + wrapped descriptions).
+    $first_page_limit = 6;
+    $subsequent_page_limit = 9;
     
     $chunks = [];
     if (count($items) <= $first_page_limit) {
@@ -499,20 +715,18 @@ $currency = $invoice['currency'] ?? ($company_settings['default_currency'] ?? 'T
                 <div class="invoice-paid-watermark" aria-hidden="true"><span>PAID</span></div>
                 <?php endif; ?>
 
-                <div style="display: flex; flex-direction: column; min-height: 270mm;">
-                    <!-- Header -->
-                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px;">
+                <div class="sheet-inner">
+                    <!-- Header (page numbers are at the bottom) -->
+                    <div class="sheet-header<?php echo $page_idx === 0 ? '' : ' sheet-header--continued'; ?>">
                         <h1 class="sheet-title">
                             Invoice # <?php echo htmlspecialchars($invoice['invoice_number']); ?>
-                            <?php if($total_pages > 1): ?>
-                                <small style="font-size: 10pt; font-weight: normal; color: #666;">(Page <?php echo $page_idx + 1; ?> of <?php echo $total_pages; ?>)</small>
-                            <?php endif; ?>
                         </h1>
                         <div style="text-align: right; width: 60%;">
                             <?php if ($invoiceLogoUrl !== ''): ?>
-                            <img src="<?php echo htmlspecialchars($invoiceLogoUrl); ?>" alt="Company Logo" style="max-height: 80px; max-width: 220px; object-fit: contain; margin-bottom: 10px;" onerror="this.style.display='none'">
+                            <img src="<?php echo htmlspecialchars($invoiceLogoUrl); ?>" alt="Company Logo" style="max-height: <?php echo $page_idx === 0 ? '80px' : '44px'; ?>; max-width: 220px; object-fit: contain; margin-bottom: <?php echo $page_idx === 0 ? '10px' : '0'; ?>;" onerror="this.style.display='none'">
                             <?php endif; ?>
-                            
+
+                            <?php if ($page_idx === 0): ?>
                             <div style="font-weight: bold; font-size: 1rem; color: #111; text-transform: uppercase;">
                                 <?php echo htmlspecialchars($company_settings['company_name']); ?>
                             </div>
@@ -529,6 +743,7 @@ $currency = $invoice['currency'] ?? ($company_settings['default_currency'] ?? 'T
                             <?php endif; ?>
                             <?php if(!empty($company_settings['company_vrn'])): ?>
                                 <div style="font-size: 0.9rem; color: #000;">VRN: <?php echo htmlspecialchars($company_settings['company_vrn']); ?></div>
+                            <?php endif; ?>
                             <?php endif; ?>
                         </div>
                     </div>
@@ -578,30 +793,35 @@ $currency = $invoice['currency'] ?? ($company_settings['default_currency'] ?? 'T
                             </div>
                         </div>
                     <?php else: ?>
-                        <div style="border-bottom: 2px solid #eee; margin-bottom: 15px; padding-bottom: 5px;">
-                            <strong>Continuation - Page <?php echo $page_idx + 1; ?></strong>
-                        </div>
+                        <!-- Continuation pages: no top page label (number is in footer) -->
                     <?php endif; ?>
-                    
 
                     <!-- Items Table -->
                     <table class="o-table">
+                        <colgroup>
+                            <col style="width: 64px;">
+                            <col style="width: 24%;">
+                            <col style="width: 38%;">
+                            <col style="width: 12%;">
+                            <col style="width: 16%;">
+                        </colgroup>
                         <thead>
-                            <tr>
-                                <th style="width: 10%;">Photo</th>
-                                <th style="width: 20%;">Product</th>
-                                <th style="width: 30%;">Description</th>
-                                <th class="num" style="width: 10%;">Quantity</th>
-                                <th class="num" style="width: 30%;">Unit Price</th>
+                            <tr style="background-color: #ffd700;">
+                                <th style="background-color: #ffd700; -webkit-print-color-adjust: exact; print-color-adjust: exact;">Photo</th>
+                                <th style="background-color: #ffd700; -webkit-print-color-adjust: exact; print-color-adjust: exact;">Product</th>
+                                <th style="background-color: #ffd700; -webkit-print-color-adjust: exact; print-color-adjust: exact;">Description</th>
+                                <th class="num" style="background-color: #ffd700; -webkit-print-color-adjust: exact; print-color-adjust: exact;">Quantity</th>
+                                <th class="num" style="background-color: #ffd700; -webkit-print-color-adjust: exact; print-color-adjust: exact;">Unit Price</th>
                             </tr>
                         </thead>
                         <tbody>
                             <?php foreach ($page_items as $item): ?>
                                 <tr>
-                                    <td style="padding: 4px 6px;">
+                                    <td style="padding: 3px 5px;">
                                         <?php 
                                             $pid = (int)($item['product_id'] ?? 0);
                                             $img = $item['main_image'] ?? '';
+                                            $thumb = $page_idx === 0 ? 44 : 40;
                                             if ($pid > 0):
                                                 $imgUrl = function_exists('sales_order_item_image_url')
                                                     ? sales_order_item_image_url($item, 'medium')
@@ -609,17 +829,18 @@ $currency = $invoice['currency'] ?? ($company_settings['default_currency'] ?? 'T
                                         ?>
                                             <img src="<?php echo htmlspecialchars($imgUrl, ENT_QUOTES, 'UTF-8'); ?>" 
                                                     alt="Product" 
-                                                    style="width: 60px; height: 60px; object-fit: cover; border-radius: 4px;"
+                                                    style="width: <?php echo (int) $thumb; ?>px; height: <?php echo (int) $thumb; ?>px; object-fit: cover; border-radius: 4px;"
                                                     onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                                            <div style="display: none; width: 60px; height: 60px; background: #eee; border-radius: 4px; align-items: center; justify-content: center; font-size: 10px; color: #aaa;">No Image</div>
+                                            <div style="display: none; width: <?php echo (int) $thumb; ?>px; height: <?php echo (int) $thumb; ?>px; background: #eee; border-radius: 4px; align-items: center; justify-content: center; font-size: 10px; color: #aaa;">No Image</div>
                                         <?php else: ?>
-                                            <div style="width: 60px; height: 60px; background: #eee; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #aaa;">No Image</div>
+                                            <div style="width: <?php echo (int) $thumb; ?>px; height: <?php echo (int) $thumb; ?>px; background: #eee; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #aaa;">No Image</div>
                                         <?php endif; ?>
                                     </td>
-                                    <td style="padding: 4px 6px;"><?php echo htmlspecialchars($item['product_name']); ?></td>
-                                    <td style="padding: 4px 6px;">
+                                    <td style="padding: 3px 5px;"><?php echo htmlspecialchars($item['product_name']); ?></td>
+                                    <td style="padding: 3px 5px;">
                                         <?php
                                         $desc = trim((string)($item['description'] ?? ''));
+                                        $desc = str_replace(["\xC2\xAD", "\u{00AD}", '&shy;'], '', $desc);
                                         if ($desc !== '' && !empty($item['product_code'])) {
                                             $desc = preg_replace('/\s*\[' . preg_quote((string)$item['product_code'], '/') . '\]\s*$/u', '', $desc);
                                         }
@@ -688,17 +909,25 @@ $currency = $invoice['currency'] ?? ($company_settings['default_currency'] ?? 'T
                         <?php endif; ?>
                     <?php endif; ?>
 
-                    <!-- Footer -->
-                    <div style="margin-top: auto; padding-top: 20px; width: 100%;">
+                    <?php if ($is_last_page): ?>
+                    <!-- Closing message stays with last-page content (no forced blank page) -->
+                    <div class="document-footer-wrap avoid-break">
                         <?php include __DIR__ . '/../includes/document-footer-message.php'; ?>
                     </div>
+                    <?php endif; ?>
+
+                    <?php if ($total_pages > 1): ?>
+                    <div class="sheet-page-footer avoid-break">
+                        Page <?php echo (int) ($page_idx + 1); ?> of <?php echo (int) $total_pages; ?>
+                    </div>
+                    <?php endif; ?>
                 </div>
             </div>
         <?php endforeach; ?>
 
         <?php 
-        // CATALOGUE SECTION
-        if (!empty($company_settings['include_catalogue'])) {
+        // CATALOGUE SECTION (skipped when invoice_only=1)
+        if (!$invoiceOnly && !empty($company_settings['include_catalogue'])) {
             $catalogue_items = [];
             foreach ($items as $item) {
                 if (!empty($item['main_image'])) {

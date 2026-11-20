@@ -633,6 +633,7 @@ function salesInvoiceViewLoadContext(int $id): array
                 : '',
             'register_payment' => $paymentUrl,
             'send_email' => sales_module_url('send_doc.php', ['type' => 'invoice', 'id' => $id, 'module' => $module]),
+            'print' => sales_module_url('invoices/print.php', ['id' => $id, 'module' => $module]),
             'return' => $returnUrl,
         ],
     ];

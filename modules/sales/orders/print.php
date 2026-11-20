@@ -10,9 +10,11 @@ if (session_status() === PHP_SESSION_NONE) {
 
 $id = isset($_GET['id']) ? (int) $_GET['id'] : 0;
 $embedMode = isset($_GET['embed']) && (string) $_GET['embed'] === '1';
+$docOnly = isset($_GET['doc_only']) && (string) $_GET['doc_only'] === '1';
+$autoBrowserPrint = isset($_GET['autoprint']) && (string) $_GET['autoprint'] === '1';
 // View in browser by default. Force-save only with autodownload=1 (or download=pdf/force).
 $downloadParam = isset($_GET['download']) ? strtolower(trim((string) $_GET['download'])) : '';
-$auto_print = !$embedMode && (
+$auto_print = !$embedMode && !$autoBrowserPrint && (
     isset($_GET['autodownload'])
     || in_array($downloadParam, ['pdf', 'force'], true)
 );
@@ -68,6 +70,12 @@ if (function_exists('sales_order_document_title_label')) {
 $is_quote = ($doc_title === 'Quotation');
 $filename_prefix = $is_quote ? 'Quotation_' : ($doc_title === 'Invoice' ? 'Invoice_' : 'Order_');
 
+$linkedInvoiceStatus = strtolower(trim((string) ($linkedInvoice['status'] ?? '')));
+$linkedBalanceDue = (float) ($linkedInvoice['balance_due'] ?? 0);
+$documentIsPaid = $orderStatusKey === 'paid'
+    || $linkedInvoiceStatus === 'paid'
+    || ($hasLinkedInvoice && $linkedBalanceDue <= 0.009);
+
 $documentHtml = salesOrderViewRenderDocumentHtml(
     $order,
     $items,
@@ -75,11 +83,14 @@ $documentHtml = salesOrderViewRenderDocumentHtml(
     $documentDisplayNumber,
     $isTruckOrder,
     $signatureUrl,
-    $hasLinkedInvoice
+    $hasLinkedInvoice,
+    $documentIsPaid
 );
 
-$showCatalogue = !empty($company_settings['include_catalogue'])
-    || (int) ($company_settings['include_product_catalogue'] ?? 0) === 1;
+$showCatalogue = !$docOnly && (
+    !empty($company_settings['include_catalogue'])
+    || (int) ($company_settings['include_product_catalogue'] ?? 0) === 1
+);
 $catalogHtml = ($showCatalogue && !empty($items))
     ? salesOrderViewRenderCatalogHtml($order, $items, $company_settings, $displayOrderNumber)
     : '';
@@ -144,10 +155,47 @@ $fontFamily = function_exists('sales_document_font_family_css')
         body.pdf-mode .no-print,
         body.pdf-mode #downloadBtn { display: none; }
         tr { page-break-inside: avoid; }
+        .o-table th {
+            background-color: #ffd700 !important;
+            background: #ffd700 !important;
+            color: #000 !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            color-adjust: exact !important;
+        }
+        .sheet-container { position: relative; overflow: hidden; }
+        .invoice-paid-watermark {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-32deg);
+            z-index: 6;
+            pointer-events: none;
+            user-select: none;
+        }
+        .invoice-paid-watermark span {
+            display: inline-block;
+            font-size: 5.5rem;
+            font-weight: 800;
+            letter-spacing: 0.12em;
+            line-height: 1;
+            color: rgba(21, 128, 61, 0.2);
+            text-transform: uppercase;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            color-adjust: exact !important;
+        }
         @media print {
             body { background: white; }
             .sheet-container, .sheet, .doc-sheet { width: 100%; margin: 0; box-shadow: none; padding: 0; }
             .no-print { display: none; }
+            .o-table th {
+                background-color: #ffd700 !important;
+                background: #ffd700 !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+                color-adjust: exact !important;
+            }
         }
     </style>
 </head>
@@ -222,11 +270,15 @@ $fontFamily = function_exists('sales_document_font_family_css')
         document.addEventListener('DOMContentLoaded', function () {
             <?php if ($auto_print): ?>
             downloadPDF();
+            <?php elseif ($autoBrowserPrint): ?>
+            window.setTimeout(function () {
+                try { window.focus(); window.print(); } catch (e) {}
+            }, 250);
             <?php endif; ?>
         });
     </script>
     
-    <?php if (!$auto_print && empty($embedMode)): ?>
+    <?php if (!$auto_print && !$autoBrowserPrint && empty($embedMode)): ?>
     <button id="downloadBtn" class="no-print" type="button" onclick="downloadPDF()" style="
         position: fixed; 
         top: 20px; 

@@ -373,7 +373,26 @@ function salesInvoiceViewRenderDocumentHtml(
     ?array $invoiceDualCurrencyCtx,
     string $brandingLogoUrl
 ): string {
-    $currency = $invoice['currency'] ?? ($company_settings['default_currency'] ?? 'TZS');
+    $currency = (string) ($invoice['currency'] ?? ($company_settings['default_currency'] ?? 'TZS'));
+    $layoutLib = __DIR__ . '/invoice-print-layout.php';
+    if (is_file($layoutLib)) {
+        require_once $layoutLib;
+    }
+    if (function_exists('sales_invoice_print_layout_html')) {
+        // Match print desk layout on the invoice-view page.
+        return sales_invoice_print_layout_html(
+            $invoice,
+            $items,
+            $company_settings,
+            $currency,
+            $brandingLogoUrl,
+            [
+                'invoice_only' => true,
+                'include_styles' => true,
+                'wrap_id' => 'invoice-content',
+            ]
+        );
+    }
 
     ob_start();
     echo '<div id="invoice-content">';
@@ -877,6 +896,7 @@ function salesInvoiceViewLoadContext(int $id): array
                 : '',
             'register_payment' => $paymentUrl,
             'send_email' => sales_module_url('send_doc.php', ['type' => 'invoice', 'id' => $id, 'module' => $module]),
+            'print' => sales_module_url('invoices/print.php', ['id' => $id, 'module' => $module]),
             'return' => $returnUrl,
         ],
     ];

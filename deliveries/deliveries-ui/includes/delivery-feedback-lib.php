@@ -341,6 +341,60 @@ function deliveries_feedback_public_url(int $noteId, ?PDO $pdo = null): string
     return '/deliveries/delivery_feedback.php?' . http_build_query($query);
 }
 
+/**
+ * Absolute public origin for QR / share links (phones need https://host/...).
+ */
+function deliveries_feedback_public_origin(): string
+{
+    if (defined('ERP_PUBLIC_SITE_URL')) {
+        $configured = rtrim(trim((string) ERP_PUBLIC_SITE_URL), '/');
+        if ($configured !== '' && preg_match('#^https?://#i', $configured)) {
+            return $configured;
+        }
+    }
+
+    $forwarded = strtolower(trim((string) ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '')));
+    $https = $forwarded === 'https'
+        || (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+        || (isset($_SERVER['SERVER_PORT']) && (int) $_SERVER['SERVER_PORT'] === 443);
+    $host = trim((string) ($_SERVER['HTTP_HOST'] ?? ''));
+    if ($host !== '' && !preg_match('/^(localhost|127\.0\.0\.1)(:|$)/i', $host)) {
+        return ($https ? 'https' : 'http') . '://' . $host;
+    }
+
+    return 'https://ultitech.io';
+}
+
+/**
+ * Turn a site-relative feedback path into a phone-scannable absolute URL.
+ */
+function deliveries_feedback_absolute_url(string $url): string
+{
+    $url = trim($url);
+    if ($url === '') {
+        return '';
+    }
+
+    $origin = deliveries_feedback_public_origin();
+
+    if (preg_match('#^https?://#i', $url)) {
+        // Rewrite accidental localhost / LAN hosts to the public site.
+        $parts = parse_url($url);
+        $host = strtolower((string) ($parts['host'] ?? ''));
+        if ($host === '' || preg_match('/^(localhost|127\.0\.0\.1)$/i', $host) || preg_match('/^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[0-1])\.)/', $host)) {
+            $path = (string) ($parts['path'] ?? '/');
+            $query = isset($parts['query']) ? ('?' . $parts['query']) : '';
+            $fragment = isset($parts['fragment']) ? ('#' . $parts['fragment']) : '';
+
+            return $origin . $path . $query . $fragment;
+        }
+
+        return $url;
+    }
+
+    return $origin . '/' . ltrim($url, '/');
+}
+
 function deliveries_feedback_qr_image_url(string $targetUrl, int $size = 140): string
 {
     $targetUrl = trim($targetUrl);
@@ -348,9 +402,13 @@ function deliveries_feedback_qr_image_url(string $targetUrl, int $size = 140): s
         return '';
     }
 
-    // Prefer an absolute scan target so phone cameras open the feedback page.
+    // Phone cameras require a full https:// URL — relative /ultimate/... paths fail.
     if (!preg_match('#^https?://#i', $targetUrl) && function_exists('app_url')) {
         $targetUrl = (string) app_url('/' . ltrim($targetUrl, '/'));
+    }
+    $targetUrl = deliveries_feedback_absolute_url($targetUrl);
+    if ($targetUrl === '') {
+        return '';
     }
 
     $size = max(96, min(320, $size));

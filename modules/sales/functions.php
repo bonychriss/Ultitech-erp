@@ -1486,6 +1486,70 @@ function sales_resolve_document_layout_id(bool $isTruck, ?array $companySettings
         : ($companySettings['spare_part_layout'] ?? 1));
 }
 
+/**
+ * Table header fill/text colors for branded docs (invoices, delivery notes).
+ * Mirrors spare/truck layout templates and shared library layouts 11–15.
+ *
+ * @param array<string,mixed>|null $companySettings
+ * @return array{bg:string,color:string,layout_id:int}
+ */
+function sales_document_table_header_colors(bool $isTruck = false, ?array $companySettings = null): array
+{
+    $companySettings = is_array($companySettings) ? $companySettings : [];
+    $layoutId = sales_resolve_document_layout_id($isTruck, $companySettings);
+
+    if (sales_is_library_document_layout_id($layoutId)) {
+        $library = [
+            11 => ['bg' => '#5b4ea3', 'color' => '#ffffff'],
+            12 => ['bg' => '#504a90', 'color' => '#ffffff'],
+            13 => ['bg' => '#2c3e5a', 'color' => '#ffffff'],
+            14 => ['bg' => '#383838', 'color' => '#ffffff'],
+            15 => ['bg' => '#2c3038', 'color' => '#ffffff'],
+        ];
+        $pair = $library[$layoutId] ?? ['bg' => '#ffd700', 'color' => '#000000'];
+
+        return [
+            'bg' => $pair['bg'],
+            'color' => $pair['color'],
+            'layout_id' => $layoutId,
+        ];
+    }
+
+    $docBrand = function_exists('sales_document_brand_profile')
+        ? sales_document_brand_profile($companySettings)
+        : ['brand' => 'generic'];
+    $isRoadmasterBrand = ($docBrand['brand'] ?? '') === 'roadmaster';
+
+    if ($isTruck) {
+        $bg = ($layoutId === 2) ? '#ffd700' : '#003366';
+        $color = ($layoutId === 2) ? '#000000' : '#ffffff';
+        if (!$isRoadmasterBrand && ($layoutId === 1 || $layoutId === 3)) {
+            $bg = '#008784';
+            $color = '#ffffff';
+        }
+
+        return ['bg' => $bg, 'color' => $color, 'layout_id' => $layoutId];
+    }
+
+    // Spare / default document layouts (Roadmaster 1–4 + Ultimate remaps).
+    $bg = ($layoutId === 1 || $layoutId === 2) ? '#ffd700' : '#003366';
+    $color = ($layoutId === 3) ? '#ffffff' : '#000000';
+    if ($layoutId === 4) {
+        $bg = '#e8eef2';
+        $color = '#0f172a';
+    }
+    if (!$isRoadmasterBrand && $layoutId === 3) {
+        $bg = '#008784';
+        $color = '#ffffff';
+    }
+    if (!$isRoadmasterBrand && $layoutId === 4) {
+        $bg = '#eef6f6';
+        $color = '#0f172a';
+    }
+
+    return ['bg' => $bg, 'color' => $color, 'layout_id' => $layoutId];
+}
+
 function sales_library_document_layout_inner_path(): ?string
 {
     $path = __DIR__ . '/layouts/library/invoice-layout-inner.php';
@@ -1535,14 +1599,12 @@ function sales_branded_document_layout_inner_path(bool $isTruck, ?array &$compan
         return is_file($path) ? $path : sales_standard_document_view_inner_path($documentKind);
     }
 
-    if (!function_exists('isRoadmaster') || !isRoadmaster()) {
-        return null;
-    }
-
+    // Roadmaster + every other tenant: use the chosen truck/spare template
+    // (brand profile adapts colors/names per company).
     $file = $isTruck ? 'truck-invoice-layout-inner.php' : 'spare-invoice-layout-inner.php';
     $path = __DIR__ . '/layouts/roadmaster/' . $file;
 
-    return is_file($path) ? $path : null;
+    return is_file($path) ? $path : sales_standard_document_view_inner_path($documentKind);
 }
 
 /**

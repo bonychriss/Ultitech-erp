@@ -703,6 +703,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'company_email' => trim((string) valueOrDefault($_POST, 'email', (string) ($existingCompany['email'] ?? ''))),
                 'company_phone' => trim((string) valueOrDefault($_POST, 'phone', (string) ($existingCompany['phone'] ?? ''))),
                 'company_address' => trim((string) valueOrDefault($_POST, 'address', (string) ($existingCompany['address'] ?? ''))),
+                'company_website' => trim((string) valueOrDefault($_POST, 'company_website', (string) ($existingSettings['company_website'] ?? ''))),
                 'country' => trim((string) valueOrDefault($_POST, 'country', (string) ($existingCompany['country'] ?? 'Tanzania'))),
                 'employee_registration_mode' => $employeeMode,
                 'allow_employee_self_registration' => (string) $allowSelf,
@@ -717,8 +718,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     ? (string) valueOrDefault($_POST, 'tax_calculation_mode', (string) ($existingSettings['tax_calculation_mode'] ?? 'exclusive'))
                     : 'exclusive',
             ];
+            // Normalize website to a full URL when a bare domain is entered.
+            $websiteRaw = trim((string) ($profileMap['company_website'] ?? ''));
+            if ($websiteRaw !== '' && !preg_match('#^https?://#i', $websiteRaw)) {
+                $profileMap['company_website'] = 'https://' . ltrim($websiteRaw, '/');
+            }
             foreach ($profileMap as $k => $v) {
                 saveCompanySettingValue($pdo, $targetCompanyId, (string) $k, (string) $v);
+            }
+            // Keep Sales settings website in sync when the column exists.
+            try {
+                if (function_exists('columnExists') && columnExists('sales_settings', 'company_website', $pdo)) {
+                    $webVal = (string) ($profileMap['company_website'] ?? '');
+                    if (function_exists('columnExists') && columnExists('sales_settings', 'company_id', $pdo)) {
+                        $upWeb = $pdo->prepare('UPDATE sales_settings SET company_website = ? WHERE company_id = ?');
+                        $upWeb->execute([$webVal !== '' ? $webVal : null, $targetCompanyId]);
+                        if ($upWeb->rowCount() < 1) {
+                            $insWeb = $pdo->prepare('INSERT INTO sales_settings (company_id, company_website) VALUES (?, ?)');
+                            $insWeb->execute([$targetCompanyId, $webVal !== '' ? $webVal : null]);
+                        }
+                    } else {
+                        $pdo->exec("UPDATE sales_settings SET company_website = " . $pdo->quote($webVal !== '' ? $webVal : null) . " LIMIT 1");
+                    }
+                }
+            } catch (Throwable $e) {
+                // non-fatal
             }
             // Keep Sales → Document Layout payment/footer fields aligned with Finance tab.
             $salesLib = dirname(__DIR__) . '/modules/sales/settings/includes/settings-lib.php';
@@ -1233,6 +1257,7 @@ $reactCfg = [
         'company_tin' => (string) ($settings['company_tin'] ?? ''),
         'company_vat' => (string) ($settings['company_vat'] ?? ''),
         'company_location' => (string) ($settings['company_location'] ?? ''),
+        'company_website' => (string) ($settings['company_website'] ?? ''),
         'bank_details' => (string) ($settings['bank_details'] ?? ''),
         'document_footer_message' => (string) ($settings['document_footer_message'] ?? ''),
         'approval_workflow_enabled' => (string) ($settings['approval_workflow_enabled'] ?? '0'),

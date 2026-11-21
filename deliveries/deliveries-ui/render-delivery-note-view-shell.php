@@ -88,9 +88,89 @@ main.main-content.dnv-react-root #root {
     min-width: 0;
 }
 @media print {
-    body.page-delivery-note-view .employee-header,
-    body.page-delivery-note-view .sidebar,
-    .ov-no-print { display: none !important; }
+    @page {
+        size: A4;
+        margin: 8mm;
+    }
+
+    html body.page-delivery-note-view .employee-header,
+    html body.page-delivery-note-view .sidebar,
+    html body.page-delivery-note-view .sidebar-container,
+    html body.page-delivery-note-view #sidebar,
+    html body.page-delivery-note-view .mobile-footer,
+    html body.page-delivery-note-view .chatbot-launcher,
+    html body.page-delivery-note-view #chatbotLauncher,
+    html body.page-delivery-note-view .ov-no-print,
+    html body.page-delivery-note-view .no-print {
+        display: none !important;
+    }
+
+    html body.page-delivery-note-view,
+    html body.page-delivery-note-view .layout-main-wrapper,
+    html body.page-delivery-note-view .layout-main-wrapper > .flex-grow-1,
+    html body.page-delivery-note-view main.main-content.dnv-react-root,
+    html body.page-delivery-note-view #root,
+    html body.page-delivery-note-view .ov-page-root {
+        display: block !important;
+        position: static !important;
+        height: auto !important;
+        max-height: none !important;
+        min-height: 0 !important;
+        overflow: visible !important;
+        background: #fff !important;
+        width: 100% !important;
+        max-width: none !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        box-shadow: none !important;
+        transform: none !important;
+    }
+
+    html body.page-delivery-note-view main.main-content.dnv-react-root > #root {
+        display: block !important;
+    }
+
+    html body.page-delivery-note-view .ov-document-wrap,
+    html body.page-delivery-note-view #delivery-note-content,
+    html body.page-delivery-note-view .ov-document-wrap .page-container {
+        display: block !important;
+        visibility: visible !important;
+        overflow: visible !important;
+        height: auto !important;
+        max-height: none !important;
+        min-height: auto !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 !important;
+        box-shadow: none !important;
+        background: #fff !important;
+    }
+
+    html body.page-delivery-note-view .ov-document-wrap {
+        padding: 0 !important;
+    }
+
+    html body.page-delivery-note-view .items-table {
+        width: 100% !important;
+        table-layout: fixed !important;
+    }
+
+    html body.page-delivery-note-view .items-table thead {
+        display: table-header-group !important;
+    }
+
+    html body.page-delivery-note-view .items-table tr {
+        page-break-inside: avoid;
+        break-inside: avoid;
+    }
+
+    html body.page-delivery-note-view .items-table th {
+        background: var(--dn-th-bg, #ffd700) !important;
+        background-color: var(--dn-th-bg, #ffd700) !important;
+        color: var(--dn-th-color, #000) !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
 }
 html[data-theme="dark"] body.page-delivery-note-view,
 html[data-theme="dark"] body.page-delivery-note-view main.main-content.dnv-react-root {

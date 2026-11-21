@@ -9,6 +9,7 @@ $deliveriesRoot = dirname(__DIR__);
 require_once $deliveriesRoot . '/config/database.php';
 require_once __DIR__ . '/lib.php';
 require_once __DIR__ . '/load-data.php';
+require_once __DIR__ . '/includes/delivery-feedback-lib.php';
 
 requireLogin();
 
@@ -86,7 +87,7 @@ body.page-dlv-reviews,
 body.page-dlv-reviews.dashboard,
 body.page-dlv-reviews .layout-main-wrapper,
 body.page-dlv-reviews .layout-main-wrapper > .flex-grow-1 {
-    background: #f1f5f9 !important;
+    background: #f8fafc !important;
 }
 html, body.page-dlv-reviews.dashboard, .main-content, .layout-main-wrapper {
     scrollbar-width: none !important;
@@ -99,7 +100,7 @@ html::-webkit-scrollbar, body.page-dlv-reviews.dashboard::-webkit-scrollbar,
     display: none !important;
 }
 body.page-dlv-reviews .employee-header.employee-header--deliveries {
-    background: #f1f5f9 !important;
+    background: #f8fafc !important;
     border: none !important;
     box-shadow: none !important;
     padding: 0 1.25rem !important;
@@ -255,7 +256,7 @@ main.main-content.dlv-react-root {
     padding: 0 1.25rem 2rem !important;
     overflow: auto !important;
     box-sizing: border-box;
-    background: #f1f5f9 !important;
+    background: #f8fafc !important;
     min-height: calc(100vh - 80px);
 }
 main.main-content.dlv-react-root #root {

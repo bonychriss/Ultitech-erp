@@ -158,6 +158,21 @@ export default function DeliveryNoteViewPage() {
     setPdfFileName('');
   };
 
+  const handlePrint = () => {
+    if (pdfState === 'loading') return;
+    closeDesktopActions();
+    setMobileActionsOpen(false);
+    window.setTimeout(() => {
+      try {
+        window.focus();
+        window.print();
+      } catch (err) {
+        console.error('Delivery note print failed:', err);
+        showToast('error', 'Could not open the print dialog.', 4000);
+      }
+    }, 50);
+  };
+
   const handleDownloadPdf = async () => {
     if (pdfState === 'loading') return;
 
@@ -254,6 +269,7 @@ export default function DeliveryNoteViewPage() {
         onDesktopActionsToggle={setDesktopActionsOpen}
         onMobileActionsToggle={setMobileActionsOpen}
         onCloseDesktopActions={closeDesktopActions}
+        onPrint={handlePrint}
         onDownloadPdf={handleDownloadPdf}
       />
 

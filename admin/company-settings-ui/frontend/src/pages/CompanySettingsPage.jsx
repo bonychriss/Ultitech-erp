@@ -186,6 +186,19 @@ export default function CompanySettingsPage() {
               <Field label="Phone">
                 <input className="cs-input" name="phone" defaultValue={company.phone || ''} />
               </Field>
+              <Field
+                label="Company website"
+                help="Shown on delivery notes and the public feedback page (e.g. www.example.com)."
+              >
+                <input
+                  className="cs-input"
+                  type="url"
+                  name="company_website"
+                  defaultValue={settings.company_website || company.domain || ''}
+                  placeholder="https://www.example.com"
+                  autoComplete="url"
+                />
+              </Field>
               <Field label="Address">
                 <input className="cs-input" name="address" defaultValue={company.address || ''} />
               </Field>

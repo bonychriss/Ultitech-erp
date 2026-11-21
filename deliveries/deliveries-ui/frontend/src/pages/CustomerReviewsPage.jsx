@@ -2,11 +2,10 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import {
   Star, Search, Loader2, MessageSquare, ThumbsUp, BarChart3,
+  Smile, Laugh, Meh, Frown, Angry,
 } from 'lucide-react'
 import { CFG } from '../config.js'
 import DeliveryKpiTraceModal from '../components/DeliveryKpiTraceModal.jsx'
-import FeedbackGradeBadge from '../components/FeedbackGradeBadge.jsx'
-import { fetchFeedbackGrades } from '../api/gradeFeedback.js'
 import { resolveKpiTrace } from '../utils/kpiTrace.js'
 
 function cleanText(value) {
@@ -18,9 +17,9 @@ function cleanText(value) {
 }
 
 function formatDateTime(value) {
-  if (!value) return '-'
+  if (!value) return '—'
   const d = new Date(String(value).replace(' ', 'T'))
-  if (Number.isNaN(d.getTime())) return '-'
+  if (Number.isNaN(d.getTime())) return '—'
   return d.toLocaleString('en-US', {
     month: 'short',
     day: 'numeric',
@@ -30,27 +29,42 @@ function formatDateTime(value) {
   })
 }
 
-function StarRating({ rating, size = 16 }) {
-  const stars = []
-  for (let i = 1; i <= 5; i += 1) {
-    stars.push(
-      <Star
-        key={i}
-        size={size}
-        fill={i <= rating ? 'currentColor' : 'none'}
-        className={i <= rating ? 'dlv-review-star dlv-review-star--filled' : 'dlv-review-star'}
-        aria-hidden="true"
-      />,
-    )
+function ratingMood(rating) {
+  const value = Number(rating) || 0
+  if (value >= 5) {
+    return { icon: Laugh, tone: 'great', label: 'Very satisfied' }
   }
-  return <div className="dlv-review-stars" aria-label={`${rating} out of 5 stars`}>{stars}</div>
+  if (value >= 4) {
+    return { icon: Smile, tone: 'good', label: 'Satisfied' }
+  }
+  if (value >= 3) {
+    return { icon: Meh, tone: 'ok', label: 'Neutral' }
+  }
+  if (value >= 2) {
+    return { icon: Frown, tone: 'poor', label: 'Dissatisfied' }
+  }
+  return { icon: Angry, tone: 'bad', label: 'Very dissatisfied' }
 }
 
-function clientInitials(name) {
-  const parts = cleanText(name).split(/\s+/).filter(Boolean)
-  if (parts.length === 0) return '?'
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
-  return `${parts[0][0] || ''}${parts[parts.length - 1][0] || ''}`.toUpperCase()
+function FaceRating({ rating, size = 22 }) {
+  const mood = ratingMood(rating)
+  const MoodIcon = mood.icon
+  return (
+    <div
+      className={`dlv-review-face dlv-review-face--${mood.tone}`}
+      title={mood.label}
+      aria-label={`${mood.label} (${rating} of 5)`}
+    >
+      <MoodIcon size={size} aria-hidden="true" />
+      <span className="dlv-review-face-label">{mood.label}</span>
+    </div>
+  )
+}
+
+function displayFeedback(text) {
+  return cleanText(text)
+    .replace(/\n*\s*Follow up:\s*(Yes|No)\s*$/i, '')
+    .trim()
 }
 
 export default function CustomerReviewsPage() {
@@ -65,38 +79,37 @@ export default function CustomerReviewsPage() {
   const mobileSearchInputRef = useRef(null)
   const searchExpandRef = useRef(null)
   const [headerSearchMount, setHeaderSearchMount] = useState(null)
-  const [gradesById, setGradesById] = useState({})
-  const [gradesLoading, setGradesLoading] = useState(false)
-  const [gradesNote, setGradesNote] = useState('')
 
-  const urls = data.urls || {}
   const reviews = data.reviews || []
   const stats = data.stats || {}
 
   const kpis = [
     {
       key: 'avgRating',
-      label: 'Average satisfaction',
-      value: `${Number(stats.avgRating || 0).toFixed(1)}`,
-      sub: 'Out of 5.0 stars',
+      label: 'Customer average',
+      value: Number(stats.avgRating || 0).toFixed(1),
+      unit: '/ 5',
       color: 'amber',
-      icon: <Star size={17} aria-hidden="true" />,
+      icon: <Star size={15} aria-hidden="true" />,
+      title: 'Average customer star rating out of 5.',
     },
     {
       key: 'totalReviews',
-      label: 'Total reviews',
+      label: 'Customer reviews',
       value: Number(stats.totalReviews || 0).toLocaleString(),
-      sub: 'All submitted ratings',
+      unit: '',
       color: 'blue',
-      icon: <BarChart3 size={17} aria-hidden="true" />,
+      icon: <BarChart3 size={15} aria-hidden="true" />,
+      title: 'Number of customer ratings submitted after delivery.',
     },
     {
       key: 'positive',
-      label: 'Positive sentiment',
+      label: 'Customer positive',
       value: `${Number(stats.positivePercent || 0)}%`,
-      sub: 'Rated 4 stars or higher',
+      unit: '',
       color: 'green',
-      icon: <ThumbsUp size={17} aria-hidden="true" />,
+      icon: <ThumbsUp size={15} aria-hidden="true" />,
+      title: 'Share of customer ratings at 4 or 5 stars.',
     },
   ]
 
@@ -130,38 +143,6 @@ export default function CustomerReviewsPage() {
     })()
     return () => { alive = false }
   }, [initial.reviews])
-
-  useEffect(() => {
-    if (!reviews.length) {
-      setGradesById({})
-      setGradesNote('')
-      return undefined
-    }
-
-    let alive = true
-    setGradesLoading(true)
-    ;(async () => {
-      try {
-        const result = await fetchFeedbackGrades(reviews.map((row) => ({
-          id: row.id,
-          feedback: cleanText(row.feedback),
-          rating: row.rating || 0,
-        })))
-        if (!alive) return
-        setGradesById(result.gradesById)
-        setGradesNote(result.note || '')
-      } catch {
-        if (alive) {
-          setGradesById({})
-          setGradesNote('')
-        }
-      } finally {
-        if (alive) setGradesLoading(false)
-      }
-    })()
-
-    return () => { alive = false }
-  }, [reviews])
 
   useEffect(() => {
     setHeaderSearchMount(document.getElementById('dlv-header-search-mount'))
@@ -210,7 +191,7 @@ export default function CustomerReviewsPage() {
           id={id}
           type="search"
           className="dlv-search-input"
-          placeholder="Search client, feedback, driver..."
+          placeholder="Search reviews..."
           value={searchInput}
           autoComplete="off"
           onChange={(e) => setSearchInput(e.target.value)}
@@ -242,7 +223,7 @@ export default function CustomerReviewsPage() {
 
   if (loading && !data.reviews) {
     return (
-      <div className="dlv-page">
+      <div className="dlv-page dlv-page--reviews">
         <div className="dlv-loading" role="status">
           <Loader2 className="dlv-spin" aria-hidden="true" />
           <span>Loading customer reviews...</span>
@@ -252,7 +233,7 @@ export default function CustomerReviewsPage() {
   }
 
   return (
-    <div className="dlv-page">
+    <div className="dlv-page dlv-page--reviews">
       {activeKpiTrace && (
         <DeliveryKpiTraceModal
           trace={activeKpiTrace}
@@ -298,88 +279,93 @@ export default function CustomerReviewsPage() {
         </div>
       </div>
 
-      <div className="dlv-sticky-top">
-        <div className="dlv-kpis dlv-kpis--3">
-          {kpis.map((k) => (
-            <button
-              key={k.key}
-              type="button"
-              className="dlv-kpi-card dlv-kpi--clickable"
-              onClick={() => openKpiTrace(k.key)}
-              aria-label={`View details for ${k.label}`}
-              title="Click to see contributing records"
-            >
-              <div className="dlv-kpi-text">
-                <span className="dlv-kpi-label">{k.label}</span>
-                <div className="dlv-kpi-value">{k.value}</div>
-                <div className="dlv-kpi-sub">{k.sub}</div>
-              </div>
-              <span className={`dlv-kpi-badge dlv-badge--${k.color}`}>{k.icon}</span>
-            </button>
-          ))}
-        </div>
+      <div className="dlv-reviews-summary">
+        {kpis.map((k) => (
+          <button
+            key={k.key}
+            type="button"
+            className="dlv-reviews-stat"
+            onClick={() => openKpiTrace(k.key)}
+            aria-label={`View details for ${k.label}`}
+            title={k.title}
+          >
+            <span className="dlv-reviews-stat-top">
+              <span className="dlv-reviews-stat-label">{k.label}</span>
+              <span className={`dlv-reviews-stat-icon dlv-reviews-stat-icon--${k.color}`}>{k.icon}</span>
+            </span>
+            <span className="dlv-reviews-stat-value">
+              {k.value}
+              {k.unit ? <span className="dlv-reviews-stat-unit">{k.unit}</span> : null}
+            </span>
+          </button>
+        ))}
       </div>
 
       <section className="dlv-reviews-section">
         <div className="dlv-reviews-section-head">
-          <h3 className="dlv-reviews-section-title">
-            <MessageSquare size={18} aria-hidden="true" />
-            Feedback history
-          </h3>
+          <h2 className="dlv-reviews-section-title">Customer feedback</h2>
           <span className="dlv-reviews-section-meta">
             {filtered.length} review{filtered.length === 1 ? '' : 's'}
-            {gradesNote ? ` � ${gradesNote}` : ''}
           </span>
         </div>
 
         {filtered.length === 0 ? (
           <div className="dlv-empty dlv-empty--reviews">
-            <MessageSquare size={32} aria-hidden="true" />
-            <p>{reviews.length === 0 ? 'No reviews received yet.' : 'No reviews match your search.'}</p>
+            <MessageSquare size={28} aria-hidden="true" />
+            <p>{reviews.length === 0 ? 'No reviews yet.' : 'No reviews match your search.'}</p>
           </div>
         ) : (
-          <div className="dlv-reviews-list">
+          <ul className="dlv-reviews-list">
+            <li className="dlv-review-head" aria-hidden="true">
+              <div className="dlv-review-col-label">Rating</div>
+              <div className="dlv-review-col-label">Name</div>
+              <div className="dlv-review-col-label">Rated</div>
+              <div className="dlv-review-col-label">Comment</div>
+            </li>
             {filtered.map((review) => {
-              const feedbackText = cleanText(review.feedback)
-              const clientName = cleanText(review.client_name) || '-'
+              const feedbackText = displayFeedback(review.feedback)
+              const clientName = cleanText(review.client_name) || '—'
               const clientPhone = cleanText(review.client_phone)
+              const driverName = cleanText(review.driver_name)
+              const orderRef = cleanText(review.order_ref)
 
               return (
-                <article key={review.id} className="dlv-review-card">
-                  <header className="dlv-review-head">
-                    <div className="dlv-review-avatar" aria-hidden="true">
-                      {clientInitials(clientName)}
-                    </div>
+                <li key={review.id} className="dlv-review-card">
+                  <div className="dlv-review-rating-lead" title="Customer face rating">
+                    <FaceRating rating={review.rating || 0} size={22} />
+                  </div>
+
+                  <div className="dlv-review-who">
                     <div className="dlv-review-client">
                       <div className="dlv-review-name">{clientName}</div>
-                      {clientPhone ? (
-                        <div className="dlv-review-phone">{clientPhone}</div>
-                      ) : null}
+                      <div className="dlv-review-meta-line">
+                        {clientPhone ? <span>{clientPhone}</span> : null}
+                        {clientPhone && orderRef ? <span aria-hidden="true">·</span> : null}
+                        {orderRef ? <span>{orderRef}</span> : null}
+                      </div>
                       <time className="dlv-review-date" dateTime={review.completion_time}>
                         {formatDateTime(review.completion_time)}
                       </time>
                     </div>
-                  </header>
-
-                  <div className={`dlv-review-message${feedbackText ? '' : ' dlv-review-message--empty'}`}>
-                    <p>{feedbackText || 'No written feedback'}</p>
                   </div>
 
-                  <div className="dlv-review-grade-wrap">
-                    <FeedbackGradeBadge
-                      grade={gradesById[review.id]}
-                      loading={gradesLoading && !gradesById[review.id]}
-                    />
+                  <div className="dlv-review-rated" title="Team member who handled the delivery">
+                    {driverName ? (
+                      <span className="dlv-review-rated-name">{driverName}</span>
+                    ) : (
+                      <span className="dlv-review-rated-empty">Unassigned</span>
+                    )}
                   </div>
 
-                  <footer className="dlv-review-rating-row">
-                    <StarRating rating={review.rating || 0} size={16} />
-                    <span className="dlv-review-score">{Number(review.rating || 0).toFixed(1)}</span>
-                  </footer>
-                </article>
+                  <div className="dlv-review-comment">
+                    <p className={`dlv-review-text${feedbackText ? '' : ' is-empty'}`}>
+                      {feedbackText || 'No written feedback'}
+                    </p>
+                  </div>
+                </li>
               )
             })}
-          </div>
+          </ul>
         )}
       </section>
     </div>

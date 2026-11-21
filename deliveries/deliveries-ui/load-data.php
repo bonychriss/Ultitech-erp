@@ -1012,33 +1012,36 @@ function deliveries_build_customer_reviews_kpi_traces(array $reviews, array $sta
 
     return [
         'avgRating' => [
-            'title' => 'Average satisfaction',
-            'headline' => $avgLabel,
-            'confirmation' => 'Average star rating across all submitted customer reviews.',
+            'title' => 'Customer average (stars)',
+            'headline' => $avgLabel . ' / 5',
+            'confirmation' => 'Average customer star rating out of 5.',
             'items' => $allItems,
-            'itemsTitle' => 'Contributing reviews',
+            'itemsTitle' => 'Contributing customer reviews',
             'modalType' => 'reviews',
         ],
         'totalReviews' => [
-            'title' => 'Total reviews',
+            'title' => 'Customer reviews',
             'headline' => $countLabel((int) ($stats['totalReviews'] ?? count($allItems))),
-            'confirmation' => 'All deliveries with a customer rating recorded.',
+            'confirmation' => 'Deliveries with a customer star rating recorded.',
             'items' => $allItems,
-            'itemsTitle' => 'Contributing reviews',
+            'itemsTitle' => 'Contributing customer reviews',
             'modalType' => 'reviews',
         ],
         'positive' => [
-            'title' => 'Positive sentiment',
+            'title' => 'Customer positive (4–5★)',
             'headline' => ((int) ($stats['positivePercent'] ?? 0)) . '%',
-            'confirmation' => 'Share of reviews rated 4 stars or higher.',
+            'confirmation' => 'Share of customer ratings at 4 or 5 stars.',
             'items' => $positiveItems,
-            'itemsTitle' => 'Contributing reviews',
+            'itemsTitle' => 'Contributing customer reviews',
             'modalType' => 'reviews',
         ],
     ];
 }
 
 /**
+ * Customer reviews come from QR feedback on delivery notes (primary) and
+ * any ratings stored directly on delivery orders (legacy / mirrored).
+ *
  * @return array{ok:bool,error?:string,data?:array}
  */
 function deliveries_load_customer_reviews_payload(PDO $pdo, array $query = []): array
@@ -1046,60 +1049,59 @@ function deliveries_load_customer_reviews_payload(PDO $pdo, array $query = []): 
     if (function_exists('ensureDeliveriesSchema')) {
         ensureDeliveriesSchema();
     }
-
-    $stats = [
-        'avgRating' => 0.0,
-        'totalReviews' => 0,
-        'positivePercent' => 0,
-    ];
-    $reviews = [];
-
-    try {
-        $stmtStats = $pdo->query("
-            SELECT
-                AVG(customer_rating) AS avg_rating,
-                COUNT(customer_rating) AS total_reviews,
-                COUNT(CASE WHEN customer_rating >= 4 THEN 1 END) AS positive_feedback
-            FROM delivery_orders
-            WHERE customer_rating IS NOT NULL
-        ");
-        $rowStats = $stmtStats ? $stmtStats->fetch(PDO::FETCH_ASSOC) : false;
-        if ($rowStats) {
-            $stats['avgRating'] = round((float) ($rowStats['avg_rating'] ?? 0), 1);
-            $stats['totalReviews'] = (int) ($rowStats['total_reviews'] ?? 0);
-            $positive = (int) ($rowStats['positive_feedback'] ?? 0);
-            $stats['positivePercent'] = $stats['totalReviews'] > 0
-                ? (int) round(($positive / $stats['totalReviews']) * 100)
-                : 0;
-        }
-    } catch (Throwable $e) {
-        $stats = ['avgRating' => 0.0, 'totalReviews' => 0, 'positivePercent' => 0];
+    if (function_exists('ensureDeliveryNotesSchema')) {
+        ensureDeliveryNotesSchema();
+    }
+    if (function_exists('deliveries_feedback_ensure_schema')) {
+        deliveries_feedback_ensure_schema($pdo);
     }
 
+    $reviewsByKey = [];
+
+    // 1) Public QR reviews live on delivery_notes.
     try {
-        $stmtReviews = $pdo->query("
-            SELECT o.id, o.client_name, o.client_phone, o.customer_rating, o.customer_feedback,
-                   o.completion_time, o.invoice_ref, t.trip_ref, u.full_name AS driver_name,
-                   dn.note_number AS delivery_number
-            FROM delivery_orders o
+        $stmtNotes = $pdo->query("
+            SELECT
+                dn.id AS note_id,
+                o.id AS order_id,
+                dn.customer_name AS client_name,
+                COALESCE(NULLIF(dn.customer_phone, ''), NULLIF(dn.phone_number, ''), o.client_phone) AS client_phone,
+                dn.customer_rating,
+                dn.customer_feedback,
+                COALESCE(dn.feedback_submitted_at, o.completion_time, CONCAT(dn.delivery_date, ' 00:00:00')) AS completion_time,
+                COALESCE(NULLIF(o.invoice_ref, ''), dn.note_number) AS order_ref,
+                t.trip_ref,
+                u.full_name AS driver_name,
+                dn.note_number AS delivery_number
+            FROM delivery_notes dn
+            LEFT JOIN (
+                SELECT delivery_note_id, MAX(id) AS id
+                FROM delivery_orders
+                WHERE delivery_note_id IS NOT NULL
+                GROUP BY delivery_note_id
+            ) olink ON olink.delivery_note_id = dn.id
+            LEFT JOIN delivery_orders o ON o.id = olink.id
             LEFT JOIN delivery_trips t ON o.trip_id = t.id
             LEFT JOIN users u ON t.driver_id = u.id
-            LEFT JOIN delivery_notes dn ON o.delivery_note_id = dn.id
-            WHERE o.customer_rating IS NOT NULL
-            ORDER BY o.completion_time DESC
-            LIMIT 100
+            WHERE dn.customer_rating IS NOT NULL
+            ORDER BY COALESCE(dn.feedback_submitted_at, dn.delivery_date) DESC
+            LIMIT 200
         ");
-        $rows = $stmtReviews ? ($stmtReviews->fetchAll(PDO::FETCH_ASSOC) ?: []) : [];
-        foreach ($rows as $row) {
-            $orderRef = trim((string) ($row['invoice_ref'] ?? ''));
+        $noteRows = $stmtNotes ? ($stmtNotes->fetchAll(PDO::FETCH_ASSOC) ?: []) : [];
+        foreach ($noteRows as $row) {
+            $noteId = (int) ($row['note_id'] ?? 0);
+            $orderId = (int) ($row['order_id'] ?? 0);
+            $key = $noteId > 0 ? ('n:' . $noteId) : ('o:' . $orderId);
+            $orderRef = trim((string) ($row['order_ref'] ?? ''));
             if ($orderRef === '') {
                 $orderRef = trim((string) ($row['delivery_number'] ?? ''));
             }
             if ($orderRef === '') {
-                $orderRef = '#' . (int) ($row['id'] ?? 0);
+                $orderRef = $orderId > 0 ? '#' . $orderId : ('DN-' . $noteId);
             }
-            $reviews[] = [
-                'id' => (int) ($row['id'] ?? 0),
+            $reviewsByKey[$key] = [
+                'id' => $orderId > 0 ? $orderId : (1000000 + $noteId),
+                'note_id' => $noteId,
                 'client_name' => (string) ($row['client_name'] ?? ''),
                 'client_phone' => (string) ($row['client_phone'] ?? ''),
                 'rating' => (int) ($row['customer_rating'] ?? 0),
@@ -1111,8 +1113,85 @@ function deliveries_load_customer_reviews_payload(PDO $pdo, array $query = []): 
             ];
         }
     } catch (Throwable $e) {
-        $reviews = [];
+        // Notes table may be unavailable in some tenants; fall through to orders.
     }
+
+    // 2) Ratings saved only on delivery_orders (or mirrored there earlier).
+    try {
+        $stmtOrders = $pdo->query("
+            SELECT o.id, o.delivery_note_id, o.client_name, o.client_phone, o.customer_rating, o.customer_feedback,
+                   o.completion_time, o.invoice_ref, t.trip_ref, u.full_name AS driver_name,
+                   dn.note_number AS delivery_number
+            FROM delivery_orders o
+            LEFT JOIN delivery_trips t ON o.trip_id = t.id
+            LEFT JOIN users u ON t.driver_id = u.id
+            LEFT JOIN delivery_notes dn ON o.delivery_note_id = dn.id
+            WHERE o.customer_rating IS NOT NULL
+            ORDER BY o.completion_time DESC
+            LIMIT 200
+        ");
+        $orderRows = $stmtOrders ? ($stmtOrders->fetchAll(PDO::FETCH_ASSOC) ?: []) : [];
+        foreach ($orderRows as $row) {
+            $noteId = (int) ($row['delivery_note_id'] ?? 0);
+            $orderId = (int) ($row['id'] ?? 0);
+            $key = $noteId > 0 ? ('n:' . $noteId) : ('o:' . $orderId);
+            if (isset($reviewsByKey[$key])) {
+                // Prefer note text/rating if present; fill missing driver/order fields from order.
+                if ($reviewsByKey[$key]['driver_name'] === '' && trim((string) ($row['driver_name'] ?? '')) !== '') {
+                    $reviewsByKey[$key]['driver_name'] = (string) $row['driver_name'];
+                }
+                if ($reviewsByKey[$key]['trip_ref'] === '' && trim((string) ($row['trip_ref'] ?? '')) !== '') {
+                    $reviewsByKey[$key]['trip_ref'] = (string) $row['trip_ref'];
+                }
+                continue;
+            }
+            $orderRef = trim((string) ($row['invoice_ref'] ?? ''));
+            if ($orderRef === '') {
+                $orderRef = trim((string) ($row['delivery_number'] ?? ''));
+            }
+            if ($orderRef === '') {
+                $orderRef = '#' . $orderId;
+            }
+            $reviewsByKey[$key] = [
+                'id' => $orderId,
+                'note_id' => $noteId,
+                'client_name' => (string) ($row['client_name'] ?? ''),
+                'client_phone' => (string) ($row['client_phone'] ?? ''),
+                'rating' => (int) ($row['customer_rating'] ?? 0),
+                'feedback' => (string) ($row['customer_feedback'] ?? ''),
+                'completion_time' => (string) ($row['completion_time'] ?? ''),
+                'order_ref' => $orderRef,
+                'trip_ref' => (string) ($row['trip_ref'] ?? ''),
+                'driver_name' => (string) ($row['driver_name'] ?? ''),
+            ];
+        }
+    } catch (Throwable $e) {
+        // Keep whatever we already collected from notes.
+    }
+
+    $reviews = array_values($reviewsByKey);
+    usort($reviews, static function (array $a, array $b): int {
+        return strcmp((string) ($b['completion_time'] ?? ''), (string) ($a['completion_time'] ?? ''));
+    });
+    if (count($reviews) > 100) {
+        $reviews = array_slice($reviews, 0, 100);
+    }
+
+    $total = count($reviews);
+    $sum = 0;
+    $positive = 0;
+    foreach ($reviews as $review) {
+        $rating = (int) ($review['rating'] ?? 0);
+        $sum += $rating;
+        if ($rating >= 4) {
+            $positive += 1;
+        }
+    }
+    $stats = [
+        'avgRating' => $total > 0 ? round($sum / $total, 1) : 0.0,
+        'totalReviews' => $total,
+        'positivePercent' => $total > 0 ? (int) round(($positive / $total) * 100) : 0,
+    ];
 
     $moduleQs = deliveries_module_query();
     $modulesUrl = function_exists('company_url') && function_exists('getRequestedCompanySlug')

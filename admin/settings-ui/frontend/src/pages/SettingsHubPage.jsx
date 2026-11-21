@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
+  Accessibility,
   Building2,
   CalendarCheck,
   Clock3,
@@ -22,6 +23,7 @@ import {
 import {
   executeFactoryReset,
   getSettingsCfg,
+  saveAccessibility,
   saveBusinessField,
   saveSiteContact,
   saveSystemFont,
@@ -31,6 +33,7 @@ import {
 const ICON_MAP = {
   building: Building2,
   type: Type,
+  accessibility: Accessibility,
   globe: Globe,
   'plus-square': PlusSquare,
   sitemap: Network,
@@ -46,6 +49,31 @@ const ICON_MAP = {
   mail: Mail,
   trash: Trash2,
   briefcase: Briefcase,
+}
+
+const A11Y_DEFAULTS = {
+  textScale: '100',
+  highContrast: false,
+  reduceMotion: false,
+  underlineLinks: false,
+  largeTargets: false,
+  deliveryNoteQr: true,
+}
+
+function applyA11yToDocument(prefs) {
+  if (typeof document === 'undefined') return
+  const next = { ...A11Y_DEFAULTS, ...(prefs || {}) }
+  const root = document.documentElement
+  root.setAttribute('data-a11y-text', String(next.textScale || '100'))
+  root.setAttribute('data-a11y-contrast', next.highContrast ? '1' : '0')
+  root.setAttribute('data-a11y-motion', next.reduceMotion ? '1' : '0')
+  root.setAttribute('data-a11y-underline', next.underlineLinks ? '1' : '0')
+  root.setAttribute('data-a11y-tap', next.largeTargets ? '1' : '0')
+  try {
+    localStorage.setItem('erp-a11y', JSON.stringify(next))
+  } catch {
+    /* ignore */
+  }
 }
 
 const SITE_TEXT_SECTIONS = [
@@ -158,6 +186,12 @@ export default function SettingsHubPage() {
   const [businessFieldOpen, setBusinessFieldOpen] = useState(false)
   const [businessFieldBusy, setBusinessFieldBusy] = useState(false)
   const businessFieldOptions = cfg.businessField?.options || []
+  const [a11yOpen, setA11yOpen] = useState(false)
+  const [a11yBusy, setA11yBusy] = useState(false)
+  const [a11yForm, setA11yForm] = useState(() => ({
+    ...A11Y_DEFAULTS,
+    ...(cfg.accessibility || {}),
+  }))
 
   const catalog = cfg.font?.catalog || []
   const selectedFont = catalog.find((f) => f.id === fontKey) || {
@@ -210,6 +244,26 @@ export default function SettingsHubPage() {
       setFlash({ type: 'error', message: err.message || 'Could not save font.' })
     } finally {
       setFontBusy(false)
+    }
+  }
+
+  const onSaveAccessibility = async (e) => {
+    e.preventDefault()
+    setA11yBusy(true)
+    try {
+      const data = await saveAccessibility(cfg.api?.saveAccessibility, a11yForm)
+      const saved = { ...A11Y_DEFAULTS, ...(data.accessibility || a11yForm) }
+      setA11yForm(saved)
+      if (cfg.accessibility) {
+        Object.assign(cfg.accessibility, saved)
+      }
+      applyA11yToDocument(saved)
+      setFlash({ type: 'success', message: data.message || 'Accessibility settings updated.' })
+      setA11yOpen(false)
+    } catch (err) {
+      setFlash({ type: 'error', message: err.message || 'Could not save accessibility settings.' })
+    } finally {
+      setA11yBusy(false)
     }
   }
 
@@ -372,6 +426,7 @@ export default function SettingsHubPage() {
             const isReset = card.action === 'factory_reset'
             const isRegister = card.action === 'register_company'
             const isFont = card.action === 'system_font'
+            const isA11y = card.action === 'accessibility'
             const isBusinessField = card.action === 'business_field'
             const isContact = card.action === 'site_contact'
             const isQuoteAccess = card.action === 'permissions' || card.action === 'web_quote_access'
@@ -399,6 +454,22 @@ export default function SettingsHubPage() {
                   type="button"
                   className="ash-card-link"
                   onClick={() => setFontOpen(true)}
+                >
+                  {content}
+                </button>
+              )
+            }
+
+            if (isA11y) {
+              return (
+                <button
+                  key={card.id}
+                  type="button"
+                  className="ash-card-link"
+                  onClick={() => {
+                    setA11yForm({ ...A11Y_DEFAULTS, ...(cfg.accessibility || {}) })
+                    setA11yOpen(true)
+                  }}
                 >
                   {content}
                 </button>
@@ -467,6 +538,132 @@ export default function SettingsHubPage() {
           })}
         </div>
       </div>
+
+      {a11yOpen ? (
+        <div
+          className="ash-modal-backdrop"
+          role="presentation"
+          onClick={() => !a11yBusy && setA11yOpen(false)}
+        >
+          <div
+            className="ash-modal ash-modal--a11y"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="ash-a11y-title"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 id="ash-a11y-title">Accessibility</h2>
+            <p className="ash-reset-lead">
+              Company-wide reading and interaction preferences. Changes apply across modules for this
+              company.
+            </p>
+            <form className="ash-a11y-form" onSubmit={onSaveAccessibility}>
+              <label className="ash-label" htmlFor="ash-a11y-text">
+                Text size
+              </label>
+              <select
+                id="ash-a11y-text"
+                className="ash-select"
+                value={a11yForm.textScale}
+                onChange={(e) => setA11yForm((prev) => ({ ...prev, textScale: e.target.value }))}
+              >
+                <option value="100">Default (100%)</option>
+                <option value="112">Comfortable (112%)</option>
+                <option value="125">Large (125%)</option>
+                <option value="150">Extra large (150%)</option>
+              </select>
+
+              <div className="ash-a11y-toggles">
+                {[
+                  {
+                    key: 'highContrast',
+                    label: 'High contrast',
+                    hint: 'Stronger borders and clearer text',
+                  },
+                  {
+                    key: 'reduceMotion',
+                    label: 'Reduce motion',
+                    hint: 'Turn off animations and transitions',
+                  },
+                  {
+                    key: 'underlineLinks',
+                    label: 'Underline links',
+                    hint: 'Mark links by more than colour alone',
+                  },
+                  {
+                    key: 'largeTargets',
+                    label: 'Larger tap targets',
+                    hint: 'Bigger buttons and controls',
+                  },
+                ].map((row) => (
+                  <label key={row.key} className="ash-a11y-toggle">
+                    <span className="ash-a11y-toggle-copy">
+                      <span className="ash-a11y-toggle-label">{row.label}</span>
+                      <span className="ash-a11y-toggle-hint">{row.hint}</span>
+                    </span>
+                    <input
+                      type="checkbox"
+                      checked={Boolean(a11yForm[row.key])}
+                      onChange={(e) =>
+                        setA11yForm((prev) => ({ ...prev, [row.key]: e.target.checked }))
+                      }
+                    />
+                  </label>
+                ))}
+              </div>
+
+              <div className="ash-a11y-section">
+                <h3 className="ash-a11y-section-title">QR code</h3>
+                <label className="ash-a11y-toggle ash-a11y-toggle--switch">
+                  <span
+                    className={`ash-switch${a11yForm.deliveryNoteQr ? ' is-on' : ''}`}
+                    aria-hidden="true"
+                  >
+                    <span className="ash-switch-knob" />
+                  </span>
+                  <span className="ash-a11y-toggle-copy">
+                    <span className="ash-a11y-toggle-label">Delivery note</span>
+                    <span className="ash-a11y-toggle-hint">
+                      {a11yForm.deliveryNoteQr
+                        ? 'QR code is shown on printed delivery notes'
+                        : 'QR code is hidden on printed delivery notes'}
+                    </span>
+                  </span>
+                  <input
+                    type="checkbox"
+                    className="ash-switch-input"
+                    checked={Boolean(a11yForm.deliveryNoteQr)}
+                    onChange={(e) =>
+                      setA11yForm((prev) => ({ ...prev, deliveryNoteQr: e.target.checked }))
+                    }
+                    aria-label="Show QR code on delivery note"
+                  />
+                </label>
+              </div>
+
+              <div className="ash-modal-actions">
+                <button
+                  type="button"
+                  className="ash-btn-ghost"
+                  style={{ borderRadius: 9999 }}
+                  onClick={() => setA11yOpen(false)}
+                  disabled={a11yBusy}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="ash-btn-primary"
+                  style={{ borderRadius: 9999 }}
+                  disabled={a11yBusy}
+                >
+                  {a11yBusy ? 'Saving…' : 'Save'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      ) : null}
 
       {fontOpen ? (
         <div

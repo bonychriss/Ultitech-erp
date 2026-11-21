@@ -153,6 +153,16 @@ function adminSettingsUiHubCards(): array
             'superAdminOnly' => false,
         ],
         [
+            'id' => 'accessibility',
+            'title' => 'Accessibility',
+            'description' => 'Text size, contrast, motion, tap targets, and delivery-note QR visibility.',
+            'href' => '#accessibility',
+            'accent' => '#0d9488',
+            'icon' => 'accessibility',
+            'action' => 'accessibility',
+            'superAdminOnly' => false,
+        ],
+        [
             'id' => 'register_company',
             'title' => 'Register new company',
             'description' => 'Create a company tenant with default module setup.',
@@ -398,6 +408,16 @@ function adminSettingsUiInitPayload(): array
             'stack' => (string) ($systemFontDef['stack'] ?? "'Poppins', sans-serif"),
             'catalog' => $fonts,
         ],
+        'accessibility' => function_exists('erp_get_accessibility_prefs')
+            ? erp_get_accessibility_prefs()
+            : [
+                'textScale' => '100',
+                'highContrast' => false,
+                'reduceMotion' => false,
+                'underlineLinks' => false,
+                'largeTargets' => false,
+                'deliveryNoteQr' => true,
+            ],
         'cards' => adminSettingsUiHubCards(),
         'registerCompany' => [
             'formAction' => 'management.php' . $mgmtQs,
@@ -410,6 +430,7 @@ function adminSettingsUiInitPayload(): array
             'factoryReset' => adminSettingsUiPublicUrl('api/factory-reset.php'),
             'saveSiteContact' => adminSettingsUiPublicUrl('api/save-site-contact.php'),
             'saveWebQuoteAccess' => adminSettingsUiPublicUrl('api/save-web-quote-access.php'),
+            'saveAccessibility' => adminSettingsUiPublicUrl('api/save-accessibility.php'),
         ],
     ];
 }

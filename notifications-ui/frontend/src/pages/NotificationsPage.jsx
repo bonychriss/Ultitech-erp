@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import {
   AlertTriangle,
+  Angry,
   Banknote,
   Bell,
   Boxes,
@@ -10,14 +11,18 @@ import {
   Clock,
   FileText,
   FileWarning,
+  Frown,
   Gauge,
+  Laugh,
   LineChart,
   Mail,
+  Meh,
   Package,
   PartyPopper,
   Receipt,
   Settings,
   Shield,
+  Smile,
   Sparkles,
   Truck,
   UserPlus,
@@ -118,13 +123,24 @@ function moduleColor(item) {
   return MODULE_COLORS[item.module] || MODULE_COLORS.general
 }
 
+const FACE_COLORS = {
+  'face-great': '#15803d',
+  'face-good': '#2563eb',
+  'face-ok': '#a16207',
+  'face-poor': '#c2410c',
+  'face-bad': '#b91c1c',
+}
+
 function iconStyle(item) {
   // Keep module brand color even for success/alert status (select-module solid hue).
   const fg = moduleColor(item)
   if (item.icon === 'alert' || item.icon === 'invoice-wrong') {
     return { background: 'transparent', color: '#e11d48' }
   }
-  // Solid icon on clean white ? matches select-module icon treatment (no fogged box).
+  if (FACE_COLORS[item.icon]) {
+    return { background: 'transparent', color: FACE_COLORS[item.icon] }
+  }
+  // Solid icon on clean white — matches select-module icon treatment (no fogged box).
   return { background: 'transparent', color: fg }
 }
 
@@ -167,9 +183,9 @@ function ProductFan({ images }) {
   )
 }
 
-function IconFor({ icon, color }) {
+function IconFor({ icon, color, size = 20 }) {
   const props = {
-    size: 20,
+    size,
     strokeWidth: 1.5,
     'aria-hidden': true,
     color: color || 'currentColor',
@@ -187,6 +203,16 @@ function IconFor({ icon, color }) {
       return <Package {...props} />
     case 'truck':
       return <Truck {...props} />
+    case 'face-great':
+      return <Laugh {...props} />
+    case 'face-good':
+      return <Smile {...props} />
+    case 'face-ok':
+      return <Meh {...props} />
+    case 'face-poor':
+      return <Frown {...props} />
+    case 'face-bad':
+      return <Angry {...props} />
     case 'kpi':
       return <Gauge {...props} />
     case 'clock':
@@ -534,6 +560,16 @@ export default function NotificationsPage() {
                                 <span className="ncr-fan-badge" style={colors} aria-hidden>
                                   <IconFor icon={item.icon} color={colors.color} />
                                 </span>
+                              </span>
+                            ) : item.faceRating ? (
+                              <span
+                                className={`${iconClass} ncr-face-lead`}
+                                style={colors}
+                                title={item.faceLabel || `${item.faceRating} of 5`}
+                                aria-label={item.faceLabel || `${item.faceRating} of 5`}
+                              >
+                                <IconFor icon={item.icon} color={colors.color} size={26} />
+                                <span className="ncr-face-lead-label">{item.faceLabel || `${item.faceRating}/5`}</span>
                               </span>
                             ) : (
                               <span

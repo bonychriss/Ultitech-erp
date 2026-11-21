@@ -24,10 +24,10 @@ function captureElements() {
   const wrap = document.getElementById('delivery-note-content');
   if (!wrap) return [];
 
-  const page = wrap.querySelector('.page-container');
-  if (page && page.offsetWidth > 0 && page.offsetHeight > 0) {
-    return [page];
-  }
+  const pages = [...wrap.querySelectorAll('.page-container')].filter(
+    (page) => page.offsetWidth > 0 && page.offsetHeight > 0,
+  );
+  if (pages.length) return pages;
 
   if (wrap.offsetWidth > 0 && wrap.offsetHeight > 0) {
     return [wrap];
@@ -165,7 +165,7 @@ function collectAvoidBands(rootEl, canvas) {
 
   rootEl.querySelectorAll('.items-table tr').forEach(pushEl);
   rootEl.querySelectorAll(
-    '.header-top, .doc-title-section, .meta-strip, .legal-caveat, .signatures, .signature-section, .signature-block',
+    '.header-top, .doc-title-section, .meta-strip, .legal-caveat, .dn-closing, .dn-qr-block, .signatures, .signature-section, .signature-block, .sig-box',
   ).forEach(pushEl);
 
   return bands.sort((a, b) => a.top - b.top || a.bottom - b.bottom);
@@ -279,13 +279,19 @@ export async function downloadDeliveryNotePdf(displayNumber, onProgress) {
   }
 
   report(10, 'Capturing delivery note...');
-  const captureRoot = elements[0];
-  const canvas = await elementToCanvasWithFallback(captureRoot);
-  const breakYs = collectAvoidBands(captureRoot, canvas);
-  report(60, 'Building PDF...');
-  appendRasterCanvasToPdf(doc, canvas, 0.93, (ratio) => {
-    report(60 + (30 * ratio), 'Assembling pages...');
-  }, breakYs);
+  const pageCount = elements.length;
+  for (let i = 0; i < pageCount; i += 1) {
+    const captureRoot = elements[i];
+    const canvas = await elementToCanvasWithFallback(captureRoot);
+    const breakYs = collectAvoidBands(captureRoot, canvas);
+    const base = 10 + ((80 / pageCount) * i);
+    const span = 80 / pageCount;
+    if (i > 0) doc.addPage();
+    appendRasterCanvasToPdf(doc, canvas, 0.93, (ratio) => {
+      report(base + (span * 0.75 * ratio), `Assembling page ${i + 1}...`);
+    }, breakYs);
+    report(base + span, `Page ${i + 1} of ${pageCount} ready`);
+  }
 
   report(94, 'Finalizing PDF file...');
   const filename = `DeliveryNote_${displayNumber || 'document'}.pdf`;

@@ -4,9 +4,12 @@ import { gradeTier } from '../api/gradeFeedback.js'
 export default function FeedbackGradeBadge({ grade, loading = false, compact = false }) {
   if (loading) {
     return (
-      <div className={`dlv-feedback-grade dlv-feedback-grade--loading${compact ? ' dlv-feedback-grade--compact' : ''}`}>
+      <div
+        className={`dlv-feedback-grade dlv-feedback-grade--loading${compact ? ' dlv-feedback-grade--compact' : ''}`}
+        title="Internal delivery score is being calculated"
+      >
         <Loader2 size={12} className="dlv-spin" aria-hidden="true" />
-        <span>Grading...</span>
+        <span>Scoring...</span>
       </div>
     )
   }
@@ -14,11 +17,16 @@ export default function FeedbackGradeBadge({ grade, loading = false, compact = f
   if (!grade) return null
 
   const tier = gradeTier(grade.letter)
+  const tip = [
+    'Internal delivery score (not the customer star rating).',
+    grade.note || grade.label || '',
+  ].filter(Boolean).join(' ')
 
   return (
     <div
       className={`dlv-feedback-grade dlv-feedback-grade--${tier}${compact ? ' dlv-feedback-grade--compact' : ''}`}
-      title={grade.note || grade.label || 'AI feedback grade'}
+      title={tip}
+      aria-label={`Internal score ${grade.letter || '-'} ${grade.score}/100`}
     >
       <Sparkles size={12} aria-hidden="true" />
       <span className="dlv-feedback-grade-mark">{grade.letter || '-'}</span>

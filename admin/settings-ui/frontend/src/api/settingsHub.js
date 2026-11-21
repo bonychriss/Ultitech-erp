@@ -71,3 +71,17 @@ export async function saveWebQuoteAccess(apiUrl, userIds) {
   }
   return data
 }
+
+export async function saveAccessibility(apiUrl, prefs) {
+  const res = await fetch(apiUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    credentials: 'same-origin',
+    body: JSON.stringify(prefs),
+  })
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok || !data.ok) {
+    throw new Error(data.message || 'Could not save accessibility settings.')
+  }
+  return data
+}

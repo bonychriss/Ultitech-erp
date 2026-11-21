@@ -156,6 +156,11 @@ function notificationsUiDetectModule(array $n): string
         || preg_match('/\b(website quote|web request)\b/', $blob)) {
         return 'website';
     }
+    // Deliveries before sales: paths like customer_reviews contain "customer".
+    if (preg_match('/\/deliveries|module=deliveries|delivery.?note/', $blob)
+        || preg_match('/\b(delivery|delivered|driver assigned|delivery feedback)\b/', $blob)) {
+        return 'deliveries';
+    }
     if (preg_match('/module=sales|\/sales\/|modules\/sales|customer_statement/', $blob)
         || preg_match('/\b(invoice|quotation|sales order|customer)\b/', $blob)) {
         return 'sales';
@@ -163,10 +168,6 @@ function notificationsUiDetectModule(array $n): string
     if (preg_match('/store-management|purchase.?order|\bpo\b|\/stock\/|module=stocks?|modules\/stock|shipment|warehouse|replenish/', $blob)
         || preg_match('/\b(purchase order|stock|shipment|warehouse|procurement)\b/', $blob)) {
         return 'stock';
-    }
-    if (preg_match('/\/deliveries|module=deliveries|delivery.?note/', $blob)
-        || preg_match('/\b(delivery|delivered|driver assigned)\b/', $blob)) {
-        return 'deliveries';
     }
     if (preg_match('/driver-kpi|module=driver_kpi|ride.?recording/', $blob)
         || preg_match('/\b(driver kpi|ride)\b/', $blob)) {
@@ -262,6 +263,90 @@ function notificationsUiEnsureSalesTargetNotice(): void
 }
 
 /**
+ * Parse delivery-feedback notification payload from title/message.
+ *
+ * @param array<string,mixed> $n
+ * @return array{rating:int,note:string,client:string,comment:string}|null
+ */
+function notificationsUiParseDeliveryFeedback(array $n): ?array
+{
+    $title = trim((string) ($n['title'] ?? ''));
+    $message = trim((string) ($n['message'] ?? ''));
+    if ($title === '' && $message === '') {
+        return null;
+    }
+    $isFeedback = (bool) preg_match('/delivery\s+feedback(\s+comment)?/i', $title)
+        || (bool) preg_match('/delivery\s+feedback(\s+comment)?/i', $message);
+    if (!$isFeedback && !preg_match('/\b([1-5])\s*\/\s*5\b/', $message)) {
+        return null;
+    }
+    // Prefer explicit feedback titles so ordinary delivery notices stay trucks.
+    if (!$isFeedback) {
+        return null;
+    }
+
+    $rating = 0;
+    if (preg_match('/\b([1-5])\s*\/\s*5\b/', $message, $m)) {
+        $rating = (int) $m[1];
+    }
+
+    $note = '';
+    $client = '';
+    $comment = '';
+    if (preg_match('/^(.*?)\s*[·•|]\s*(.*?)\s*[·•|]\s*[1-5]\s*\/\s*5(?:\s*[—–-]\s*[“"\']?(.*?)[”"\']?\s*)?$/u', $message, $parts)) {
+        $note = trim((string) ($parts[1] ?? ''));
+        $client = trim((string) ($parts[2] ?? ''));
+        $comment = trim((string) ($parts[3] ?? ''));
+    } elseif (preg_match('/^(.*?)\s*[·•|]\s*[1-5]\s*\/\s*5(?:\s*[—–-]\s*[“"\']?(.*?)[”"\']?\s*)?$/u', $message, $parts)) {
+        $note = trim((string) ($parts[1] ?? ''));
+        $comment = trim((string) ($parts[2] ?? ''));
+    } elseif (preg_match('/[—–-]\s*[“"\']?(.*?)[”"\']?\s*$/u', $message, $parts)) {
+        $comment = trim((string) ($parts[1] ?? ''));
+    }
+
+    $comment = trim($comment, " \t\n\r\0\x0B\"'“”");
+
+    return [
+        'rating' => max(0, min(5, $rating)),
+        'note' => $note,
+        'client' => $client,
+        'comment' => $comment,
+    ];
+}
+
+/**
+ * Face icon + tone for a delivery feedback rating (mirrors Customer Reviews moods).
+ *
+ * @param array<string,mixed> $n
+ * @return array{icon:string,tone:string}|null
+ */
+function notificationsUiDeliveryFeedbackFace(array $n): ?array
+{
+    $parsed = notificationsUiParseDeliveryFeedback($n);
+    if ($parsed === null) {
+        return null;
+    }
+    $rating = (int) ($parsed['rating'] ?? 0);
+    if ($rating >= 5) {
+        return ['icon' => 'face-great', 'tone' => 'green'];
+    }
+    if ($rating >= 4) {
+        return ['icon' => 'face-good', 'tone' => 'blue'];
+    }
+    if ($rating >= 3) {
+        return ['icon' => 'face-ok', 'tone' => 'amber'];
+    }
+    if ($rating >= 2) {
+        return ['icon' => 'face-poor', 'tone' => 'amber'];
+    }
+    if ($rating >= 1) {
+        return ['icon' => 'face-bad', 'tone' => 'rose'];
+    }
+
+    return ['icon' => 'face-ok', 'tone' => 'amber'];
+}
+
+/**
  * @param array<string,mixed> $n
  * @return array{icon:string,tone:string,module:string}
  */
@@ -323,7 +408,10 @@ function notificationsUiVisual(array $n): array
             $visual = ['icon' => 'mail', 'tone' => 'sky'];
         }
     } elseif ($module === 'deliveries') {
-        if (preg_match('/\b(reject|fail|unaccepted)\b/', $blob) || $type === 'danger') {
+        $feedbackFace = notificationsUiDeliveryFeedbackFace($n);
+        if ($feedbackFace !== null) {
+            $visual = $feedbackFace;
+        } elseif (preg_match('/\b(reject|fail|unaccepted)\b/', $blob) || $type === 'danger') {
             $visual = ['icon' => 'alert', 'tone' => 'rose'];
         } elseif (preg_match('/\b(complete|delivered)\b/', $blob) || $type === 'success') {
             $visual = ['icon' => 'check', 'tone' => 'green'];
@@ -644,6 +732,38 @@ function notificationsUiNormalizeItem(array $n): array
         $message = $formatted['message'];
     }
 
+    $faceRating = 0;
+    $faceLabel = '';
+    $feedback = notificationsUiParseDeliveryFeedback($n);
+    if ($feedback !== null) {
+        $faceRating = (int) ($feedback['rating'] ?? 0);
+        if ($faceRating >= 5) {
+            $faceLabel = 'Very satisfied';
+        } elseif ($faceRating >= 4) {
+            $faceLabel = 'Satisfied';
+        } elseif ($faceRating >= 3) {
+            $faceLabel = 'Neutral';
+        } elseif ($faceRating >= 2) {
+            $faceLabel = 'Dissatisfied';
+        } elseif ($faceRating >= 1) {
+            $faceLabel = 'Very dissatisfied';
+        }
+        $bits = [];
+        if ($feedback['client'] !== '') {
+            $bits[] = $feedback['client'];
+        }
+        if ($feedback['note'] !== '') {
+            $bits[] = $feedback['note'];
+        }
+        $message = implode(' · ', $bits);
+        if ($feedback['comment'] !== '') {
+            $message = ($message !== '' ? $message . ' — ' : '') . '“' . $feedback['comment'] . '”';
+        }
+        if ($title === '' || preg_match('/delivery\s+feedback/i', $title)) {
+            $title = 'Delivery feedback comment';
+        }
+    }
+
     $images = notificationsUiWrongInvoiceImages($n);
 
     return [
@@ -663,6 +783,8 @@ function notificationsUiNormalizeItem(array $n): array
         'module' => $module,
         'moduleLabel' => notificationsUiModuleLabel($module),
         'type' => (string) ($n['type'] ?? 'info'),
+        'faceRating' => $faceRating > 0 ? $faceRating : null,
+        'faceLabel' => $faceLabel !== '' ? $faceLabel : null,
     ];
 }
 
@@ -795,7 +917,7 @@ function notificationsUiModuleOptions(): array
         ['id' => 'sales', 'label' => 'Sales', 'color' => '#4ade80', 'description' => 'Orders, invoices, and sales follow-up reminders.'],
         ['id' => 'website', 'label' => 'Website', 'color' => '#0f766e', 'description' => 'New website quote requests and web enquiry alerts.'],
         ['id' => 'stock', 'label' => 'Stock / Purchases', 'color' => '#1e3a8a', 'description' => 'PO verification, receiving, and purchase alerts.'],
-        ['id' => 'deliveries', 'label' => 'Deliveries', 'color' => '#0369a1', 'description' => 'Delivery started, completed, and shipment updates.'],
+        ['id' => 'deliveries', 'label' => 'Deliveries', 'color' => '#0369a1', 'description' => 'Delivery started, completed, shipment updates, and customer review comments.'],
         ['id' => 'driver_kpi', 'label' => 'Driver KPI', 'color' => '#0e7490', 'description' => 'Driver performance and ride recording alerts.'],
         ['id' => 'attendance', 'label' => 'Attendance', 'color' => '#c2410c', 'description' => 'Clock-in reminders and attendance exceptions.'],
         ['id' => 'letter', 'label' => 'Letter', 'color' => '#E6B800', 'description' => 'Letter drafts, reviews, and approval requests.'],

@@ -244,6 +244,58 @@ function deliveryNoteViewRenderDocumentHtml(array $ctx): string
     $dnCompanyPhone = (string) ($publicBrand['phone'] ?? '');
     $dnLogoUrl = (string) ($publicBrand['logoUrl'] ?? '');
 
+    // Match invoice/quotation table header colors for the active document layout.
+    $dnIsTruck = false;
+    foreach ($items as $dnItem) {
+        $ity = strtolower(trim((string) ($dnItem['item_type'] ?? '')));
+        if ($ity === 'vehicle' || $ity === 'truck') {
+            $dnIsTruck = true;
+            break;
+        }
+    }
+    $linkedOrder = is_array($ctx['linked_order'] ?? null) ? $ctx['linked_order'] : null;
+    if (!$dnIsTruck && is_array($linkedOrder)) {
+        $dnIsTruck = strtolower(trim((string) ($linkedOrder['order_type'] ?? ''))) === 'truck';
+    }
+    $dnHeaderColors = function_exists('sales_document_table_header_colors')
+        ? sales_document_table_header_colors($dnIsTruck, $salesSettings)
+        : ['bg' => '#ffd700', 'color' => '#000000'];
+    $dnThBg = (string) ($dnHeaderColors['bg'] ?? '#ffd700');
+    $dnThColor = (string) ($dnHeaderColors['color'] ?? '#000000');
+
+    // Roadmaster delivery notes: use logo navy instead of the yellow layout bar.
+    if (function_exists('isRoadmaster') && isRoadmaster()) {
+        $dnBgNorm = strtolower(ltrim($dnThBg, '#'));
+        if (in_array($dnBgNorm, ['ffd700', 'ffd000', 'ebda24', 'ffcc00', 'gold'], true)) {
+            $dnBrand = function_exists('sales_document_brand_profile')
+                ? sales_document_brand_profile($salesSettings)
+                : ['navy' => '#0D2A4A'];
+            $dnThBg = (string) ($dnBrand['navy'] ?? '#0D2A4A');
+            if ($dnThBg === '' || !preg_match('/^#?[0-9a-fA-F]{3,8}$/', $dnThBg)) {
+                $dnThBg = '#0D2A4A';
+            }
+            if ($dnThBg[0] !== '#') {
+                $dnThBg = '#' . $dnThBg;
+            }
+            $dnThColor = '#ffffff';
+        }
+    }
+
+    $dnFeedbackUrl = '';
+    $dnQrUrl = '';
+    $noteId = (int) ($note['id'] ?? 0);
+    $showDeliveryNoteQr = !function_exists('erp_accessibility_delivery_note_qr_enabled')
+        || erp_accessibility_delivery_note_qr_enabled();
+    if ($showDeliveryNoteQr && $noteId > 0) {
+        require_once __DIR__ . '/delivery-feedback-lib.php';
+        if (function_exists('deliveries_feedback_public_url')) {
+            $dnFeedbackUrl = deliveries_feedback_public_url($noteId);
+        }
+        if ($dnFeedbackUrl !== '' && function_exists('deliveries_feedback_qr_image_url')) {
+            $dnQrUrl = deliveries_feedback_qr_image_url($dnFeedbackUrl, 148);
+        }
+    }
+
     ob_start();
     echo '<div id="delivery-note-content">';
     include dirname(__DIR__) . '/view-delivery-note-inner.php';

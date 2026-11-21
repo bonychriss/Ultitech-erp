@@ -10,6 +10,7 @@ export default function DeliveryNoteViewToolbar({
   onDesktopActionsToggle,
   onMobileActionsToggle,
   onCloseDesktopActions,
+  onPrint,
   onDownloadPdf,
 }) {
   const hasActionLinks = flags.has_order || flags.has_invoice;
@@ -73,9 +74,18 @@ export default function DeliveryNoteViewToolbar({
                       View Invoice
                     </a>
                   ) : null}
-                  {hasActionLinks && flags.can_download ? (
+                  {hasActionLinks && (flags.can_download || flags.can_print !== false) ? (
                     <hr className="ov-actions-divider" />
                   ) : null}
+                  <button
+                    type="button"
+                    className="ov-actions-item"
+                    disabled={pdfDownloading}
+                    onClick={() => { onCloseDesktopActions(); onPrint?.(); }}
+                  >
+                    <i className="fas fa-print" aria-hidden="true" />
+                    Print
+                  </button>
                   {flags.can_download ? (
                     <button
                       type="button"
@@ -115,6 +125,15 @@ export default function DeliveryNoteViewToolbar({
                   View Invoice
                 </a>
               ) : null}
+              <button
+                type="button"
+                className="ov-mobile-item"
+                disabled={pdfDownloading}
+                onClick={() => { onMobileActionsToggle?.(false); onPrint?.(); }}
+              >
+                <i className="fas fa-print" aria-hidden="true" />
+                Print
+              </button>
               {flags.can_download ? (
                 <button type="button" className="ov-mobile-item" disabled={pdfDownloading} onClick={onDownloadPdf}>
                   <i className={`fas ${pdfDownloading ? 'fa-spinner fa-spin' : 'fa-download'}`} aria-hidden="true" />

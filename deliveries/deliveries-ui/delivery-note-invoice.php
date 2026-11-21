@@ -244,19 +244,27 @@ function deliveries_load_public_company_branding(PDO $pdo, int $companyId): arra
 
     try {
         if ($companyId > 0 && function_exists('tableExists') && tableExists('sales_settings', $pdo)) {
+            $salesCols = ['company_name', 'company_address', 'company_phone'];
+            if (function_exists('columnExists') && columnExists('sales_settings', 'company_website', $pdo)) {
+                $salesCols[] = 'company_website';
+            }
+            $select = implode(', ', $salesCols);
             if (function_exists('columnExists') && columnExists('sales_settings', 'company_id', $pdo)) {
                 $settingsStmt = $pdo->prepare(
-                    'SELECT company_name, company_address, company_phone FROM sales_settings WHERE company_id = ? LIMIT 1'
+                    "SELECT {$select} FROM sales_settings WHERE company_id = ? LIMIT 1"
                 );
                 $settingsStmt->execute([$companyId]);
             } else {
-                $settingsStmt = $pdo->query('SELECT company_name, company_address, company_phone FROM sales_settings LIMIT 1');
+                $settingsStmt = $pdo->query("SELECT {$select} FROM sales_settings LIMIT 1");
             }
             $salesSettings = $settingsStmt ? $settingsStmt->fetch(PDO::FETCH_ASSOC) : false;
             if (is_array($salesSettings)) {
                 $brand['name'] = trim((string) ($salesSettings['company_name'] ?? ''));
                 $brand['address'] = trim((string) ($salesSettings['company_address'] ?? ''));
                 $brand['phone'] = trim((string) ($salesSettings['company_phone'] ?? ''));
+                if (!empty($salesSettings['company_website'])) {
+                    $brand['website'] = trim((string) $salesSettings['company_website']);
+                }
             }
         }
     } catch (Throwable $e) {
@@ -278,8 +286,10 @@ function deliveries_load_public_company_branding(PDO $pdo, int $companyId): arra
         if (!empty($settings['company_phone'])) {
             $brand['phone'] = trim((string) $settings['company_phone']);
         }
-        if (!empty($settings['company_website'])) {
-            $brand['website'] = trim((string) $settings['company_website']);
+        foreach (['company_website', 'website', 'company_domain', 'domain'] as $webKey) {
+            if ($brand['website'] === '' && !empty($settings[$webKey])) {
+                $brand['website'] = trim((string) $settings[$webKey]);
+            }
         }
     }
 
@@ -294,6 +304,19 @@ function deliveries_load_public_company_branding(PDO $pdo, int $companyId): arra
                 if ($domain !== '') {
                     $brand['website'] = (strpos($domain, '://') !== false) ? $domain : 'https://' . $domain;
                 }
+            }
+            if ($brand['website'] === '' && !empty($profile['website'])) {
+                $brand['website'] = trim((string) $profile['website']);
+            }
+        }
+    }
+
+    if ($brand['website'] === '' && function_exists('getCompanySetting')) {
+        foreach (['company_website', 'website'] as $webKey) {
+            $live = trim((string) getCompanySetting($webKey, ''));
+            if ($live !== '') {
+                $brand['website'] = $live;
+                break;
             }
         }
     }

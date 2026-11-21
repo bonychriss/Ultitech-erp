@@ -9652,6 +9652,195 @@ function erp_get_theme_init_html(): string
     return '<script id="erp-theme-init">(function(){try{var t=localStorage.getItem("theme")||"light";document.documentElement.setAttribute("data-theme",t);}catch(e){document.documentElement.setAttribute("data-theme","light");}})();</script>' . "\n";
 }
 
+/**
+ * @return array{
+ *   textScale:string,
+ *   highContrast:bool,
+ *   reduceMotion:bool,
+ *   underlineLinks:bool,
+ *   largeTargets:bool,
+ *   deliveryNoteQr:bool
+ * }
+ */
+function erp_accessibility_defaults(): array
+{
+    return [
+        'textScale' => '100',
+        'highContrast' => false,
+        'reduceMotion' => false,
+        'underlineLinks' => false,
+        'largeTargets' => false,
+        'deliveryNoteQr' => true,
+    ];
+}
+
+/**
+ * @param array<string,mixed> $raw
+ * @return array{
+ *   textScale:string,
+ *   highContrast:bool,
+ *   reduceMotion:bool,
+ *   underlineLinks:bool,
+ *   largeTargets:bool,
+ *   deliveryNoteQr:bool
+ * }
+ */
+function erp_normalize_accessibility_prefs(array $raw): array
+{
+    $defaults = erp_accessibility_defaults();
+    $scale = trim((string) ($raw['textScale'] ?? $raw['text_scale'] ?? $defaults['textScale']));
+    if (!in_array($scale, ['100', '112', '125', '150'], true)) {
+        $scale = $defaults['textScale'];
+    }
+
+    $bool = static function ($value, bool $default = false): bool {
+        if ($value === null) {
+            return $default;
+        }
+        if (is_bool($value)) {
+            return $value;
+        }
+        $v = strtolower(trim((string) $value));
+        if ($v === '') {
+            return $default;
+        }
+        if (in_array($v, ['0', 'false', 'no', 'off'], true)) {
+            return false;
+        }
+
+        return in_array($v, ['1', 'true', 'yes', 'on'], true) ? true : $default;
+    };
+
+    $hasDeliveryQr = array_key_exists('deliveryNoteQr', $raw) || array_key_exists('delivery_note_qr', $raw);
+
+    return [
+        'textScale' => $scale,
+        'highContrast' => $bool($raw['highContrast'] ?? $raw['high_contrast'] ?? null, false),
+        'reduceMotion' => $bool($raw['reduceMotion'] ?? $raw['reduce_motion'] ?? null, false),
+        'underlineLinks' => $bool($raw['underlineLinks'] ?? $raw['underline_links'] ?? null, false),
+        'largeTargets' => $bool($raw['largeTargets'] ?? $raw['large_targets'] ?? null, false),
+        'deliveryNoteQr' => $hasDeliveryQr
+            ? $bool($raw['deliveryNoteQr'] ?? $raw['delivery_note_qr'] ?? null, true)
+            : true,
+    ];
+}
+
+/**
+ * Whether the delivery-note feedback QR should print.
+ */
+function erp_accessibility_delivery_note_qr_enabled(): bool
+{
+    $prefs = function_exists('erp_get_accessibility_prefs')
+        ? erp_get_accessibility_prefs()
+        : erp_accessibility_defaults();
+
+    return !empty($prefs['deliveryNoteQr']);
+}
+
+/**
+ * @return array{
+ *   textScale:string,
+ *   highContrast:bool,
+ *   reduceMotion:bool,
+ *   underlineLinks:bool,
+ *   largeTargets:bool,
+ *   deliveryNoteQr:bool
+ * }
+ */
+function erp_get_accessibility_prefs(): array
+{
+    $defaults = erp_accessibility_defaults();
+    if (!function_exists('getCompanySetting')) {
+        return $defaults;
+    }
+    $raw = getCompanySetting('accessibility', null);
+    if ($raw === null || $raw === '') {
+        return $defaults;
+    }
+    if (is_string($raw)) {
+        $decoded = json_decode($raw, true);
+        $raw = is_array($decoded) ? $decoded : [];
+    }
+    if (!is_array($raw)) {
+        return $defaults;
+    }
+
+    return erp_normalize_accessibility_prefs($raw);
+}
+
+/**
+ * @param array<string,mixed> $prefs
+ */
+function erp_save_accessibility_prefs(array $prefs): bool
+{
+    global $pdo;
+    $normalized = erp_normalize_accessibility_prefs($prefs);
+    $json = json_encode($normalized, JSON_UNESCAPED_UNICODE);
+    if (!is_string($json) || $json === '') {
+        return false;
+    }
+    $cid = (int) (function_exists('currentCompanyId') ? (currentCompanyId() ?? 0) : 0);
+    if ($cid > 0 && isset($pdo) && $pdo instanceof PDO && function_exists('saveCompanySettingValue')) {
+        try {
+            if (saveCompanySettingValue($pdo, $cid, 'accessibility', $json)) {
+                return true;
+            }
+        } catch (Throwable $e) {
+            error_log('erp_save_accessibility_prefs tenant: ' . $e->getMessage());
+        }
+    }
+    if (function_exists('setCompanySetting')) {
+        return setCompanySetting('accessibility', $json);
+    }
+
+    return false;
+}
+
+/** Apply company accessibility prefs before first paint (+ localStorage override). */
+function erp_get_accessibility_init_html(): string
+{
+    $prefs = function_exists('erp_get_accessibility_prefs')
+        ? erp_get_accessibility_prefs()
+        : erp_accessibility_defaults();
+    $json = json_encode($prefs, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+    if (!is_string($json)) {
+        $json = '{}';
+    }
+
+    return '<script id="erp-a11y-init">(function(){try{var d=' . $json
+        . ';try{var o=JSON.parse(localStorage.getItem("erp-a11y")||"null");if(o&&typeof o==="object"){for(var k in o){if(Object.prototype.hasOwnProperty.call(o,k))d[k]=o[k];}}}catch(e){}'
+        . 'var r=document.documentElement;'
+        . 'r.setAttribute("data-a11y-text",String(d.textScale||"100"));'
+        . 'r.setAttribute("data-a11y-contrast",d.highContrast?"1":"0");'
+        . 'r.setAttribute("data-a11y-motion",d.reduceMotion?"1":"0");'
+        . 'r.setAttribute("data-a11y-underline",d.underlineLinks?"1":"0");'
+        . 'r.setAttribute("data-a11y-tap",d.largeTargets?"1":"0");'
+        . '}catch(e){}})();</script>' . "\n";
+}
+
+function erp_accessibility_css_url(): string
+{
+    $path = dirname(__DIR__) . '/assets/css/accessibility.css';
+    $v = is_file($path) ? (string) filemtime($path) : (string) time();
+    if (function_exists('app_url')) {
+        return (string) app_url('/assets/css/accessibility.css?v=' . rawurlencode($v));
+    }
+
+    return '/assets/css/accessibility.css?v=' . rawurlencode($v);
+}
+
+function erp_get_accessibility_head_html(): string
+{
+    static $rendered = false;
+    if ($rendered) {
+        return '';
+    }
+    $rendered = true;
+
+    return '<link rel="stylesheet" id="erp-accessibility" href="'
+        . htmlspecialchars(erp_accessibility_css_url(), ENT_QUOTES, 'UTF-8') . '">' . "\n";
+}
+
 /** Dark theme stylesheet link for &lt;head&gt;. */
 function erp_get_dark_theme_head_html(): string
 {
@@ -10073,10 +10262,28 @@ function erp_inject_system_font_into_html_buffer(string $buffer): string
         }
     }
 
+    if (stripos($buffer, 'erp-a11y-init') === false && function_exists('erp_get_accessibility_init_html')) {
+        $a11yInit = erp_get_accessibility_init_html();
+        if (preg_match('/<head[^>]*>/i', $buffer)) {
+            $replaced = preg_replace('/<head([^>]*)>/i', '<head$1>' . $a11yInit, $buffer, 1);
+            if (is_string($replaced)) {
+                $buffer = $replaced;
+            }
+        } elseif (stripos($buffer, '<html') !== false) {
+            $replaced = preg_replace('/<html([^>]*)>/i', '<html$1>' . $a11yInit, $buffer, 1);
+            if (is_string($replaced)) {
+                $buffer = $replaced;
+            }
+        }
+    }
+
     if (stripos($buffer, '</head>') !== false) {
         $headMarkup = '';
         if (stripos($buffer, 'erp-system-font-live') === false) {
             $headMarkup .= erp_get_system_font_assets_html();
+        }
+        if (stripos($buffer, 'id="erp-accessibility"') === false && function_exists('erp_get_accessibility_head_html')) {
+            $headMarkup .= erp_get_accessibility_head_html();
         }
         if (stripos($buffer, 'id="erp-dark-theme"') === false) {
             $headMarkup .= erp_get_dark_theme_head_html();

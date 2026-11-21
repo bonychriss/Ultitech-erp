@@ -1,0 +1,76 @@
+/**
+ * Company accessibility preferences (Admin → Settings → Accessibility).
+ * Driven by html[data-a11y-*] attributes set before first paint.
+ */
+
+html[data-a11y-text="112"] {
+  font-size: 112.5%;
+}
+html[data-a11y-text="125"] {
+  font-size: 125%;
+}
+html[data-a11y-text="150"] {
+  font-size: 150%;
+}
+
+html[data-a11y-contrast="1"] {
+  --ash-border: #0f172a;
+}
+html[data-a11y-contrast="1"] body {
+  color: #0f172a !important;
+}
+html[data-a11y-contrast="1"] a {
+  text-decoration-thickness: 0.1em;
+}
+html[data-a11y-contrast="1"] button,
+html[data-a11y-contrast="1"] .btn,
+html[data-a11y-contrast="1"] input,
+html[data-a11y-contrast="1"] select,
+html[data-a11y-contrast="1"] textarea,
+html[data-a11y-contrast="1"] .ash-card,
+html[data-a11y-contrast="1"] .ncr-row,
+html[data-a11y-contrast="1"] .card {
+  border-color: #0f172a !important;
+  outline-color: #0f172a;
+}
+html[data-a11y-contrast="1"] :focus-visible {
+  outline: 3px solid #2563eb !important;
+  outline-offset: 2px !important;
+}
+
+html[data-a11y-motion="1"] *,
+html[data-a11y-motion="1"] *::before,
+html[data-a11y-motion="1"] *::after {
+  animation: none !important;
+  transition: none !important;
+  scroll-behavior: auto !important;
+}
+
+html[data-a11y-underline="1"] a:not(.ash-card-link):not([class*="btn"]) {
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
+html[data-a11y-tap="1"] button,
+html[data-a11y-tap="1"] .btn,
+html[data-a11y-tap="1"] a.ash-card-link,
+html[data-a11y-tap="1"] input[type="button"],
+html[data-a11y-tap="1"] input[type="submit"],
+html[data-a11y-tap="1"] [role="button"] {
+  min-height: 44px;
+}
+html[data-a11y-tap="1"] input[type="checkbox"],
+html[data-a11y-tap="1"] input[type="radio"] {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-a11y-motion="0"]) *,
+  html:not([data-a11y-motion="0"]) *::before,
+  html:not([data-a11y-motion="0"]) *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}

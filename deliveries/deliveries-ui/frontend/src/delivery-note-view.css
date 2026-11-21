@@ -1,11 +1,13 @@
 .ov-document-wrap {
   padding: 1.25rem 1.25rem 2.5rem;
   box-sizing: border-box;
+  background: #e5e7eb;
 }
 
 .ov-document-wrap .page-container {
   max-width: 210mm;
   margin: 0 auto;
+  background: #fff;
 }
 
 @media (max-width: 767.98px) {
@@ -21,11 +23,52 @@
 }
 
 @media print {
+  .ov-no-print,
+  .no-print {
+    display: none !important;
+  }
+
+  .ov-page-root,
+  .ov-document-wrap,
+  .ov-document-wrap #delivery-note-content,
+  .ov-document-wrap .page-container {
+    display: block !important;
+    visibility: visible !important;
+    overflow: visible !important;
+    height: auto !important;
+    max-height: none !important;
+    min-height: auto !important;
+    background: #fff !important;
+  }
+
   .ov-document-wrap {
-    padding: 0;
+    padding: 0 !important;
   }
 
   .ov-document-wrap .page-container {
     box-shadow: none !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+  }
+
+  .ov-document-wrap .items-table {
+    width: 100% !important;
+    table-layout: fixed !important;
+  }
+
+  .ov-document-wrap .items-table th,
+  .ov-document-wrap .items-table td {
+    word-break: normal !important;
+    overflow-wrap: break-word !important;
+    white-space: normal !important;
+  }
+
+  .ov-document-wrap .items-table th {
+    background: var(--dn-th-bg, #ffd700) !important;
+    background-color: var(--dn-th-bg, #ffd700) !important;
+    color: var(--dn-th-color, #000) !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 }

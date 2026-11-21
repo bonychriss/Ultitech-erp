@@ -17,15 +17,20 @@ import {
   downloadInvoicePdf,
   formatPdfError,
 } from '../utils/invoicePdf.js';
-import { downloadDeliveryNotePdfFromHtml } from '../utils/deliveryNoteOffscreenPdf.js';
+import {
+  downloadDeliveryNotePdfFromHtml,
+  printDeliveryNoteFromHtml,
+} from '../utils/deliveryNoteOffscreenPdf.js';
 import { printInvoiceDirect } from '../utils/invoiceDirectPrint.js';
 import InvoiceViewToolbar from '../components/InvoiceViewToolbar.jsx';
 import InvoiceDownloadModal from '../components/InvoiceDownloadModal.jsx';
+import InvoiceDeliveryNoteModal from '../components/InvoiceDeliveryNoteModal.jsx';
 import InvoiceDocumentPane from '../components/InvoiceDocumentPane.jsx';
 import InvoiceDocumentsCard from '../components/InvoiceDocumentsCard.jsx';
 import InvoicePaymentsCard from '../components/InvoicePaymentsCard.jsx';
 import InvoiceRegisterPaymentModal from '../components/InvoiceRegisterPaymentModal.jsx';
 import InvoicePrintFeatureTour from '../components/InvoicePrintFeatureTour.jsx';
+import '../invoice-delivery-note-modal.css';
 
 function getDeskCfg() {
   if (typeof window === 'undefined') return {};
@@ -68,6 +73,8 @@ export default function InvoiceViewPage() {
   const [pdfMessage, setPdfMessage] = useState('Preparing document...');
   const [pdfFileName, setPdfFileName] = useState('');
   const [payEntryId, setPayEntryId] = useState(null);
+  const [deliveryNoteOpen, setDeliveryNoteOpen] = useState(false);
+  const [deliveryNoteBusy, setDeliveryNoteBusy] = useState(false);
   const pdfCloseTimer = useRef(null);
   const desktopDropdownRef = useRef(null);
   const createFlashShown = useRef(false);
@@ -255,13 +262,64 @@ export default function InvoiceViewPage() {
     }
   };
 
-  const handleDownloadDeliveryNote = async () => {
-    if (pdfState === 'loading') return;
+  const openDeliveryNoteModal = () => {
+    if (pdfState === 'loading' || deliveryNoteBusy) return;
+    if (!urls.delivery_note) {
+      showToast('error', 'Delivery note is not available for this invoice.', 4000);
+      return;
+    }
+    setDeliveryNoteOpen(true);
+  };
+
+  const closeDeliveryNoteModal = () => {
+    if (deliveryNoteBusy) return;
+    setDeliveryNoteOpen(false);
+  };
+
+  const handleViewDeliveryNote = () => {
+    if (pdfState === 'loading' || deliveryNoteBusy) return;
+    if (!urls.delivery_note) {
+      showToast('error', 'Delivery note is not available for this invoice.', 4000);
+      return;
+    }
+    setDeliveryNoteOpen(false);
+    window.open(urls.delivery_note, '_blank', 'noopener,noreferrer');
+  };
+
+  const handlePrintDeliveryNote = async () => {
+    if (pdfState === 'loading' || deliveryNoteBusy) return;
     if (!urls.delivery_note) {
       showToast('error', 'Delivery note is not available for this invoice.', 4000);
       return;
     }
 
+    setDeliveryNoteBusy(true);
+    try {
+      const payload = await fetchDeliveryNoteDownloadPayload(urls.delivery_note);
+      const noteNumber = payload.note_number || 'document';
+      printDeliveryNoteFromHtml({
+        html: payload.document_html,
+        displayNumber: noteNumber,
+        fontStylesheets: payload.font_stylesheets || '',
+      });
+      setDeliveryNoteOpen(false);
+    } catch (err) {
+      console.error('Delivery note print failed:', err);
+      const reason = formatPdfError(err);
+      showToast('error', reason, 5000);
+    } finally {
+      setDeliveryNoteBusy(false);
+    }
+  };
+
+  const handleDownloadDeliveryNote = async () => {
+    if (pdfState === 'loading' || deliveryNoteBusy) return;
+    if (!urls.delivery_note) {
+      showToast('error', 'Delivery note is not available for this invoice.', 4000);
+      return;
+    }
+
+    setDeliveryNoteOpen(false);
     setPdfFileName('DeliveryNote.pdf');
     setPdfState('loading');
     setPdfProgress(3);
@@ -421,6 +479,15 @@ export default function InvoiceViewPage() {
         onClose={closeDownloadModal}
       />
 
+      <InvoiceDeliveryNoteModal
+        open={deliveryNoteOpen}
+        busy={deliveryNoteBusy}
+        onClose={closeDeliveryNoteModal}
+        onView={handleViewDeliveryNote}
+        onPrint={handlePrintDeliveryNote}
+        onDownload={handleDownloadDeliveryNote}
+      />
+
       <InvoiceViewToolbar
         displayNumber={displayNumber}
         pipeline={data?.pipeline}
@@ -429,7 +496,7 @@ export default function InvoiceViewPage() {
         share={share}
         invoice={invoice}
         busyAction={busyAction}
-        pdfDownloading={pdfState === 'loading'}
+        pdfDownloading={pdfState === 'loading' || deliveryNoteBusy}
         desktopActionsOpen={desktopActionsOpen}
         mobileActionsOpen={mobileActionsOpen}
         desktopDropdownRef={desktopDropdownRef}
@@ -439,7 +506,7 @@ export default function InvoiceViewPage() {
         onRunStatusAction={runStatusAction}
         onPrint={handlePrint}
         onDownloadPdf={handleDownloadPdf}
-        onDownloadDeliveryNote={handleDownloadDeliveryNote}
+        onOpenDeliveryNote={openDeliveryNoteModal}
         onEmail={handleEmail}
         onRegisterPayment={flags.can_register_payment && revenueEntryId > 0 ? openRegisterPayment : undefined}
       />

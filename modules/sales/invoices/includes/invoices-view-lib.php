@@ -374,25 +374,8 @@ function salesInvoiceViewRenderDocumentHtml(
     string $brandingLogoUrl
 ): string {
     $currency = (string) ($invoice['currency'] ?? ($company_settings['default_currency'] ?? 'TZS'));
-    $layoutLib = __DIR__ . '/invoice-print-layout.php';
-    if (is_file($layoutLib)) {
-        require_once $layoutLib;
-    }
-    if (function_exists('sales_invoice_print_layout_html')) {
-        // Match print desk layout on the invoice-view page.
-        return sales_invoice_print_layout_html(
-            $invoice,
-            $items,
-            $company_settings,
-            $currency,
-            $brandingLogoUrl,
-            [
-                'invoice_only' => true,
-                'include_styles' => true,
-                'wrap_id' => 'invoice-content',
-            ]
-        );
-    }
+    // Layouts expect $logoUrl; keep branding alias in scope for includes.
+    $logoUrl = trim((string) $brandingLogoUrl);
 
     ob_start();
     echo '<div id="invoice-content">';

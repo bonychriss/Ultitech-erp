@@ -230,6 +230,61 @@ function appendRasterCanvasToPdf(doc, canvas, jpegQuality, onSliceProgress, band
 }
 
 /**
+ * Open a print window for server-rendered delivery-note HTML.
+ *
+ * @param {{ html: string, displayNumber?: string, fontStylesheets?: string }} payload
+ */
+export function printDeliveryNoteFromHtml(payload) {
+  const html = String(payload?.html || '').trim();
+  if (!html) throw new Error('Delivery note document is empty.');
+
+  const title = `Delivery Note ${payload?.displayNumber || ''}`.trim();
+  const fonts = String(payload?.fontStylesheets || '');
+  const win = window.open('', 'dn-print', 'width=980,height=720');
+  if (!win) {
+    throw new Error('Pop-up blocked. Allow pop-ups for this site to print the delivery note.');
+  }
+
+  win.document.open();
+  win.document.write(`<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>${title.replace(/[<>&"]/g, '')}</title>
+  ${fonts}
+  <style>
+    html, body { margin: 0; padding: 0; background: #fff; }
+    @media print {
+      html, body { background: #fff !important; }
+      .no-print { display: none !important; }
+    }
+  </style>
+</head>
+<body>${html}</body>
+</html>`);
+  win.document.close();
+
+  const triggerPrint = () => {
+    try {
+      win.focus();
+      win.print();
+    } catch (err) {
+      console.error('Delivery note print failed:', err);
+    }
+  };
+
+  if (win.document.readyState === 'complete') {
+    window.setTimeout(triggerPrint, 350);
+  } else {
+    win.addEventListener('load', () => {
+      window.setTimeout(triggerPrint, 350);
+    });
+  }
+
+  return win;
+}
+
+/**
  * Mount server-rendered delivery-note HTML off-screen and save a PDF.
  *
  * @param {{ html: string, displayNumber?: string, fontStylesheets?: string }} payload

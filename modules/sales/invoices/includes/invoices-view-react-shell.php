@@ -79,12 +79,15 @@ main.main-content.ov-react-root {
     box-sizing: border-box;
     background: #f8fafc !important;
 }
-body.page-invoice-view .ov-document-wrap .o-table th {
+body.page-invoice-view .ov-document-wrap .o-table th,
+body.page-invoice-view .ov-document-wrap .spare-table th,
+body.page-invoice-view .ov-document-wrap .truck-table th {
     background-color: #ffd700 !important;
     background: #ffd700 !important;
     color: #000 !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
+    color-adjust: exact !important;
 }
 main.main-content.ov-react-root #root {
     width: 100%;
@@ -196,10 +199,15 @@ main.main-content.ov-react-root #root {
         line-height: 1.35 !important;
     }
 
-    html body.page-invoice-view .ov-document-wrap .o-table th {
+    html body.page-invoice-view .ov-document-wrap .o-table th,
+    html body.page-invoice-view .ov-document-wrap .spare-table th,
+    html body.page-invoice-view .ov-document-wrap .truck-table th {
+        background-color: #ffd700 !important;
         background: #ffd700 !important;
+        color: #000 !important;
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
+        color-adjust: exact !important;
     }
 }
 html[data-theme="dark"] body.page-invoice-view,

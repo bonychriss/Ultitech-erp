@@ -16,7 +16,7 @@ export default function InvoiceViewToolbar({
   onRunStatusAction,
   onPrint,
   onDownloadPdf,
-  onDownloadDeliveryNote,
+  onOpenDeliveryNote,
   onEmail,
   onRegisterPayment,
 }) {
@@ -151,9 +151,9 @@ export default function InvoiceViewToolbar({
                       type="button"
                       className="ov-actions-item ov-actions-item--delivery"
                       disabled={pdfDownloading || Boolean(busyAction)}
-                      onClick={() => { onCloseDesktopActions(); onDownloadDeliveryNote(); }}
+                      onClick={() => { onCloseDesktopActions(); onOpenDeliveryNote?.(); }}
                     >
-                      <i className={`fas ${pdfDownloading ? 'fa-spinner fa-spin' : 'fa-truck'}`} aria-hidden="true" />
+                      <i className="fas fa-truck" aria-hidden="true" />
                       Delivery Note
                     </button>
                   ) : null}
@@ -280,9 +280,12 @@ export default function InvoiceViewToolbar({
                   type="button"
                   className="ov-mobile-item"
                   disabled={pdfDownloading || Boolean(busyAction)}
-                  onClick={onDownloadDeliveryNote}
+                  onClick={() => {
+                    onMobileActionsToggle(false);
+                    onOpenDeliveryNote?.();
+                  }}
                 >
-                  <i className={`fas ${pdfDownloading ? 'fa-spinner fa-spin' : 'fa-truck'}`} aria-hidden="true" />
+                  <i className="fas fa-truck" aria-hidden="true" />
                   Delivery Note
                 </button>
               ) : null}

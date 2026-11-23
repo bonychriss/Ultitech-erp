@@ -162,7 +162,7 @@ body.dashboard.page-customer-index-desk main.main-content.exp-desk-react-root {
 }
 
 body.dashboard.page-customer-index-desk .employee-header.employee-header--page-context {
-  position: static !important;
+  position: relative !important;
   top: auto !important;
   z-index: auto !important;
   flex: 0 0 auto !important;
@@ -178,52 +178,6 @@ body.dashboard.page-customer-index-desk #erp-auto-breadcrumb {
 
 body.dashboard.page-customer-index-desk .erp-auto-breadcrumb-current {
   font-weight: 500;
-}
-
-@media (min-width: 768px) {
-  html:has(body.dashboard.page-customer-index-desk),
-  html:has(body.dashboard.page-customer-index-desk) body {
-    height: 100dvh !important;
-    max-height: 100dvh !important;
-    overflow: hidden !important;
-    overscroll-behavior: none !important;
-  }
-
-  body.dashboard.page-customer-index-desk .layout-main-wrapper {
-    height: 100dvh !important;
-    max-height: 100dvh !important;
-    min-height: 0 !important;
-    overflow: hidden !important;
-    overscroll-behavior: none !important;
-  }
-
-  body.dashboard.page-customer-index-desk .layout-main-wrapper > .flex-grow-1 {
-    flex: 1 1 0 !important;
-    height: 100% !important;
-    min-height: 0 !important;
-    max-height: 100% !important;
-    overflow-x: hidden !important;
-    overflow-y: auto !important;
-    overscroll-behavior: contain !important;
-  }
-
-  body.dashboard.page-customer-index-desk main.main-content.exp-desk-react-root {
-    flex: 0 0 auto !important;
-    height: auto !important;
-    min-height: 0 !important;
-    overflow: visible !important;
-    overscroll-behavior: auto !important;
-  }
-
-  body.dashboard.page-customer-index-desk main.main-content.exp-desk-react-root #root,
-  body.dashboard.page-customer-index-desk main.main-content.exp-desk-react-root .exp-desk-page {
-    flex: 0 0 auto !important;
-    height: auto !important;
-    min-height: 0 !important;
-    max-height: none !important;
-    overflow: visible !important;
-    overscroll-behavior: auto !important;
-  }
 }
 
 .exp-desk-flash-success {
@@ -694,10 +648,6 @@ html[data-theme="dark"] .ci-customers-table .exp-desk-row-action--danger:hover {
   color: #0f172a;
   font-size: 1.125rem;
   font-weight: 600;
-}
-
-.ci-customers-table .exp-desk-results-count {
-  font-weight: 500;
 }
 
 .ci-mobile-card {

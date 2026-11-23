@@ -270,11 +270,6 @@ export default function CustomerIndexPage() {
   }
 
   const trimmedSearch = searchTerm.trim();
-  const resultsLabel = trimmedSearch
-    ? `${filteredCustomers.length} ${filteredCustomers.length === 1 ? 'result' : 'results'} for "${trimmedSearch}"`
-    : allCustomers.length > 0
-      ? `Showing 1–${allCustomers.length} of ${allCustomers.length}`
-      : '0 results';
 
   const searchForm = (
     <form
@@ -365,7 +360,6 @@ export default function CustomerIndexPage() {
       <section className="exp-desk-results ci-customers-table">
         <div className="exp-desk-results-head">
           <h2 className="ci-results-title">All Customers</h2>
-          <span className="exp-desk-results-count">{resultsLabel}</span>
         </div>
 
         {filteredCustomers.length === 0 ? (

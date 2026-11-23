@@ -10,6 +10,13 @@ requireLogin();
 
 global $pdo;
 
+require_once __DIR__ . '/../includes/gl/gl_reports.php';
+if (gl_report_source($pdo) === 'ledger' && !isset($_GET['legacy'])) {
+    define('GL_VIEW', true);
+    require __DIR__ . '/gl-views/profit-loss.php';
+    exit;
+}
+
 $startDate = (string) ($_GET['start_date'] ?? date('Y-m-01'));
 $endDate = (string) ($_GET['end_date'] ?? date('Y-m-t'));
 $jeModule = isset($_GET['module']) ? htmlspecialchars((string) $_GET['module']) : 'balances';

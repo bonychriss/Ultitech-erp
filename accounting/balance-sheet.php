@@ -9,6 +9,13 @@ if (file_exists(__DIR__ . '/setup_schema.php')) {
 }
 global $pdo;
 
+require_once __DIR__ . '/../includes/gl/gl_reports.php';
+if (gl_report_source($pdo) === 'ledger' && !isset($_GET['legacy'])) {
+    define('GL_VIEW', true);
+    require __DIR__ . '/gl-views/balance-sheet.php';
+    exit;
+}
+
 $sqlRev = "SELECT COALESCE(SUM(ji.credit) - SUM(ji.debit), 0) FROM erp_accounts a JOIN erp_journal_items ji ON a.id = ji.account_id WHERE a.type = 'revenue'";
 $totalRevenue = $pdo->query($sqlRev)->fetchColumn();
 $sqlExp = "SELECT COALESCE(SUM(ji.debit) - SUM(ji.credit), 0) FROM erp_accounts a JOIN erp_journal_items ji ON a.id = ji.account_id WHERE a.type = 'expense'";

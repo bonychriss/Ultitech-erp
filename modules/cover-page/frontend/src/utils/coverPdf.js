@@ -26,6 +26,7 @@ const CORNER_TAB_PATH = 'M 663.886 1053.649 L 742 1053.649 L 742 1110 L 612.785 
 const ACCENT_COLORS = {
   revenue: rgb(34 / 255, 160 / 255, 90 / 255),
   expenses: rgb(242 / 255, 129 / 255, 29 / 255),
+  cogs: rgb(30 / 255, 111 / 255, 217 / 255),
   logs: rgb(30 / 255, 111 / 255, 217 / 255),
 };
 
@@ -130,7 +131,7 @@ function accentColorFor(name) {
   const key = documentNameWithoutFile(name).toLowerCase();
   if (key.includes('revenue')) return ACCENT_COLORS.revenue;
   if (key.includes('expense')) return ACCENT_COLORS.expenses;
-  if (key.includes('log') || key.includes('bank')) return ACCENT_COLORS.logs;
+  if (key.includes('cog') || key.includes('log') || key.includes('bank')) return ACCENT_COLORS.cogs;
   return null;
 }
 

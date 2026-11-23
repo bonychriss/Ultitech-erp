@@ -166,6 +166,10 @@ html[data-theme='dark'] .acct-card:hover {
   mask: var(--acct-ico-mask) center / contain no-repeat;
 }
 
+.acct-ico--glyph {
+  color: var(--acct-ico-color);
+}
+
 .acct-ico--cyan,
 .acct-card--cyan .acct-ico {
   --acct-ico-color: #0891b2;

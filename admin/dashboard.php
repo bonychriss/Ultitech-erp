@@ -504,6 +504,9 @@ $dashboardConfig = [
     'stockPayUrl' => function_exists('company_url')
         ? (string) company_url('modules/finance/api/mark-stock-purchase-voucher-paid.php')
         : adminDashboardUiRootWebPath() . '/modules/finance/api/mark-stock-purchase-voucher-paid.php',
+    'voucherMarkPaidUrl' => function_exists('company_url')
+        ? (string) company_url('mark-paid.php')
+        : adminDashboardUiRootWebPath() . '/mark-paid.php',
     'returnUrl' => $adminBase . '/dashboard.php?module=' . rawurlencode($qsModule),
     'reportsUrl' => $adminBase . '/reports.php',
     'userManualUrl' => $employeeBase . '/user-manual.php',

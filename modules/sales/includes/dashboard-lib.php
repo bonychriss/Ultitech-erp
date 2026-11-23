@@ -355,6 +355,7 @@ function dashboardDeskBuildKpiSummaries(
     int $overdueInvoices,
     float $monthlySalesDisplay,
     float $commissionEarned,
+    float $monthlyQuotationValue,
     array $funnelStats
 ): array {
     $pdo = sales_pdo();
@@ -438,6 +439,42 @@ function dashboardDeskBuildKpiSummaries(
         error_log('dashboard kpi pending orders: ' . $e->getMessage());
     }
 
+    $recentQuotations = [];
+    try {
+        $monthStart = new DateTimeImmutable($month . '-01 00:00:00');
+        $nextMonthStart = $monthStart->modify('+1 month');
+        $sqlQuotes = "
+            SELECT so.id, so.order_number, so.total_amount, so.status, so.created_at, c.company_name
+            FROM sales_orders so
+            JOIN customers c ON c.id = so.customer_id
+            WHERE so.status = 'quotation'
+              AND so.created_at >= ?
+              AND so.created_at < ?";
+        $paramsQuotes = [
+            $monthStart->format('Y-m-d H:i:s'),
+            $nextMonthStart->format('Y-m-d H:i:s'),
+        ];
+        salesAppendCompanyScope($sqlQuotes, $paramsQuotes, 'sales_orders', 'so');
+        $sqlQuotes .= ' ORDER BY so.created_at DESC LIMIT 5';
+        $stmtQuotes = $pdo->prepare($sqlQuotes);
+        $stmtQuotes->execute($paramsQuotes);
+        foreach ($stmtQuotes->fetchAll(PDO::FETCH_ASSOC) ?: [] as $row) {
+            $recentQuotations[] = [
+                'ref_number' => (string) ($row['order_number'] ?? ''),
+                'customer_name' => (string) ($row['company_name'] ?? ''),
+                'total_amount' => (float) ($row['total_amount'] ?? 0),
+                'status' => (string) ($row['status'] ?? ''),
+                'created_at' => (string) ($row['created_at'] ?? ''),
+                'url' => sales_module_url('orders/view.php', [
+                    'id' => (int) ($row['id'] ?? 0),
+                    'module' => $module,
+                ]),
+            ];
+        }
+    } catch (Throwable $e) {
+        error_log('dashboard kpi recent quotations: ' . $e->getMessage());
+    }
+
     $overdueTotal = 0.0;
     $recentOverdue = [];
     try {
@@ -475,6 +512,19 @@ function dashboardDeskBuildKpiSummaries(
     $quotes = (int) ($funnelStats['quotes'] ?? 0);
 
     return [
+        'quotation_value' => [
+            'title' => 'Quotation Value This Month',
+            'headline' => $monthlyQuotationValue,
+            'headline_format' => 'money',
+            'period_label' => $currentPeriod,
+            'stats' => [
+                ['label' => 'Total quotation value', 'value' => $monthlyQuotationValue, 'format' => 'money'],
+            ],
+            'items' => $recentQuotations,
+            'items_heading' => 'Recent quotations this month',
+            'action_url' => sales_module_url('orders/index.php', ['module' => $module]),
+            'action_label' => 'View all quotations',
+        ],
         'monthly_sales' => [
             'title' => 'Monthly Sales',
             'headline' => $salesTotal,
@@ -599,6 +649,7 @@ function dashboardInitData(): array
     $companyYearlySales = 0.0;
     $commissionEarned = 0.0;
     $monthlySalesDisplay = 0.0;
+    $monthlyQuotationValue = 0.0;
     $salesLeaderboard = [];
     $isRoadmasterDashboard = function_exists('isRoadmaster') && isRoadmaster();
     $mostSoldTrucks = [];
@@ -625,6 +676,31 @@ function dashboardInitData(): array
         error_log('sales dashboard metrics: ' . $e->getMessage());
         if (isset($_GET['debug']) && $_GET['debug'] === '1') {
             $error = 'Dashboard data error: ' . $e->getMessage();
+        }
+    }
+
+    try {
+        $monthStart = new DateTimeImmutable($month . '-01 00:00:00');
+        $nextMonthStart = $monthStart->modify('+1 month');
+        $pdo = sales_pdo();
+        $sqlQuotationValue = "
+            SELECT COALESCE(SUM(total_amount), 0)
+            FROM sales_orders
+            WHERE status = 'quotation'
+              AND created_at >= ?
+              AND created_at < ?";
+        $paramsQuotationValue = [
+            $monthStart->format('Y-m-d H:i:s'),
+            $nextMonthStart->format('Y-m-d H:i:s'),
+        ];
+        salesAppendCompanyScope($sqlQuotationValue, $paramsQuotationValue, 'sales_orders');
+        $stmtQuotationValue = $pdo->prepare($sqlQuotationValue);
+        $stmtQuotationValue->execute($paramsQuotationValue);
+        $monthlyQuotationValue = (float) ($stmtQuotationValue->fetchColumn() ?: 0);
+    } catch (Throwable $e) {
+        error_log('sales dashboard quotation value: ' . $e->getMessage());
+        if (isset($_GET['debug']) && $_GET['debug'] === '1' && $error === '') {
+            $error = 'Dashboard quotation value error: ' . $e->getMessage();
         }
     }
 
@@ -704,6 +780,7 @@ function dashboardInitData(): array
         ],
         'metrics' => [
             'sales_total' => $salesTotal,
+            'quotation_value' => $monthlyQuotationValue,
             'pending_orders' => $pendingOrders,
             'overdue_invoices' => $overdueInvoices,
             'monthly_sales_display' => $monthlySalesDisplay,
@@ -720,7 +797,7 @@ function dashboardInitData(): array
         ],
         'revenue_growth' => $revenueGrowth,
         'quote_growth' => $quoteGrowth,
-        'recent_activities' => dashboardDeskNormalizeActivities(array_slice($recentActivities, 0, 6), $module),
+        'recent_activities' => dashboardDeskNormalizeActivities(array_slice($recentActivities, 0, 8), $module),
         'leaderboard' => dashboardDeskNormalizeLeaderboard(array_slice($salesLeaderboard, 0, 8), $leaderboardTargets, $year, $month),
         'yearly' => [
             'target' => $companyYearlyTarget,
@@ -749,10 +826,13 @@ function dashboardInitData(): array
             $overdueInvoices,
             $monthlySalesDisplay,
             $commissionEarned,
+            $monthlyQuotationValue,
             $funnelStats
         ),
         'urls' => [
             'new_quote' => sales_module_url('orders/create.php', ['module' => $module]),
+            'orders' => sales_module_url('orders/index.php', ['module' => $module]),
+            'statistics' => sales_module_url('statistics', ['module' => $module]),
             'wrong_invoices' => sales_module_url('invoices/corrections.php', ['module' => $module]),
             'catalogue' => function_exists('sales_catalogue_url') ? sales_catalogue_url('quote') : '',
             'product_view' => dashboardDeskStockProductViewUrl(),
@@ -767,14 +847,14 @@ function dashboardRenderReactShell(): void
         http_response_code(503);
         header('Content-Type: text/html; charset=utf-8');
         echo '<!DOCTYPE html><html><head><title>Sales Dashboard</title></head><body style="font-family:sans-serif;padding:2rem;">';
-        echo '<h1>Sales Dashboard</h1>';
         echo '<p>Run <code>npm install</code> and <code>npm run build</code> in <code>modules/sales/dashboard/frontend/</code>.</p>';
         echo '</body></html>';
         exit;
     }
 
     $page_title = 'Sales Dashboard';
-    $employeeHeaderTitle = 'Sales Dashboard';
+    $employeeHeaderTitle = '';
+    $hideErpBreadcrumbs = true;
     $hideHeaderCompanyBranding = true;
     $employeeHeaderExtraClass = 'employee-header--exp-desk';
 

@@ -47,6 +47,32 @@ if (!function_exists('erp_seo_tags')) {
             '<meta name="theme-color" content="#8b3fe0">',
         ]);
 
+        if (empty($page['schema']) && !str_contains($robots, 'noindex')) {
+            $crumbs = [['@type' => 'ListItem', 'position' => 1, 'name' => 'UltiTech ERP', 'item' => $site . '/']];
+            $pageName = trim((string) preg_replace('/\s*\|\s*UltiTech ERP$/', '', $page['title']));
+            $crumbs[] = ['@type' => 'ListItem', 'position' => 2, 'name' => $pageName, 'item' => $url];
+            $graph = [
+                '@context' => 'https://schema.org',
+                '@graph' => [
+                    [
+                        '@type' => 'WebPage',
+                        '@id' => $url . '#webpage',
+                        'url' => $url,
+                        'name' => $page['title'],
+                        'description' => $page['description'],
+                        'isPartOf' => ['@id' => $site . '/#website'],
+                        'about' => ['@id' => $site . '/#organization'],
+                        'breadcrumb' => ['@id' => $url . '#breadcrumb'],
+                        'inLanguage' => 'en',
+                    ],
+                    ['@type' => 'BreadcrumbList', '@id' => $url . '#breadcrumb', 'itemListElement' => $crumbs],
+                ],
+            ];
+            $tags[] = '<script type="application/ld+json">'
+                . json_encode($graph, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG)
+                . '</script>';
+        }
+
         if (!empty($page['schema'])) {
             $organization = [
                 '@type' => 'Organization',
@@ -114,5 +140,56 @@ if (!function_exists('erp_seo_tags')) {
         }
 
         return implode("\n", $tags) . "\n";
+    }
+}
+
+if (!function_exists('erp_seo_fallback_html')) {
+    /**
+     * Plain-HTML copy of a public page placed inside #root, so crawlers get headings and
+     * site links before JavaScript runs. React replaces it on mount.
+     *
+     * @param array{title:string,description:string} $page
+     * @param array<string,string> $urls keys: home, pricing, trial, about, contact, login
+     */
+    function erp_seo_fallback_html(string $pageKey, array $page, array $urls): string
+    {
+        $esc = static fn (string $value): string => htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
+        $nav = [
+            'home' => 'Home',
+            'pricing' => 'Pricing',
+            'trial' => 'Free Trial',
+            'about' => 'About Us',
+            'contact' => 'Contact Us',
+            'login' => 'Sign in',
+        ];
+        $links = '';
+        foreach ($nav as $key => $label) {
+            if (!empty($urls[$key])) {
+                $links .= '<li><a href="' . $esc($urls[$key]) . '">' . $esc($label) . '</a></li>';
+            }
+        }
+        $heading = $pageKey === 'home'
+            ? 'UltiTech ERP'
+            : trim((string) preg_replace('/\s*\|\s*UltiTech ERP$/', '', $page['title']));
+        $modules = [
+            'Sales' => 'Quotations, sales orders, invoices, customers and price lists.',
+            'Stock and inventory' => 'Products, warehouses, purchase orders, stock levels and transfers.',
+            'Payroll' => 'Salaries, payslips and payroll runs for your staff.',
+            'Expenses and payment vouchers' => 'Payment requests with approvals, receipts and budgets.',
+            'Accounting and reports' => 'Account balances, general ledger, cash book and live reports.',
+            'CRM and deliveries' => 'Leads, customer follow-ups, delivery notes and dispatch.',
+        ];
+        $items = '';
+        foreach ($modules as $name => $text) {
+            $items .= '<li><strong>' . $esc($name) . '</strong>: ' . $esc($text) . '</li>';
+        }
+
+        return '<div class="erp-seo-fallback" style="max-width:960px;margin:0 auto;padding:2rem 1.25rem;font-family:sans-serif;line-height:1.5;">'
+            . '<nav aria-label="Main"><ul style="display:flex;flex-wrap:wrap;gap:1rem;list-style:none;padding:0;margin:0 0 1.5rem;">' . $links . '</ul></nav>'
+            . '<h1>' . $esc($heading) . '</h1>'
+            . '<p>' . $esc($page['description']) . '</p>'
+            . '<h2>Modules in UltiTech ERP</h2><ul>' . $items . '</ul>'
+            . '<p><a href="' . $esc($urls['trial'] ?? '/free-trial.php') . '">Start a free 14-day trial</a> or <a href="' . $esc($urls['contact'] ?? '/contact.php') . '">contact the UltiTech team</a> in Dar es Salaam, Tanzania.</p>'
+            . '</div>';
     }
 }

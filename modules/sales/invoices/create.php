@@ -142,12 +142,13 @@ try {
     }
 
     $itemTypeSelect = in_array('item_type', $prodCols, true) ? 'p.item_type' : "'' AS item_type";
+    $truckDocumentFields = sales_product_document_fields_sql($prodCols);
     $hasProductCompanyId = in_array('company_id', $prodCols, true);
     $whereCompanySql = ($company_id > 0 && $hasProductCompanyId) ? (' WHERE p.company_id = ' . (int) $company_id . ' ') : ' ';
 
     // Keep product loading schema-safe: some installs miss company_id in one or more tables.
     $products = $salesDb->query("
-        SELECT p.id, p.product_code, p.name, p.description, p.unit_price as selling_price, $itemTypeSelect, $imgSelect,
+        SELECT p.id, p.product_code, p.name, p.description, p.unit_price as selling_price, $itemTypeSelect, $truckDocumentFields, $imgSelect,
                (
                    COALESCE((SELECT SUM(quantity) FROM stock WHERE product_id = p.id), 0) -
                    COALESCE((
@@ -168,7 +169,7 @@ try {
     // Fallback: if company-scoped query returns nothing, retry without company filter.
     if ($products === [] && $whereCompanySql !== ' ') {
         $products = $salesDb->query("
-            SELECT p.id, p.product_code, p.name, p.description, p.unit_price as selling_price, $itemTypeSelect, $imgSelect,
+            SELECT p.id, p.product_code, p.name, p.description, p.unit_price as selling_price, $itemTypeSelect, $truckDocumentFields, $imgSelect,
                    (
                        COALESCE((SELECT SUM(quantity) FROM stock WHERE product_id = p.id), 0) -
                        COALESCE((
@@ -185,6 +186,7 @@ try {
             ORDER BY p.name
         ")->fetchAll(PDO::FETCH_ASSOC);
     }
+    $products = sales_apply_product_document_descriptions($products);
 } catch (Throwable $e) {
     $products = [];
 }

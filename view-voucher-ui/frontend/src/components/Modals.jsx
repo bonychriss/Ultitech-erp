@@ -2,7 +2,12 @@ import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Check, CheckCircle2, ChevronDown, Coins, Landmark, Paperclip, Smartphone, Wallet, X } from 'lucide-react'
 
-function PaymentAccountIcon({ type, size }) {
+function PaymentAccountIcon({ type, size, imageUrl }) {
+  const [imageFailed, setImageFailed] = useState(false)
+  useEffect(() => { setImageFailed(false) }, [imageUrl])
+  if (imageUrl && !imageFailed) {
+    return <img className="vv-pay-modal__account-logo" src={imageUrl} alt="" loading="lazy" onError={() => setImageFailed(true)} />
+  }
   const Icon = type === 'bank' ? Landmark : type === 'mobile' ? Smartphone : type === 'cash' ? Coins : Wallet
   return <Icon size={size} aria-hidden="true" />
 }
@@ -196,7 +201,7 @@ function MarkPaidDialog({ onClose, data }) {
                 onClick={(event) => { if (isUploading) event.preventDefault() }}
               >
                 <span className={`vv-pay-modal__account-icon is-${selectedAccount ? selectedAccountType : 'default'}`}>
-                  <PaymentAccountIcon type={selectedAccount?.type} size={19} />
+                  <PaymentAccountIcon type={selectedAccount?.type} size={19} imageUrl={selectedAccount?.image_url} />
                 </span>
                 <span className="vv-pay-modal__account-summary" id="vv-pay-account-value">
                   <strong>{selectedAccount?.name || 'Select a payment account'}</strong>
@@ -224,7 +229,7 @@ function MarkPaidDialog({ onClose, data }) {
                     }}
                   >
                     <span className={`vv-pay-modal__account-option-icon is-${account.type}`}>
-                      <PaymentAccountIcon type={account.type} size={17} />
+                      <PaymentAccountIcon type={account.type} size={17} imageUrl={account.image_url} />
                     </span>
                     <span className="vv-pay-modal__account-option-copy">
                       <strong>{account.name}</strong>

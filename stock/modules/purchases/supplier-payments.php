@@ -93,7 +93,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $stmt = $pdo->prepare("
             INSERT INTO account_transactions 
             (company_id, account_id, transaction_date, type, amount, reference_type, reference_id, description, created_by, created_at, supplier_payment_id) 
-            VALUES (?, ?, ?, 'credit', ?, 'purchase_order', ?, ?, ?, NOW(), ?)
+            VALUES (?, ?, ?, 'debit', ?, 'purchase_order', ?, ?, ?, NOW(), ?)
         ");
         $desc = "Supplier Payment: " . $payment_number . " for PO #" . $po['po_number'];
         if (!empty($notes)) {
@@ -174,6 +174,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         }
 
         $pdo->commit();
+
+        $glBridge = dirname(__DIR__, 3) . '/includes/gl/gl_bridge.php';
+        if (is_file($glBridge)) {
+            require_once $glBridge;
+            gl_bridge_schedule_sync($pdo);
+        }
 
         echo json_encode(['success' => true, 'message' => "Payment registered successfully as $payment_number!"]);
         exit;

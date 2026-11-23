@@ -2,6 +2,13 @@
 require_once '../../includes/functions.php';
 requireLogin();
 ensureOutstandingInvoicesSchema();
+ensurePaymentVoucherDueDateColumn($pdo);
+if (function_exists('backfillOutstandingCreditVoucherPayables')) {
+    backfillOutstandingCreditVoucherPayables();
+}
+if (function_exists('backfillOutstandingInvoiceDueDates')) {
+    backfillOutstandingInvoiceDueDates();
+}
 $rootPath = '../../';
 $modulesLink = '../../select-module.php';
 $logoBase = '../../';
@@ -12,6 +19,44 @@ $error = '';
 
 // Handle Actions (Create, Delete/Pay)
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (isset($_POST['set_payable_due_date'])) {
+        $dueDate = trim((string) ($_POST['due_date'] ?? ''));
+        if (!isFinance()) {
+            $error = 'Only Finance users can change payable due dates.';
+        } elseif (!verify_csrf($_POST['csrf_token'] ?? '')) {
+            $error = 'Your session has expired. Refresh the page and try again.';
+        } elseif (!validOutstandingDueDate($dueDate)) {
+            $error = 'Please enter a valid due date.';
+        } else {
+            $pdo->beginTransaction();
+            try {
+                $find = $pdo->prepare("SELECT source_payment_voucher_id FROM erp_outstanding_invoices WHERE id = ? AND type = 'payable' AND status = 'outstanding' FOR UPDATE");
+                $find->execute([(int) ($_POST['id'] ?? 0)]);
+                $row = $find->fetch(PDO::FETCH_ASSOC);
+                if (!$row) {
+                    throw new RuntimeException('Outstanding payable not found.');
+                }
+                if (!empty($row['source_payment_voucher_id'])) {
+                    $findVoucher = $pdo->prepare('SELECT id FROM payment_vouchers WHERE id = ? FOR UPDATE');
+                    $findVoucher->execute([(int) $row['source_payment_voucher_id']]);
+                    if (!$findVoucher->fetchColumn()) {
+                        throw new RuntimeException('Linked payment voucher not found.');
+                    }
+                    $updateVoucher = $pdo->prepare('UPDATE payment_vouchers SET due_date = ? WHERE id = ?');
+                    $updateVoucher->execute([$dueDate, (int) $row['source_payment_voucher_id']]);
+                }
+                $pdo->prepare('UPDATE erp_outstanding_invoices SET due_date = ? WHERE id = ?')->execute([$dueDate, (int) $_POST['id']]);
+                $pdo->commit();
+                $_SESSION['outstanding_invoice_success'] = 'Payable due date updated.';
+                header('Location: ?' . http_build_query($_GET), true, 303);
+                exit;
+            } catch (Throwable $e) {
+                if ($pdo->inTransaction()) $pdo->rollBack();
+                error_log('Unable to update payable due date: ' . $e->getMessage());
+                $error = 'Could not update the payable due date. Please try again.';
+            }
+        }
+    }
     if (isset($_POST['create_invoice'])) {
         $type = $_POST['type'] ?? 'receivable'; // receivable or payable
         $date = $_POST['invoice_date'] ?? date('Y-m-d');
@@ -52,18 +97,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
     
-    // Mark as Paid (Soft delete or status update) - User asked for "Outstanding", so marking paid removes it from list usually.
-    // Mark as Paid (Soft delete or status update) - User asked for "Outstanding", so marking paid removes it from list usually.
     if (isset($_POST['mark_paid'])) {
-        if (!isFinance()) {
-            $error = 'Only Finance users can mark invoices as paid.';
-        } else {
-            $id = (int)$_POST['id'];
-            $stmt = $pdo->prepare("DELETE FROM erp_outstanding_invoices WHERE id = ?");
-            if ($stmt->execute([$id])) {
-                $success = 'Invoice marked as paid and removed.';
-            }
-        }
+        $error = 'Mark Paid is no longer available on this page. Record the payment on the original invoice or voucher.';
     }
 
     // Delete Invoice
@@ -94,19 +129,63 @@ $activeTab = (($_GET['tab'] ?? 'receivables') === 'payables') ? 'payables' : 're
 $entryMode = (($_GET['entry'] ?? '') === 'new');
 $typeFilter = ($activeTab === 'payables') ? 'payable' : 'receivable';
 
-$stmt = $pdo->prepare("SELECT * FROM erp_outstanding_invoices WHERE type = ? AND status = 'outstanding' ORDER BY invoice_date DESC");
-$stmt->execute([$typeFilter]);
-$invoices = $stmt->fetchAll();
-
-// Calculate Total Outstanding
-$totalOutstanding = 0;
-foreach ($invoices as $inv) {
-    $totalOutstanding += $inv['amount'];
+$invoiceTotals = ['receivable' => 0.0, 'payable' => 0.0];
+$invoiceCounts = ['receivable' => 0, 'payable' => 0];
+$invoices = [];
+foreach (outstandingInvoiceRows($pdo) as $row) {
+    if (isset($invoiceTotals[$row['type']])) {
+        $invoiceTotals[$row['type']] += (float) $row['amount'];
+        $invoiceCounts[$row['type']]++;
+    }
+    if ($row['type'] === $typeFilter) $invoices[] = $row;
 }
 
 function oi_h(string $value): string
 {
     return htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
+}
+
+function oi_due_date_form(array $invoice): void
+{
+    $currentDate = validOutstandingDueDate((string) ($invoice['due_date'] ?? '')) ? (string) $invoice['due_date'] : '';
+    ?>
+    <details class="oi-due-editor"><summary class="oi-row-action-item"><?= $currentDate === '' ? 'Set due date' : 'Change due date' ?></summary>
+    <form method="post" class="oi-due-form">
+        <input type="hidden" name="csrf_token" value="<?= oi_h(csrf_token()) ?>">
+        <input type="hidden" name="id" value="<?= (int) $invoice['id'] ?>">
+        <input type="hidden" name="set_payable_due_date" value="1">
+        <input type="date" name="due_date" value="<?= oi_h($currentDate) ?>" aria-label="Payable due date" required>
+        <button type="submit">Save date</button>
+    </form>
+    </details>
+    <?php
+}
+
+/**
+ * @return array{date:string,label:string,state:string}
+ */
+function oi_due_date_info($value): array
+{
+    $rawDate = trim((string) $value);
+    $dueDate = DateTimeImmutable::createFromFormat('!Y-m-d', $rawDate);
+    if (!$dueDate || $dueDate->format('Y-m-d') !== $rawDate) {
+        return ['date' => '-', 'label' => 'Due date not set', 'state' => 'missing'];
+    }
+
+    $days = (int) (new DateTimeImmutable('today'))->diff($dueDate)->format('%r%a');
+    if ($days < 0) {
+        $overdueDays = abs($days);
+        $label = 'Overdue by ' . $overdueDays . ' ' . ($overdueDays === 1 ? 'day' : 'days');
+        $state = 'overdue';
+    } elseif ($days === 0) {
+        $label = 'Due today';
+        $state = 'today';
+    } else {
+        $label = $days . ' ' . ($days === 1 ? 'day' : 'days') . ' left';
+        $state = 'upcoming';
+    }
+
+    return ['date' => $dueDate->format('d/m/Y'), 'label' => $label, 'state' => $state];
 }
 
 /**
@@ -126,14 +205,31 @@ function oi_url(array $extra = []): string
     return '?' . http_build_query($query);
 }
 
+function oi_voucher_attachment_url(string $path): string
+{
+    $path = trim(str_replace('\\', '/', $path));
+    if (preg_match('#^https?://#i', $path)) {
+        return $path;
+    }
+    $relativePath = ltrim($path, '/');
+    if (!str_starts_with($relativePath, 'assets/')
+        && !str_starts_with($relativePath, 'storage/')
+        && !str_starts_with($relativePath, 'uploads/')) {
+        $relativePath = 'assets/uploads/vouchers/' . $relativePath;
+    }
+    $proxyUrl = function_exists('app_url') ? app_url('/proxy_pdf.php') : '../../proxy_pdf.php';
+    return $proxyUrl . '?file=' . urlencode($relativePath);
+}
+
 $search = trim((string) ($_GET['q'] ?? ''));
 if (strlen($search) > 80) {
     $search = substr($search, 0, 80);
 }
-$sortKey = strtolower(trim((string) ($_GET['sort'] ?? 'date')));
+$defaultSort = $activeTab === 'payables' ? 'recent' : 'date';
+$sortKey = strtolower(trim((string) ($_GET['sort'] ?? $defaultSort)));
 $sortDir = strtolower(trim((string) ($_GET['dir'] ?? 'desc')));
-if (!in_array($sortKey, ['date', 'name', 'number', 'amount'], true)) {
-    $sortKey = 'date';
+if (!in_array($sortKey, ['date', 'name', 'number', 'amount', 'recent'], true) || ($sortKey === 'recent' && $activeTab !== 'payables')) {
+    $sortKey = $defaultSort;
 }
 if (!in_array($sortDir, ['asc', 'desc'], true)) {
     $sortDir = 'desc';
@@ -152,7 +248,9 @@ if ($search !== '') {
         return str_contains($hay, $needle);
     }));
 }
-if ($sortKey !== 'date' || $sortDir !== 'desc') {
+if ($sortKey === 'recent') {
+    usort($displayRows, static fn(array $a, array $b): int => (int) $b['id'] <=> (int) $a['id']);
+} elseif ($sortKey !== 'date' || $sortDir !== 'desc') {
     $mult = $sortDir === 'asc' ? 1 : -1;
     usort($displayRows, static function (array $a, array $b) use ($sortKey, $mult): int {
         switch ($sortKey) {
@@ -176,24 +274,85 @@ if ($sortKey !== 'date' || $sortDir !== 'desc') {
     });
 }
 
-$filteredTotal = 0.0;
-foreach ($displayRows as $row) {
-    $filteredTotal += (float) ($row['amount'] ?? 0);
-}
+$pageRows = $displayRows;
+$rangeFrom = $pageRows === [] ? 0 : 1;
 
-$pageSize = 10;
-$resultCount = count($displayRows);
-$pageCount = max(1, (int) ceil($resultCount / $pageSize));
-$page = (int) ($_GET['p'] ?? 1);
-if ($page < 1) {
-    $page = 1;
+$sourceVoucherData = [];
+$sourceVoucherByNumber = [];
+if ($activeTab === 'payables' && function_exists('tableExists') && tableExists('payment_vouchers', $pdo)) {
+    $sourceVoucherIds = [];
+    $sourceVoucherNumbers = [];
+    foreach ($pageRows as $row) {
+        $sourceVoucherId = (int) ($row['source_payment_voucher_id'] ?? 0);
+        if ($sourceVoucherId > 0) {
+            $sourceVoucherIds[$sourceVoucherId] = $sourceVoucherId;
+        }
+        $sourceVoucherNumber = trim((string) ($row['invoice_number'] ?? ''));
+        if ($sourceVoucherNumber !== '') {
+            $sourceVoucherNumbers[$sourceVoucherNumber] = $sourceVoucherNumber;
+        }
+    }
+
+    $lookupConditions = [];
+    $lookupParams = [];
+    if ($sourceVoucherIds !== []) {
+        $placeholders = implode(',', array_fill(0, count($sourceVoucherIds), '?'));
+        $lookupConditions[] = "id IN ($placeholders)";
+        array_push($lookupParams, ...array_values($sourceVoucherIds));
+    }
+    if ($sourceVoucherNumbers !== []) {
+        $placeholders = implode(',', array_fill(0, count($sourceVoucherNumbers), '?'));
+        $lookupConditions[] = "voucher_no IN ($placeholders)";
+        array_push($lookupParams, ...array_values($sourceVoucherNumbers));
+    }
+    if ($lookupConditions !== []) {
+        $voucherStmt = $pdo->prepare('SELECT id, voucher_no, swift_document FROM payment_vouchers WHERE ' . implode(' OR ', $lookupConditions));
+        $voucherStmt->execute($lookupParams);
+        foreach ($voucherStmt->fetchAll(PDO::FETCH_ASSOC) as $voucher) {
+            $sourceVoucherId = (int) $voucher['id'];
+            $voucherNumber = trim((string) ($voucher['voucher_no'] ?? ''));
+            $voucherUrl = function_exists('company_url')
+                ? company_url('employee/view-voucher.php')
+                : (function_exists('app_url') ? app_url('/employee/view-voucher.php') : '../../employee/view-voucher.php');
+            $sourceVoucherData[$sourceVoucherId] = [
+                'voucher_no' => $voucherNumber,
+                'voucher_url' => $voucherUrl . '?' . http_build_query(['id' => $sourceVoucherId, 'module' => 'voucher']) . '#attachments',
+                'attachments' => [],
+            ];
+            if ($voucherNumber !== '') {
+                $sourceVoucherByNumber[$voucherNumber] = $sourceVoucherId;
+            }
+            $swiftDocument = trim((string) ($voucher['swift_document'] ?? ''));
+            if ($swiftDocument !== '') {
+                $sourceVoucherData[$sourceVoucherId]['attachments'][] = [
+                    'name' => 'Payment proof',
+                    'url' => oi_voucher_attachment_url($swiftDocument),
+                    'title' => 'Payment proof',
+                ];
+            }
+        }
+
+        $attachmentVoucherIds = array_keys($sourceVoucherData);
+        if ($attachmentVoucherIds !== [] && tableExists('voucher_attachments', $pdo)) {
+            $placeholders = implode(',', array_fill(0, count($attachmentVoucherIds), '?'));
+            $attachmentStmt = $pdo->prepare("SELECT voucher_id, file_path, original_name FROM voucher_attachments WHERE voucher_id IN ($placeholders) ORDER BY id");
+            $attachmentStmt->execute($attachmentVoucherIds);
+            foreach ($attachmentStmt->fetchAll(PDO::FETCH_ASSOC) as $attachment) {
+                $sourceVoucherId = (int) $attachment['voucher_id'];
+                $filePath = (string) ($attachment['file_path'] ?? '');
+                $fileName = trim((string) ($attachment['original_name'] ?? ''));
+                if ($fileName === '') {
+                    $fileName = basename(str_replace('\\', '/', $filePath));
+                }
+                $sourceVoucherData[$sourceVoucherId]['attachments'][] = [
+                    'name' => $fileName,
+                    'url' => oi_voucher_attachment_url($filePath),
+                    'title' => $fileName,
+                ];
+            }
+        }
+    }
 }
-if ($page > $pageCount) {
-    $page = $pageCount;
-}
-$pageRows = array_slice($displayRows, ($page - 1) * $pageSize, $pageSize);
-$rangeFrom = $resultCount === 0 ? 0 : (($page - 1) * $pageSize) + 1;
-$rangeTo = min($resultCount, $page * $pageSize);
 
 function oi_sort_url(string $key, string $currentKey, string $currentDir): string
 {
@@ -219,33 +378,68 @@ $entityLabel = $activeTab === 'receivables' ? 'Customer' : 'Supplier';
     <link rel="stylesheet" href="../../assets/css/style.css?v=<?= time() ?>">
     <style>
         body { background: #f3f4f6; }
-        .main-content { max-width: 1200px; margin: 0 auto; padding: 12px 20px 20px; }
-        .outstanding-invoice-header-actions {
-            position: relative;
-            display: inline-flex;
-            align-items: center;
+        .main-content { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        html body .main-content.oi-page { max-width: 1400px !important; margin: 0 auto !important; padding: 0.35rem 22px 2.4rem !important; background: transparent; }
+        @media (max-width: 780px) {
+            html body .main-content.oi-page { padding-left: 16px !important; padding-right: 16px !important; }
         }
+        .oi-table a.badge-att { background: #e0f2fe !important; color: #0369a1 !important; font-weight: 600; opacity: 1; }
+        .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .page-title { font-size: 1.5rem; font-weight: bold; color: #111; margin: 0; align-self: flex-start; transform: translateY(-2px); }
+        .page-header-right { position: relative; display: flex; align-items: center; gap: 10px; margin-left: auto; }
+        body.page-outstanding-invoices .employee-header--outstanding { z-index: 12000 !important; overflow: visible !important; }
+        body.page-outstanding-invoices .employee-header--outstanding .header-content { overflow: visible !important; }
+        body.page-outstanding-invoices .employee-header--outstanding .page-header-right { z-index: 12001 !important; overflow: visible !important; }
         .new-invoice-btn {
             background: #2563eb;
             color: #fff;
             border: none;
-            border-radius: 6px;
+            border-radius: 8px;
             padding: 10px 16px;
             font-size: 0.9rem;
-            font-weight: 600;
+            font-weight: 700;
             cursor: pointer;
             text-decoration: none;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.2);
+            box-shadow: 0 6px 14px rgba(37, 99, 235, 0.2);
+        }
+        body.page-outstanding-invoices .employee-header--outstanding .new-invoice-btn {
+            height: 32px;
+            min-height: 32px;
+            padding: 0 10px;
+            border-radius: 10px !important;
+            font-size: 0.78rem;
         }
         .new-invoice-btn:hover { background: #1d4ed8; }
-        .oi-header-search { width: min(26rem, 38vw); max-width: 26rem; min-width: 12rem; margin: 0; position: relative; z-index: 35; }
-        .oi-header-search-field { position: relative; display: flex; align-items: center; width: 100%; height: 2.45rem; border: 1px solid #d7dee7; border-radius: 9999px; background: #fff; overflow: hidden; }
-        .oi-header-search-field:focus-within { border-color: #93c5fd; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12); }
+        .oi-new-type-picker { position: absolute; top: calc(100% + 8px); right: 0; z-index: 12002; display: grid; width: min(250px, calc(100vw - 24px)); gap: 6px; padding: 8px; border: 1px solid #e2e8f0; border-radius: 10px; background: #fff; box-shadow: 0 10px 24px rgba(15, 23, 42, 0.16); }
+        .oi-new-type-picker[hidden] { display: none; }
+        .oi-new-type-link { display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 7px 9px; border: 1px solid #e8edf3; border-radius: 8px; background: #fff; color: #0f172a; text-decoration: none; }
+        .oi-new-type-link:hover { border-color: #bfdbfe; background: #f8fafc; }
+        .oi-new-type-icon { display: inline-flex; width: 32px; height: 32px; flex: 0 0 32px; align-items: center; justify-content: center; border-radius: 8px; background: #eff6ff; color: #2563eb; }
+        .oi-new-type-icon--payables { background: #ecfdf5; color: #059669; }
+        .oi-new-type-icon svg { width: 18px; height: 18px; }
+        .oi-new-type-copy { display: grid; gap: 2px; min-width: 0; }
+        .oi-new-type-copy strong { font-size: 0.8rem; font-weight: 700; }
+        .oi-new-type-copy small { color: #64748b; font-size: 0.68rem; }
+        html[data-theme="dark"] body.page-outstanding-invoices .oi-new-type-picker,
+        html[data-theme="dark"] body.page-outstanding-invoices .oi-new-type-link { background: #111b21; border-color: #2a3942; color: #e9edef; }
+        html[data-theme="dark"] body.page-outstanding-invoices .oi-new-type-icon { background: #17345b; color: #bfdbfe; }
+        html[data-theme="dark"] body.page-outstanding-invoices .oi-new-type-icon--payables { background: #123b32; color: #a7f3d0; }
+        html[data-theme="dark"] body.page-outstanding-invoices .oi-new-type-link:hover { background: #202c33; border-color: #40515b; }
+        html[data-theme="dark"] body.page-outstanding-invoices .oi-new-type-copy small { color: #b0bec5; }
+        .oi-header-search { width: 100%; max-width: none; min-width: 0; margin: 0; position: relative; }
+        .oi-header-search--desktop { width: 100%; }
+        body.page-outstanding-invoices .employee-header--outstanding .header-content { display: grid !important; grid-template-columns: minmax(0, 1fr) minmax(16rem, 26rem) minmax(0, 1fr); column-gap: 1rem; align-items: center; }
+        body.page-outstanding-invoices .employee-header--outstanding .header-left { display: none !important; }
+        body.page-outstanding-invoices .employee-header--outstanding .employee-header-page-heading--with-center { grid-column: 1; min-width: 0 !important; margin: 0 !important; }
+        body.page-outstanding-invoices .employee-header--outstanding .employee-header-center-slot { grid-column: 2; width: 100%; max-width: none; padding: 0 !important; transform: translateY(18px); }
+        body.page-outstanding-invoices .employee-header--outstanding .header-right { grid-column: 3; justify-self: end; margin: 0 !important; }
+        .oi-header-search-field { position: relative; display: flex; align-items: center; width: 100%; height: 2.25rem; border: 1px solid #e2e8f0; border-radius: 9999px; background: #fff; overflow: hidden; }
+        .oi-header-search-field:focus-within { border-color: #a5b4fc; box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12); }
         .oi-header-search-icon { position: absolute; left: 0.9rem; width: 1rem; height: 1rem; color: #94a3b8; pointer-events: none; }
-        .oi-header-search-input { width: 100%; min-width: 0; height: 100%; padding: 0 5.2rem 0 2.5rem; border: 0 !important; border-radius: 9999px !important; outline: 0 !important; box-shadow: none !important; background: transparent !important; color: #0f172a; font: inherit; font-size: 0.875rem; }
+        .oi-header-search-input { width: 100%; min-width: 0; height: 100%; padding: 0 5.2rem 0 2.5rem; border: 0 !important; border-radius: 9999px !important; outline: 0 !important; box-shadow: none !important; background: transparent !important; color: #0f172a; font: inherit; font-size: 0.8125rem; }
         .oi-header-search-input::-webkit-search-cancel-button { display: none; }
         .oi-header-search-clear { position: absolute; right: 2.6rem; width: 1.8rem; height: 1.8rem; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; color: #64748b; text-decoration: none; }
         .oi-header-search-clear:hover { background: #f1f5f9; color: #334155; }
@@ -253,102 +447,97 @@ $entityLabel = $activeTab === 'receivables' ? 'Customer' : 'Supplier';
         .oi-header-search-submit:hover { background: transparent; color: #0f172a; }
         .oi-header-search-submit svg { width: 1rem; height: 1rem; }
         .oi-header-search--mobile { display: none; }
-        body.page-outstanding-invoices .employee-header--outstanding .header-content { position: relative; }
-        body.page-outstanding-invoices .employee-header--outstanding .employee-header-center-slot { position: absolute; left: 50%; top: calc(50% + 14px); width: min(26rem, 38vw); flex: 0 0 auto !important; transform: translate(-50%, -50%); z-index: 30; }
-        body.page-outstanding-invoices .employee-header--outstanding .header-right { position: relative; z-index: 35; }
-        body.page-outstanding-invoices .employee-header--outstanding .header-actions-tray { pointer-events: none; }
-        body.page-outstanding-invoices .employee-header--outstanding .header-actions-tray > * { pointer-events: auto; }
+        .oi-account-switcher { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; width: min(40rem, 100%); margin: 41px auto 53px; }
+        .oi-account-card { display: flex; min-width: 0; min-height: 60px; align-items: center; gap: 10px; padding: 8px 12px; border: 1px solid #e8edf3; border-radius: 10px; background: #fff; box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04); color: #0f172a; text-decoration: none; transition: border-color 0.15s ease, box-shadow 0.15s ease; }
+        .oi-account-card:hover { border-color: var(--oi-account-accent); box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08); }
+        .oi-account-card--receivables { --oi-account-accent: #087cff; }
+        .oi-account-card--payables { --oi-account-accent: #00b67a; }
+        .oi-account-card.is-active { border-color: var(--oi-account-accent); box-shadow: 0 0 0 1px var(--oi-account-accent); }
+        .oi-account-icon { display: inline-flex; width: 32px; height: 32px; flex: 0 0 32px; align-items: center; justify-content: center; border-radius: 9px; background: #eff6ff; color: #2563eb; }
+        .oi-account-card--payables .oi-account-icon { background: #ecfdf5; color: #059669; }
+        .oi-account-icon svg { width: 17px; height: 17px; }
+        .oi-account-copy { display: grid; min-width: 0; gap: 3px; }
+        .oi-account-copy strong { color: #334155; font-size: 0.74rem; font-weight: 650; }
+        .oi-account-copy small { color: #64748b; font-size: 0.68rem; }
+        .oi-account-count { display: none; }
+        .oi-account-total { margin-left: auto; color: #0f172a; font-size: 0.88rem; font-weight: 750; font-variant-numeric: tabular-nums; white-space: nowrap; }
+        .oi-header-search--mobile { display: none; }
+        .oi-header-breadcrumb { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 0.3rem; margin: 0; color: #64748b; font-size: 0.76rem; line-height: 1.25; }
+        .oi-header-breadcrumb a { color: #2563eb; text-decoration: none; }
+        .oi-header-breadcrumb a:hover { text-decoration: underline; }
+        .oi-header-breadcrumb .oi-breadcrumb-separator { color: #94a3b8; }
+        .oi-header-breadcrumb .oi-breadcrumb-current { color: #64748b; font-weight: 600; }
+        @media (max-width: 1023.98px) {
+            body.page-outstanding-invoices .employee-header--outstanding .header-content { display: flex !important; }
+            body.page-outstanding-invoices .employee-header--outstanding .employee-header-center-slot { display: none !important; }
+            .oi-header-search--mobile { display: block; width: 100%; max-width: none; min-width: 0; margin: 0.75rem 0 0.625rem; }
+        }
         @media (max-width: 767.98px) {
-            body.page-outstanding-invoices .employee-header--outstanding .employee-header-center-slot,
-            .oi-header-search--desktop { display: none !important; }
-            .oi-header-search--mobile { display: block; width: 100%; max-width: none; min-width: 0; margin: 0 0 0.9rem; }
+            body.page-outstanding-invoices .employee-header--outstanding .header-content { display: grid !important; grid-template-columns: 2.5rem minmax(0, 1fr) auto; column-gap: 0.5rem; row-gap: 0.2rem; align-items: start !important; padding: 8px 12px !important; }
+            body.page-outstanding-invoices .employee-header--outstanding .header-left { display: flex !important; grid-column: 1; grid-row: 1; margin: 0 !important; padding: 0 !important; align-self: start; }
+            body.page-outstanding-invoices .employee-header--outstanding .employee-header-page-heading--with-center { grid-column: 2; grid-row: 1; min-width: 0 !important; margin: 0 !important; padding: 0 !important; }
+            body.page-outstanding-invoices .employee-header--outstanding .employee-header-page-title { font-size: 16px !important; line-height: 1.15 !important; white-space: normal; }
+            body.page-outstanding-invoices .employee-header--outstanding .employee-header-page-subtitle { margin: 4px 0 0 !important; font-size: 11px !important; line-height: 1.2 !important; }
+            body.page-outstanding-invoices .employee-header--outstanding .header-right { grid-column: 3; grid-row: 1; margin: 0 !important; align-self: start !important; }
         }
-        .oi-invoice-picker {
-            position: absolute;
-            top: calc(100% + 10px);
-            right: 0;
-            width: min(560px, 72vw);
-            margin: 0;
-            background: #ffffff;
-            border: 1px solid #e2e8f0;
-            border-radius: 16px;
-            box-shadow: 0 18px 36px rgba(15, 23, 42, 0.12);
-            padding: 18px;
-            z-index: 20;
-            animation: oi-panel-pop 0.18s ease-out;
-        }
-        .oi-invoice-picker[hidden] { display: none; }
-        .oi-invoice-picker-grid {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 16px;
-        }
-        @keyframes oi-panel-pop {
-            from {
-                opacity: 0;
-                transform: translateY(-8px);
+        html[data-theme="dark"] body.page-outstanding-invoices .oi-header-breadcrumb a { color: #7ab8ff; }
+        html[data-theme="dark"] body.page-outstanding-invoices .oi-header-breadcrumb .oi-breadcrumb-current { color: #b0bec5; }
+        html[data-theme="dark"] body.page-outstanding-invoices .oi-account-card { background: #111b21; border-color: #2a3942; color: #e9edef; }
+        html[data-theme="dark"] body.page-outstanding-invoices .oi-account-card.is-active { border-color: var(--oi-account-accent); }
+        html[data-theme="dark"] body.page-outstanding-invoices .oi-account-copy strong,
+        html[data-theme="dark"] body.page-outstanding-invoices .oi-account-total { color: #e9edef; }
+        html[data-theme="dark"] body.page-outstanding-invoices .oi-account-copy small { color: #8696a0; }
+        html[data-theme="dark"] body.page-outstanding-invoices .oi-account-icon { background: rgba(37, 99, 235, 0.2); color: #93c5fd; }
+        html[data-theme="dark"] body.page-outstanding-invoices .oi-account-card--payables .oi-account-icon { background: rgba(5, 150, 105, 0.2); color: #6ee7b7; }
+        @media (max-width: 620px) {
+            .oi-account-switcher { grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; gap: 8px; margin: 12px auto 16px; }
+            .oi-account-card {
+                position: relative;
+                display: grid;
+                grid-template-columns: 42px minmax(0, 1fr);
+                grid-template-rows: minmax(44px, 1fr) auto;
+                align-items: start;
+                min-height: 96px;
+                gap: 6px 7px;
+                padding: 8px;
             }
-            to {
-                opacity: 1;
-                transform: translateY(0);
+            .oi-account-icon {
+                grid-column: 1;
+                grid-row: 1;
+                align-self: center;
+                width: 42px;
+                height: 42px;
+                border-radius: 12px;
             }
+            .oi-account-icon svg { width: 23px; height: 23px; }
+            .oi-account-copy {
+                grid-column: 2;
+                grid-row: 1;
+                align-self: center;
+                padding-left: 7px;
+                border-left: 1px solid #e8edf3;
+            }
+            .oi-account-copy strong { font-size: 0.7rem; line-height: 1.2; }
+            .oi-account-copy small { font-size: 0.62rem; line-height: 1.2; }
+            .oi-account-count { display: block; }
+            .oi-account-total {
+                grid-column: 1 / -1;
+                grid-row: 2;
+                margin: 0;
+                justify-self: end;
+                text-align: right;
+                font-size: clamp(0.62rem, 2.5vw, 0.78rem);
+                white-space: nowrap;
+            }
+            html[data-theme="dark"] body.page-outstanding-invoices .oi-account-copy { border-left-color: #2a3942; }
         }
-        .oi-invoice-picker-card {
-            display: flex;
-            align-items: center;
-            gap: 14px;
-            background: #f8fafc;
-            border: 1px solid #e2e8f0;
-            border-radius: 14px;
-            padding: 18px;
-            text-decoration: none;
-            color: #0f172a;
-            transition: 0.2s ease;
-        }
-        .oi-invoice-picker-card.active {
-            border-color: #93c5fd;
-            background: #eff6ff;
-            box-shadow: 0 8px 18px rgba(37, 99, 235, 0.08);
-        }
-        .oi-invoice-picker-card:hover {
-            transform: translateY(-1px);
-            border-color: #cbd5e1;
-        }
-        .oi-picker-icon {
-            width: 42px;
-            height: 42px;
-            border-radius: 12px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.15rem;
-            font-weight: 800;
-            flex-shrink: 0;
-        }
-        .oi-picker-icon--in { background: #dcfce7; color: #15803d; }
-        .oi-picker-icon--out { background: #fee2e2; color: #b91c1c; }
-        .oi-invoice-picker-card strong {
-            display: block;
-            font-size: 1rem;
-            margin-bottom: 4px;
-        }
-        .oi-invoice-picker-card small {
-            color: #475569;
-            line-height: 1.4;
-            display: block;
-        }
-        
-        .tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid #e5e7eb; }
-        .tab-link { padding: 10px 20px; text-decoration: none; color: #6b7280; border-bottom: 2px solid transparent; font-weight: 500; }
-        .tab-link.active { color: #2563eb; border-bottom-color: #2563eb; }
-        .tab-link:hover { color: #111; }
         
         .card { background: #fff; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); padding: 20px; margin-bottom: 20px; }
         
         .oi-form-card { background: #fff; border: 1px solid #e7edf3; border-radius: 16px; box-shadow: 0 8px 22px rgba(15, 23, 42, 0.04); margin-bottom: 20px; }
-        .oi-form-back { float: right; color: #475569; font-size: 0.82rem; font-weight: 700; text-decoration: none; }
-        .oi-form-back:hover { color: #1d4ed8; }
         .oi-form-head { display: flex; align-items: center; gap: 0.75rem; padding: 1rem 1.15rem 0.85rem; border-bottom: 1px solid #eef2f6; }
+        .oi-form-back { margin-left: auto; color: #475569; font-size: 0.82rem; font-weight: 700; text-decoration: none; white-space: nowrap; }
+        .oi-form-back:hover { color: #1d4ed8; }
         .oi-form-head h2 { margin: 0; font-size: 1.05rem; font-weight: 760; color: #0f172a; }
         .oi-form-head p { margin: 0.1rem 0 0; color: #64748b; font-size: 0.82rem; }
         .oi-form-mark { width: 38px; height: 38px; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex: 0 0 auto; }
@@ -388,6 +577,7 @@ $entityLabel = $activeTab === 'receivables' ? 'Customer' : 'Supplier';
         html[data-theme="dark"] .oi-form-card { background: #1e293b; border-color: #334155; }
         html[data-theme="dark"] .oi-form-head, html[data-theme="dark"] .oi-form-foot { border-color: #334155; }
         html[data-theme="dark"] .oi-form-head h2 { color: #f8fafc; }
+        html[data-theme="dark"] .oi-form-back { color: #cbd5e1; }
         html[data-theme="dark"] .oi-field > label { color: #cbd5e1; }
         html[data-theme="dark"] .oi-field input[type="text"],
         html[data-theme="dark"] .oi-field input[type="date"],
@@ -417,6 +607,77 @@ $entityLabel = $activeTab === 'receivables' ? 'Customer' : 'Supplier';
         .oi-rank-card .oi-search input[type="search"] { border-radius: 999px !important; -webkit-appearance: none; appearance: none; background-clip: padding-box; }
         .oi-rank-card .oi-search input[type="search"]:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15); }
         .oi-search button, .oi-clear { height: 2.25rem; border-radius: 999px; border: 1px solid #e2e8f0; background: #fff; color: #334155; font-weight: 700; padding: 0 0.75rem; text-decoration: none; display: inline-flex; align-items: center; cursor: pointer; }
+        .oi-mobile-invoice-list { display: none; }
+        .oi-mobile-invoice-card {
+            display: flex;
+            flex-direction: column;
+            gap: 0.55rem;
+            width: 100%;
+            min-width: 0;
+            padding: 0.7rem 0.8rem;
+            border: 1px solid #e2e8f0;
+            border-radius: 15px !important;
+            background: #fff;
+            color: #0f172a;
+            text-align: left;
+            font: inherit;
+            cursor: pointer;
+            appearance: none;
+            -webkit-appearance: none;
+        }
+        .oi-mobile-invoice-card:focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }
+        .oi-mobile-invoice-card-top { display: flex; align-items: center; gap: 0.65rem; width: 100%; min-width: 0; }
+        .oi-mobile-invoice-party { display: flex; flex: 1 1 0; align-items: center; gap: 0.55rem; min-width: 0; }
+        .oi-mobile-invoice-avatar {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex: 0 0 2rem;
+            width: 2rem;
+            height: 2rem;
+            border-radius: 50%;
+            background: #312e81;
+            color: #e0e7ff;
+            font-size: 0.65rem;
+            font-weight: 700;
+        }
+        .oi-mobile-invoice-identity { display: flex; flex-direction: column; min-width: 0; gap: 0.12rem; }
+        .oi-mobile-invoice-number,
+        .oi-mobile-invoice-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .oi-mobile-invoice-number { color: #0f172a; font-size: 0.76rem; font-weight: 800; }
+        .oi-mobile-invoice-name { color: #64748b; font-size: 0.66rem; font-weight: 600; }
+        .oi-mobile-invoice-aside { display: flex; flex: 0 0 auto; flex-direction: column; align-items: flex-end; gap: 0.2rem; }
+        .oi-mobile-invoice-amount { color: #0f172a; font-size: 0.69rem; font-weight: 800; white-space: nowrap; }
+        .oi-mobile-invoice-status { padding: 0.12rem 0.42rem; border-radius: 999px; font-size: 0.58rem; font-weight: 700; white-space: nowrap; }
+        .oi-mobile-invoice-details { display: flex; flex-wrap: wrap; align-items: center; gap: 0.55rem; min-width: 0; padding-top: 0.5rem; border-top: 1px solid #e2e8f0; color: #64748b; }
+        .oi-mobile-invoice-fact { display: inline-flex; align-items: center; gap: 0.3rem; min-width: 0; font-size: 0.61rem; }
+        .oi-mobile-invoice-fact svg { width: 0.8rem; height: 0.8rem; flex: 0 0 auto; }
+        .oi-mobile-invoice-date { flex: 0 0 auto; }
+        .oi-mobile-invoice-due { flex: 0 0 100%; }
+        .oi-mobile-invoice-divider { width: 1px; height: 0.8rem; flex: 0 0 1px; background: #cbd5e1; }
+        .oi-mobile-invoice-description {
+            display: flex;
+            flex: 1 1 0;
+            width: 0;
+            min-width: 0;
+            overflow: hidden;
+        }
+        .oi-mobile-invoice-description-text {
+            display: block;
+            width: 100%;
+            max-width: 18ch;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        html[data-theme="dark"] body.page-outstanding-invoices .oi-mobile-invoice-card { background: #111b21; border-color: #2a3942; color: #e9edef; }
+        html[data-theme="dark"] body.page-outstanding-invoices .oi-mobile-invoice-number,
+        html[data-theme="dark"] body.page-outstanding-invoices .oi-mobile-invoice-amount { color: #e9edef !important; }
+        html[data-theme="dark"] body.page-outstanding-invoices .oi-mobile-invoice-name,
+        html[data-theme="dark"] body.page-outstanding-invoices .oi-mobile-invoice-details { color: #b0bec5 !important; }
+        html[data-theme="dark"] body.page-outstanding-invoices .oi-mobile-invoice-details { border-color: #2a3942; }
+        html[data-theme="dark"] body.page-outstanding-invoices .oi-mobile-invoice-divider { background: #475569; }
         .oi-table-wrap { overflow-x: auto; border: 1px solid #e2e8f0; border-radius: 14px; background: #fff; }
         .oi-table { width: 100%; border-collapse: separate; border-spacing: 0; min-width: 820px; font-size: 0.78rem; }
         .oi-table thead th { background: #f8fafc; color: #0f172a; font-size: 0.75rem; font-weight: 600; text-align: left; padding: 0.55rem 0.45rem; white-space: nowrap; border: 0; border-bottom: 1px solid #e2e8f0; vertical-align: middle; }
@@ -433,6 +694,9 @@ $entityLabel = $activeTab === 'receivables' ? 'Customer' : 'Supplier';
         .oi-table a.oi-attachment-link:hover { text-decoration: underline; }
         .oi-table a.oi-attachment-link svg { width: 0.9rem; height: 0.9rem; flex: 0 0 auto; }
         .oi-table a.oi-attachment-link span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .oi-pv-attachments { display: grid; justify-items: start; gap: 0.3rem; }
+        .oi-status-badge { display: inline-flex; align-items: center; padding: 0.22rem 0.55rem; border-radius: 999px; background: #ecfdf5; color: #047857; font-size: 0.72rem; font-weight: 700; white-space: nowrap; }
+        html[data-theme="dark"] body.page-outstanding-invoices .oi-status-badge { background: #123026; color: #b7f7d8; }
         .oi-row-actions { position: relative; display: inline-flex; }
         .oi-row-actions-trigger { width: 2rem; height: 2rem; display: inline-flex; align-items: center; justify-content: center; padding: 0; border: 1px solid transparent; border-radius: 8px; background: transparent; color: #64748b; cursor: pointer; list-style: none; }
         .oi-row-actions-trigger::-webkit-details-marker { display: none; }
@@ -466,12 +730,23 @@ $entityLabel = $activeTab === 'receivables' ? 'Customer' : 'Supplier';
         .oi-details-attachments { margin-top: 0.85rem; padding-top: 0.85rem; border-top: 1px solid #e2e8f0; }
         .oi-details-attachments[hidden] { display: none; }
         .oi-details-attachments-label { margin-bottom: 0.4rem; color: #64748b; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
+        .oi-details-attachment-list { display: grid; justify-items: start; gap: 0.4rem; }
         .oi-details-attachment-link { display: inline-flex; align-items: center; gap: 0.4rem; max-width: 100%; padding: 0.4rem 0.55rem; border: 1px solid #e2e8f0; border-radius: 8px; background: #f8fafc; color: #1d4ed8; font-size: 0.8rem; font-weight: 600; line-height: 1.25; text-decoration: none; }
         .oi-details-attachment-link:hover { background: #eff6ff; border-color: #bfdbfe; color: #1e40af; }
         .oi-details-attachment-link svg { width: 0.95rem; height: 0.95rem; }
         .oi-details-attachment-link span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .oi-name { color: #0f172a; font-weight: 700; }
         .oi-desc { color: #475569; max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .oi-due-date { display: flex; flex-direction: column; gap: 0.12rem; white-space: nowrap; }
+        .oi-due-status { color: #64748b; font-size: 0.72rem; }
+        .oi-due-status--overdue { color: #b91c1c; font-weight: 700; }
+        .oi-due-status--upcoming { color: #047857; font-weight: 650; }
+        .oi-due-status--today { color: #b45309; font-weight: 700; }
+        .oi-due-status--missing { color: #9ca3af; }
+        .oi-due-form { display: flex; flex-wrap: wrap; gap: 0.3rem; padding: 0 0.65rem 0.4rem; }
+        .oi-due-form input, .oi-due-form button { font: inherit; max-width: 100%; }
+        .oi-due-editor summary { list-style: none; }
+        .oi-due-editor summary::-webkit-details-marker { display: none; }
         .oi-amt { font-variant-numeric: tabular-nums; font-weight: 650; }
         .oi-muted { color: #9ca3af; font-size: 0.8rem; }
         .oi-empty { padding: 2rem 1rem; text-align: center; color: #475569; border-top: 1px dashed #cbd5e1; }
@@ -503,6 +778,11 @@ $entityLabel = $activeTab === 'receivables' ? 'Customer' : 'Supplier';
             .oi-search, .oi-search input { width: 100%; }
             .oi-search input { min-width: 0; flex: 1; }
             .oi-pager { flex-direction: column; align-items: flex-start; }
+        }
+        @media (max-width: 767.98px) {
+            .oi-mobile-invoice-list { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0.55rem; }
+            .oi-mobile-invoice-list > .oi-row-actions { justify-self: end; }
+            .oi-table-wrap { display: none; }
         }
         
         .oi-btn-primary, .oi-btn-ghost, .oi-file-btn { border-radius: 12px !important; }
@@ -569,6 +849,7 @@ $entityLabel = $activeTab === 'receivables' ? 'Customer' : 'Supplier';
         html[data-theme="dark"] body.page-outstanding-invoices .oi-table a.oi-attachment-link { background: #0b141a !important; border-color: #2a3942 !important; color: #93c5fd !important; }
         html[data-theme="dark"] body.page-outstanding-invoices .oi-details-attachment-link:hover,
         html[data-theme="dark"] body.page-outstanding-invoices .oi-table a.oi-attachment-link:hover { background: #202c33 !important; border-color: #334155 !important; color: #bfdbfe !important; }
+        html[data-theme="dark"] body.page-outstanding-invoices .oi-form-head,
         html[data-theme="dark"] body.page-outstanding-invoices .oi-form-foot { border-color: #2a3942; }
         html[data-theme="dark"] body.page-outstanding-invoices .oi-form-head h2,
         html[data-theme="dark"] body.page-outstanding-invoices .oi-rank-head h2,
@@ -621,6 +902,11 @@ $entityLabel = $activeTab === 'receivables' ? 'Customer' : 'Supplier';
             background: #202c33 !important;
             background-color: #202c33 !important;
         }
+        html[data-theme="dark"] body.page-outstanding-invoices .oi-due-status { color: #cbd5e1 !important; }
+        html[data-theme="dark"] body.page-outstanding-invoices .oi-due-status--overdue { color: #fca5a5 !important; font-weight: 700; }
+        html[data-theme="dark"] body.page-outstanding-invoices .oi-due-status--upcoming { color: #86efac !important; font-weight: 650; }
+        html[data-theme="dark"] body.page-outstanding-invoices .oi-due-status--today { color: #fcd34d !important; font-weight: 700; }
+        html[data-theme="dark"] body.page-outstanding-invoices .oi-due-status--missing { color: #94a3b8 !important; font-weight: 400; }
         html[data-theme="dark"] body.page-outstanding-invoices .oi-total { color: #34d399; }
         html[data-theme="dark"] body.page-outstanding-invoices .oi-success-notice { background: #123026 !important; color: #b7f7d8 !important; }
         html[data-theme="dark"] body.page-outstanding-invoices .oi-error-notice { background: #3b1b20 !important; color: #fecaca !important; }
@@ -631,6 +917,19 @@ $entityLabel = $activeTab === 'receivables' ? 'Customer' : 'Supplier';
     $hideHeaderCompanyBranding = true;
     $employeeHeaderTitle = 'Outstanding Invoices';
     $employeeHeaderExtraClass = 'employee-header--outstanding';
+    $outstandingHomeUrl = function_exists('company_url')
+        ? company_url('select-module')
+        : (function_exists('app_url') ? app_url('/select-module.php') : '../../select-module.php');
+    $outstandingInvoicesUrl = function_exists('company_url')
+        ? company_url('erp/outstanding-invoices/index.php') . '?module=outstanding'
+        : (function_exists('app_url') ? app_url('/erp/outstanding-invoices/index.php?module=outstanding') : 'index.php?module=outstanding');
+    $employeeHeaderSubtitle = '<nav class="oi-header-breadcrumb" aria-label="Breadcrumb">'
+        . '<a href="' . oi_h($outstandingHomeUrl) . '">Home</a>'
+        . '<span class="oi-breadcrumb-separator">/</span>'
+        . '<a href="' . oi_h($outstandingInvoicesUrl) . '">Outstanding Invoices</a>'
+        . '<span class="oi-breadcrumb-separator">/</span>'
+        . '<span class="oi-breadcrumb-current">' . ($activeTab === 'receivables' ? 'Receivables' : 'Payables') . '</span>'
+        . '</nav>';
     $searchHiddenInputs = '';
     foreach ($_GET as $queryKey => $queryValue) {
         if (in_array((string) $queryKey, ['q', 'p', 'company_slug'], true) || is_array($queryValue)) {
@@ -651,48 +950,61 @@ $entityLabel = $activeTab === 'receivables' ? 'Customer' : 'Supplier';
         ? '<form class="oi-header-search oi-header-search--mobile" method="get" action="">' . $searchHiddenInputs . $searchFieldMarkup . '</form>'
         : '';
     $employeeHeaderRightHtml = '
-        <div class="outstanding-invoice-header-actions">
-            <button type="button" class="new-invoice-btn" data-toggle-target="new-outstanding-invoice-panel" aria-expanded="false">New Outstanding Invoice</button>
-            <section class="oi-invoice-picker" id="new-outstanding-invoice-panel" hidden>
-                <div class="oi-invoice-picker-grid">
-                    <a href="' . oi_h(oi_url(['tab' => 'receivables', 'entry' => 'new', 'q' => null, 'p' => null, 'sort' => null, 'dir' => null])) . '" class="oi-invoice-picker-card ' . ($activeTab === 'receivables' ? 'active' : '') . '">
-                        <span class="oi-picker-icon oi-picker-icon--in">↗</span>
-                        <div>
-                            <strong>Receivables</strong>
-                            <small>Track customer invoices still waiting to be collected.</small>
-                        </div>
-                    </a>
-                    <a href="' . oi_h(oi_url(['tab' => 'payables', 'entry' => 'new', 'q' => null, 'p' => null, 'sort' => null, 'dir' => null])) . '" class="oi-invoice-picker-card ' . ($activeTab === 'payables' ? 'active' : '') . '">
-                        <span class="oi-picker-icon oi-picker-icon--out">↘</span>
-                        <div>
-                            <strong>Payables</strong>
-                            <small>Track supplier invoices still waiting to be paid.</small>
-                        </div>
-                    </a>
-                </div>
+        <div class="page-header-right">
+            <button type="button" class="new-invoice-btn" aria-haspopup="true" aria-expanded="false" aria-controls="new-outstanding-invoice-panel">New</button>
+            <section class="oi-new-type-picker" id="new-outstanding-invoice-panel" aria-label="Choose invoice type" hidden>
+                <a href="' . oi_h(oi_url(['tab' => 'receivables', 'entry' => 'new', 'q' => null, 'p' => null, 'sort' => null, 'dir' => null])) . '" class="oi-new-type-link">
+                    <span class="oi-new-type-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.75h12a1 1 0 0 1 1 1v15.5l-3-1.8-4 1.8-4-1.8-3 1.8V4.75a1 1 0 0 1 1-1Z"/><path d="M9 8h6M9 12h6M9 16h3"/></svg></span>
+                    <span class="oi-new-type-copy"><strong>Receivables</strong><small>Customer invoice</small></span>
+                </a>
+                <a href="' . oi_h(oi_url(['tab' => 'payables', 'entry' => 'new', 'q' => null, 'p' => null, 'sort' => null, 'dir' => null])) . '" class="oi-new-type-link">
+                    <span class="oi-new-type-icon oi-new-type-icon--payables" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="14" rx="2"/><path d="M7 7V5a2 2 0 0 1 2-2h9v4M3 11h18"/><path d="M16 14h2"/></svg></span>
+                    <span class="oi-new-type-copy"><strong>Payables</strong><small>Supplier bill</small></span>
+                </a>
             </section>
         </div>
     ';
     include '../../includes/header_employee.php';
     ?>
 
+    <div class="main-content oi-page">
         <?php if ($success): ?><div class="oi-success-notice" style="background:#dcfce7; color:#166534; padding:10px; border-radius:6px; margin-bottom:15px;"><?= htmlspecialchars($success) ?></div><?php endif; ?>
         <?php if ($error): ?><div class="oi-error-notice" style="background:#fee2e2; color:#991b1b; padding:10px; border-radius:6px; margin-bottom:15px;"><?= htmlspecialchars($error) ?></div><?php endif; ?>
 
         <?php if (!$entryMode): ?>
-        <div class="tabs">
-            <a href="<?= oi_h(oi_url(['tab' => 'receivables', 'q' => null, 'p' => null, 'sort' => null, 'dir' => null])) ?>" class="tab-link <?= $activeTab === 'receivables' ? 'active' : '' ?>">Receivables (Income)</a>
-            <a href="<?= oi_h(oi_url(['tab' => 'payables', 'q' => null, 'p' => null, 'sort' => null, 'dir' => null])) ?>" class="tab-link <?= $activeTab === 'payables' ? 'active' : '' ?>">Payables (Expenses)</a>
-        </div>
         <?= $mobileSearchMarkup ?>
+        <nav class="oi-account-switcher" aria-label="Outstanding invoice type">
+            <a href="<?= oi_h(oi_url(['tab' => 'receivables', 'q' => null, 'p' => null, 'sort' => null, 'dir' => null])) ?>" class="oi-account-card oi-account-card--receivables <?= $activeTab === 'receivables' ? 'is-active' : '' ?>" <?= $activeTab === 'receivables' ? 'aria-current="page"' : '' ?>>
+                <span class="oi-account-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.75h12a1 1 0 0 1 1 1v15.5l-3-1.8-4 1.8-4-1.8-3 1.8V4.75a1 1 0 0 1 1-1Z"/><path d="M9 8h6M9 12h6M9 16h3"/></svg></span>
+                <span class="oi-account-copy"><strong>Receivables</strong><small>Customer Invoices</small><small class="oi-account-count"><?= $invoiceCounts['receivable'] ?> <?= $invoiceCounts['receivable'] === 1 ? 'invoice' : 'invoices' ?></small></span>
+                <span class="oi-account-total">TZS <?= number_format($invoiceTotals['receivable'], 2) ?></span>
+            </a>
+            <a href="<?= oi_h(oi_url(['tab' => 'payables', 'q' => null, 'p' => null, 'sort' => null, 'dir' => null])) ?>" class="oi-account-card oi-account-card--payables <?= $activeTab === 'payables' ? 'is-active' : '' ?>" <?= $activeTab === 'payables' ? 'aria-current="page"' : '' ?>>
+                <span class="oi-account-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="14" rx="2"/><path d="M7 7V5a2 2 0 0 1 2-2h9v4M3 11h18"/><path d="M16 14h2"/></svg></span>
+                <span class="oi-account-copy"><strong>Payables</strong><small>Supplier Bills</small><small class="oi-account-count"><?= $invoiceCounts['payable'] ?> <?= $invoiceCounts['payable'] === 1 ? 'invoice' : 'invoices' ?></small></span>
+                <span class="oi-account-total">TZS <?= number_format($invoiceTotals['payable'], 2) ?></span>
+            </a>
+        </nav>
 
         <?php endif; ?>
 
         <?php if ($entryMode): ?>
-        <div class="card oi-form-card" id="new-outstanding-invoice-form">
-            <a class="oi-form-back" href="<?= oi_h(oi_url(['entry' => null, 'q' => null, 'p' => null, 'sort' => null, 'dir' => null])) ?>">Back to outstanding invoices</a>
-            <h3 style="font-size:1rem; margin-bottom:15px; color:#374151;">Add <?= $activeTab === 'receivables' ? 'receivable' : 'payable' ?></h3>
-            <form method="POST" enctype="multipart/form-data" id="oiAddForm">
+        <section class="oi-form-card">
+            <div class="oi-form-head">
+                <span class="oi-form-mark oi-form-mark--<?= $activeTab === 'receivables' ? 'in' : 'out' ?>" aria-hidden="true">
+                    <?php if ($activeTab === 'receivables'): ?>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M19 12l-7 7-7-7"/></svg>
+                    <?php else: ?>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="M5 12l7-7 7 7"/></svg>
+                    <?php endif; ?>
+                </span>
+                <div>
+                    <h2>Add <?= $activeTab === 'receivables' ? 'receivable' : 'payable' ?></h2>
+                    <p><?= $activeTab === 'receivables' ? 'Record money a customer still owes you.' : 'Record money you still owe a supplier.' ?></p>
+                </div>
+                <a class="oi-form-back" href="<?= oi_h(oi_url(['entry' => null, 'q' => null, 'p' => null, 'sort' => null, 'dir' => null])) ?>">Back to outstanding invoices</a>
+            </div>
+            <form method="POST" enctype="multipart/form-data" class="oi-form" id="oiAddForm">
                 <input type="hidden" name="create_invoice" value="1">
                 <input type="hidden" name="type" value="<?= $typeFilter ?>">
                 <div class="oi-form-grid">
@@ -717,7 +1029,7 @@ $entityLabel = $activeTab === 'receivables' ? 'Customer' : 'Supplier';
                         <div class="oi-money">
                             <span>TZS</span>
                             <input type="number" id="oiAmount" step="0.01" min="0.01" name="amount" placeholder="0.00" required>
-                        </div>
+                    </div>
                     </div>
                     <div class="oi-field oi-span-12">
                         <label for="oiFile">Attachment (invoice)</label>
@@ -736,24 +1048,84 @@ $entityLabel = $activeTab === 'receivables' ? 'Customer' : 'Supplier';
                     <button type="submit" class="oi-btn-primary">+ Add invoice</button>
                 </div>
             </form>
-        </div>
+        </section>
         <?php endif; ?>
 
         <!-- List -->
         <?php if (!$entryMode): ?>
         <section class="oi-rank-card">
-            <div class="oi-rank-head">
-                <div>
-                    <h2><?= $activeTab === 'receivables' ? 'Outstanding receivables' : 'Outstanding payables' ?></h2>
-                    <p>Invoices not yet paid, newest first unless you sort by a column</p>
-                </div>
-            </div>
-
             <?php if ($pageRows === []): ?>
                 <div class="oi-empty">
                     <strong><?= $search !== '' ? 'No invoices match that search.' : 'No outstanding invoices found.' ?></strong>
                 </div>
             <?php else: ?>
+            <div class="oi-mobile-invoice-list" aria-label="<?= $activeTab === 'payables' ? 'Payable invoices' : 'Receivable invoices' ?>">
+                <?php foreach ($pageRows as $inv): ?>
+                    <?php
+                        $mobileEntityName = trim((string) ($inv['entity_name'] ?? ''));
+                        $mobileNameParts = preg_split('/\s+/', $mobileEntityName, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+                        $mobileInitials = count($mobileNameParts) > 1
+                            ? strtoupper(substr($mobileNameParts[0], 0, 1) . substr($mobileNameParts[1], 0, 1))
+                            : strtoupper(substr($mobileEntityName, 0, 3));
+                        $mobileInvoiceNumber = trim((string) ($inv['invoice_number'] ?? ''));
+                        $mobileInvoiceDate = date('d/m/Y', strtotime($inv['invoice_date']));
+                        $mobileInvoiceDescription = trim((string) ($inv['narration'] ?? ''));
+                        $mobileInvoiceType = $activeTab === 'payables' ? 'Payable' : 'Receivable';
+                        $mobileInvoiceDetails = $mobileInvoiceType . ' / ' . ($mobileInvoiceDescription !== '' ? $mobileInvoiceDescription : 'Invoice');
+                        $mobileDueDate = oi_due_date_info($inv['due_date'] ?? null);
+                    ?>
+                    <button
+                        type="button"
+                        class="oi-mobile-invoice-card"
+                        aria-label="View invoice details for <?= oi_h($mobileEntityName) ?>"
+                        data-invoice-id="<?= (int) $inv['id'] ?>"
+                        data-invoice-type="<?= $mobileInvoiceType ?>"
+                        data-invoice-entity="<?= oi_h($mobileEntityName) ?>"
+                        data-invoice-number="<?= oi_h($mobileInvoiceNumber) ?>"
+                        data-invoice-date="<?= oi_h($mobileInvoiceDate) ?>"
+                        data-invoice-description="<?= oi_h((string) ($inv['narration'] ?? '')) ?>"
+                        data-invoice-attachments="[]"
+                        data-invoice-amount="<?= oi_h(number_format((float) $inv['amount'], 2)) ?>">
+                        <span class="oi-mobile-invoice-card-top">
+                            <span class="oi-mobile-invoice-party">
+                                <span class="oi-mobile-invoice-avatar" aria-hidden="true"><?= oi_h($mobileInitials) ?></span>
+                                <span class="oi-mobile-invoice-identity">
+                                    <span class="oi-mobile-invoice-number"><?= oi_h($mobileInvoiceNumber !== '' ? $mobileInvoiceNumber : $mobileEntityName) ?></span>
+                                    <span class="oi-mobile-invoice-name"><?= oi_h($mobileEntityName) ?></span>
+                                </span>
+                            </span>
+                            <span class="oi-mobile-invoice-aside">
+                                <span class="oi-mobile-invoice-amount">TZS <?= number_format((float) $inv['amount'], 2) ?></span>
+                                <span class="oi-mobile-invoice-status oi-status-badge"><?= !empty($inv['partially_paid']) ? 'Partially paid' : 'Outstanding' ?></span>
+                            </span>
+                        </span>
+                        <span class="oi-mobile-invoice-details">
+                            <span class="oi-mobile-invoice-fact oi-mobile-invoice-date">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"></rect><path d="M16 3v4M8 3v4M3 11h18"></path></svg>
+                                <?= oi_h($mobileInvoiceDate) ?>
+                            </span>
+                            <span class="oi-mobile-invoice-divider" aria-hidden="true"></span>
+                            <span class="oi-mobile-invoice-fact oi-mobile-invoice-description">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"></rect><path d="M7 9h10M7 15h5"></path></svg>
+                                <span class="oi-mobile-invoice-description-text" title="<?= oi_h($mobileInvoiceDetails) ?>"><?= oi_h($mobileInvoiceDetails) ?></span>
+                            </span>
+                            <?php if ($mobileDueDate !== null): ?>
+                            <span class="oi-mobile-invoice-fact oi-mobile-invoice-due">
+                                <span class="oi-due-status oi-due-status--<?= oi_h($mobileDueDate['state']) ?>"><?= oi_h($mobileDueDate['state'] === 'missing' ? $mobileDueDate['label'] : 'Due ' . $mobileDueDate['date'] . ' · ' . $mobileDueDate['label']) ?></span>
+                            </span>
+                            <?php endif; ?>
+                        </span>
+                    </button>
+                    <?php if ($activeTab === 'payables' && $isFinanceUser): ?>
+                        <details class="oi-row-actions">
+                            <summary class="oi-row-actions-trigger" aria-label="Payable actions" title="Payable actions">
+                                <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="5" r="1.8"></circle><circle cx="12" cy="12" r="1.8"></circle><circle cx="12" cy="19" r="1.8"></circle></svg>
+                            </summary>
+                            <div class="oi-row-actions-menu"><?php oi_due_date_form($inv); ?></div>
+                        </details>
+                    <?php endif; ?>
+                <?php endforeach; ?>
+            </div>
             <div class="oi-table-wrap">
             <table class="oi-table">
                 <thead>
@@ -763,14 +1135,15 @@ $entityLabel = $activeTab === 'receivables' ? 'Customer' : 'Supplier';
                         $heads = [
                             'date' => ['Date', ''],
                             'name' => [$entityLabel, ''],
-                            'number' => ['Invoice no', ''],
+                            'number' => [$activeTab === 'payables' ? 'Payment voucher no' : 'Invoice no', ''],
                         ];
                         foreach ($heads as $key => $meta):
                         ?>
                             <th class="<?= oi_h($meta[1]) ?>"><a href="<?= oi_h(oi_sort_url($key, $sortKey, $sortDir)) ?>"><?= oi_h($meta[0]) ?><?php if ($sortKey === $key): ?> <?= $sortDir === 'asc' ? '&#8593;' : '&#8595;' ?><?php endif; ?></a></th>
                         <?php endforeach; ?>
+                        <th>Due date</th>
                         <th>Description</th>
-                        <th>Attachment</th>
+                        <th>Status</th>
                         <th class="oi-num"><a href="<?= oi_h(oi_sort_url('amount', $sortKey, $sortDir)) ?>">Amount<?php if ($sortKey === 'amount'): ?> <?= $sortDir === 'asc' ? '&#8593;' : '&#8595;' ?><?php endif; ?></a></th>
                         <?php if ($isFinanceUser): ?><th class="oi-actions">Action</th><?php endif; ?>
                     </tr>
@@ -782,29 +1155,54 @@ $entityLabel = $activeTab === 'receivables' ? 'Customer' : 'Supplier';
                             $attachmentName = $attachmentPath !== '' ? basename($attachmentPath) : '';
                             $attachmentExtension = strtoupper((string) pathinfo($attachmentName, PATHINFO_EXTENSION));
                             $attachmentLabel = $activeTab === 'receivables' ? 'Customer invoice' : 'Supplier invoice';
+                            $sourceVoucherId = (int) ($inv['source_payment_voucher_id'] ?? 0);
+                            if ($sourceVoucherId <= 0) {
+                                $sourceVoucherId = $sourceVoucherByNumber[trim((string) ($inv['invoice_number'] ?? ''))] ?? 0;
+                            }
+                            $sourceVoucher = $sourceVoucherData[$sourceVoucherId] ?? null;
+                            $detailAttachments = [];
+                            if ($activeTab === 'payables' && $sourceVoucher !== null) {
+                                $detailAttachments[] = [
+                                    'label' => 'Payment voucher',
+                                    'name' => $sourceVoucher['voucher_no'],
+                                    'url' => $sourceVoucher['voucher_url'],
+                                    'title' => 'Open payment voucher ' . $sourceVoucher['voucher_no'],
+                                ];
+                                foreach ($sourceVoucher['attachments'] as $voucherAttachment) {
+                                    $detailAttachments[] = [
+                                        'label' => 'Payment voucher attachment',
+                                        'name' => $voucherAttachment['name'],
+                                        'url' => $voucherAttachment['url'],
+                                        'title' => $voucherAttachment['title'],
+                                    ];
+                                }
+                            } elseif ($attachmentPath !== '') {
+                                $detailAttachments[] = [
+                                    'label' => $attachmentLabel,
+                                    'name' => $attachmentName,
+                                    'url' => function_exists('app_url') ? app_url('/' . ltrim($attachmentPath, '/')) : '/' . ltrim($attachmentPath, '/'),
+                                    'title' => $attachmentLabel . ($attachmentExtension !== '' ? ' · ' . $attachmentExtension : '') . ': ' . $attachmentName,
+                                ];
+                            }
+                            $detailAttachmentsJson = json_encode($detailAttachments, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) ?: '[]';
                         ?>
                         <tr class="oi-invoice-row" tabindex="0" aria-label="View invoice details for <?= oi_h((string) $inv['entity_name']) ?>"
+                            data-invoice-id="<?= (int) $inv['id'] ?>"
                             data-invoice-type="<?= $activeTab === 'receivables' ? 'Receivable' : 'Payable' ?>"
                             data-invoice-entity="<?= oi_h((string) $inv['entity_name']) ?>"
                             data-invoice-number="<?= oi_h((string) ($inv['invoice_number'] ?? '')) ?>"
                             data-invoice-date="<?= oi_h(date('d/m/Y', strtotime($inv['invoice_date']))) ?>"
                             data-invoice-description="<?= oi_h((string) ($inv['narration'] ?? '')) ?>"
+                            data-invoice-attachments="<?= oi_h($detailAttachmentsJson) ?>"
                             data-invoice-amount="<?= oi_h(number_format((float) $inv['amount'], 2)) ?>">
                             <td class="oi-col-sn"><?= $rangeFrom + $rowIndex ?></td>
                             <td><?= date('d/m/Y', strtotime($inv['invoice_date'])) ?></td>
                             <td><span class="oi-name"><?= htmlspecialchars($inv['entity_name']) ?></span></td>
                             <td><?= htmlspecialchars(($inv['invoice_number'] ?? '') !== '' ? $inv['invoice_number'] : '-') ?></td>
+                            <?php $dueDateInfo = oi_due_date_info($inv['due_date'] ?? null); ?>
+                            <td><?= oi_h($dueDateInfo['date']) ?></td>
                             <td><div class="oi-desc" title="<?= htmlspecialchars((string) $inv['narration']) ?>"><?= htmlspecialchars((string) $inv['narration']) !== '' ? htmlspecialchars((string) $inv['narration']) : '<span class="oi-muted">-</span>' ?></div></td>
-                            <td>
-                                <?php if ($attachmentPath !== ''): ?>
-                                    <a href="<?= oi_h(function_exists('app_url') ? app_url('/' . ltrim($attachmentPath, '/')) : '/' . ltrim($attachmentPath, '/')) ?>" target="_blank" rel="noopener" class="badge badge-att oi-attachment-link" data-file-name="<?= oi_h($attachmentName) ?>" data-file-label="<?= oi_h($attachmentLabel) ?>" data-file-format="<?= oi_h($attachmentExtension) ?>" title="<?= oi_h($attachmentLabel . ($attachmentExtension !== '' ? ' · ' . $attachmentExtension : '') . ': ' . $attachmentName) ?>">
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.4 11.1l-9.2 9.2a6 6 0 0 1-8.5-8.5l9.2-9.2a4 4 0 0 1 5.7 5.7l-9.2 9.2a2 2 0 0 1-2.8-2.8l8.5-8.5"></path></svg>
-                                        <span><?= oi_h($attachmentLabel) ?></span>
-                                    </a>
-                                <?php else: ?>
-                                    <span class="oi-muted">-</span>
-                                <?php endif; ?>
-                            </td>
+                            <td><span class="oi-due-status oi-due-status--<?= oi_h($dueDateInfo['state']) ?>"><?= oi_h($dueDateInfo['label']) ?></span><?php if (!empty($inv['partially_paid'])): ?><br><span class="oi-status-badge">Partially paid</span><?php endif; ?></td>
                             <td class="oi-num"><span class="oi-amt"><?= number_format($inv['amount'], 2) ?></span></td>
                             <?php if ($isFinanceUser): ?>
                             <td class="oi-actions">
@@ -813,11 +1211,7 @@ $entityLabel = $activeTab === 'receivables' ? 'Customer' : 'Supplier';
                                         <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="5" r="1.8"></circle><circle cx="12" cy="12" r="1.8"></circle><circle cx="12" cy="19" r="1.8"></circle></svg>
                                     </summary>
                                     <div class="oi-row-actions-menu">
-                                    <form method="POST" onsubmit="return confirm('Mark this invoice as Paid?');">
-                                        <input type="hidden" name="mark_paid" value="1">
-                                        <input type="hidden" name="id" value="<?= $inv['id'] ?>">
-                                        <button type="submit" class="oi-row-action-item">Mark Paid</button>
-                                    </form>
+                                    <?php if ($activeTab === 'payables') oi_due_date_form($inv); ?>
                                     <button type="button" class="oi-row-action-item oi-row-action-item--delete" onclick="confirmDelete(<?= $inv['id'] ?>)">Delete</button>
                                     </div>
                                 </details>
@@ -830,29 +1224,6 @@ $entityLabel = $activeTab === 'receivables' ? 'Customer' : 'Supplier';
             </div>
             <?php endif; ?>
 
-            <?php if ($invoices !== []): ?>
-                <div class="oi-pager">
-                    <span>
-                        <?php if ($resultCount > 0): ?>Showing <?= number_format($rangeFrom) ?>-<?= number_format($rangeTo) ?> of <?= number_format($resultCount) ?> &middot; <?php endif; ?>
-                        <span class="oi-total">
-                            <?php if ($search !== ''): ?>
-                                Matching total: <?= number_format($filteredTotal, 2) ?> &middot; Total outstanding: <?= number_format($totalOutstanding, 2) ?>
-                            <?php else: ?>
-                                Total outstanding: <?= number_format($totalOutstanding, 2) ?>
-                            <?php endif; ?>
-                        </span>
-                    </span>
-                    <?php if ($pageCount > 1): ?>
-                        <div class="oi-pages">
-                            <?php if ($page > 1): ?><a href="<?= oi_h(oi_url(['p' => $page - 1])) ?>">Prev</a><?php endif; ?>
-                            <?php for ($i = 1; $i <= $pageCount; $i++): ?>
-                                <?php if ($i === $page): ?><span><?= $i ?></span><?php else: ?><a href="<?= oi_h(oi_url(['p' => $i === 1 ? null : $i])) ?>"><?= $i ?></a><?php endif; ?>
-                            <?php endfor; ?>
-                            <?php if ($page < $pageCount): ?><a href="<?= oi_h(oi_url(['p' => $page + 1])) ?>">Next</a><?php endif; ?>
-                        </div>
-                    <?php endif; ?>
-                </div>
-            <?php endif; ?>
         </section>
         <?php endif; ?>
     </div>
@@ -878,11 +1249,8 @@ $entityLabel = $activeTab === 'receivables' ? 'Customer' : 'Supplier';
                     <div class="oi-details-row"><dt>Amount</dt><dd id="oiInvoiceDetailsAmount" class="oi-details-amount"></dd></div>
                 </dl>
                 <section class="oi-details-attachments" id="oiInvoiceDetailsAttachments" hidden>
-                    <div class="oi-details-attachments-label" id="oiInvoiceDetailsAttachmentLabel"></div>
-                    <a class="oi-details-attachment-link" id="oiInvoiceDetailsAttachment" href="#" target="_blank" rel="noopener">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.4 11.1l-9.2 9.2a6 6 0 0 1-8.5-8.5l9.2-9.2a4 4 0 0 1 5.7 5.7l-9.2 9.2a2 2 0 0 1-2.8-2.8l8.5-8.5"></path></svg>
-                        <span id="oiInvoiceDetailsAttachmentName">View invoice</span>
-                    </a>
+                    <div class="oi-details-attachments-label">Attachments</div>
+                    <div class="oi-details-attachment-list" id="oiInvoiceDetailsAttachmentList"></div>
                 </section>
             </div>
         </section>
@@ -911,6 +1279,84 @@ $entityLabel = $activeTab === 'receivables' ? 'Customer' : 'Supplier';
     </div>
 
     <script>
+        var activeInvoiceDetailsRow = null;
+        var invoiceDetailsBodyOverflow = '';
+        function openInvoiceDetails(row, attachmentSource) {
+            var modal = document.getElementById('oiInvoiceDetailsModal');
+            var invoiceNumber = row.dataset.invoiceNumber || '';
+            document.getElementById('oiInvoiceDetailsTitle').textContent = invoiceNumber || 'Invoice details';
+            document.getElementById('oiInvoiceDetailsEntity').textContent = row.dataset.invoiceEntity || '-';
+            var typeLabel = document.getElementById('oiInvoiceDetailsType');
+            typeLabel.textContent = 'Outstanding ' + (row.dataset.invoiceType || 'invoice').toLowerCase();
+            typeLabel.classList.toggle('oi-details-type--payable', row.dataset.invoiceType === 'Payable');
+            document.getElementById('oiInvoiceDetailsDate').textContent = row.dataset.invoiceDate || '-';
+            document.getElementById('oiInvoiceDetailsNumber').textContent = invoiceNumber || '-';
+            document.getElementById('oiInvoiceDetailsDescription').textContent = row.dataset.invoiceDescription || '-';
+            document.getElementById('oiInvoiceDetailsAmount').textContent = 'TZS ' + (row.dataset.invoiceAmount || '0.00');
+            var attachmentSection = document.getElementById('oiInvoiceDetailsAttachments');
+            var attachmentList = document.getElementById('oiInvoiceDetailsAttachmentList');
+            var attachments = [];
+            try {
+                attachments = JSON.parse((attachmentSource || row).dataset.invoiceAttachments || '[]');
+            } catch (error) {
+                attachments = [];
+            }
+            attachmentList.replaceChildren();
+            attachments.forEach(function (item) {
+                if (!item || !item.url) return;
+                var link = document.createElement('a');
+                var label = String(item.label || 'Attachment');
+                var name = String(item.name || label);
+                link.className = 'oi-details-attachment-link';
+                link.href = String(item.url);
+                link.target = '_blank';
+                link.rel = 'noopener';
+                link.title = String(item.title || name);
+                link.setAttribute('aria-label', link.title);
+                link.textContent = label === 'Payment voucher' || label === 'Customer invoice' || label === 'Supplier invoice'
+                    ? label
+                    : name;
+                attachmentList.appendChild(link);
+            });
+            attachmentSection.hidden = attachmentList.childElementCount === 0;
+            activeInvoiceDetailsRow = row;
+            invoiceDetailsBodyOverflow = document.body.style.overflow;
+            document.body.style.overflow = 'hidden';
+            modal.style.display = 'flex';
+            document.getElementById('oiInvoiceDetailsClose').focus();
+        }
+        function closeInvoiceDetails() {
+            var modal = document.getElementById('oiInvoiceDetailsModal');
+            if (!modal || modal.style.display === 'none') return;
+            modal.style.display = 'none';
+            document.body.style.overflow = invoiceDetailsBodyOverflow;
+            if (activeInvoiceDetailsRow) activeInvoiceDetailsRow.focus();
+            activeInvoiceDetailsRow = null;
+        }
+        document.querySelectorAll('.oi-invoice-row').forEach(function (row) {
+            row.addEventListener('click', function (event) {
+                if (event.target.closest('a, button, input, select, textarea, form, summary, details')) return;
+                openInvoiceDetails(row);
+            });
+            row.addEventListener('keydown', function (event) {
+                if (event.target !== row || (event.key !== 'Enter' && event.key !== ' ')) return;
+                event.preventDefault();
+                openInvoiceDetails(row);
+            });
+        });
+        document.querySelectorAll('.oi-mobile-invoice-card').forEach(function (card) {
+            card.addEventListener('click', function () {
+                var attachmentSource = Array.from(document.querySelectorAll('.oi-invoice-row')).find(function (row) {
+                    return row.dataset.invoiceId === card.dataset.invoiceId;
+                });
+                openInvoiceDetails(card, attachmentSource || card);
+            });
+        });
+        document.getElementById('oiInvoiceDetailsClose').addEventListener('click', closeInvoiceDetails);
+        document.getElementById('oiInvoiceDetailsModal').addEventListener('click', function (event) {
+            if (event.target === this) closeInvoiceDetails();
+        });
+
         document.addEventListener('DOMContentLoaded', function () {
             const successNotice = document.querySelector('.oi-success-notice');
             if (successNotice && successNotice.textContent.trim() === 'Invoice deleted successfully.') {
@@ -920,17 +1366,23 @@ $entityLabel = $activeTab === 'receivables' ? 'Customer' : 'Supplier';
             }
 
             const trigger = document.querySelector('.new-invoice-btn');
-            const panel = document.getElementById('new-outstanding-invoice-panel');
-
-            if (!trigger || !panel) {
-                return;
+            const picker = document.getElementById('new-outstanding-invoice-panel');
+            if (trigger && picker) {
+                function closePicker() {
+                    picker.hidden = true;
+                    trigger.setAttribute('aria-expanded', 'false');
+                }
+                trigger.addEventListener('click', function (event) {
+                    event.stopPropagation();
+                    picker.hidden = !picker.hidden;
+                    trigger.setAttribute('aria-expanded', String(!picker.hidden));
+                });
+                picker.addEventListener('click', function (event) { event.stopPropagation(); });
+                document.addEventListener('click', closePicker);
+                document.addEventListener('keydown', function (event) {
+                    if (event.key === 'Escape') closePicker();
+                });
             }
-
-            trigger.addEventListener('click', function () {
-                const isHidden = panel.hidden;
-                panel.hidden = !isHidden;
-                trigger.setAttribute('aria-expanded', String(!isHidden));
-            });
         });
     </script>
 
@@ -1028,62 +1480,6 @@ $entityLabel = $activeTab === 'receivables' ? 'Customer' : 'Supplier';
             input.addEventListener('change', syncFileName);
             form.addEventListener('reset', function () { window.setTimeout(syncFileName, 0); });
         })();
-
-        var activeInvoiceDetailsRow = null;
-        var invoiceDetailsBodyOverflow = '';
-        function openInvoiceDetails(row) {
-            var modal = document.getElementById('oiInvoiceDetailsModal');
-            var invoiceNumber = row.dataset.invoiceNumber || '';
-            document.getElementById('oiInvoiceDetailsTitle').textContent = invoiceNumber || 'Invoice details';
-            document.getElementById('oiInvoiceDetailsEntity').textContent = row.dataset.invoiceEntity || '-';
-            var typeLabel = document.getElementById('oiInvoiceDetailsType');
-            typeLabel.textContent = 'Outstanding ' + (row.dataset.invoiceType || 'invoice').toLowerCase();
-            typeLabel.classList.toggle('oi-details-type--payable', row.dataset.invoiceType === 'Payable');
-            document.getElementById('oiInvoiceDetailsDate').textContent = row.dataset.invoiceDate || '-';
-            document.getElementById('oiInvoiceDetailsNumber').textContent = invoiceNumber || '-';
-            document.getElementById('oiInvoiceDetailsDescription').textContent = row.dataset.invoiceDescription || '-';
-            document.getElementById('oiInvoiceDetailsAmount').textContent = 'TZS ' + (row.dataset.invoiceAmount || '0.00');
-            var attachment = row.querySelector('a.badge-att');
-            var attachmentSection = document.getElementById('oiInvoiceDetailsAttachments');
-            var attachmentLink = document.getElementById('oiInvoiceDetailsAttachment');
-            var attachmentLabel = document.getElementById('oiInvoiceDetailsAttachmentLabel');
-            attachmentSection.hidden = !attachment;
-            if (attachment) {
-                attachmentLink.href = attachment.href;
-                document.getElementById('oiInvoiceDetailsAttachmentName').textContent = attachment.dataset.fileLabel || 'Invoice';
-                attachmentLink.title = attachment.title || attachment.textContent.trim();
-                attachmentLink.setAttribute('aria-label', attachmentLink.title);
-                attachmentLabel.textContent = (attachment.dataset.fileLabel || 'Invoice').toUpperCase();
-            }
-            activeInvoiceDetailsRow = row;
-            invoiceDetailsBodyOverflow = document.body.style.overflow;
-            document.body.style.overflow = 'hidden';
-            modal.style.display = 'flex';
-            document.getElementById('oiInvoiceDetailsClose').focus();
-        }
-        function closeInvoiceDetails() {
-            var modal = document.getElementById('oiInvoiceDetailsModal');
-            if (!modal || modal.style.display === 'none') return;
-            modal.style.display = 'none';
-            document.body.style.overflow = invoiceDetailsBodyOverflow;
-            if (activeInvoiceDetailsRow) activeInvoiceDetailsRow.focus();
-            activeInvoiceDetailsRow = null;
-        }
-        document.querySelectorAll('.oi-invoice-row').forEach(function (row) {
-            row.addEventListener('click', function (event) {
-                if (event.target.closest('a, button, input, select, textarea, form, summary, details')) return;
-                openInvoiceDetails(row);
-            });
-            row.addEventListener('keydown', function (event) {
-                if (event.target !== row || (event.key !== 'Enter' && event.key !== ' ')) return;
-                event.preventDefault();
-                openInvoiceDetails(row);
-            });
-        });
-        document.getElementById('oiInvoiceDetailsClose').addEventListener('click', closeInvoiceDetails);
-        document.getElementById('oiInvoiceDetailsModal').addEventListener('click', function (event) {
-            if (event.target === this) closeInvoiceDetails();
-        });
 
         function confirmDelete(id) {
             document.querySelectorAll('.oi-row-actions[open]').forEach(function (menu) { menu.open = false; });

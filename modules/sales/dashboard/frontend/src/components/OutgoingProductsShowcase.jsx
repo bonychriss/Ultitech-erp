@@ -1,3 +1,5 @@
+import { useState } from 'react';
+
 function productCode(productId) {
   return productId > 0
     ? `PRD-${String(productId).padStart(6, '0')}`
@@ -48,7 +50,7 @@ export default function OutgoingProductsShowcase({
     <div className={panelClass}>
       <div className="dash-desk-panel-head">
         <h2>{title}</h2>
-        {!compact && viewAllUrl ? (
+        {viewAllUrl ? (
           <a href={viewAllUrl}>View all</a>
         ) : null}
       </div>
@@ -114,6 +116,7 @@ export default function OutgoingProductsShowcase({
           return (
             <li key={`${product.product_id}-${index}`}>
               <a href={href}>
+                <ProductThumbnail product={product} placeholderIcon={placeholderIcon} />
                 <span className="dash-desk-list-copy">
                   <span className="dash-desk-list-title">
                     {product.product_name}
@@ -129,5 +132,25 @@ export default function OutgoingProductsShowcase({
         })}
       </ul>
     </div>
+  );
+}
+
+function ProductThumbnail({ product, placeholderIcon }) {
+  const [failed, setFailed] = useState(false);
+
+  return (
+    <span className="dash-desk-list-thumb" aria-hidden="true">
+      {product.image_url && !failed ? (
+        <img
+          src={product.image_url}
+          alt=""
+          loading="lazy"
+          decoding="async"
+          onError={() => setFailed(true)}
+        />
+      ) : (
+        <i className={`fas ${product.placeholder_icon || placeholderIcon}`} />
+      )}
+    </span>
   );
 }

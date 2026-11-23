@@ -166,6 +166,10 @@ if (!function_exists('invoice_gl_post_balanced_entry')) {
         string $description,
         array $items
     ): int {
+        if (is_file(__DIR__ . '/gl/gl_bridge.php')) {
+            require_once __DIR__ . '/gl/gl_bridge.php';
+            gl_bridge_schedule_sync($pdo);
+        }
         if (!invoice_gl_tables_ready($pdo)) {
             throw new RuntimeException('General ledger tables are not available.');
         }
@@ -180,6 +184,30 @@ if (!function_exists('invoice_gl_post_balanced_entry')) {
         }
 
         return (int) $journalId;
+    }
+}
+
+if (!function_exists('invoice_gl_require_stock_accounts')) {
+    /** @return array{cogs:int,inventory:int}|null */
+    function invoice_gl_require_stock_accounts(PDO $pdo): ?array
+    {
+        if (accounting_settings_get($pdo, 'invoice_stock_mapping_guard') !== '1') {
+            return null;
+        }
+        $accounts = [];
+        foreach (['cogs', 'inventory'] as $role) {
+            $id = accounting_get_gl_role_account_id($pdo, $role);
+            $options = accounting_gl_role_options($pdo, $role);
+            $allowed = array_column($options['options'], 'id');
+            if (!$id || !$options['filtered'] || !in_array($id, $allowed, true)) {
+                throw new RuntimeException(
+                    'Invoice posting requires dedicated Cost of Goods Sold and Inventory accounts. '
+                    . 'Ask an administrator to configure both in Accounting Settings before creating an invoice.'
+                );
+            }
+            $accounts[$role] = $id;
+        }
+        return $accounts;
     }
 }
 
@@ -206,9 +234,9 @@ if (!function_exists('invoice_gl_ensure_invoice_recognition')) {
             return 0;
         }
 
-        $arId = invoice_gl_find_account_id($pdo, 'asset', ['1200', '1010', '1100'], ['Receivable']);
+        $arId = accounting_resolve_gl_role_account_id($pdo, 'receivable');
         $revId = accounting_resolve_default_sales_revenue_gl_account_id($pdo);
-        $taxId = invoice_gl_find_account_id($pdo, 'liability', ['2200', '2020'], ['Tax']);
+        $taxId = accounting_resolve_gl_role_account_id($pdo, 'output_tax');
 
         if (!$arId || !$revId) {
             throw new RuntimeException('Could not resolve AR or Revenue accounts in the general ledger.');
@@ -224,11 +252,16 @@ if (!function_exists('invoice_gl_ensure_invoice_recognition')) {
             $items[1]['credit'] = round($amounts['total'], 2);
         }
 
-        // Automated Cost of Goods Sold (COGS) Recognition
-        $cogsId = invoice_gl_find_account_id($pdo, 'expense', ['6000', '5001'], ['Cost of Goods', 'COGS']);
-        $invId = invoice_gl_find_account_id($pdo, 'asset', ['1300'], ['Inventory']);
-        if ($cogsId && $invId) {
-            $cogsTotal = 0.0;
+        $stockAccounts = invoice_gl_require_stock_accounts($pdo);
+        if ($stockAccounts === null) {
+            $cogsId = accounting_resolve_gl_role_account_id($pdo, 'cogs');
+            $inventoryId = accounting_resolve_gl_role_account_id($pdo, 'inventory');
+            $stockAccounts = $cogsId && $inventoryId
+                ? ['cogs' => $cogsId, 'inventory' => $inventoryId]
+                : null;
+        }
+        $cogsTotal = 0.0;
+        if ($stockAccounts !== null) {
             try {
                 $stmtCogs = $pdo->prepare("
                     SELECT soi.quantity, COALESCE(p.buying_price, p.cost_price, 0) AS cost
@@ -239,15 +272,14 @@ if (!function_exists('invoice_gl_ensure_invoice_recognition')) {
                 ");
                 $stmtCogs->execute([$invoiceId]);
                 while ($cogsItem = $stmtCogs->fetch(PDO::FETCH_ASSOC)) {
-                    $cogsTotal += (float)$cogsItem['quantity'] * (float)$cogsItem['cost'];
+                    $cogsTotal += (float) $cogsItem['quantity'] * (float) $cogsItem['cost'];
                 }
             } catch (Throwable $e) {
                 error_log('COGS calculation failed: ' . $e->getMessage());
             }
-
             if ($cogsTotal > 0.00001) {
-                $items[] = ['account_id' => $cogsId, 'debit' => round($cogsTotal, 2), 'credit' => 0];
-                $items[] = ['account_id' => $invId, 'debit' => 0, 'credit' => round($cogsTotal, 2)];
+                $items[] = ['account_id' => $stockAccounts['cogs'], 'debit' => round($cogsTotal, 2), 'credit' => 0];
+                $items[] = ['account_id' => $stockAccounts['inventory'], 'debit' => 0, 'credit' => round($cogsTotal, 2)];
             }
         }
 
@@ -289,9 +321,9 @@ if (!function_exists('invoice_gl_post_invoice_payment')) {
 
         $bankId = invoice_gl_resolve_financial_account($pdo, $financialAccountId);
         if (!$bankId) {
-            $bankId = invoice_gl_find_account_id($pdo, 'asset', ['1002', '1001'], ['Bank', 'Cash']);
+            $bankId = accounting_resolve_gl_role_account_id($pdo, 'payment_bank');
         }
-        $arId = invoice_gl_find_account_id($pdo, 'asset', ['1200', '1010', '1100'], ['Receivable']);
+        $arId = accounting_resolve_gl_role_account_id($pdo, 'receivable');
         if (!$bankId || !$arId) {
             throw new RuntimeException('Could not resolve Bank or Accounts Receivable for payment posting.');
         }
@@ -335,9 +367,9 @@ if (!function_exists('invoice_gl_post_revenue_recognition')) {
             return 0;
         }
 
-        $arId = invoice_gl_find_account_id($pdo, 'asset', ['1200', '1010', '1100'], ['Receivable']);
+        $arId = accounting_resolve_gl_role_account_id($pdo, 'receivable');
         $revId = $revenueGlAccountId ?: accounting_resolve_default_sales_revenue_gl_account_id($pdo);
-        $taxId = invoice_gl_find_account_id($pdo, 'liability', ['2200', '2020'], ['Tax']);
+        $taxId = accounting_resolve_gl_role_account_id($pdo, 'output_tax');
 
         if (!$arId || !$revId) {
             throw new RuntimeException('Could not resolve AR or Revenue accounts for revenue entry.');
@@ -386,9 +418,9 @@ if (!function_exists('invoice_gl_post_revenue_payment')) {
 
         $bankId = invoice_gl_resolve_financial_account($pdo, $financialAccountId);
         if (!$bankId) {
-            $bankId = invoice_gl_find_account_id($pdo, 'asset', ['1002', '1001'], ['Bank', 'Cash']);
+            $bankId = accounting_resolve_gl_role_account_id($pdo, 'payment_bank');
         }
-        $arId = invoice_gl_find_account_id($pdo, 'asset', ['1200', '1010', '1100'], ['Receivable']);
+        $arId = accounting_resolve_gl_role_account_id($pdo, 'receivable');
         if (!$bankId || !$arId) {
             throw new RuntimeException('Could not resolve Bank or AR for revenue collection.');
         }

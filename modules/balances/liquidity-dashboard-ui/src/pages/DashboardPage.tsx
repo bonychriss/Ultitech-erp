@@ -20,6 +20,19 @@ import { navigateLdView } from '../nav';
 
 const RECENT_TX_PER_PAGE = 100;
 
+const VOUCHER_BUDGET_LINKS: { budget: string; account: string; report: string }[] = [
+  { budget: 'Procurement & Supplies', account: '6000 Cost of Goods Sold', report: 'Profit & Loss (expense)' },
+  { budget: 'Employee Costs', account: '5005 Salaries & Wages', report: 'Profit & Loss (expense)' },
+  { budget: 'Operational Expenses', account: '5011 Operating Expenses', report: 'Profit & Loss (expense)' },
+  { budget: 'Tax & Compliance', account: '2200 Tax Payable', report: 'Balance Sheet (reduces liability)' },
+  { budget: 'Projects & Capital Expenditure (CAPEX)', account: '1500 Fixed Assets', report: 'Balance Sheet (asset)' },
+  { budget: 'Administration & Management', account: '5007 Professional Fees', report: 'Profit & Loss (expense)' },
+  { budget: 'Sales & Marketing', account: '5006 Marketing & Advertising', report: 'Profit & Loss (expense)' },
+  { budget: 'Financial Obligations', account: '2100 Loans Payable', report: 'Balance Sheet (reduces liability)' },
+  { budget: 'Others / Miscellaneous', account: '5010 Miscellaneous Expenses', report: 'Profit & Loss (expense)' },
+  { budget: 'Logistics & Delivery', account: '5002 Travel & Transport', report: 'Profit & Loss (expense)' },
+];
+
 /** Semantic themes: success=green, danger=red, warning=amber, info=blue, tip=slate, payment=indigo, ai=violet */
 function insightTone(item: InsightItem): string {
   const raw = String(item.class || '').toLowerCase();
@@ -655,7 +668,37 @@ export default function DashboardPage() {
                 <strong>Internal transfers</strong> move money between your own accounts. The{' '}
                 <strong>transactions ledger</strong> is the audit trail for all money movements.
               </p>
-              <h3>5. FAQ</h3>
+              <h3>5. Where voucher spending is recorded</h3>
+              <p>
+                Each general payment voucher line has a budget type. When the voucher is paid from a bank, cash or
+                mobile account, the amount is recorded in the ledger account linked to its budget type. Stock purchase
+                vouchers always go to Inventory.
+              </p>
+              <div className="ld-manual-table-wrap">
+                <table className="ld-manual-table">
+                  <thead>
+                    <tr>
+                      <th>Budget type</th>
+                      <th>Ledger account</th>
+                      <th>Shows in</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {VOUCHER_BUDGET_LINKS.map((row) => (
+                      <tr key={row.budget}>
+                        <td>{row.budget}</td>
+                        <td>{row.account}</td>
+                        <td>{row.report}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <p>
+                Budget types without a link wait in <strong>Suspense</strong>. Admins and finance users can change the
+                links in <strong>Accounting &rarr; Voucher Categories</strong>.
+              </p>
+              <h3>6. FAQ</h3>
               <p>
                 Record customer payments in Sales (select receiving account). Pay expenses via vouchers (select source
                 account). Balances update automatically.

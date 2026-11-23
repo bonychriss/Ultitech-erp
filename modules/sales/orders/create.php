@@ -925,9 +925,10 @@ try {
     } elseif (in_array('image', $prodCols, true)) {
         $imgSelect = 'p.image AS main_image';
     }
+    $truckDocumentFields = sales_product_document_fields_sql($prodCols);
 
     $products = $salesDb->query("
-        SELECT p.id, p.product_code, p.name, p.description, p.unit_price as selling_price, p.item_type, $imgSelect,
+        SELECT p.id, p.product_code, p.name, p.description, p.unit_price as selling_price, p.item_type, $truckDocumentFields, $imgSelect,
                (
                    COALESCE((SELECT SUM(quantity) FROM stock WHERE product_id = p.id), 0) -
                    COALESCE((
@@ -943,6 +944,7 @@ try {
         FROM products p
         ORDER BY p.name
     ")->fetchAll(PDO::FETCH_ASSOC);
+    $products = sales_apply_product_document_descriptions($products);
 
     if (function_exists('sales_product_image_url')) {
         foreach ($products as $pIdx => $pRow) {

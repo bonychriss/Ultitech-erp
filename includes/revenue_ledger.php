@@ -207,6 +207,7 @@ function syncInvoiceToRevenueLedger($pdo, $invoiceId, $userId = null): int
         if ($revenueEntryId > 0) {
             $pdo->prepare('UPDATE revenue_ledger SET revenue_entry_id = ? WHERE source_type = ? AND source_id = ? LIMIT 1')
                 ->execute([$revenueEntryId, 'invoice', $invoiceId]);
+            syncInvoiceToOutstandingReceivable($pdo, $invoiceId, $revenueEntryId);
         } else {
             error_log('syncInvoiceToRevenueLedger: no revenue_entries row for invoice #' . (int) $invoiceId);
         }
@@ -223,6 +224,96 @@ function syncInvoiceToRevenueLedger($pdo, $invoiceId, $userId = null): int
         // Do not block Sales flows, but keep a trail for missed syncs.
         error_log('syncInvoiceToRevenueLedger invoice #' . (int) $invoiceId . ': ' . $e->getMessage());
         return 0;
+    }
+}
+
+/**
+ * Keep an unpaid sales invoice visible in Outstanding Receivables.
+ */
+function syncInvoiceToOutstandingReceivable(PDO $pdo, int $invoiceId, int $revenueEntryId): void
+{
+    try {
+        if (!function_exists('ensureOutstandingInvoicesSchema')) {
+            require_once __DIR__ . '/functions.php';
+        }
+        ensureOutstandingInvoicesSchema($pdo);
+
+        $invoiceColumns = invoiceTableColumns($pdo);
+        $revenueColumns = revenueEntriesTableColumns($pdo);
+        if (!in_array('source_invoice_id', $revenueColumns, true)
+            || !in_array('customer_name', $revenueColumns, true)
+            || !in_array('amount_total', $revenueColumns, true)
+            || !in_array('total_paid', $revenueColumns, true)) {
+            error_log('syncInvoiceToOutstandingReceivable: required revenue columns are missing.');
+            return;
+        }
+
+        $invoiceNumberExpr = in_array('invoice_number', $invoiceColumns, true) ? 'i.invoice_number' : 'NULL';
+        $invoiceDateExpr = in_array('invoice_date', $invoiceColumns, true) ? 'i.invoice_date' : 'CURDATE()';
+        $dueDateExpr = in_array('due_date', $invoiceColumns, true) ? 'NULLIF(i.due_date, \'0000-00-00\')' : 'NULL';
+        $narrationExpr = in_array('narration', $revenueColumns, true) ? 're.narration' : 'NULL';
+        $attachmentExpr = in_array('attachment', $revenueColumns, true) ? 're.attachment' : 'NULL';
+        $stmt = $pdo->prepare("SELECT
+                i.id AS invoice_id,
+                {$invoiceNumberExpr} AS invoice_number,
+                {$invoiceDateExpr} AS invoice_date,
+                {$dueDateExpr} AS due_date,
+                re.customer_name,
+                {$narrationExpr} AS narration,
+                {$attachmentExpr} AS attachment,
+                GREATEST(COALESCE(re.amount_total, 0) - COALESCE(re.total_paid, 0), 0) AS balance
+            FROM invoices i
+            INNER JOIN revenue_entries re ON re.source_invoice_id = i.id
+            WHERE i.id = ? AND re.id = ?
+            LIMIT 1");
+        $stmt->execute([$invoiceId, $revenueEntryId]);
+        $invoice = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$invoice) {
+            error_log('syncInvoiceToOutstandingReceivable: linked invoice data not found for invoice #' . $invoiceId);
+            return;
+        }
+
+        $balance = (float) ($invoice['balance'] ?? 0);
+        $status = $balance > 0.009 ? 'outstanding' : 'paid';
+        $customerName = trim((string) ($invoice['customer_name'] ?? ''));
+        if ($customerName === '') {
+            $customerName = 'Customer #' . $invoiceId;
+        }
+        $invoiceNumber = trim((string) ($invoice['invoice_number'] ?? ''));
+        $narration = trim((string) ($invoice['narration'] ?? ''));
+        if ($narration === '') {
+            $narration = 'Sales invoice ' . ($invoiceNumber !== '' ? $invoiceNumber : '#' . $invoiceId);
+        }
+        $attachment = trim((string) ($invoice['attachment'] ?? ''));
+
+        $insert = $pdo->prepare("INSERT INTO erp_outstanding_invoices
+            (type, invoice_date, entity_name, invoice_number, narration, amount, attachment, source_invoice_id, due_date, source_revenue_entry_id, status)
+            VALUES ('receivable', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE
+                invoice_date = VALUES(invoice_date),
+                entity_name = VALUES(entity_name),
+                invoice_number = VALUES(invoice_number),
+                narration = VALUES(narration),
+                amount = VALUES(amount),
+                attachment = VALUES(attachment),
+                source_invoice_id = VALUES(source_invoice_id),
+                source_revenue_entry_id = VALUES(source_revenue_entry_id),
+                due_date = VALUES(due_date),
+                status = VALUES(status)");
+        $insert->execute([
+            $invoice['invoice_date'] ?: date('Y-m-d'),
+            $customerName,
+            $invoiceNumber !== '' ? $invoiceNumber : null,
+            $narration,
+            $balance,
+            $attachment !== '' ? $attachment : null,
+            $invoiceId,
+            $invoice['due_date'] ?: null,
+            $revenueEntryId,
+            $status,
+        ]);
+    } catch (Throwable $e) {
+        error_log('syncInvoiceToOutstandingReceivable invoice #' . $invoiceId . ': ' . $e->getMessage());
     }
 }
 
@@ -346,4 +437,3 @@ function findRevenueCollectionJournalEntry(PDO $pdo, string $voucherRef, string 
 
     return null;
 }
-

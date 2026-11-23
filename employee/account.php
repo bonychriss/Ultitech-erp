@@ -283,6 +283,42 @@ if (!empty($user['profile_photo']) && function_exists('mediaUrlFromPath')) {
     $profilePhotoUrl = '../' . ltrim((string) $user['profile_photo'], '/');
 }
 $logoutUrl = function_exists('company_url') ? company_url('logout.php') : '../logout.php';
+$psAiAgentUrl = function_exists('company_url') ? company_url('modules/ai-agent/index.php') : '../modules/ai-agent/index.php';
+$psPersonalizationUrl = 'personalization/index.php?module=personalization';
+$psAiAgentApiUrl = function_exists('company_url') ? company_url('modules/ai-agent/api.php') : '../modules/ai-agent/api.php';
+$psFontApiUrl = 'personalization/system-font-ui/api/index.php';
+$psFontConfig = null;
+$psFontLib = __DIR__ . '/personalization/system-font-ui/lib.php';
+if (is_file($psFontLib)) {
+    require_once $psFontLib;
+    if (function_exists('systemFontUiBuildInitialConfig')) {
+        try {
+            $psFontConfig = systemFontUiBuildInitialConfig($userId);
+        } catch (Throwable $e) {
+            $psFontConfig = null;
+        }
+    }
+}
+$psCurrentTheme = (string) ($_SESSION['theme'] ?? 'theme-minimal');
+if (isset($_GET['set_theme']) && is_string($_GET['set_theme']) && $_GET['set_theme'] !== '') {
+    $psCurrentTheme = (string) $_GET['set_theme'];
+}
+$psSidebarThemes = [
+    'theme-minimal' => ['Minimal', '#ffffff', '#334155', true],
+    'default' => ['Trust Blue', '#0d6efd', '#ffffff', false],
+    'theme-deep-ocean' => ['Deep Ocean', '#001f2f', '#ffffff', false],
+    'theme-clean-white' => ['Clean White', '#f8f9fa', '#212529', true],
+    'theme-night-mode' => ['Night Mode', '#212529', '#ffffff', false],
+    'theme-royal-purple' => ['Royal Purple', 'linear-gradient(180deg, #4a148c, #311b92)', '#ffffff', false],
+    'theme-professional' => ['Professional', '#1e40af', '#ffffff', false],
+    'theme-dark-mode-v2' => ['Dark Mode V2', '#0f172a', '#ffffff', false],
+    'theme-cool' => ['Cool', '#ecfeff', '#155e75', true],
+];
+$psThemeUrl = static function (string $theme): string {
+    $params = $_GET;
+    $params['set_theme'] = $theme;
+    return '?' . http_build_query($params);
+};
 $employeeHeaderTitle = 'Profile Settings';
 $homeUrl = $profileBackUrl;
 $esc = static function ($value): string {
@@ -339,707 +375,10 @@ $isActiveUser = !isset($user['is_active']) || (int) $user['is_active'] === 1;
 	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 	<?php if (function_exists('renderSystemFontHeadMarkup')) { renderSystemFontHeadMarkup(); } ?>
 	<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-	<style>
-        body { font-family: var(--erp-font-family, 'Poppins', sans-serif); background: #f4f6fb; color: #1e293b; }
-        .main-content-wrapper { padding: 0 1.25rem 2.5rem; }
-        .page-shell { padding-left: 0; max-width: none; }
-        .editor-shell { max-width: 1120px; margin: 0 auto; padding: 0; }
-
-        .ps-hero {
-            display: flex; align-items: center; justify-content: space-between; gap: 1rem;
-            padding: 1.35rem 1.5rem; margin-bottom: 0.35rem;
-            border-radius: 1.35rem; color: #fff; position: relative; overflow: hidden;
-            background:
-                radial-gradient(ellipse 70% 120% at 90% 20%, rgba(196, 181, 253, 0.35), transparent 55%),
-                radial-gradient(ellipse 50% 80% at 10% 120%, rgba(167, 139, 250, 0.28), transparent 50%),
-                linear-gradient(115deg, #3b0764 0%, #5b21b6 42%, #6d28d9 100%);
-        }
-        .ps-hero::after {
-            content: ""; position: absolute; inset: 0; pointer-events: none;
-            background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 800 200'%3E%3Cpath d='M0 140 C160 80 280 180 420 110 C560 40 680 150 800 80 L800 200 L0 200 Z' fill='rgba(255,255,255,0.06)'/%3E%3C/svg%3E") bottom / cover no-repeat;
-        }
-        .ps-hero-main { display: flex; align-items: center; gap: 1.15rem; min-width: 0; position: relative; z-index: 1; }
-        .account-avatar-wrap { position: relative; width: 96px; height: 96px; flex-shrink: 0; }
-        .account-avatar {
-            width: 96px; height: 96px; border-radius: 50%; background: #ede9fe; overflow: hidden;
-            border: 4px solid rgba(255,255,255,0.9); box-shadow: 0 8px 24px rgba(15, 23, 42, 0.25);
-            display: flex; align-items: center; justify-content: center;
-        }
-        .account-avatar img { width: 100%; height: 100%; object-fit: cover; }
-        .account-avatar-fallback { font-size: 2rem; font-weight: 800; color: #5b21b6; display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; }
-        .account-avatar-btn {
-            position: absolute; bottom: 2px; right: 2px; width: 28px; height: 28px; border-radius: 50%;
-            background: #7c3aed; border: 2px solid #fff; display: flex; align-items: center; justify-content: center;
-            cursor: pointer; color: #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.18); font-size: 11px;
-        }
-        .ps-hero-copy { min-width: 0; }
-        .ps-hero-copy h2 { margin: 0; font-size: 1.45rem; font-weight: 800; letter-spacing: -0.02em; }
-        .ps-hero-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; margin: 0.35rem 0 0.45rem; }
-        .ps-hero-handle { color: rgba(255,255,255,0.82); font-size: 0.88rem; font-weight: 600; }
-        .profile-badge {
-            display: inline-flex; padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 700;
-            background: rgba(255,255,255,0.18); color: #fff;
-        }
-        .profile-badge-muted { background: #f1f5f9; color: #475569; }
-        .profile-badge-success { background: #bbf7d0; color: #166534; }
-        .ps-hero-email { margin: 0 0 0.45rem; font-size: 0.84rem; color: rgba(255,255,255,0.78); display: flex; align-items: center; gap: 0.4rem; }
-        .ps-hero-meta { display: flex; flex-wrap: wrap; gap: 0.85rem 1.15rem; font-size: 0.78rem; color: rgba(255,255,255,0.78); }
-        .ps-hero-meta span { display: inline-flex; align-items: center; gap: 0.4rem; }
-        .ps-logout {
-            position: relative; z-index: 1; flex-shrink: 0;
-            display: inline-flex; align-items: center; gap: 0.4rem;
-            min-height: 2.2rem; padding: 0 0.95rem; border-radius: 0.7rem;
-            background: rgba(255,255,255,0.12); color: #fff !important; text-decoration: none !important;
-            border: 1px solid rgba(255,255,255,0.22); font-size: 0.82rem; font-weight: 700;
-        }
-        .ps-logout:hover { background: rgba(255,255,255,0.2); color: #fff !important; }
-
-        .section-nav { margin: 0.15rem 0 1rem; }
-        .section-nav ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 0.15rem 0.35rem; }
-        .section-nav li + li { margin-top: 0; }
-        .section-nav a {
-            display: inline-flex; align-items: center; gap: 0.4rem;
-            padding: 0.7rem 0.9rem 0.65rem; border-radius: 0;
-            color: #64748b; font-size: 0.88rem; font-weight: 600; text-decoration: none;
-            border-bottom: 2px solid transparent;
-        }
-        .section-nav a:hover { color: #0f172a; background: transparent; }
-        .section-nav a.is-active { background: transparent; color: #7c3aed; border-bottom-color: #7c3aed; font-weight: 700; }
-
-        .ps-body { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 1rem; align-items: start; }
-        .editor-main { min-width: 0; display: flex; flex-direction: column; gap: 1rem; }
-        .editor-section, .acct-aside-card, .ps-status-card {
-            padding: 1.15rem 1.25rem 1.25rem; margin: 0; scroll-margin-top: 96px;
-            background: #fff; border-radius: 1.15rem; border: 1px solid #eef2f7;
-            box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
-        }
-        .editor-section:last-of-type { margin-bottom: 0; border-bottom: none; }
-        .section-header { margin-bottom: 1.1rem; }
-        .section-title { font-size: 1.05rem; font-weight: 800; color: #0f172a; margin-bottom: 4px; }
-        .section-subtitle { font-size: 0.78rem; color: #94a3b8; margin: 0; }
-        .form-row { display: grid; grid-template-columns: 160px 1fr; align-items: start; margin-bottom: 20px; }
-        .form-row:last-child { margin-bottom: 0; }
-        .form-label { font-size: 13px; font-weight: 600; color: #334155; padding-top: 12px; margin: 0; }
-        .form-input {
-            width: 100%; padding: 11px 14px; border: 1px solid #e2e8f0; border-radius: 10px;
-            font-size: 14px; color: #1e293b; outline: none; transition: all 0.2s; background: #fff;
-        }
-        .form-input:focus { border-color: #7c3aed; box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.12); }
-        .ps-icon-field { position: relative; }
-        .ps-icon-field i { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 0.8rem; }
-        .ps-icon-field .form-input { padding-left: 2.15rem; }
-        .ps-details-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.85rem; }
-        .ps-details-grid .form-label { padding-top: 0; margin-bottom: 0.35rem; display: block; }
-        .ps-photo-actions { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
-        .ps-photo-preview { width: 56px; height: 56px; border-radius: 50%; overflow: hidden; background: #f1f5f9; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-        .ps-photo-preview img { width: 100%; height: 100%; object-fit: cover; }
-        .ps-upload-btn {
-            display: inline-flex; align-items: center; gap: 0.4rem; min-height: 2.4rem; padding: 0 1rem;
-            border-radius: 0.75rem; background: #7c3aed; color: #fff; font-size: 0.82rem; font-weight: 700; cursor: pointer;
-        }
-        .ps-remove-btn {
-            display: inline-flex; align-items: center; gap: 0.35rem; min-height: 2.4rem; padding: 0 0.9rem;
-            border-radius: 0.75rem; background: #f8fafc; color: #64748b; border: 1px solid #e2e8f0;
-            font-size: 0.82rem; font-weight: 700; cursor: pointer;
-        }
-        .help-text { font-size: 12px; color: #94a3b8; margin-top: 6px; line-height: 1.5; margin-bottom: 0; }
-        .inline-field-form { display: flex; gap: 12px; align-items: center; max-width: 640px; }
-        .inline-field-form .form-input { flex: 1; min-width: 0; }
-        .host-port-grid { display: grid; grid-template-columns: 120px 1fr; gap: 12px; }
-        .btn-save {
-            background: #7c3aed; color: white; padding: 12px 28px; border-radius: 0.75rem;
-            font-weight: 600; font-size: 14px; border: none; cursor: pointer;
-            box-shadow: 0 4px 12px rgba(124, 58, 237, 0.22); transition: all 0.2s;
-        }
-        .btn-save:hover { background: #6d28d9; }
-        .btn-save-inline { padding: 10px 18px; border-radius: 999px; font-size: 13px; white-space: nowrap; flex-shrink: 0; }
-        .btn-cancel { border: 1px solid #d8b4fe; color: #7c3aed; background: #faf5ff; transition: all 0.2s; cursor: pointer; }
-        .btn-cancel:hover { background: #f3e8ff; color: #6d28d9; }
-        .btn-secondary-lite {
-            border: 1px solid #e2e8f0; background: #fff; color: #475569; padding: 8px 14px;
-            border-radius: 999px; font-size: 13px; font-weight: 600; cursor: pointer;
-        }
-        .btn-secondary-lite:hover { background: #f8fafc; }
-        .btn-secondary-lite:disabled { opacity: 0.5; cursor: not-allowed; }
-        .btn-danger-lite { border-color: #fecaca; color: #dc2626; }
-        .btn-danger-lite:hover { background: #fef2f2; }
-        .profile-photo-row { display: flex; }
-        .status-pill {
-            display: inline-flex; padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 600;
-        }
-        .status-pill.is-active { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
-        .status-pill.is-missing { background: #fef9c3; color: #854d0e; border: 1px solid #fde68a; }
-        .password-actions-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding-top: 4px; }
-        .account-forgot-link { font-size: 13px; color: #64748b; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; }
-        .account-forgot-link:hover { color: #7c3aed; }
-        .sig-tools { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 12px; }
-        .sig-tool-group { display: flex; align-items: center; gap: 8px; }
-        .sig-tool-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #94a3b8; font-weight: 700; }
-        .sig-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
-        .canvas-container {
-            position: relative; background: #fff; border: 2px dashed #d1d5db; border-radius: 12px;
-            overflow: hidden; transition: border-color 0.2s;
-        }
-        .canvas-container:hover { border-color: #9ca3af; }
-        #sigCanvas { display: block; width: 100%; height: 250px; cursor: crosshair; touch-action: none; }
-        .canvas-placeholder {
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            color: #9ca3af; font-size: 16px; pointer-events: none; opacity: 0.5;
-        }
-        .canvas-container.has-content .canvas-placeholder { opacity: 0; }
-        .pen-size-btn, .color-btn {
-            width: 32px; height: 32px; border: 1px solid #e2e8f0; border-radius: 8px; background: #fff;
-            cursor: pointer; display: inline-flex; align-items: center; justify-content: center; padding: 0;
-        }
-        .pen-size-btn.active, .color-btn.active { border-color: #7c3aed; background: #f3e8ff; color: #7c3aed; }
-        .pen-size-btn .dot { background: currentColor; border-radius: 50%; }
-        .pen-size-btn[data-size="2"] .dot { width: 4px; height: 4px; }
-        .pen-size-btn[data-size="4"] .dot { width: 8px; height: 8px; }
-        .pen-size-btn[data-size="6"] .dot { width: 12px; height: 12px; }
-        .color-btn .color-circle { width: 20px; height: 20px; border-radius: 50%; border: 1px solid rgba(0,0,0,0.1); }
-        .signature-preview-box {
-            border: 1px solid #e2e8f0; border-radius: 12px; background: #f8fafc; padding: 16px; min-height: 180px;
-        }
-        .signature-preview-box img { max-height: 100px; max-width: 100%; }
-        .signature-empty {
-            border: 1px dashed #e2e8f0; border-radius: 12px; background: #f8fafc; padding: 32px 16px;
-            text-align: center; color: #94a3b8; font-size: 13px;
-        }
-        .account-pw-field { position: relative; max-width: 640px; }
-        .account-pw-field .account-pw-input { padding-right: 48px; }
-        .account-pw-toggle {
-            position: absolute; right: 8px; top: 50%; transform: translateY(-50%); width: 40px; height: 40px;
-            border: 0 !important; background: transparent !important; box-shadow: none !important; color: #64748b; cursor: pointer;
-            display: inline-flex; align-items: center; justify-content: center; padding: 0;
-        }
-        .account-pw-toggle:hover { color: #475569; }
-        .account-pw-toggle.is-visible { color: #7c3aed; }
-        .account-pw-toggle svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; pointer-events: none; }
-        .account-pw-toggle svg.account-pw-toggle-svg--hide { display: none; }
-        .account-pw-toggle.is-visible svg.account-pw-toggle-svg--show { display: none; }
-        .account-pw-toggle.is-visible svg.account-pw-toggle-svg--hide { display: block; }
-        .account-pw-strength { margin-top: 12px; max-width: 640px; }
-        .account-pw-strength-top { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 8px; }
-        .account-pw-strength-bar { height: 8px; background: #e2e8f0; border-radius: 999px; overflow: hidden; }
-        .account-pw-strength-fill { display: block; height: 100%; width: 0%; background: #ef4444; transition: all 0.25s ease; }
-        .account-pw-strength-fill.is-fair { background: #f59e0b; }
-        .account-pw-strength-fill.is-good { background: #8b5cf6; }
-        .account-pw-strength-fill.is-strong { background: linear-gradient(90deg, #6f45ff, #7c3aed); }
-        .account-pw-rules { list-style: none; margin: 12px 0 0; padding: 0; font-size: 12px; color: #64748b; }
-        .account-pw-rules li { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
-        .account-pw-rules li i { font-size: 6px; color: #cbd5e1; }
-        .account-pw-rules li.is-met { color: #0f172a; font-weight: 500; }
-        .account-pw-rules li.is-met i { color: #7c3aed; }
-        #change-password .form-row { margin-bottom: 12px; }
-        #change-password .account-pw-strength { margin-top: 8px; }
-        #change-password .account-pw-strength-top { margin-bottom: 5px; }
-        #change-password .account-pw-strength-bar { height: 6px; }
-        #change-password .account-pw-field,
-        #change-password .account-pw-strength { max-width: none; }
-        #change-password .form-row { grid-template-columns: 140px 1fr; }
-        #change-password .account-pw-rules { display: flex; flex-wrap: wrap; gap: 4px 22px; margin-top: 8px; }
-        #change-password .account-pw-rules li { margin-bottom: 0; white-space: nowrap; }
-        #change-password .help-text { margin-top: 4px; }
-        #change-password .account-pw-match:empty { display: none; }
-        #change-password .password-actions-row { padding-top: 0; flex-wrap: nowrap; }
-        #change-password .form-row:last-child { align-items: center; margin-bottom: 0; }
-        #change-password .account-pw-strength-top:has(.account-pw-strength-score:empty) { display: none; }
-        #change-password .btn-save-inline { border-radius: 8px !important; padding: 10px 22px; box-shadow: 0 4px 12px rgba(124, 58, 237, 0.25); }
-        .ps-toast {
-            position: fixed; top: 14px; right: 24px; z-index: 2147483000; display: flex; align-items: center; gap: 12px;
-            min-width: 280px; max-width: 380px; padding: 12px 12px 12px 12px; background: #fff; border: 1px solid #eef0f4;
-            border-radius: 12px; box-shadow: 0 12px 32px rgba(15, 23, 42, 0.12); font-size: 13.5px; font-weight: 500; color: #1f2937;
-            opacity: 0; transform: translateY(-8px); transition: opacity .2s ease, transform .2s ease;
-        }
-        .ps-toast.is-in { opacity: 1; transform: none; }
-        .ps-toast i { flex-shrink: 0; width: 30px; height: 30px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 14px; background: #dcfce7; color: #16a34a; }
-        .ps-toast span { flex: 1; line-height: 1.4; }
-        .ps-toast--error i { background: #fee2e2; color: #dc2626; }
-        .ps-toast--info i { background: #f1f5f9; color: #64748b; }
-        .ps-toast .ps-toast-close { flex-shrink: 0; width: 26px; height: 26px; border: 0; border-radius: 6px !important; background: transparent; color: #9ca3af; font-size: 18px; line-height: 1; cursor: pointer; padding: 0; }
-        .ps-toast .ps-toast-close:hover { background: #f3f4f6; color: #374151; }
-        html[data-theme="dark"] .ps-toast { background: #1e293b; border-color: #334155; color: #e2e8f0; }
-        @media (max-width: 640px) { .ps-toast { top: 12px; left: 12px; right: 12px; min-width: 0; max-width: none; } }
-        .ps-coming-soon { display: flex; align-items: center; gap: 14px; padding: 16px 18px; border: 1px dashed #d8d4f5; border-radius: 10px; background: #faf9ff; }
-        .ps-coming-soon-icon { width: 38px; height: 38px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 10px; background: #ede9fe; color: #7c3aed; font-size: 16px; }
-        .ps-coming-soon div { display: flex; flex-direction: column; gap: 2px; font-size: 13px; color: #64748b; }
-        .ps-coming-soon strong { font-size: 14px; font-weight: 600; color: #0f172a; }
-        html[data-theme="dark"] .ps-coming-soon { background: #0f172a; border-color: #334155; }
-        html[data-theme="dark"] .ps-coming-soon strong { color: #f8fafc; }
-        .ps-pw-reset { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding: 14px 16px; border: 1px solid #e2e8f0; border-radius: 10px; background: #f8fafc; }
-        .ps-pw-reset-text { display: flex; flex-direction: column; gap: 2px; font-size: 13px; color: #64748b; }
-        .ps-pw-reset-text strong { font-size: 14px; font-weight: 600; color: #0f172a; }
-        .ps-pw-reset-btn { display: inline-flex; align-items: center; gap: 8px; color: #7c3aed; font-size: 13px; font-weight: 500; text-decoration: none; white-space: nowrap; }
-        .ps-pw-reset-btn:hover { color: #6d28d9; text-decoration: underline; }
-        html[data-theme="dark"] .ps-pw-reset-btn { color: #a78bfa; }
-        html[data-theme="dark"] .ps-pw-reset { background: #0f172a; border-color: #334155; }
-        html[data-theme="dark"] .ps-pw-reset-text strong { color: #f8fafc; }
-        @media (max-width: 640px) { #change-password .password-actions-row { flex-wrap: wrap; } }
-        @media (max-width: 992px) { #change-password .form-row { grid-template-columns: 1fr; } }
-        .account-pw-match.is-ok { color: #16a34a; font-weight: 600; }
-        .account-pw-match.is-bad { color: #dc2626; font-weight: 600; }
-        .subsection-label { font-size: 14px; font-weight: 700; color: #334155; margin: 0 0 16px; }
-        .editor-footer-actions {
-            display: flex; justify-content: flex-end; align-items: center;
-            gap: 12px; flex-wrap: wrap; margin: 0; padding: 0.25rem 0 0.5rem;
-        }
-
-        .acct-aside { display: flex; flex-direction: column; gap: 1rem; }
-        .acct-aside-card {
-            background: #f5f3ff; border-color: #ede9fe; text-align: left;
-        }
-        .acct-aside-card h3 {
-            font-size: 0.92rem; font-weight: 800; color: #5b21b6; margin: 0 0 0.4rem;
-            display: flex; align-items: center; gap: 0.45rem;
-        }
-        .acct-aside-card p { font-size: 0.78rem; color: #6b7280; line-height: 1.5; margin: 0; }
-        .ps-status-card h3 {
-            font-size: 0.95rem; font-weight: 800; color: #0f172a; margin: 0 0 0.85rem;
-            display: flex; align-items: center; gap: 0.45rem;
-        }
-        .ps-status-row {
-            display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;
-            padding: 0.45rem 0; font-size: 0.82rem; color: #64748b;
-        }
-        .ps-status-row span { display: inline-flex; align-items: center; gap: 0.4rem; color: #0f172a; font-weight: 600; }
-        .ps-status-row .profile-badge { background: #f3e8ff; color: #7c3aed; }
-        .ps-status-row .profile-badge-success { background: #dcfce7; color: #166534; }
-
-        /* ---- Profile Settings mock ---- */
-        body.ps-page, body.ps-page.dashboard, body.ps-page .layout-main-wrapper,
-        body.ps-page .layout-main-wrapper > .flex-grow-1, body.ps-page .employee-header { background: #f8fafc !important; }
-        body.ps-page #native-sidebar .mb-auto { margin-bottom: 0 !important; }
-        body.ps-page .employee-header { padding-top: 0.75rem !important; border-bottom: 0 !important; box-shadow: none !important; }
-        @media (min-width: 993px) {
-            body.ps-page .employee-header { position: relative !important; }
-            body.ps-page .employee-header .header-right { position: absolute !important; top: 0.85rem; left: 50%; right: auto; transform: translateX(-50%); }
-            body.ps-page .ps-head-search { width: 340px; }
-        }
-        body.ps-page #native-sidebar .nav-link.active {
-            background: #efedfc !important; color: #4338ca !important; border-radius: 10px; font-weight: 600;
-        }
-        body.ps-page #native-sidebar .nav-link.active i { color: #4338ca !important; }
-        body.ps-page .employee-header-page-title { font-size: 26px !important; font-weight: 700 !important; color: #111827 !important; }
-        .ps-crumbs { display: inline-flex; align-items: center; gap: 10px; font-size: 15px; margin-top: 6px; }
-        .ps-crumbs a { color: #5b54c9; text-decoration: none; }
-        .ps-crumbs a:hover { text-decoration: underline; }
-        .ps-crumb-sep { color: #9ca3af; }
-        .ps-crumb-current { color: #4b5563; }
-        .ps-head-tools { display: flex; align-items: center; gap: 14px; }
-        .ps-head-search {
-            display: flex; align-items: center; gap: 8px; width: 172px; height: 40px; margin: 0;
-            padding: 0 12px; background: #fff; border: 1px solid #e6e8f0; border-radius: 10px; color: #6b7280;
-        }
-        .ps-head-search i { font-size: 13px; }
-        .ps-head-search input { border: 0; outline: 0; background: transparent; width: 100%; font-size: 12px; color: #111827; }
-        .ps-head-search input::placeholder { color: #6b7280; }
-        .ps-head-bell {
-            position: relative; width: 36px; height: 36px; border-radius: 50%; display: inline-flex;
-            align-items: center; justify-content: center; color: #374151 !important; text-decoration: none !important; font-size: 17px;
-        }
-        @media (min-width: 993px) { .ps-head-bell--mobile { display: none !important; } }
-        .ps-head-dot { position: absolute; top: 6px; right: 7px; width: 7px; height: 7px; border-radius: 50%; background: #ef4444; border: 1.5px solid #f8fafc; }
-        .ps-head-avatar {
-            width: 38px; height: 38px; border-radius: 50%; background: #ebe8fb; color: #3730a3;
-            display: inline-flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700;
-        }
-
-        .editor-shell { max-width: none; }
-        .ps-hero {
-            min-height: 124px; padding: 1.1rem 1.4rem 1.1rem 1.9rem; margin: 0.9rem 0 0;
-            border-radius: 12px 12px 0 0;
-            background:
-                radial-gradient(ellipse 45% 140% at 78% 10%, rgba(129, 120, 214, 0.38), transparent 60%),
-                radial-gradient(ellipse 40% 120% at 100% 100%, rgba(99, 88, 196, 0.45), transparent 60%),
-                linear-gradient(100deg, #2b2462 0%, #352d78 45%, #3f3690 100%);
-        }
-        .ps-hero::after {
-            background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 800 200' preserveAspectRatio='none'%3E%3Cpath d='M330 200 C420 120 520 40 640 60 C720 72 770 40 800 20 L800 200 Z' fill='rgba(255,255,255,0.05)'/%3E%3Cpath d='M260 200 C380 150 470 70 600 90 C700 105 760 70 800 55' fill='none' stroke='rgba(255,255,255,0.10)' stroke-width='2'/%3E%3C/svg%3E") right bottom / 100% 100% no-repeat;
-        }
-        .ps-hero-main { gap: 1.6rem; }
-        .account-avatar-wrap, .account-avatar { width: 104px; height: 104px; }
-        .account-avatar { border: 4px solid #fff; box-shadow: 0 10px 26px rgba(15, 23, 42, 0.28); }
-        .account-avatar-btn {
-            bottom: 2px; right: 0; width: 30px; height: 30px; background: #fff; color: #5b45d6;
-            border: 0; font-size: 12px; box-shadow: 0 3px 10px rgba(15, 23, 42, 0.25);
-        }
-        .ps-hero-copy h2 { font-size: 1.55rem; font-weight: 700; letter-spacing: -0.01em; }
-        .ps-hero-chips { gap: 0.55rem; margin: 0.3rem 0 0.55rem; }
-        .ps-hero-handle { color: rgba(255,255,255,0.9); font-size: 0.9rem; font-weight: 500; margin-right: 0.2rem; }
-        .ps-hero .profile-badge { padding: 3px 13px; font-size: 11px; font-weight: 600; background: #5b45d6; color: #fff; }
-        .ps-hero .profile-badge-success { background: rgba(34, 197, 94, 0.08); color: #86efac; border: 1px solid #4ade80; }
-        .ps-hero-email { font-size: 0.82rem; color: rgba(255,255,255,0.82); margin-bottom: 0.6rem; }
-        .ps-hero-meta { font-size: 0.74rem; gap: 1.1rem; }
-        .ps-logout {
-            align-self: flex-start; margin-top: 0.4rem; min-height: 2.35rem; padding: 0 1.1rem; border-radius: 9px;
-            background: transparent; border: 1px solid rgba(255,255,255,0.55); font-weight: 600; font-size: 0.8rem;
-        }
-        .ps-logout:hover { background: rgba(255,255,255,0.1); }
-
-        .section-nav {
-            margin: 0 0 1rem; padding: 0 0 0 1rem; background: #fff;
-            border: 1px solid #eceef5; border-top: 0; border-radius: 0 0 12px 12px;
-        }
-        .section-nav ul { gap: 0 1.6rem; }
-        .section-nav a { padding: 0.95rem 0.6rem 0.85rem; font-size: 0.9rem; font-weight: 500; color: #374151; }
-        .section-nav a i { font-size: 1rem; color: #4b5563; }
-        .section-nav a.is-active { color: #5b45d6; border-bottom: 2px solid #5b45d6; font-weight: 600; }
-        .section-nav a.is-active i { color: #5b45d6; }
-
-        .ps-body { grid-template-columns: minmax(0, 1fr) 265px; gap: 0.75rem; }
-        .editor-main { gap: 0.75rem; }
-        .editor-section, .acct-aside-card, .ps-status-card {
-            border-radius: 10px; border-color: #eceef5; box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03); padding: 0.95rem 0.75rem 1rem;
-        }
-        .editor-section[hidden] { display: none !important; }
-
-        .editor-section.ps-sig-wrap {
-            background: transparent; border: 0; box-shadow: none; padding: 0;
-            display: flex; flex-direction: column; gap: 0.75rem;
-        }
-        .ps-sig-card {
-            background: #fff; border: 1px solid #eceef5; border-radius: 10px;
-            box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03); padding: 0.95rem 0.95rem 1rem;
-        }
-        .ps-sig-card[hidden] { display: none !important; }
-
-        .swal2-popup.ps-del-popup { border-radius: 14px; box-shadow: 0 18px 40px rgba(15, 23, 42, 0.18); }
-        .swal2-html-container.ps-del-body { margin: 0; padding: 0; overflow: visible; }
-        .ps-del-icon { width: 44px; height: 44px; margin: 0 auto 0.55rem; color: #dc2626; }
-        .ps-del-icon svg { width: 100%; height: 100%; }
-        .ps-del-title { margin: 0 0 0.45rem; font-size: 1.3rem; font-weight: 700; color: #111827; }
-        .ps-del-text { margin: 0; font-size: 0.88rem; color: #111827; }
-        .swal2-actions.ps-del-actions { margin: 1.15rem 0 0; gap: 0.75rem; width: 100%; flex-wrap: nowrap; }
-        .swal2-popup .swal2-actions button.ps-del-btn { flex: 1 1 0; min-height: 2.6rem; padding: 0 1rem; border: 0 !important; border-radius: 8px !important; font-size: 0.85rem; font-weight: 600; cursor: pointer; margin: 0; }
-        .swal2-popup .swal2-actions button.ps-del-btn--no { background: #e5e7eb !important; color: #111827 !important; }
-        .swal2-popup .swal2-actions button.ps-del-btn--no:hover { background: #d9dce1 !important; }
-        .swal2-popup .swal2-actions button.ps-del-btn--yes { background: #ef2b2b !important; color: #fff !important; box-shadow: 0 6px 16px rgba(239, 43, 43, 0.45); }
-        .swal2-popup .swal2-actions button.ps-del-btn--yes:hover { background: #dc2626 !important; }
-        .swal2-popup .swal2-actions button.ps-del-btn:focus,
-        .swal2-popup .swal2-actions button.ps-del-btn:focus-visible { outline: none !important; box-shadow: none; }
-        .swal2-popup .swal2-actions button.ps-del-btn--yes:focus { box-shadow: 0 6px 16px rgba(239, 43, 43, 0.45); }
-        html[data-theme="dark"] .swal2-popup.ps-del-popup { background: #1e293b; }
-        html[data-theme="dark"] .ps-del-title, html[data-theme="dark"] .ps-del-text { color: #f8fafc; }
-        html[data-theme="dark"] .swal2-popup .swal2-actions button.ps-del-btn--no { background: #334155 !important; color: #f8fafc !important; }
-        .ps-sig-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 0.9rem; }
-        .ps-sig-status {
-            display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.35rem 0.8rem;
-            border-radius: 999px; font-size: 0.72rem; font-weight: 500;
-        }
-        .ps-sig-status-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
-        .ps-sig-status.is-active { background: #dcfce7; color: #15803d; }
-        .ps-sig-status.is-missing { background: #fef9c3; color: #a16207; }
-        .ps-sig-wrap .sig-tools { gap: 1.1rem; margin-bottom: 0.75rem; }
-        .ps-sig-wrap .sig-tool-group { gap: 0.6rem; }
-        .ps-sig-wrap .sig-tool-label { font-size: 0.68rem; font-weight: 600; color: #6b7280; letter-spacing: 0.04em; margin-right: 0.35rem; }
-        .sig-tool-divider { width: 1px; height: 24px; background: #e5e7eb; }
-        .ps-sig-wrap .pen-size-btn, .ps-sig-wrap .color-btn { width: 32px; height: 32px; border-color: #e5e7eb; border-radius: 7px; }
-        .ps-sig-wrap .pen-size-btn.active, .ps-sig-wrap .color-btn.active { border-color: #a78bfa; background: #f1effd; color: #5b45d6; }
-        .ps-sig-wrap .pen-size-btn { color: #111827; }
-        .ps-sig-wrap .canvas-container { border: 1.5px dashed #c9c3ee; border-radius: 10px; }
-        .ps-sig-wrap #sigCanvas { height: 125px; }
-        .ps-sig-wrap .canvas-placeholder {
-            display: flex; flex-direction: column; align-items: center; gap: 0.4rem;
-            font-size: 0.82rem; color: #9ca3af; opacity: 1;
-        }
-        .ps-sig-wrap .canvas-placeholder i { font-size: 1rem; }
-        .ps-sig-wrap .canvas-container.has-content .canvas-placeholder { opacity: 0; }
-        .ps-sig-wrap .canvas-container.is-highlight { border-color: #5b45d6; box-shadow: 0 0 0 4px rgba(91, 69, 214, 0.12); }
-        .ps-sig-wrap .sig-actions { display: flex; align-items: center; gap: 0.6rem; margin-top: 0.75rem; }
-        .ps-sig-btn {
-            display: inline-flex; align-items: center; gap: 0.45rem; min-height: 2.1rem; padding: 0 0.95rem;
-            border: 1px solid #e5e7eb; border-radius: 7px; background: #fff; color: #374151;
-            font-size: 0.78rem; font-weight: 500; cursor: pointer;
-        }
-        .ps-sig-btn:hover:not(:disabled) { background: #f9fafb; }
-        .ps-sig-btn:disabled { opacity: 0.55; cursor: not-allowed; }
-        .ps-sig-btn--danger { border-color: #fca5a5; color: #dc2626; }
-        .ps-sig-btn--danger:hover:not(:disabled) { background: #fef2f2; }
-        .ps-sig-btn--accent { border-color: #c4b5fd; color: #5b45d6; }
-        .ps-sig-btn--accent:hover { background: #f5f3ff; }
-        .ps-sig-btn.ps-sig-btn--plain,
-        html[data-theme="dark"] .ps-sig-btn.ps-sig-btn--plain { border: 0; background: transparent; padding: 0 0.35rem; }
-        .ps-sig-btn.ps-sig-btn--plain:hover:not(:disabled) { background: transparent; text-decoration: underline; }
-        html[data-theme="dark"] .ps-sig-btn--accent.ps-sig-btn--plain { color: #a78bfa; }
-        html[data-theme="dark"] .ps-sig-btn--danger.ps-sig-btn--plain { color: #f87171; }
-        .ps-sig-save {
-            margin-left: auto; display: inline-flex; align-items: center; gap: 0.5rem; min-height: 2.25rem; padding: 0 1.35rem;
-            border: 0; border-radius: 999px !important; background: #5b45d6; color: #fff; font-size: 0.8rem; font-weight: 500; cursor: pointer;
-        }
-        .ps-sig-save:hover:not(:disabled) { background: #4c38c4; }
-        .ps-sig-save:disabled { opacity: 0.6; cursor: not-allowed; }
-        .ps-sig-current-head { margin-bottom: 0.8rem; }
-        .ps-sig-current { display: flex; align-items: center; gap: 1rem; }
-        .ps-sig-current-preview {
-            flex: 1; min-width: 0; height: 64px; border: 1.5px dashed #e5e7eb; border-radius: 8px;
-            display: flex; align-items: center; justify-content: center; padding: 0.35rem;
-        }
-        .ps-sig-current-preview img { max-height: 100%; max-width: 100%; object-fit: contain; }
-        .ps-sig-current-empty { font-size: 0.76rem; color: #9ca3af; }
-        .ps-sig-current-actions { display: flex; gap: 0.6rem; flex-shrink: 0; }
-        @media (max-width: 640px) {
-            .sig-tool-divider { display: none; }
-            .ps-sig-current { flex-direction: column; align-items: stretch; }
-            .ps-sig-current-actions { justify-content: flex-end; }
-        }
-        html[data-theme="dark"] .ps-sig-card { background: #1e293b; border-color: #334155; }
-        html[data-theme="dark"] .ps-sig-btn, html[data-theme="dark"] .ps-sig-wrap .pen-size-btn,
-        html[data-theme="dark"] .ps-sig-wrap .color-btn { background: #0f172a; border-color: #334155; color: #e2e8f0; }
-        html[data-theme="dark"] .ps-sig-current-preview { border-color: #334155; background: #fff; }
-        .ps-sec-head { display: flex; align-items: flex-start; gap: 0.75rem; }
-        .ps-sec-icon {
-            width: 32px; height: 32px; border-radius: 8px; background: #f1f0fb; color: #4b5563;
-            display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 0.9rem;
-        }
-        .section-header.ps-sec-head { margin-bottom: 1rem; }
-        .section-title { font-size: 0.95rem; font-weight: 600; color: #111827; margin-bottom: 2px; }
-        .section-subtitle { font-size: 0.74rem; color: #6b7280; }
-        .form-label { font-weight: 500; color: #374151; }
-        .form-input { border-color: #e2e5ee; border-radius: 6px; padding: 9px 12px; font-size: 13px; }
-        .ps-icon-field i { color: #6b7280; }
-
-        .ps-photo-actions { gap: 0.95rem; padding-left: 1.6rem; }
-        .ps-photo-preview-wrap { position: relative; margin: 0; }
-        .ps-photo-preview { width: 44px; height: 44px; }
-        .ps-photo-cam {
-            position: absolute; right: -5px; bottom: -3px; width: 18px; height: 18px; border-radius: 50%;
-            background: #5b45d6; color: #fff; border: 2px solid #fff; display: flex; align-items: center;
-            justify-content: center; font-size: 8px; cursor: pointer; margin: 0;
-        }
-        .ps-upload-btn { min-height: 2.15rem; padding: 0 1.05rem; border-radius: 4px; background: #5b45d6; font-size: 0.74rem; font-weight: 500; margin: 0 0 0 1.4rem; }
-        .ps-upload-btn:hover { background: #4c38c4; }
-        .ps-remove-btn { min-height: 2.15rem; padding: 0 0.9rem; border-radius: 4px; background: #f3f4f6; color: #374151; border-color: #e5e7eb; font-size: 0.74rem; font-weight: 500; }
-
-        #personal-details .ps-details-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.85rem 1rem; }
-        .ps-details-actions { display: flex; justify-content: flex-end; margin-top: 1rem; }
-        .ps-details-save { display: inline-flex; align-items: center; gap: 8px; padding: 10px 22px; border-radius: 999px !important; font-size: 13px; }
-        .ps-details-save:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; }
-
-        .acct-aside-card {
-            display: flex; gap: 0.85rem; align-items: flex-start; padding: 1rem;
-            background: linear-gradient(120deg, #ecebfb 0%, #f4f3fd 100%); border-color: #e7e5f8;
-        }
-        .acct-aside-icon {
-            width: 36px; height: 36px; border-radius: 9px; background: #dcd8f8; color: #5b45d6; flex-shrink: 0;
-            display: inline-flex; align-items: center; justify-content: center; font-size: 0.95rem; margin-top: 0.15rem;
-        }
-        .acct-aside-card h3 { font-size: 0.8rem; font-weight: 600; color: #111827; margin: 0 0 0.3rem; }
-        .acct-aside-card p { font-size: 0.72rem; color: #6b7280; }
-        .ps-status-card { padding: 1rem; }
-        .ps-status-card h3 { font-size: 0.85rem; font-weight: 600; color: #111827; margin-bottom: 0.8rem; }
-        .ps-status-card h3 i { color: #5b45d6; font-size: 0.8rem; }
-        .ps-status-row {
-            display: grid; grid-template-columns: 92px 1fr; justify-content: start; align-items: center; white-space: nowrap;
-            padding: 0.32rem 0; font-size: 0.74rem; color: #374151;
-        }
-        .ps-status-row .ps-status-label { color: #374151; font-weight: 400; }
-        .ps-status-row > span:last-child { justify-self: start; }
-        .ps-status-value { display: inline-flex; align-items: center; gap: 0.45rem; color: #111827; font-weight: 400 !important; }
-        .ps-status-value i { color: #6b7280; }
-        .ps-status-row .profile-badge { background: #ece9fb; color: #5b45d6; font-weight: 500; padding: 2px 9px; }
-        .ps-status-row .profile-badge-success { background: #dcfce7; color: #15803d; }
-
-        html[data-theme="dark"] body.ps-page, html[data-theme="dark"] body.ps-page .layout-main-wrapper,
-        html[data-theme="dark"] body.ps-page .layout-main-wrapper > .flex-grow-1,
-        html[data-theme="dark"] body.ps-page .employee-header { background: #0f172a !important; }
-        html[data-theme="dark"] .section-nav { background: #1e293b; border-color: #334155; }
-        html[data-theme="dark"] .section-nav a, html[data-theme="dark"] .section-nav a i { color: #cbd5e1; }
-        html[data-theme="dark"] .section-nav a.is-active, html[data-theme="dark"] .section-nav a.is-active i { color: #a78bfa; border-bottom-color: #a78bfa; }
-        html[data-theme="dark"] .ps-sec-icon { background: #334155; color: #e2e8f0; }
-        html[data-theme="dark"] .acct-aside-card h3, html[data-theme="dark"] .ps-status-value { color: #f8fafc; }
-        html[data-theme="dark"] .ps-status-row, html[data-theme="dark"] .ps-status-row .ps-status-label { color: #cbd5e1; }
-        html[data-theme="dark"] .ps-head-search, html[data-theme="dark"] .ps-head-avatar { background: #1e293b; border-color: #334155; color: #e2e8f0; }
-        html[data-theme="dark"] .ps-head-bell { color: #e2e8f0 !important; }
-        html[data-theme="dark"] body.ps-page .employee-header-page-title { color: #f8fafc !important; }
-
-        @media (max-width: 992px) {
-            .ps-head-search { display: none; }
-            .section-nav ul { gap: 0 0.4rem; }
-            .ps-upload-btn { margin-left: 0; }
-            .ps-photo-actions { padding-left: 0; }
-        }
-
-        html[data-theme="dark"] body { background: #0f172a; }
-        html[data-theme="dark"] .editor-section,
-        html[data-theme="dark"] .ps-status-card { background: #1e293b; border-color: #334155; }
-        html[data-theme="dark"] .acct-aside-card { background: #2e1064; border-color: #4c1d95; }
-        html[data-theme="dark"] .section-title, html[data-theme="dark"] .ps-status-card h3 { color: #f8fafc; }
-        html[data-theme="dark"] .form-input { background: #0f172a; border-color: #334155; color: #e2e8f0; }
-
-        @media (max-width: 992px) {
-            .main-content-wrapper { padding: 0 0.85rem 2.5rem !important; }
-            .ps-body { grid-template-columns: 1fr; }
-            .ps-hero { flex-direction: column; align-items: flex-start; }
-            .ps-details-grid, #personal-details .ps-details-grid { grid-template-columns: 1fr; }
-            .ps-details-save { width: 100%; justify-content: center; }
-            .form-row { grid-template-columns: 1fr; gap: 8px; margin-bottom: 18px; }
-            .form-label { padding-top: 0; font-size: 13px; }
-            .inline-field-form { flex-direction: column; align-items: stretch; }
-            .host-port-grid { grid-template-columns: 1fr; }
-            .btn-save { width: 100%; padding: 12px 24px; }
-        }
-
-        @media (max-width: 992px) {
-            body.ps-page[data-ps-tab]:not([data-ps-tab="profile-photo"]) .acct-aside { display: none; }
-        }
-        @media (max-width: 640px) {
-            body.ps-page .employee-header-page-title { font-size: 20px !important; }
-            .ps-crumbs { font-size: 12px; gap: 6px; margin-top: 2px; }
-
-            .ps-hero {
-                position: relative; flex-direction: row; align-items: center; min-height: 0;
-                padding: 1rem 0.9rem; margin-top: 0.6rem; gap: 0;
-            }
-            .ps-hero-main { gap: 0.9rem; align-items: center; width: 100%; padding-right: 92px; }
-            .account-avatar-wrap, .account-avatar { width: 76px; height: 76px; }
-            .account-avatar { border-width: 3px; }
-            .account-avatar-btn { width: 24px; height: 24px; font-size: 10px; }
-            .ps-hero-copy h2 { font-size: 1.1rem; }
-            .ps-hero-chips { gap: 0.35rem; margin: 0.2rem 0 0.35rem; }
-            .ps-hero-handle { font-size: 0.78rem; }
-            .ps-hero .profile-badge { padding: 2px 9px; font-size: 10px; }
-            .ps-hero-email { font-size: 0.74rem; margin-bottom: 0; word-break: break-all; }
-            .ps-logout {
-                position: absolute; top: 0.85rem; right: 0.8rem; margin: 0; z-index: 2;
-                min-height: 2rem; padding: 0 0.7rem; font-size: 0.72rem; border-radius: 8px;
-            }
-
-            .section-nav { padding: 0 0.25rem; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
-            .section-nav::-webkit-scrollbar { display: none; }
-            .section-nav ul { flex-wrap: nowrap; gap: 0 0.2rem; }
-            .section-nav li { flex-shrink: 0; }
-            .section-nav a { padding: 0.75rem 0.55rem 0.65rem; font-size: 0.8rem; white-space: nowrap; }
-            .section-nav a i { font-size: 0.85rem; }
-
-            .editor-section { padding: 0.9rem 0.85rem 1rem; }
-            .ps-photo-actions { gap: 0.7rem; padding-left: 0; flex-wrap: wrap; }
-            .ps-photo-preview { width: 52px; height: 52px; }
-            .ps-upload-btn, .ps-remove-btn { min-height: 2.2rem; font-size: 0.74rem; }
-            .ps-upload-btn { border-radius: 6px; }
-            .ps-remove-btn { border-radius: 6px; background: #fff; }
-            .ps-details-save { border-radius: 10px !important; min-height: 2.75rem; }
-        }
-
-        /* ---------- Dark theme ---------- */
-        html[data-theme="dark"] body.ps-page,
-        html[data-theme="dark"] body.ps-page .layout-main-wrapper,
-        html[data-theme="dark"] body.ps-page .layout-main-wrapper > .flex-grow-1,
-        html[data-theme="dark"] body.ps-page .employee-header { background: #0b141a !important; }
-        html[data-theme="dark"] body.ps-page .employee-header { border-bottom: 0 !important; box-shadow: none !important; }
-        html[data-theme="dark"] body.ps-page .employee-header-page-title { color: #e9edef !important; }
-        html[data-theme="dark"] .ps-crumbs a { color: #818cf8; }
-        html[data-theme="dark"] .ps-crumb-sep { color: #667781; }
-        html[data-theme="dark"] .ps-crumb-current { color: #00a884; }
-        html[data-theme="dark"] .ps-head-search { background: #111b21; border-color: #2a3942; color: #8696a0; }
-        html[data-theme="dark"] .ps-head-search input { color: #e9edef; }
-        html[data-theme="dark"] .ps-head-search input::placeholder { color: #8696a0; }
-        html[data-theme="dark"] .ps-head-bell { color: #e9edef !important; }
-        html[data-theme="dark"] .ps-head-dot { border-color: #0b141a; }
-
-        html[data-theme="dark"] .ps-hero {
-            background:
-                radial-gradient(ellipse 50% 140% at 82% 0%, rgba(99, 102, 241, 0.22), transparent 60%),
-                radial-gradient(ellipse 45% 120% at 100% 100%, rgba(0, 168, 132, 0.10), transparent 60%),
-                linear-gradient(100deg, #111b21 0%, #16222b 55%, #1b2635 100%);
-            border: 1px solid #2a3942;
-        }
-        html[data-theme="dark"] .account-avatar { border-color: #818cf8; box-shadow: 0 0 0 4px rgba(129, 140, 248, 0.18); }
-        html[data-theme="dark"] .account-avatar-btn { background: #6366f1; color: #fff; }
-        html[data-theme="dark"] .ps-hero .profile-badge { background: #6366f1; color: #fff; }
-        html[data-theme="dark"] .ps-hero .profile-badge-success { background: rgba(34, 197, 94, 0.12); color: #86efac; border-color: #22c55e; }
-        html[data-theme="dark"] .ps-logout { border-color: rgba(255, 255, 255, 0.45); color: #fff !important; }
-        html[data-theme="dark"] .ps-logout:hover { background: rgba(255, 255, 255, 0.08); }
-
-        html[data-theme="dark"] .section-nav { background: #111b21; border-color: #2a3942; }
-        html[data-theme="dark"] .section-nav a,
-        html[data-theme="dark"] .section-nav a i { color: #8696a0; }
-        html[data-theme="dark"] .section-nav a:hover { color: #fff; }
-        html[data-theme="dark"] .section-nav a.is-active,
-        html[data-theme="dark"] .section-nav a.is-active i { color: #fff; }
-        html[data-theme="dark"] .section-nav a.is-active { background: transparent; border-bottom: 2px solid #818cf8; border-radius: 0; box-shadow: none; }
-
-        html[data-theme="dark"] .editor-section,
-        html[data-theme="dark"] .ps-status-card,
-        html[data-theme="dark"] .acct-aside-card,
-        html[data-theme="dark"] .ps-sig-card { background: #111b21; border-color: #2a3942; box-shadow: none; }
-        html[data-theme="dark"] .ps-sec-icon { background: #202c33; color: #a5b4fc; }
-        html[data-theme="dark"] .section-title,
-        html[data-theme="dark"] .ps-status-card h3,
-        html[data-theme="dark"] .acct-aside-card h3 { color: #e9edef; }
-        html[data-theme="dark"] .section-subtitle,
-        html[data-theme="dark"] .help-text { color: #8696a0; }
-        html[data-theme="dark"] .form-label { color: #e9edef; }
-        html[data-theme="dark"] .form-input,
-        html[data-theme="dark"] .ps-sig-wrap .form-input { background: #0b141a; border-color: #2a3942; color: #e9edef; }
-        html[data-theme="dark"] .form-input::placeholder { color: #667781; }
-        html[data-theme="dark"] .form-input:focus { border-color: #818cf8; box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2); }
-        html[data-theme="dark"] .ps-icon-field i { color: #8696a0; }
-
-        html[data-theme="dark"] .ps-photo-preview { background: #202c33; }
-        html[data-theme="dark"] .ps-photo-cam { border-color: #111b21; }
-        html[data-theme="dark"] .ps-upload-btn { background: #6366f1; color: #fff; }
-        html[data-theme="dark"] .ps-remove-btn { background: transparent; border-color: #3b4a54; color: #e9edef; }
-        html[data-theme="dark"] .ps-remove-btn:hover { background: #202c33; }
-        html[data-theme="dark"] .btn-save,
-        html[data-theme="dark"] .ps-details-save,
-        html[data-theme="dark"] .ps-sig-save { background: #6366f1; color: #fff; border: 0; box-shadow: none; }
-        html[data-theme="dark"] .ps-details-save:disabled { opacity: 0.45; box-shadow: none; }
-
-        html[data-theme="dark"] .ps-status-row,
-        html[data-theme="dark"] .ps-status-row .ps-status-label { color: #8696a0; }
-        html[data-theme="dark"] .ps-status-value { color: #e9edef; }
-        html[data-theme="dark"] .ps-status-row .profile-badge { background: rgba(99, 102, 241, 0.18); color: #a5b4fc; }
-        html[data-theme="dark"] .ps-status-row .profile-badge-success { background: rgba(34, 197, 94, 0.14); color: #86efac; }
-
-        html[data-theme="dark"] .ps-pw-reset,
-        html[data-theme="dark"] .ps-coming-soon { background: #0b141a; border-color: #2a3942; }
-        html[data-theme="dark"] .ps-pw-reset-text strong,
-        html[data-theme="dark"] .ps-coming-soon strong { color: #e9edef; }
-        html[data-theme="dark"] .ps-pw-reset-text,
-        html[data-theme="dark"] .ps-coming-soon div { color: #8696a0; }
-        html[data-theme="dark"] .ps-coming-soon-icon { background: #202c33; color: #a5b4fc; }
-        html[data-theme="dark"] .account-pw-strength-bar { background: #2a3942; }
-        html[data-theme="dark"] .account-pw-rules { color: #8696a0; }
-        html[data-theme="dark"] .account-pw-rules li.is-met { color: #e9edef; }
-        html[data-theme="dark"] .account-pw-toggle { color: #8696a0; }
-
-        html[data-theme="dark"] .ps-sig-current-preview { border-color: #2a3942; }
-        html[data-theme="dark"] .ps-toast { background: #202c33; border-color: #2a3942; color: #e9edef; }
-        html[data-theme="dark"] .ps-toast .ps-toast-close:hover { background: #2a3942; color: #fff; }
-        /* :not(#_) lifts these above the global dark-theme a:not(...) rule, which chains eight :not() classes */
-        html[data-theme="dark"] body.ps-page .ps-crumbs a:not(#_) { color: #60a5fa !important; }
-        html[data-theme="dark"] body.ps-page .ps-crumb-current:not(#_) { color: #00a884 !important; }
-        html[data-theme="dark"] body.ps-page .section-nav a:not(#_),
-        html[data-theme="dark"] body.ps-page .section-nav a:not(#_) i { color: #8696a0 !important; }
-        html[data-theme="dark"] body.ps-page .section-nav a.is-active:not(#_),
-        html[data-theme="dark"] body.ps-page .section-nav a.is-active:not(#_) i { color: #e9edef !important; }
-        html[data-theme="dark"] body.ps-page .ps-logout:not(#_),
-        html[data-theme="dark"] body.ps-page .ps-logout:not(#_) i { color: #fff !important; }
-        html[data-theme="dark"] body.ps-page .ps-head-bell:not(#_),
-        html[data-theme="dark"] body.ps-page .ps-head-bell:not(#_) i { color: #e9edef !important; }
-        html[data-theme="dark"] body.ps-page .ps-pw-reset-btn:not(#_),
-        html[data-theme="dark"] body.ps-page .account-forgot-link:not(#_) { color: #818cf8 !important; }
-        html[data-theme="dark"] body.ps-page .form-input:not(#_) { background-color: #0b141a !important; border-color: #2a3942 !important; color: #e9edef !important; }
-        html[data-theme="dark"] body.ps-page .form-input:not(#_):focus { border-color: #818cf8 !important; }
-        html[data-theme="dark"] body.ps-page .ps-head-search input:not(#_) { background-color: transparent !important; border: 0 !important; }
-        html[data-theme="dark"] body.ps-page #native-sidebar .nav-link.active:not(#_),
-        html[data-theme="dark"] body.ps-page #native-sidebar .nav-link.active:not(#_) i { background: rgba(99, 102, 241, 0.2) !important; color: #a5b4fc !important; }
-        html[data-theme="dark"] body.ps-page #native-sidebar .nav-link.active:not(#_) i { background: transparent !important; }
-
-        html[data-theme="dark"] body.ps-page .main-content-wrapper:not(#_),
-        html[data-theme="dark"] body.ps-page .page-shell:not(#_),
-        html[data-theme="dark"] body.ps-page .ps-body:not(#_),
-        html[data-theme="dark"] body.ps-page .editor-main:not(#_),
-        html[data-theme="dark"] body.ps-page .acct-aside:not(#_) { background: transparent !important; }
-        html[data-theme="dark"] body.ps-page #native-sidebar:not(#_) { background: #0b141a !important; border-right-color: #2a3942 !important; }
-
-        @media (max-width: 768px) {
-            .ps-icon-field .form-input:not(#_) { padding-left: 2.4rem !important; }
-        }
-	</style>
+	<link rel="stylesheet" href="<?= $esc(app_url('/assets/css/profile-shell.css')) ?>?v=<?= (int) @filemtime(__DIR__ . '/../assets/css/profile-shell.css') ?>">
 </head>
 <body class="dashboard ps-page">
-<?php require_once __DIR__ . '/../includes/header_employee.php'; ?>
+<?php $hideErpBreadcrumbs = true; require_once __DIR__ . '/../includes/header_employee.php'; ?>
 
 <div class="main-content-wrapper">
 		<?php if (!empty($feedback)): ?>
@@ -1103,7 +442,14 @@ $isActiveUser = !isset($user['is_active']) || (int) $user['is_active'] === 1;
                     <li><a href="#change-password"><i class="fas fa-lock"></i> Security</a></li>
                     <li><a href="#digital-signature"><i class="fas fa-signature"></i> Signature</a></li>
                     <li><a href="#personal-email"><i class="far fa-envelope"></i> Email</a></li>
+                    <li class="ps-nav-sep" aria-hidden="true"></li>
+                    <li><a href="javascript:void(0)" role="button" class="ps-nav-link ps-pref-toggle" id="psPrefToggle" aria-haspopup="menu" aria-expanded="false" aria-controls="psPrefMenu"><i class="fas fa-sliders"></i> Preferences <i class="fas fa-chevron-down ps-pref-caret"></i></a></li>
                     </ul>
+                <div class="ps-pref-menu" id="psPrefMenu" role="menu" hidden>
+                    <a href="#ps-pref-ai" role="menuitem" data-ps-section="ps-pref-ai"><i class="fas fa-robot"></i><span><strong>AI Agent</strong><small>Smart alerts and insights</small></span></a>
+                    <a href="#ps-pref-personalization" role="menuitem" data-ps-section="ps-pref-personalization"><i class="fas fa-palette"></i><span><strong>Personalization</strong><small>System font and look &amp; feel</small></span></a>
+                    <a href="#ps-pref-appearance" role="menuitem" data-ps-section="ps-pref-appearance"><i class="fas fa-paintbrush"></i><span><strong>Appearance</strong><small>Light / dark mode and sidebar theme</small></span></a>
+                </div>
             </nav>
                 
             <div class="ps-body">
@@ -1279,6 +625,85 @@ $isActiveUser = !isset($user['is_active']) || (int) $user['is_active'] === 1;
                     </div>
                 </form>
                 <?php endif; ?>
+            </section>
+
+            <section class="editor-section ps-pref" id="ps-pref-ai" hidden>
+                <div class="section-header ps-sec-head">
+                    <span class="ps-sec-icon"><i class="fas fa-robot"></i></span>
+                    <div>
+                        <h2 class="section-title">AI Agent</h2>
+                        <p class="section-subtitle">Smart alerts and insights for your account.</p>
+                    </div>
+                </div>
+                <div class="ps-soon">
+                    <span class="ps-soon-icon"><i class="fas fa-wand-magic-sparkles"></i></span>
+                    <h3>Coming soon</h3>
+                    <p>Your personal AI briefing on receivables, approvals, stock and purchasing will appear here.</p>
+                </div>
+            </section>
+
+            <section class="editor-section ps-pref" id="ps-pref-personalization" hidden>
+                <div class="section-header ps-sec-head">
+                    <span class="ps-sec-icon"><i class="fas fa-palette"></i></span>
+                    <div>
+                        <h2 class="section-title">System Font</h2>
+                        <p class="section-subtitle">Choose the font used for menus, forms and dashboards on your account.</p>
+                    </div>
+                </div>
+                <?php if ($psFontConfig === null): ?>
+                <p class="ps-pref-empty">Font settings are not available right now.</p>
+                <?php else: ?>
+                <?php
+                $psFontSelected = (string) ($psFontConfig['selectedKey'] ?? '');
+                $psCompanyFont = $psFontConfig['companyFont'] ?? ['label' => 'Company default', 'stack' => 'inherit'];
+                ?>
+                <div class="ps-font-grid" id="psFontGrid" data-api="<?= $esc($psFontApiUrl) ?>" data-selected="<?= $esc($psFontSelected) ?>">
+                    <button type="button" class="ps-font-card<?= $psFontSelected === '' ? ' is-selected' : '' ?>" data-font="" style="--ps-font: <?= $esc($psCompanyFont['stack'] ?? 'inherit') ?>;">
+                        <span class="ps-font-sample" title="<?= $esc($psCompanyFont['label'] ?? '') ?>">Company default</span>
+                        <i class="fas fa-check ps-font-check"></i>
+                    </button>
+                    <?php foreach (($psFontConfig['fonts'] ?? []) as $psFont): ?>
+                    <button type="button" class="ps-font-card<?= $psFontSelected === (string) $psFont['id'] ? ' is-selected' : '' ?>" data-font="<?= $esc($psFont['id']) ?>" data-google="<?= $esc($psFont['google'] ?? '') ?>" data-local="<?= $esc($psFont['localCss'] ?? '') ?>" style="--ps-font: <?= $esc($psFont['stack'] ?? 'inherit') ?>;">
+                        <span class="ps-font-sample"><?= $esc($psFont['label']) ?></span>
+                        <i class="fas fa-check ps-font-check"></i>
+                    </button>
+                    <?php endforeach; ?>
+                </div>
+                <div class="ps-pref-actions">
+                    <span class="ps-pref-note" id="psFontNote">Current: <?= $esc($psFontConfig['effectiveFont']['label'] ?? '') ?><?= empty($psFontConfig['isPersonalChoice']) ? ' (company default)' : ' (your choice)' ?></span>
+                </div>
+                <?php endif; ?>
+            </section>
+
+            <section class="editor-section ps-pref" id="ps-pref-appearance" hidden>
+                <div class="section-header ps-sec-head">
+                    <span class="ps-sec-icon"><i class="fas fa-paintbrush"></i></span>
+                    <div>
+                        <h2 class="section-title">Appearance</h2>
+                        <p class="section-subtitle">Switch between light and dark mode, and pick a sidebar theme.</p>
+                    </div>
+                </div>
+                <p class="subsection-label">Mode</p>
+                <div class="ps-mode-grid" id="psModeGrid">
+                    <button type="button" class="ps-mode-card" data-mode="light">
+                        <span class="ps-mode-preview ps-mode-preview--light"><span></span><span></span><span></span></span>
+                        <span class="ps-mode-label"><i class="fas fa-sun"></i> Light</span>
+                    </button>
+                    <button type="button" class="ps-mode-card" data-mode="dark">
+                        <span class="ps-mode-preview ps-mode-preview--dark"><span></span><span></span><span></span></span>
+                        <span class="ps-mode-label"><i class="fas fa-moon"></i> Dark</span>
+                    </button>
+                </div>
+                <p class="subsection-label" style="margin-top:1.1rem;">Sidebar theme <small>(used in light mode)</small></p>
+                <div class="ps-theme-grid">
+                    <?php foreach ($psSidebarThemes as $psThemeKey => [$psThemeLabel, $psThemeBg, $psThemeFg, $psThemeBorder]): ?>
+                    <a href="<?= $esc($psThemeUrl($psThemeKey)) ?>" class="ps-theme-card<?= $psCurrentTheme === $psThemeKey ? ' is-selected' : '' ?>" data-theme-key="<?= $esc($psThemeKey) ?>">
+                        <span class="ps-theme-swatch<?= $psThemeBorder ? ' has-border' : '' ?>" style="background: <?= $esc($psThemeBg) ?>; color: <?= $esc($psThemeFg) ?>;"><i class="fas fa-bars"></i></span>
+                        <span class="ps-theme-label"><?= $esc($psThemeLabel) ?></span>
+                        <i class="fas fa-circle-check ps-theme-check"></i>
+                    </a>
+                    <?php endforeach; ?>
+                </div>
             </section>
                 </div>
 
@@ -1781,7 +1206,10 @@ var psShowTab = (function () {
             link.classList.toggle('is-active', on);
             link.setAttribute('aria-selected', on ? 'true' : 'false');
         });
+        var prefToggle = document.getElementById('psPrefToggle');
+        if (prefToggle) prefToggle.classList.toggle('is-active', id.indexOf('ps-pref-') === 0);
         document.body.setAttribute('data-ps-tab', id);
+        document.dispatchEvent(new CustomEvent('ps:tab', { detail: { id: id } }));
         try { sessionStorage.setItem(storageKey, id); } catch (e) {}
         if (updateHash && history.replaceState) history.replaceState(null, '', '#' + id);
         if (id === 'digital-signature' && typeof resizeCanvas === 'function') {
@@ -1808,6 +1236,205 @@ var psShowTab = (function () {
     window.addEventListener('hashchange', function () { show(location.hash.slice(1), false); });
 
     return show;
+})();
+
+(function () {
+    var toggle = document.getElementById('psPrefToggle');
+    var menu = document.getElementById('psPrefMenu');
+    if (!toggle || !menu) return;
+    document.body.appendChild(menu);
+
+    function place() {
+        var r = toggle.getBoundingClientRect();
+        var w = menu.offsetWidth;
+        var left = Math.min(Math.max(8, r.right - w), window.innerWidth - w - 8);
+        menu.style.top = (r.bottom + 6) + 'px';
+        menu.style.left = left + 'px';
+    }
+    function setOpen(open) {
+        menu.hidden = !open;
+        toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+        if (open) place();
+    }
+    toggle.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        setOpen(menu.hidden);
+    });
+    menu.addEventListener('click', function (e) {
+        var item = e.target.closest('[data-ps-section]');
+        if (!item) return;
+        e.preventDefault();
+        setOpen(false);
+        if (typeof psShowTab === 'function') psShowTab(item.getAttribute('data-ps-section'), true);
+    });
+    document.addEventListener('click', function (e) {
+        if (!menu.hidden && !menu.contains(e.target)) setOpen(false);
+    });
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && !menu.hidden) { setOpen(false); toggle.focus(); }
+    });
+    window.addEventListener('resize', function () { if (!menu.hidden) place(); });
+    window.addEventListener('scroll', function () { if (!menu.hidden) place(); }, true);
+})();
+
+function psOnTab(id, fn) {
+    var ran = false;
+    function maybe(tabId) {
+        if (tabId === id && !ran) { ran = true; fn(); }
+    }
+    document.addEventListener('ps:tab', function (e) { maybe(e.detail && e.detail.id); });
+    maybe(document.body.getAttribute('data-ps-tab'));
+}
+
+(function () {
+    var body = document.getElementById('psAiBody');
+    if (!body) return;
+    var api = body.getAttribute('data-api');
+
+    function esc(v) {
+        return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) {
+            return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+        });
+    }
+    function money(amount, currency) {
+        var n = Number(amount || 0);
+        return (currency || 'TZS') + ' ' + n.toLocaleString('en-US', { maximumFractionDigits: 0 });
+    }
+    function card(icon, tone, label, value, sub, url) {
+        var tag = url ? 'a' : 'div';
+        return '<' + tag + ' class="ps-ai-card ps-ai-card--' + tone + '"' + (url ? ' href="' + esc(url) + '"' : '') + '>'
+            + '<span class="ps-ai-card-icon"><i class="fas ' + icon + '"></i></span>'
+            + '<span class="ps-ai-card-text"><small>' + esc(label) + '</small><strong>' + esc(value) + '</strong>'
+            + (sub ? '<em>' + esc(sub) + '</em>' : '') + '</span></' + tag + '>';
+    }
+    function render(b) {
+        var r = b.receivables || {}, a = b.approvals || {}, s = b.stock || {}, p = b.procurement || {}, an = b.anomalies || {};
+        var urls = b.urls || {};
+        var cards = [];
+        if (r.available) cards.push(card('fa-file-invoice-dollar', 'red', 'Overdue invoices', String(r.overdue_count || 0), money(r.overdue_amount, b.currency), urls.invoices));
+        if (a.available) cards.push(card('fa-clipboard-check', 'amber', 'Pending approvals', String(a.pending_count || 0), 'Payment vouchers', a.url || urls.vouchers));
+        if (s.available) cards.push(card('fa-boxes-stacked', 'blue', 'Low stock items', String(s.low_stock_count || 0), 'At or below reorder level', s.url || urls.stock));
+        if (p.available) cards.push(card('fa-truck-ramp-box', 'violet', 'Stalled purchases', String(p.stalled_count || 0), 'Waiting too long', p.url || urls.procurement));
+        if (an.available) cards.push(card('fa-triangle-exclamation', 'slate', 'Balance anomalies', String(an.count || 0), 'Invoices to check', an.url || urls.invoices));
+        var n = b.narrative || {};
+        var total = Number(b.total_attention_items || 0);
+        body.innerHTML =
+            '<div class="ps-ai-hero">'
+            + '<div><p class="ps-ai-greet">' + esc(b.greeting || 'Hello') + (b.user_name ? ', ' + esc(b.user_name) : '') + '</p>'
+            + '<p class="ps-ai-date">' + esc(b.date_label || '') + (b.company_name ? ' · ' + esc(b.company_name) : '') + '</p></div>'
+            + '<span class="ps-ai-badge' + (total > 0 ? ' is-alert' : '') + '">' + (total > 0 ? total + ' item' + (total === 1 ? '' : 's') + ' need attention' : 'All clear') + '</span>'
+            + '</div>'
+            + (cards.length ? '<div class="ps-ai-grid">' + cards.join('') + '</div>' : '')
+            + (n.facts || n.analysis ? '<div class="ps-ai-note">'
+                + (n.facts ? '<p>' + esc(n.facts) + '</p>' : '')
+                + (n.analysis ? '<p class="ps-ai-analysis">' + esc(n.analysis) + '</p>' : '')
+                + '</div>' : '');
+    }
+    function load() {
+        body.innerHTML = '<div class="ps-pref-loading"><i class="fas fa-circle-notch fa-spin"></i> Preparing your briefing…</div>';
+        fetch(api + (api.indexOf('?') === -1 ? '?' : '&') + 'action=briefing', { credentials: 'same-origin', headers: { Accept: 'application/json' } })
+            .then(function (res) { return res.json(); })
+            .then(function (data) {
+                if (!data || !data.ok || !data.briefing) throw new Error((data && data.error) || 'No briefing');
+                render(data.briefing);
+            })
+            .catch(function () {
+                body.innerHTML = '<p class="ps-pref-empty">I could not load the AI Agent briefing right now. Try Refresh in a moment.</p>';
+            });
+    }
+    psOnTab('ps-pref-ai', load);
+    var refresh = document.getElementById('psAiRefresh');
+    if (refresh) refresh.addEventListener('click', load);
+})();
+
+(function () {
+    var grid = document.getElementById('psFontGrid');
+    if (!grid) return;
+    var note = document.getElementById('psFontNote');
+    var original = grid.getAttribute('data-selected') || '';
+    var busy = false;
+
+    try {
+        var saved = sessionStorage.getItem('psFontSaved');
+        if (saved) {
+            sessionStorage.removeItem('psFontSaved');
+            if (typeof showToast === 'function') showToast(saved, 'success');
+        }
+    } catch (err) {}
+
+    psOnTab('ps-pref-personalization', function () {
+        grid.querySelectorAll('[data-google],[data-local]').forEach(function (btn) {
+            ['data-local', 'data-google'].forEach(function (attr) {
+                var href = btn.getAttribute(attr);
+                if (!href || document.querySelector('link[href="' + href + '"]')) return;
+                var link = document.createElement('link');
+                link.rel = 'stylesheet';
+                link.href = href;
+                document.head.appendChild(link);
+            });
+        });
+    });
+
+    grid.addEventListener('click', function (e) {
+        var btn = e.target.closest('.ps-font-card');
+        if (!btn || busy) return;
+        var chosen = btn.getAttribute('data-font') || '';
+        if (chosen === original) return;
+        var cards = grid.querySelectorAll('.ps-font-card');
+        var previous = grid.querySelector('.ps-font-card.is-selected');
+        var label = (btn.querySelector('.ps-font-sample') || btn).textContent.trim();
+        busy = true;
+        grid.style.pointerEvents = 'none';
+        cards.forEach(function (c) { c.classList.toggle('is-selected', c === btn); });
+        note.textContent = 'Saving ' + label + '…';
+        fetch(grid.getAttribute('data-api'), {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+            body: JSON.stringify({ userFont: chosen === '' ? 'company' : chosen })
+        })
+            .then(function (res) { return res.json(); })
+            .then(function (data) {
+                if (!data || !data.ok) throw new Error((data && data.error) || 'Save failed');
+                note.textContent = 'Saved. Applying ' + label + '…';
+                try { sessionStorage.setItem('psFontSaved', 'Font changed to ' + label); } catch (err) {}
+                window.location.reload();
+            })
+            .catch(function (err) {
+                busy = false;
+                grid.style.pointerEvents = '';
+                cards.forEach(function (c) { c.classList.toggle('is-selected', c === previous); });
+                note.textContent = 'Current font unchanged.';
+                var msg = err.message || 'Could not save your font. Please try again.';
+                if (typeof showToast === 'function') showToast(msg, 'error'); else alert(msg);
+            });
+    });
+})();
+
+(function () {
+    var grid = document.getElementById('psModeGrid');
+    if (!grid) return;
+    function current() { return document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light'; }
+    function sync() {
+        var mode = current();
+        grid.querySelectorAll('.ps-mode-card').forEach(function (c) { c.classList.toggle('is-selected', c.getAttribute('data-mode') === mode); });
+    }
+    grid.addEventListener('click', function (e) {
+        var btn = e.target.closest('.ps-mode-card');
+        if (!btn || btn.getAttribute('data-mode') === current()) return;
+        var toggle = document.querySelector('[data-erp-theme-toggle]');
+        if (toggle) {
+            toggle.click();
+        } else {
+            var mode = btn.getAttribute('data-mode');
+            try { localStorage.setItem('theme', mode); } catch (err) {}
+            document.documentElement.setAttribute('data-theme', mode);
+        }
+        setTimeout(sync, 50);
+    });
+    new MutationObserver(sync).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+    sync();
 })();
 
 (function () {

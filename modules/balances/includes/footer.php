@@ -80,6 +80,7 @@
         <?php endif; ?>
     </script>
 <?php
+require __DIR__ . '/toast.php';
 require __DIR__ . '/lottie-form-overlay.php';
 $balancesDarkCss = __DIR__ . '/../assets/balances-dark.css';
 $balancesDarkVer = is_file($balancesDarkCss) ? (string) filemtime($balancesDarkCss) : (string) time();

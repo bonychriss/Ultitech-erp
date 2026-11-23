@@ -514,7 +514,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             app_log('create-voucher: itemsValid=' . count($items) . ' total_amount=' . $total_amount);
         }
 
-        $voucher_no = generateVoucherNumber();
+        $creditAmount = 0.0;
+        foreach ($items as $item) {
+            if (strcasecmp(trim((string) $item['payment_type']), 'Credit') === 0) {
+                $creditAmount += (float) $item['amount'];
+            }
+            $voucherDueDate = trim((string) ($_POST['due_date'] ?? ''));
+            if ($voucherDueDate !== '' && !validOutstandingDueDate($voucherDueDate)) {
+                throw new Exception('Please enter a valid due date.');
+            }
+            if (!$isDraft && $creditAmount > 0 && $voucherDueDate === '') {
+                throw new Exception('Please enter a due date for the credit payment.');
+            }
+            ensurePaymentVoucherDueDateColumn($pdo);
+        }
+        $createPayable = !$isDraft
+            && $creditAmount > 0
+            && strtoupper(trim((string) $currency)) === 'TZS';
+        if ($createPayable && function_exists('ensureOutstandingInvoicesSchema')) {
+            ensureOutstandingInvoicesSchema();
+        }
+
+        // Stock purchase PVs use PUR-YYYY-M-N; general PVs keep PV/... sequence.
+        $voucher_no = ($voucher_purpose === 'stock_purchase' && function_exists('generateStockPurchaseVoucherNumber'))
+            ? generateStockPurchaseVoucherNumber()
+            : generateVoucherNumber();
 
         // Start transaction
         $pdo->beginTransaction();
@@ -551,6 +575,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 : (defined('STATUS_CONFIRMING') ? STATUS_CONFIRMING : 'confirming'),
             $is_restricted
         ];
+        $insertCols[] = 'due_date';
+        $insertVals[] = $creditAmount > 0 && $voucherDueDate !== '' ? $voucherDueDate : null;
 
         if (in_array('checked_by', $pvCols, true)) {
             $insertCols[] = 'checked_by';
@@ -722,6 +748,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     app_log('create-voucher: item inserted payment_type=' . $item['payment_type'] . ' amount=' . $item['amount']);
                 }
             }
+        }
+
+        if ($createPayable) {
+            $payableInsert = $pdo->prepare("INSERT INTO erp_outstanding_invoices
+                    (type, invoice_date, entity_name, invoice_number, narration, amount, source_payment_voucher_id, due_date)
+                    VALUES ('payable', ?, ?, ?, ?, ?, ?, ?)
+                    ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID(id)");
+            $payableInsert->execute([
+                $date_created,
+                $payee_name,
+                $voucher_no,
+                $description,
+                $creditAmount,
+                (int) $voucher_id,
+                $voucherDueDate,
+            ]);
         }
 
         // Handle file uploads for supporting documents

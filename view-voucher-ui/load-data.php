@@ -871,12 +871,12 @@ function vv_load_view_payload(PDO $pdo, int $voucherId, array $opts = []): array
     try {
         if (function_exists('balancesUseCompanyScope') && balancesUseCompanyScope($pdo)) {
             if ($companyId > 0) {
-                $accountsStmt = $pdo->prepare("SELECT id, name, type, current_balance, currency FROM financial_accounts WHERE status = 'active' AND company_id = ? ORDER BY name ASC");
+                $accountsStmt = $pdo->prepare("SELECT * FROM financial_accounts WHERE status = 'active' AND company_id = ? ORDER BY name ASC");
                 $accountsStmt->execute([$companyId]);
                 $finAccounts = $accountsStmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
             }
         } else {
-            $finAccounts = $pdo->query("SELECT id, name, type, current_balance, currency FROM financial_accounts WHERE status = 'active' ORDER BY name ASC")->fetchAll(PDO::FETCH_ASSOC) ?: [];
+            $finAccounts = $pdo->query("SELECT * FROM financial_accounts WHERE status = 'active' ORDER BY name ASC")->fetchAll(PDO::FETCH_ASSOC) ?: [];
         }
         $finAccounts = array_values(array_filter($finAccounts, static function (array $account): bool {
             $bucket = function_exists('balancesAccountLiquidityBucket')
@@ -885,6 +885,31 @@ function vv_load_view_payload(PDO $pdo, int $voucherId, array $opts = []): array
 
             return in_array($bucket, ['cash', 'bank', 'mobile'], true);
         }));
+        if (!function_exists('balances_account_logo_url')) {
+            $balancesFunctions = dirname(__DIR__) . '/modules/balances/functions.php';
+            if (is_file($balancesFunctions)) {
+                require_once $balancesFunctions;
+            }
+        }
+        $liveBalances = [];
+        if (function_exists('balancesFetchAccountsWithLiveBalance')) {
+            foreach (balancesFetchAccountsWithLiveBalance($pdo, true) as $liveRow) {
+                $liveBalances[(int) $liveRow['id']] = (float) $liveRow['live_balance'];
+            }
+        }
+        foreach ($finAccounts as &$finAccount) {
+            if (isset($liveBalances[(int) $finAccount['id']])) {
+                $finAccount['current_balance'] = $liveBalances[(int) $finAccount['id']];
+            }
+            try {
+                $finAccount['image_url'] = function_exists('balances_account_logo_url')
+                    ? balances_account_logo_url($finAccount, $pdo)
+                    : '';
+            } catch (Throwable $e) {
+                $finAccount['image_url'] = '';
+            }
+        }
+        unset($finAccount);
     } catch (Throwable $e) { /* ignore */ }
 
     $voucherLogoUrl = function_exists('getCompanyLogoUrl') ? getCompanyLogoUrl() : '';
@@ -1070,6 +1095,9 @@ function vv_load_view_payload(PDO $pdo, int $voucherId, array $opts = []): array
             'permissions' => [
                 'isAdmin' => isAdmin(),
                 'isFinance' => isFinance(),
+                'canSendToPayables' => !$isPaid && !$isPosted && empty($voucher['is_draft'])
+                    && !$isDraftDerived && !in_array($statusLower, ['rejected', 'draft', 'paid', 'posted', 'cancelled', 'canceled', 'void'], true)
+                    && in_array(strtoupper(trim((string) ($voucher['currency'] ?? 'TZS'))), ['', 'TZS'], true),
                 'canMarkPaid' => $canMarkPaid,
                 'canPost' => $canPost,
                 'canEdit' => $vvShowEdit,
@@ -1080,6 +1108,8 @@ function vv_load_view_payload(PDO $pdo, int $voucherId, array $opts = []): array
                 'blockFinalApproveOnConfirming' => $statusLower === 'confirming',
             ],
             'actions' => [
+                'sendToPayablesUrl' => app_url('/view-voucher-ui/api/voucher/send-to-payables.php'),
+                'csrfToken' => csrf_token(),
                 'backUrl' => $backLink,
                 'backLabel' => $fromPurchases ? 'Back to Purchases' : 'Back',
                 'fromPurchases' => $fromPurchases,
@@ -1109,6 +1139,7 @@ function vv_load_view_payload(PDO $pdo, int $voucherId, array $opts = []): array
                     'type' => (string) ($acc['type'] ?? ''),
                     'currency' => (string) ($acc['currency'] ?? 'TZS'),
                     'current_balance' => (float) ($acc['current_balance'] ?? 0),
+                    'image_url' => (string) ($acc['image_url'] ?? ''),
                 ];
             }, $finAccounts),
             'userPendingApprovals' => array_map(static function ($ua) {

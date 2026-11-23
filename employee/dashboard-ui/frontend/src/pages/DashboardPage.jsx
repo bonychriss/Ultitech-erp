@@ -26,6 +26,7 @@ import ExportMenu from '../components/ExportMenu.jsx'
 import ExportRangeModal from '../components/ExportRangeModal.jsx'
 import MarkPaidModal from '../components/MarkPaidModal.jsx'
 import { exportVouchersExcel, exportVouchersPdf, filterVouchersByDateRange } from '../utils/exportVouchers.js'
+import { showPayablesNotification } from '../../../../../view-voucher-ui/frontend/src/payables-notification.js'
 
 function WhatsAppIcon({ size = 16 }) {
   return (
@@ -50,6 +51,7 @@ const URLS = {
   approve: CFG.approveUrl || 'dashboard.php',
   markPaid: CFG.markPaidUrl || 'dashboard.php',
   stockPay: CFG.stockPayUrl || '',
+  voucherMarkPaid: CFG.voucherMarkPaidUrl || '',
   returnUrl: CFG.returnUrl || '',
   reports: CFG.reportsUrl || 'reports.php',
   userManual: CFG.userManualUrl || '../employee/user-manual.php',
@@ -63,6 +65,7 @@ const allVouchersHref = MODULE
 // Share column is opt-in (admin dashboard table has star + ⋮ only).
 const SHARE_ENABLED = CFG.share === true
 const DELETE_MODE = CFG.deleteMode || 'simple' // 'simple' | 'action'
+const PAYMENT_TYPE_OPTIONS = ['Bank Transfer', 'Cash Payment', 'Cheque', 'Mobile Payment', 'Credit']
 
 function num(v) {
   return Number(v || 0)
@@ -118,7 +121,7 @@ function rememberListAndView(id, listState) {
 
 function readListStateFromUrl() {
   if (typeof window === 'undefined') {
-    return { search: '', selectedId: 0, filters: { status: '', from_date: '', to_date: '', payee: '' } }
+    return { search: '', selectedId: 0, filters: emptyListFilters() }
   }
   const p = new URLSearchParams(window.location.search)
   return {
@@ -129,6 +132,9 @@ function readListStateFromUrl() {
       from_date: p.get('from_date') || '',
       to_date: p.get('to_date') || '',
       payee: p.get('payee') || '',
+      purpose: p.get('purpose') || '',
+      payment_type: p.get('payment_type') || '',
+      budget_type: p.get('budget_type') || '',
     },
   }
 }
@@ -146,6 +152,9 @@ function writeListStateToUrl(search, filters, selectedId) {
   setOrDel('from_date', filters && filters.from_date)
   setOrDel('to_date', filters && filters.to_date)
   setOrDel('payee', filters && filters.payee)
+  setOrDel('purpose', filters && filters.purpose)
+  setOrDel('payment_type', filters && filters.payment_type)
+  setOrDel('budget_type', filters && filters.budget_type)
   setOrDel('sel', selectedId ? String(selectedId) : '')
   const next = url.pathname + url.search + url.hash
   const cur = window.location.pathname + window.location.search + window.location.hash
@@ -182,6 +191,25 @@ function quickApprove(id, action) {
   submitForm(URLS.approve, { voucher_id: id, action })
 }
 
+async function sendToPayables(id, url, token) {
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { Accept: 'application/json' },
+      body: new URLSearchParams({ voucher_id: String(id), csrf_token: token }),
+    })
+    if (!response.headers.get('content-type')?.includes('application/json')) {
+      throw new Error('The server returned an unexpected response. Refresh the page and try again.')
+    }
+    const result = await response.json()
+    if (!response.ok || !result.ok || !result.message) throw new Error(result.error || result.message || 'Could not send this voucher to Payables.')
+    showPayablesNotification(result.message)
+  } catch (error) {
+    window.alert(error instanceof Error ? error.message : 'Could not send this voucher to Payables.')
+  }
+}
+
 function RowActionsMenu({
   voucher: r,
   open,
@@ -190,6 +218,8 @@ function RowActionsMenu({
   togglingRef,
   onToggleReference,
   onMarkPaid,
+  payablesUrl,
+  csrfToken,
 }) {
   const btnRef = useRef(null)
   const menuRef = useRef(null)
@@ -299,6 +329,16 @@ function RowActionsMenu({
       href: `${URLS.edit}?id=${r.id}${APPEND_MODULE}`,
     })
   }
+  if (payablesUrl && csrfToken && !r.is_paid && !r.is_posted
+      && !['draft', 'rejected', 'paid', 'posted', 'cancelled', 'canceled', 'void'].includes(String(r.display_status_key || r.status || '').toLowerCase())
+      && ['', 'TZS'].includes(String(r.currency || '').trim().toUpperCase())) {
+    items.push({
+      key: 'send-payables',
+      label: 'Send to Payables',
+      icon: <FileText size={14} aria-hidden="true" />,
+      onClick: () => { sendToPayables(r.id, payablesUrl, csrfToken); onClose() },
+    })
+  }
   if (SHARE_ENABLED && r.can_view !== false) {
     items.push({
       key: 'share',
@@ -381,148 +421,20 @@ function RowActionsMenu({
   )
 }
 
-const STOCK_PAYMENT_METHODS = ['Bank Transfer', 'RTGS / SWIFT', 'Cash', 'Mobile Money', 'Cheque']
-
-function todayIso() {
-  const d = new Date()
-  const pad = (n) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
-}
-
-function returnToPath() {
-  const raw = URLS.returnUrl || `${window.location.pathname}${window.location.search}`
-  try {
-    const u = new URL(raw, window.location.href)
-    return `${u.pathname}${u.search}`
-  } catch {
-    return `${window.location.pathname}${window.location.search}`
-  }
-}
-
-function StockPurchasePayModal({ voucher, accounts, onClose }) {
-  const total = num(voucher.total_amount)
-  const paidSoFar = num(voucher.paid_so_far)
-  const balanceDue = Math.max(0, Math.round((total - paidSoFar) * 100) / 100)
-  const currency = voucher.currency || 'TZS'
-  const [accountId, setAccountId] = useState('')
-  const [amount, setAmount] = useState(balanceDue ? balanceDue.toFixed(2) : '')
-
-  const matchingAccounts = (accounts || []).filter((a) => !a.currency || a.currency === currency)
-  const otherAccounts = (accounts || []).filter((a) => a.currency && a.currency !== currency)
-  const selected = (accounts || []).find((a) => String(a.id) === String(accountId))
-  const payAmount = num(amount)
-  const afterBalance = selected ? num(selected.current_balance) - payAmount : null
-  const isPartial = payAmount > 0 && payAmount < balanceDue - 0.009
-
-  const accountOption = (a) => (
-    <option key={a.id} value={a.id}>
-      {a.name} ({a.currency} {num(a.current_balance).toLocaleString('en-US', { minimumFractionDigits: 2 })})
-    </option>
-  )
-
-  return (
-    <div className="ed-modal-overlay" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="ed-modal ed-modal--wide" role="dialog" aria-modal="true" aria-label="Pay stock purchase voucher">
-        <div className="ed-modal-head">
-          <h3>Pay Stock Purchase</h3>
-          <button type="button" className="ed-modal-close" onClick={onClose} aria-label="Close">
-            <X size={18} aria-hidden="true" />
-          </button>
-        </div>
-        <div className="ed-modal-details">
-          <div><strong>Voucher:</strong> {voucher.voucher_no}</div>
-          <div><strong>Supplier:</strong> {voucher.payee_name}</div>
-          <div><strong>Voucher total:</strong> {formatAmount(currency, total)}</div>
-          {paidSoFar > 0 ? (
-            <div><strong>Already paid:</strong> {formatAmount(currency, paidSoFar)}</div>
-          ) : null}
-          <div><strong>Balance due:</strong> {formatAmount(currency, balanceDue)}</div>
-        </div>
-        <form method="POST" action={URLS.stockPay} encType="multipart/form-data" className="ed-modal-form">
-          <input type="hidden" name="voucher_id" value={voucher.id} />
-          <input type="hidden" name="return_to" value={returnToPath()} />
-          {MODULE ? <input type="hidden" name="module" value={MODULE} /> : null}
-          <label className="ed-modal-label">
-            Pay from account (Bank / Cash)
-            <select name="account_id" required value={accountId} onChange={(e) => setAccountId(e.target.value)}>
-              <option value="" disabled>Select account</option>
-              {matchingAccounts.length > 0 ? (
-                <optgroup label={`${currency} accounts`}>{matchingAccounts.map(accountOption)}</optgroup>
-              ) : null}
-              {otherAccounts.length > 0 ? (
-                <optgroup label="Other currencies">{otherAccounts.map(accountOption)}</optgroup>
-              ) : null}
-            </select>
-          </label>
-          {selected ? (
-            <div className={`ed-modal-balance${afterBalance < 0 ? ' is-negative' : ''}`}>
-              Balance after payment: {formatAmount(selected.currency, afterBalance)}
-              {selected.currency && selected.currency !== currency ? ' (account currency differs from voucher)' : ''}
-            </div>
-          ) : null}
-          <div className="ed-modal-grid">
-            <label className="ed-modal-label">
-              Amount to pay ({currency})
-              <input
-                type="number"
-                name="payment_amount"
-                required
-                min="0.01"
-                step="0.01"
-                max={balanceDue || undefined}
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-              />
-            </label>
-            <label className="ed-modal-label">
-              Payment date
-              <input type="date" name="payment_date" required defaultValue={todayIso()} />
-            </label>
-            <label className="ed-modal-label">
-              Payment method
-              <select name="payment_method" required defaultValue="Bank Transfer">
-                {STOCK_PAYMENT_METHODS.map((m) => <option key={m} value={m}>{m}</option>)}
-              </select>
-            </label>
-            <label className="ed-modal-label">
-              Reference no.
-              <input type="text" name="payment_reference_no" required placeholder="Bank / SWIFT reference" />
-            </label>
-          </div>
-          {isPartial ? (
-            <div className="ed-modal-hint">Partial payment: the voucher stays open until the balance is paid.</div>
-          ) : null}
-          <label className="ed-modal-label">
-            Notes (optional)
-            <input type="text" name="payment_notes" placeholder="e.g. first installment" />
-          </label>
-          <label className="ed-modal-label">
-            Payment proof (SWIFT / bank slip)
-            <input type="file" name="swift_file" required accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,.svg,.bmp,.doc,.docx,.xls,.xlsx" />
-          </label>
-          <div className="ed-modal-actions">
-            <button type="button" className="ed-btn ed-btn--ghost" onClick={onClose}>Cancel</button>
-            <button type="submit" className="ed-btn ed-btn--primary">Post Payment</button>
-          </div>
-        </form>
-      </div>
-    </div>
-  )
-}
-
 function AdminPayModal({ voucher, accounts, onClose }) {
   if (!voucher) return null
-  if (voucher.purpose === 'stock_purchase' && URLS.stockPay) {
-    return <StockPurchasePayModal voucher={voucher} accounts={accounts} onClose={onClose} />
-  }
+  // Stock purchase PVs go through mark-paid.php (same as the voucher page) so linked purchases are updated.
+  const stockPurchase = voucher.purpose === 'stock_purchase' && Boolean(URLS.voucherMarkPaid)
   return (
     <MarkPaidModal
       voucher={voucher}
       accounts={accounts}
-      actionUrl={URLS.markPaid}
+      actionUrl={stockPurchase ? URLS.voucherMarkPaid : URLS.markPaid}
       module={MODULE}
       formatAmount={formatAmount}
       onClose={onClose}
+      supplierLabel={voucher.purpose === 'stock_purchase'}
+      redirectEndpoint={stockPurchase}
     />
   )
 }
@@ -660,8 +572,22 @@ function matchesPayee(v, payee) {
   return q.split(/\s+/).every((term) => name.includes(term))
 }
 
+function matchesVoucherItemValue(values, selectedValue) {
+  if (!selectedValue) return true
+  const expected = String(selectedValue).trim().toLowerCase()
+  return Array.isArray(values) && values.some((value) => String(value).trim().toLowerCase() === expected)
+}
+
 function emptyListFilters() {
-  return { status: '', from_date: '', to_date: '', payee: '' }
+  return {
+    status: '',
+    from_date: '',
+    to_date: '',
+    payee: '',
+    purpose: '',
+    payment_type: '',
+    budget_type: '',
+  }
 }
 
 function normalizeListFilters(filters) {
@@ -670,6 +596,9 @@ function normalizeListFilters(filters) {
     from_date: (filters && filters.from_date) || '',
     to_date: (filters && filters.to_date) || '',
     payee: (filters && filters.payee) || '',
+    purpose: (filters && filters.purpose) || '',
+    payment_type: (filters && filters.payment_type) || '',
+    budget_type: (filters && filters.budget_type) || '',
   }
 }
 
@@ -750,12 +679,17 @@ export default function DashboardPage() {
       const width = Math.min(360, Math.max(280, window.innerWidth - 24))
       let left = rect.right - width
       left = Math.max(12, Math.min(left, window.innerWidth - width - 12))
-      const top = Math.min(rect.bottom + 8, window.innerHeight - 24)
+      const panelHeight = Math.max(240, Math.min(680, window.innerHeight - 24))
+      const belowTop = rect.bottom + 8
+      const top = belowTop + panelHeight <= window.innerHeight - 12
+        ? belowTop
+        : Math.max(12, rect.top - panelHeight - 8)
       setFilterPanelStyle({
         position: 'fixed',
         top,
         left,
         width,
+        maxHeight: panelHeight,
         zIndex: 1050,
       })
     }
@@ -788,7 +722,8 @@ export default function DashboardPage() {
   }
 
   const hasActiveFilters = Boolean(
-    aiFilters.status || aiFilters.from_date || aiFilters.to_date || String(aiFilters.payee || '').trim(),
+    aiFilters.status || aiFilters.from_date || aiFilters.to_date || String(aiFilters.payee || '').trim()
+      || aiFilters.purpose || aiFilters.payment_type || aiFilters.budget_type,
   )
 
   useEffect(() => {
@@ -947,12 +882,30 @@ export default function DashboardPage() {
   const total = num(stats.total)
 
   const allVouchers = useMemo(() => data?.recent || [], [data])
+  const paymentTypeOptions = useMemo(() => {
+    const options = new Map(PAYMENT_TYPE_OPTIONS.map((option) => [option.toLowerCase(), option]))
+    allVouchers.forEach((voucher) => {
+      const paymentTypes = Array.isArray(voucher.payment_types) ? voucher.payment_types : []
+      paymentTypes.forEach((rawType) => {
+        const option = String(rawType || '').trim()
+        const key = option.toLowerCase()
+        if (key && !options.has(key)) options.set(key, option)
+      })
+    })
+    return Array.from(options.values()).sort((a, b) => a.localeCompare(b))
+  }, [allVouchers])
+  const budgetTypeOptions = useMemo(() => Array.from(new Set(
+    allVouchers.flatMap((voucher) => Array.isArray(voucher.budget_types) ? voucher.budget_types : []),
+  )).sort((a, b) => a.localeCompare(b)), [allVouchers])
   const filteredVouchers = useMemo(
     () => allVouchers.filter(
       (v) => matchesSearch(v, searchInput)
         && matchesStatus(v, aiFilters.status)
         && matchesDate(v, aiFilters.from_date, aiFilters.to_date)
-        && matchesPayee(v, aiFilters.payee),
+        && matchesPayee(v, aiFilters.payee)
+        && (!aiFilters.purpose || v.purpose === aiFilters.purpose)
+        && matchesVoucherItemValue(v.payment_types, aiFilters.payment_type)
+        && matchesVoucherItemValue(v.budget_types, aiFilters.budget_type),
       ),
     [allVouchers, searchInput, aiFilters],
   )
@@ -1162,7 +1115,7 @@ export default function DashboardPage() {
         <div className="pv-filters-head">
           <div>
             <h2 className="pv-filters-title">Filters</h2>
-            <p className="pv-filters-sub">Narrow the list by payee, status, and date.</p>
+            <p className="pv-filters-sub">Narrow the list by payee, status, date, and payment details.</p>
           </div>
           <button type="button" className="pv-filters-close" onClick={() => setFiltersOpen(false)} aria-label="Close filters">
             <X size={16} aria-hidden="true" />
@@ -1175,12 +1128,56 @@ export default function DashboardPage() {
               <label htmlFor="edFilterPayee">Payee name</label>
               <input
                 id="edFilterPayee"
+                className="pv-filter-payee-input"
                 type="text"
                 value={draftFilters.payee || ''}
                 placeholder="Search by payee name"
                 autoComplete="off"
                 onChange={(e) => setDraftFilters((prev) => ({ ...prev, payee: e.target.value }))}
               />
+            </div>
+          </div>
+          <div className="pv-filters-section">
+            <div className="pv-filters-section-label">Payment purpose</div>
+            <div className="pv-field">
+              <label htmlFor="edFilterPurpose">Payment purpose</label>
+              <select
+                id="edFilterPurpose"
+                value={draftFilters.purpose || ''}
+                onChange={(e) => setDraftFilters((prev) => ({ ...prev, purpose: e.target.value }))}
+              >
+                <option value="">All purposes</option>
+                <option value="general">General</option>
+                <option value="stock_purchase">Stock purchase</option>
+              </select>
+            </div>
+          </div>
+          <div className="pv-filters-section">
+            <div className="pv-filters-section-label">Payment type</div>
+            <div className="pv-field">
+              <label htmlFor="edFilterPaymentType">Payment type</label>
+              <select
+                id="edFilterPaymentType"
+                value={draftFilters.payment_type || ''}
+                onChange={(e) => setDraftFilters((prev) => ({ ...prev, payment_type: e.target.value }))}
+              >
+                <option value="">All payment types</option>
+                {paymentTypeOptions.map((option) => <option key={option} value={option}>{option}</option>)}
+              </select>
+            </div>
+          </div>
+          <div className="pv-filters-section">
+            <div className="pv-filters-section-label">Budget type</div>
+            <div className="pv-field">
+              <label htmlFor="edFilterBudgetType">Budget type</label>
+              <select
+                id="edFilterBudgetType"
+                value={draftFilters.budget_type || ''}
+                onChange={(e) => setDraftFilters((prev) => ({ ...prev, budget_type: e.target.value }))}
+              >
+                <option value="">All budget types</option>
+                {budgetTypeOptions.map((option) => <option key={option} value={option}>{option}</option>)}
+              </select>
             </div>
           </div>
           <div className="pv-filters-section">
@@ -1432,6 +1429,8 @@ export default function DashboardPage() {
                             togglingRef={togglingRef}
                             onToggleReference={handleToggleReference}
                             onMarkPaid={setPayVoucher}
+                            payablesUrl={data?.payables_url}
+                            csrfToken={data?.csrf_token}
                           />
                         ) : null}
                       </td>

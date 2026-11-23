@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client';
 import App from './App.jsx';
 import './index.css';
 import '../../../modules/expenses/frontend/src/expenses-desk.css';
+import '../../../modules/expenses/frontend/src/expenses-dark.css';
 import './customer-statement.css';
 import ErrorBoundary from './ErrorBoundary.jsx';
 

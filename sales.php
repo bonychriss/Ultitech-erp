@@ -82,6 +82,7 @@ $salesDeskEntries = [
 
 /** @var array<string,string> $salesDeskApiFiles */
 $salesDeskApiFiles = [
+    'statistics' => __DIR__ . '/modules/sales/dashboard/api/statistics.php',
     'dashboard' => __DIR__ . '/modules/sales/dashboard/api/init.php',
     'init' => __DIR__ . '/modules/sales/dashboard/api/init.php',
     'my-sales' => __DIR__ . '/modules/sales/my-sales/api/init.php',

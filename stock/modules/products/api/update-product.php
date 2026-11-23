@@ -146,46 +146,17 @@ if ($isUltimateStockSimple) {
 $isTruckUpdate = !$isUltimateStockSimple && ($item_type === 'vehicle');
 
 if ($isTruckUpdate) {
+    stock_products_update_ensure_column($pdo, 'use_description_on_documents', 'TINYINT(1) NOT NULL DEFAULT 1');
+    if (!stock_products_update_has_column($pdo, 'use_description_on_documents')) {
+        http_response_code(500);
+        echo json_encode(['ok' => false, 'error' => 'Could not save the truck quote and invoice description setting.']);
+        exit;
+    }
     stock_products_update_ensure_column($pdo, 'drive_configuration', 'VARCHAR(50) NULL');
     stock_products_update_ensure_column($pdo, 'fuel_type', 'VARCHAR(40) NULL');
     stock_products_update_ensure_column($pdo, 'cab_details', 'TEXT NULL');
     stock_products_update_ensure_column($pdo, 'tire_model', 'VARCHAR(100) NULL');
     stock_products_update_ensure_column($pdo, 'curb_weight_kg', 'INT NULL');
-    if ($model_number === '') {
-        http_response_code(422);
-        echo json_encode(['ok' => false, 'error' => 'Model No. is required.']);
-        exit;
-    }
-    if ($brand === '') {
-        http_response_code(422);
-        echo json_encode(['ok' => false, 'error' => 'Make is required.']);
-        exit;
-    }
-    if ($truck_type === '') {
-        http_response_code(422);
-        echo json_encode(['ok' => false, 'error' => 'Truck type is required.']);
-        exit;
-    }
-    if ($cab_details === '') {
-        http_response_code(422);
-        echo json_encode(['ok' => false, 'error' => 'Cabin is required.']);
-        exit;
-    }
-    if ($engine_model === '') {
-        http_response_code(422);
-        echo json_encode(['ok' => false, 'error' => 'Engine is required.']);
-        exit;
-    }
-    if ($transmission === '') {
-        http_response_code(422);
-        echo json_encode(['ok' => false, 'error' => 'Transmission is required.']);
-        exit;
-    }
-    if ($fuel_type === '') {
-        http_response_code(422);
-        echo json_encode(['ok' => false, 'error' => 'Fuel type is required.']);
-        exit;
-    }
     if ($name === '') {
         $name = trim($brand . ' ' . $model_number);
     }
@@ -289,6 +260,7 @@ try {
         'shelf_life_unit' => $shelf_life_unit,
         'oem_number' => ($oem_number !== '' ? $oem_number : null),
         'item_type' => $item_type,
+        'use_description_on_documents' => !empty($_POST['use_description_on_documents']) ? 1 : 0,
     ];
 
     $setParts = [];

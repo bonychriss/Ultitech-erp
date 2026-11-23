@@ -1342,7 +1342,7 @@ html[data-theme="dark"] .ed-modal-label input[type="file"] {
   cursor: pointer;
 }
 .pv-filters-close:hover { border-color: #cbd5e1; color: #334155; }
-.pv-filters-body { padding-bottom: .35rem; }
+.pv-filters-body { min-height: 0; overflow-y: auto; padding-bottom: .35rem; }
 .pv-filters-section { padding: .85rem 1rem 0; }
 .pv-filters-section + .pv-filters-section {
   margin-top: .2rem;
@@ -1380,8 +1380,20 @@ html[data-theme="dark"] .ed-modal-label input[type="file"] {
   color: #0f172a;
   font-size: .85rem;
 }
+.pv-filters-panel .pv-filter-payee-input {
+  box-sizing: border-box;
+  width: 85%;
+  height: 2.35rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 0 .7rem;
+  background: #fff;
+  color: #0f172a;
+  font-size: .85rem;
+}
 .pv-field select:focus,
-.pv-field input[type="date"]:focus {
+.pv-field input[type="date"]:focus,
+.pv-filter-payee-input:focus {
   outline: none;
   border-color: #2563eb;
 }
@@ -1404,7 +1416,8 @@ html[data-theme="dark"] .pv-filters-sub { color: #94a3b8; }
 html[data-theme="dark"] .pv-filters-close { background: #1e293b; border-color: #334155; color: #cbd5e1; }
 html[data-theme="dark"] .pv-field label { color: #94a3b8; }
 html[data-theme="dark"] .pv-filters-panel .pv-field select,
-html[data-theme="dark"] .pv-filters-panel .pv-field input[type="date"] {
+html[data-theme="dark"] .pv-filters-panel .pv-field input[type="date"],
+html[data-theme="dark"] .pv-filters-panel .pv-filter-payee-input {
   background: #0f172a;
   border-color: #334155;
   color: #e2e8f0;

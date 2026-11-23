@@ -407,7 +407,7 @@ function coverPageApprove(PDO $pdo, int $id): array
  */
 function coverPageDocumentNames(): array
 {
-    return ['Revenue', 'Expenses', 'Logs & Bank Statement'];
+    return ['Revenue', 'Expenses', 'COGS & Bank Statement'];
 }
 
 /**
@@ -441,6 +441,9 @@ function coverPageValidate(array $input): array
             $chosenName = $allowed;
             break;
         }
+    }
+    if ($chosenName === null && strcasecmp('Logs & Bank Statement', $data['document_name']) === 0) {
+        $chosenName = 'COGS & Bank Statement';
     }
     if ($chosenName === null) {
         $errors['document_name'] = 'Choose the name of the document.';

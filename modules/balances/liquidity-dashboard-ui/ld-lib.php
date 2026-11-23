@@ -296,6 +296,8 @@ function ldBuildInitPayload(PDO $pdo): array
     });
     $accountCount = count($activeAccountRows);
 
+    $liquidityTxFilter = ldLiquidityAccountFilterSql($pdo, 'account_id');
+
     $monthStart = date('Y-m-01 00:00:00');
     $monthCredits = 0.0;
     $monthDebits = 0.0;
@@ -308,7 +310,7 @@ function ldBuildInitPayload(PDO $pdo): array
                 COALESCE(SUM(CASE WHEN type = 'debit' THEN amount ELSE 0 END), 0) AS debits,
                 COUNT(*) AS tx_count
             FROM account_transactions
-            WHERE transaction_date >= ?
+            WHERE transaction_date >= ? AND {$liquidityTxFilter}
         ");
         $stmtMonth->execute([$monthStart]);
         $monthRow = $stmtMonth->fetch(PDO::FETCH_ASSOC) ?: [];
@@ -332,7 +334,7 @@ function ldBuildInitPayload(PDO $pdo): array
                    COALESCE(SUM(CASE WHEN type = 'credit' THEN amount ELSE 0 END), 0) AS credits,
                    COALESCE(SUM(CASE WHEN type = 'debit' THEN amount ELSE 0 END), 0) AS debits
             FROM account_transactions
-            WHERE transaction_date >= DATE_SUB(CURDATE(), INTERVAL 29 DAY)
+            WHERE transaction_date >= DATE_SUB(CURDATE(), INTERVAL 29 DAY) AND {$liquidityTxFilter}
             GROUP BY DATE(transaction_date)
             ORDER BY d
         ");
@@ -404,8 +406,7 @@ function ldBuildInitPayload(PDO $pdo): array
     $companyDisplay = (string) ($_SESSION['company_name'] ?? (defined('COMPANY_NAME') ? COMPANY_NAME : 'Company'));
     $moduleParam = (string) ($_GET['module'] ?? 'balances');
     $coaCreateUrl = ldDeskPublicUrl('coa_create.php') . '?' . http_build_query(['module' => $moduleParam]);
-    $canManageAccount = (function_exists('isAdmin') && isAdmin())
-        || (function_exists('isFinance') && isFinance());
+    $canManageAccount = function_exists('isAdmin') && isAdmin();
 
     $balInsights = function_exists('balances_build_insights')
         ? balances_build_insights([
@@ -605,6 +606,32 @@ function ldMapRecentTransactionRow(array $tx): array
 }
 
 /**
+ * SQL condition limiting account_transactions to cash / bank / mobile accounts,
+ * so expense and other COA categories never count as money in or out.
+ */
+function ldLiquidityAccountFilterSql(PDO $pdo, string $column): string
+{
+    $ids = [];
+    try {
+        foreach ($pdo->query('SELECT id, type FROM financial_accounts')->fetchAll(PDO::FETCH_ASSOC) ?: [] as $row) {
+            $bucket = function_exists('balancesAccountLiquidityBucket')
+                ? balancesAccountLiquidityBucket((string) ($row['type'] ?? ''))
+                : strtolower(trim((string) ($row['type'] ?? '')));
+            $isLiquid = function_exists('balancesIsLiquidityBucket')
+                ? balancesIsLiquidityBucket($bucket)
+                : in_array($bucket, ['cash', 'bank', 'mobile'], true);
+            if ($isLiquid) {
+                $ids[] = (int) $row['id'];
+            }
+        }
+    } catch (Throwable $e) {
+        error_log('balances liquidity-dashboard account filter: ' . $e->getMessage());
+    }
+
+    return $ids === [] ? '1 = 0' : $column . ' IN (' . implode(',', $ids) . ')';
+}
+
+/**
  * Paginated recent transactions for the liquidity dashboard card.
  *
  * @return array{transactions: list<array<string, mixed>>, page: int, perPage: int, total: int, totalPages: int}
@@ -617,7 +644,8 @@ function ldBuildRecentTransactionsPayload(PDO $pdo, int $page = 1, int $perPage 
     $transactions = [];
 
     try {
-        $total = (int) $pdo->query('SELECT COUNT(*) FROM account_transactions')->fetchColumn();
+        $liquidityTxFilter = ldLiquidityAccountFilterSql($pdo, 't.account_id');
+        $total = (int) $pdo->query('SELECT COUNT(*) FROM account_transactions t WHERE ' . $liquidityTxFilter)->fetchColumn();
         $totalPages = max(1, (int) ceil($total / $perPage));
         if ($page > $totalPages) {
             $page = $totalPages;
@@ -639,6 +667,7 @@ function ldBuildRecentTransactionsPayload(PDO $pdo, int $page = 1, int $perPage 
             FROM account_transactions t
             LEFT JOIN financial_accounts a ON a.id = t.account_id
             LEFT JOIN users u ON u.id = t.created_by
+            WHERE {$liquidityTxFilter}
             ORDER BY t.transaction_date DESC, t.id DESC
             LIMIT :limit OFFSET :offset
         ");

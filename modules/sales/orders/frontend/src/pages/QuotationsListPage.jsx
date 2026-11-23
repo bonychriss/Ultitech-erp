@@ -806,6 +806,76 @@ export default function QuotationsListPage() {
 
   const pdfModalOpen = pdfState !== 'idle';
 
+  function renderQuotationActions(q) {
+    const canInvoiceRow = orderCanDirectInvoice(q.status) && !rowHasInvoice(q);
+    const canDeleteRow = quotationStatusIsDeletable(q.status) && !rowHasInvoice(q);
+
+    return (
+      <div className="qt-actions-menu" onClick={(event) => event.stopPropagation()}>
+        <button
+          type="button"
+          className="qt-actions-btn"
+          aria-label={`Actions for ${q.order_number || `quotation ${q.id}`}`}
+          aria-expanded={openMenuId === q.id}
+          onClick={() => setOpenMenuId((id) => (id === q.id ? null : q.id))}
+        >
+          <EllipsisVertical size={18} aria-hidden="true" />
+        </button>
+        {openMenuId === q.id ? (
+          <div className="qt-actions-dropdown">
+            <a href={buildUrl(urls.view, q.id)} onClick={() => { setOpenMenuId(null); markOpened(q.id); }}>
+              <Eye size={16} className="qt-action-icon qt-action-icon--view" aria-hidden="true" /> View
+            </a>
+            <a
+              href={buildDownloadUrl(urls, q.id)}
+              onClick={(event) => handleDownloadClick(event, q)}
+            >
+              <Download size={16} className="qt-action-icon qt-action-icon--download" aria-hidden="true" /> Download
+            </a>
+            {canInvoiceRow ? (
+              <a
+                href={buildInvoiceCreateHref(urls, q.id)}
+                onClick={(event) => {
+                  setOpenMenuId(null);
+                  handleInvoiceLinkClick(
+                    event,
+                    buildInvoiceCreateHref(urls, q.id),
+                    { ...invoiceTransformOptions(q), module: init?.module || 'sales' },
+                  );
+                }}
+              >
+                <Receipt size={16} className="qt-action-icon qt-action-icon--invoice" aria-hidden="true" /> Invoice
+              </a>
+            ) : null}
+            <button
+              type="button"
+              className="qt-actions-delete"
+              onClick={() => {
+                setOpenMenuId(null);
+                if (!canDeleteRow) {
+                  const message = 'Only a draft, quotation, or cancelled quotation with no invoice can be deleted.';
+                  if (typeof window.Swal !== 'undefined') {
+                    window.Swal.fire({
+                      icon: 'info',
+                      title: 'This quotation cannot be deleted',
+                      text: message,
+                    });
+                  } else {
+                    window.alert(message);
+                  }
+                  return;
+                }
+                handleDeleteIds([q.id]);
+              }}
+            >
+              <Trash2 size={16} aria-hidden="true" /> Delete
+            </button>
+          </div>
+        ) : null}
+      </div>
+    );
+  }
+
   return (
     <div className="exp-desk-page">
       <OrderDownloadModal
@@ -933,6 +1003,17 @@ export default function QuotationsListPage() {
           <span className="prod-desk-results-count">
             {filteredQuotations.length} {filteredQuotations.length === 1 ? 'result' : 'results'}
           </span>
+          {filteredQuotations.length > 0 && (
+            <label className="qt-mobile-select-all">
+              <input
+                type="checkbox"
+                checked={selectedIds.size === filteredQuotations.length}
+                onChange={toggleSelectAll}
+                aria-label="Select all quotations"
+              />
+              Select all
+            </label>
+          )}
         </div>
 
         {filteredQuotations.length === 0 ? (
@@ -942,8 +1023,74 @@ export default function QuotationsListPage() {
             <p className="prod-desk-empty-sub">Try adjusting your search or filters.</p>
           </div>
         ) : (
-          <div className="prod-desk-table-wrap">
-            <table className="prod-desk-table">
+          <>
+            <div className="qt-mobile-cards">
+              {filteredQuotations.map((q) => {
+                const isSelected = selectedIds.has(q.id);
+                return (
+                  <article
+                    key={q.id}
+                    className={[
+                      'qt-mobile-card',
+                      isSelected ? 'is-selected' : '',
+                      openedId === Number(q.id) ? 'is-glow' : '',
+                    ].filter(Boolean).join(' ')}
+                    data-quotation-id={q.id}
+                  >
+                    <div className="qt-mobile-card-main">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => toggleSelection(q.id)}
+                        aria-label={`Select ${q.order_number || q.id}`}
+                      />
+                      <div className="qt-mobile-card-content">
+                        <div className="qt-mobile-card-heading">
+                          <a
+                            href={buildUrl(urls.view, q.id)}
+                            className="qt-mobile-card-reference"
+                            onClick={() => markOpened(q.id)}
+                          >
+                            {q.order_number || `Quotation #${q.id}`}
+                          </a>
+                          <StatusPill status={q.status} />
+                        </div>
+                        <div
+                          className="qt-mobile-card-customer"
+                          title={q.company_name || ''}
+                          style={{ textTransform: isRoadmaster ? 'uppercase' : 'none' }}
+                        >
+                          {q.company_name || '-'}
+                        </div>
+                        <div className="qt-mobile-card-details">
+                          <span>{formatDateTime(q.created_at)}</span>
+                          <span className="qt-mobile-card-salesperson">
+                            <span className="qt-avatar qt-avatar--sm" style={avatarStyle(q.salesperson)}>
+                              {initials(q.salesperson)}
+                            </span>
+                            <span className="qt-salesperson-name" title={q.salesperson || ''}>
+                              {q.salesperson || '-'}
+                            </span>
+                          </span>
+                          {supportsOrderTypeSplit ? <TypeBadge type={q.order_type} /> : null}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="qt-mobile-card-footer">
+                      <div className="qt-mobile-card-amount">
+                        <span>Total</span>
+                        <strong>
+                          {q.currency || defaultCurrency} {formatCurrency(q.total_amount)}
+                        </strong>
+                      </div>
+                      {renderQuotationActions(q)}
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+            <div className="prod-desk-table-wrap">
+              <table className="prod-desk-table">
               <thead>
                 <tr>
                   <th style={{ width: 40 }}>
@@ -966,8 +1113,6 @@ export default function QuotationsListPage() {
               <tbody>
                 {filteredQuotations.map((q) => {
                   const isSelected = selectedIds.has(q.id);
-                  const canInvoiceRow = orderCanDirectInvoice(q.status) && !rowHasInvoice(q);
-                  const canDeleteRow = quotationStatusIsDeletable(q.status) && !rowHasInvoice(q);
                   return (
                     <tr
                       key={q.id}
@@ -1051,72 +1196,7 @@ export default function QuotationsListPage() {
                         </div>
                       </td>
                       <td className="qt-col-actions" onClick={(e) => e.stopPropagation()} data-qt-actions="1">
-                        <div className="qt-actions-menu">
-                          <button
-                            type="button"
-                            className="qt-actions-btn"
-                            aria-label="Actions"
-                            aria-expanded={openMenuId === q.id}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setOpenMenuId((id) => (id === q.id ? null : q.id));
-                            }}
-                          >
-                            <EllipsisVertical size={18} aria-hidden="true" />
-                          </button>
-                          {openMenuId === q.id ? (
-                            <div className="qt-actions-dropdown">
-                              <a href={buildUrl(urls.view, q.id)} onClick={() => { setOpenMenuId(null); markOpened(q.id); }}>
-                                <Eye size={16} className="qt-action-icon qt-action-icon--view" aria-hidden="true" /> View
-                              </a>
-                              <a
-                                href={buildDownloadUrl(urls, q.id)}
-                                onClick={(e) => handleDownloadClick(e, q)}
-                              >
-                                <Download size={16} className="qt-action-icon qt-action-icon--download" aria-hidden="true" /> Download
-                              </a>
-                              {canInvoiceRow ? (
-                                <a
-                                  href={buildInvoiceCreateHref(urls, q.id)}
-                                  onClick={(e) => {
-                                    setOpenMenuId(null);
-                                    handleInvoiceLinkClick(
-                                      e,
-                                      buildInvoiceCreateHref(urls, q.id),
-                                      { ...invoiceTransformOptions(q), module: init?.module || 'sales' },
-                                    );
-                                  }}
-                                >
-                                  <Receipt size={16} className="qt-action-icon qt-action-icon--invoice" aria-hidden="true" /> Invoice
-                                </a>
-                              ) : null}
-                              <button
-                                type="button"
-                                className="qt-actions-delete"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setOpenMenuId(null);
-                                  if (!canDeleteRow) {
-                                    const message = 'Only a draft, quotation, or cancelled quotation with no invoice can be deleted.';
-                                    if (typeof window.Swal !== 'undefined') {
-                                      window.Swal.fire({
-                                        icon: 'info',
-                                        title: 'This quotation cannot be deleted',
-                                        text: message,
-                                      });
-                                    } else {
-                                      window.alert(message);
-                                    }
-                                    return;
-                                  }
-                                  handleDeleteIds([q.id]);
-                                }}
-                              >
-                                <Trash2 size={16} aria-hidden="true" /> Delete
-                              </button>
-                            </div>
-                          ) : null}
-                        </div>
+                        {renderQuotationActions(q)}
                       </td>
                     </tr>
                   );
@@ -1124,6 +1204,7 @@ export default function QuotationsListPage() {
               </tbody>
             </table>
           </div>
+          </>
         )}
 
         {selectedIds.size > 0 && (

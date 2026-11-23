@@ -70,6 +70,10 @@ class AIAssistantContextBuilder
                 $ctx[] = "=== Detailed Financial & Expenses Context ===";
                 $ctx[] = $this->buildDetailedFinanceContext();
                 $ctx[] = "";
+            } elseif ($moduleLower === 'accounting') {
+                $ctx[] = "=== Accounting Settings & Guidance ===";
+                $ctx[] = $this->buildAccountingContext();
+                $ctx[] = "";
             } elseif ($moduleLower === 'payroll') {
                 $ctx[] = "=== Detailed Payroll Context ===";
                 $ctx[] = $this->buildDetailedPayrollContext();
@@ -420,6 +424,33 @@ class AIAssistantContextBuilder
         } catch (Throwable $e) {
             return "Error compiling finance context: " . $e->getMessage();
         }
+    }
+
+    public function buildAccountingContext(): string
+    {
+        $lines = [
+            "The user is on the Accounting Settings page. Answer accounting questions in plain, simple language for non-accountants.",
+            "Settings: GL Mapping picks the ledger account for each posting role (sales, receivable, VAT, COGS, inventory, receipts, payables, system accounts, retained earnings).",
+            "Periods & tax: Financial year start month, Year-End Close (moves profit/loss into Retained Earnings; undo by reversing the closing entry in the Journal), Books closed through (lock date; cannot be reopened; entries dated on or before it move to the first open day), base currency, exchange rates, VAT registration and prices include VAT.",
+            "Recommended routine: check records, lock each month; at year end close the year first, then lock the whole year. Changes in Periods & tax need Save changes; Year-End Close happens immediately.",
+        ];
+        try {
+            $glCore = __DIR__ . '/gl/gl_core.php';
+            if (is_file($glCore)) {
+                require_once $glCore;
+            }
+            if (function_exists('gl_fiscal_year_start_month')) {
+                $m = gl_fiscal_year_start_month($this->pdo);
+                [$fs, $fe] = gl_fiscal_year_bounds($this->pdo);
+                $lines[] = "Current financial year starts in month {$m}; the current year runs {$fs} to {$fe}.";
+                $lock = gl_locked_through($this->pdo);
+                $lines[] = $lock ? "Books are closed through {$lock}." : "No period is locked yet.";
+                $lines[] = "Base currency: " . gl_base_currency($this->pdo) . ".";
+            }
+        } catch (Throwable $e) {
+            // Settings are optional context; answer from the general guidance.
+        }
+        return implode("\n", $lines);
     }
 
     public function buildDetailedPayrollContext(): string

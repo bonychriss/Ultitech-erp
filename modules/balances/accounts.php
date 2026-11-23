@@ -23,21 +23,21 @@ if (function_exists('getRequestedCompanySlug') && function_exists('applyWinningC
     }
 }
 
-try {
-    if (function_exists('coa_ensure_parent_id_column')) {
-        coa_ensure_parent_id_column($pdo);
+// Each step runs on its own so one tenant-specific failure does not skip the rest.
+foreach ([
+    'coa_ensure_parent_id_column',
+    'balances_ensure_default_accounts',
+    'coa_backfill_sub_account_company_ids',
+    'balances_ensure_system_locked_accounts',
+] as $seedStep) {
+    if (!function_exists($seedStep)) {
+        continue;
     }
-    if (function_exists('balances_ensure_default_accounts')) {
-        balances_ensure_default_accounts($pdo);
+    try {
+        $seedStep($pdo);
+    } catch (Throwable $e) {
+        error_log('accounts.php schema seed (' . $seedStep . '): ' . $e->getMessage());
     }
-    if (function_exists('coa_backfill_sub_account_company_ids')) {
-        coa_backfill_sub_account_company_ids($pdo);
-    }
-    if (function_exists('balances_ensure_system_locked_accounts')) {
-        balances_ensure_system_locked_accounts($pdo);
-    }
-} catch (Throwable $e) {
-    error_log('accounts.php schema seed: ' . $e->getMessage());
 }
 // Legacy pruning is disabled to prevent auto-deletion of user-created sub-accounts with codes in the legacy range.
 // if (function_exists('balances_prune_legacy_default_sub_accounts')) {
@@ -137,14 +137,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!function_exists('balances_create_sub_account')) {
             $_SESSION['error'] = 'Sub-account creation is not available.';
         } else {
-            $result = balances_create_sub_account(
-                $pdo,
-                $parentId,
-                $accountName,
-                $paymentWalletType !== '' ? $paymentWalletType : null
-            );
+            $openingRaw = str_replace([',', ' '], '', (string) ($_POST['opening_balance'] ?? ''));
+            $openingDateRaw = trim((string) ($_POST['opening_date'] ?? ''));
+            $imagePath = '';
+            $imageUploaded = false;
+            if ($openingRaw !== '' && !is_numeric($openingRaw)) {
+                $result = ['success' => false, 'message' => 'Opening balance must be a number.'];
+            } else {
+                try {
+                    $imagePath = balances_store_uploaded_account_image();
+                    $imageUploaded = $imagePath !== '';
+                    if ($imagePath === '' && !empty($_POST['institution'])) {
+                        $imagePath = balances_copy_institution_logo((string) $_POST['institution'], $pdo);
+                    }
+                    $result = balances_create_sub_account(
+                        $pdo,
+                        $parentId,
+                        $accountName,
+                        $paymentWalletType !== '' ? $paymentWalletType : null,
+                        $openingRaw === '' ? 0.0 : (float) $openingRaw,
+                        $openingDateRaw !== '' ? $openingDateRaw : null,
+                        ['currency' => (string) ($_POST['currency'] ?? ''), 'account_image' => $imagePath]
+                    );
+                } catch (RuntimeException $e) {
+                    $result = ['success' => false, 'message' => $e->getMessage()];
+                }
+                if (empty($result['success']) && $imagePath !== '') {
+                    @unlink(dirname(__DIR__, 2) . '/' . $imagePath);
+                }
+            }
+            if (!empty($result['success']) && $imageUploaded) {
+                balances_save_custom_institution($pdo, $accountName, $paymentWalletType, $imagePath);
+            }
             if (!empty($result['success'])) {
                 $_SESSION['bal_lottie_success'] = (string) ($result['message'] ?? 'Sub-account created successfully.');
+                $newCurrency = strtoupper(trim((string) ($_POST['currency'] ?? '')));
+                if (is_file(dirname(__DIR__, 2) . '/includes/gl/gl_core.php')) {
+                    require_once dirname(__DIR__, 2) . '/includes/gl/gl_core.php';
+                    if ($newCurrency !== '' && $newCurrency !== gl_base_currency($pdo) && gl_exchange_rate($pdo, $newCurrency, date('Y-m-d')) === null) {
+                        $_SESSION['bal_lottie_success'] .= ' Add a ' . $newCurrency . ' exchange rate (Accounting > Exchange Rates) so this account reaches the reports.';
+                    }
+                }
             } else {
                 $_SESSION['error'] = (string) ($result['message'] ?? 'Could not create sub-account.');
             }
@@ -247,7 +280,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             if ($action === 'deactivate') {
                 $pdo->prepare("UPDATE financial_accounts SET status='inactive' WHERE id=?")->execute([$id]);
-                $_SESSION['bal_lottie_success'] = 'Account removed from the list. History is kept and you can restore it later if needed.';
+                $_SESSION['bal_toast'] = 'Account removed from the list. History is kept and you can restore it later if needed.';
             } else {
                 $accStmt = $pdo->prepare('SELECT name FROM financial_accounts WHERE id = ? LIMIT 1');
                 $accStmt->execute([$id]);
@@ -266,7 +299,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $pdo->prepare('UPDATE financial_accounts SET parent_id = NULL WHERE parent_id = ?')->execute([$id]);
                 $pdo->prepare('DELETE FROM account_transactions WHERE account_id=?')->execute([$id]);
                 $pdo->prepare('DELETE FROM financial_accounts WHERE id=?')->execute([$id]);
-                $_SESSION['bal_lottie_success'] = 'Account deleted permanently.';
+                $_SESSION['bal_toast'] = 'Account deleted permanently.';
+                balancesScheduleLedgerSync($pdo);
             }
 
             if ($selectedAfter === $id) {
@@ -321,6 +355,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $skipped++;
                         continue;
                     }
+                    [$rowCode] = coa_parse_account_name_parts((string) ($row['name'] ?? ''));
+                    if (function_exists('coa_account_is_required_system_parent')
+                        && coa_account_is_required_system_parent([
+                            'code' => $rowCode,
+                            'name' => (string) ($row['name'] ?? ''),
+                            'is_system' => 0,
+                        ])
+                    ) {
+                        $skipped++;
+                        continue;
+                    }
 
                     if ($deleteMode === 'deactivate') {
                         $pdo->prepare("UPDATE financial_accounts SET status='inactive' WHERE id=?")->execute([$id]);
@@ -343,11 +388,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 if ($deleted > 0) {
                     if ($deleteMode === 'delete_permanent') {
-                        $_SESSION['bal_lottie_success'] = $deleted === 1
+                        balancesScheduleLedgerSync($pdo);
+                        $_SESSION['bal_toast'] = $deleted === 1
                             ? 'Sub-account deleted permanently.'
                             : $deleted . ' sub-accounts deleted permanently.';
                     } else {
-                        $_SESSION['bal_lottie_success'] = $deleted === 1
+                        $_SESSION['bal_toast'] = $deleted === 1
                             ? 'Sub-account removed from the list. History is kept.'
                             : $deleted . ' sub-accounts removed from the list. History is kept.';
                     }
@@ -358,7 +404,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
 
                 if ($skipped > 0 && $deleted > 0) {
-                    $_SESSION['success'] = ($deleted . ' deleted, ' . $skipped . ' skipped (system or invalid).');
+                    $_SESSION['bal_toast'] = ($deleted . ' deleted, ' . $skipped . ' skipped (system or invalid).');
                 }
             }
         }
@@ -578,12 +624,11 @@ if (is_array($selectedParent)) {
         }
     }
 }
-$selectedParentShowsPaymentType = is_array($selectedParentRaw)
-    && function_exists('balances_parent_is_payment_wallet_group')
-    && balances_parent_is_payment_wallet_group($selectedParentRaw);
-$selectedParentDefaultPaymentType = $selectedParentShowsPaymentType && function_exists('balances_infer_payment_wallet_type')
+$selectedParentPaymentMode = is_array($selectedParentRaw) ? balances_parent_payment_type_mode($selectedParentRaw) : 'none';
+$selectedParentShowsPaymentType = $selectedParentPaymentMode === 'required';
+$selectedParentDefaultPaymentType = $selectedParentShowsPaymentType
     ? balances_infer_payment_wallet_type($selectedParentRaw)
-    : 'cash';
+    : '';
 
 $accountRowsById = [];
 foreach ($accountRows as $row) {
@@ -623,9 +668,8 @@ foreach ($parentAccounts as $parentRow) {
             $parentRaw = null;
         }
     }
-    $showsPayment = is_array($parentRaw)
-        && function_exists('balances_parent_is_payment_wallet_group')
-        && balances_parent_is_payment_wallet_group($parentRaw);
+    $paymentMode = is_array($parentRaw) ? balances_parent_payment_type_mode($parentRaw) : 'none';
+    $showsPayment = $paymentMode === 'required';
     $assignRows = function_exists('balances_list_assignable_accounts')
         ? balances_list_assignable_accounts($accountRows, $parentRow, $childrenByParent)
         : [];
@@ -644,10 +688,9 @@ foreach ($parentAccounts as $parentRow) {
     $mobileParentMeta[$pid] = [
         'id' => $pid,
         'name' => (string) ($parentRow['name'] ?? ''),
-        'shows_payment_type' => $showsPayment,
-        'default_payment_type' => $showsPayment && function_exists('balances_infer_payment_wallet_type') && is_array($parentRaw)
-            ? balances_infer_payment_wallet_type($parentRaw)
-            : 'cash',
+        'payment_type_mode' => $paymentMode,
+        'currency' => strtoupper((string) ($parentRow['currency'] ?? 'TZS')),
+        'default_payment_type' => $showsPayment ? balances_infer_payment_wallet_type($parentRaw) : '',
         'assignable' => $assignOptions,
     ];
 }
@@ -711,6 +754,21 @@ $hideHeaderCompanyBranding = true;
 $employeeHeaderExtraClass = 'employee-header--balances-accounts';
 $bodyExtraClass = 'page-balances-accounts';
 
+require_once dirname(__DIR__, 2) . '/includes/sidebar_react_icons.php';
+$rayMenuIcon = static fn (string $name): string => sidebar_react_icon_svg($name, 'ray-menu-icon');
+
+$rayAccountAvatar = static function (array $row) use ($pdo): string {
+    $raw = (array) ($row['raw'] ?? []);
+    $url = balances_account_logo_url($raw, $pdo);
+    if ($url !== '') {
+        return '<span class="ray-acc-logo"><img src="' . htmlspecialchars($url, ENT_QUOTES, 'UTF-8') . '" alt="" loading="lazy"></span>';
+    }
+    $label = trim(preg_replace('/^\s*\d+\s*-\s*/', '', (string) ($row['name'] ?? '')));
+    $initial = $label !== '' ? mb_strtoupper(mb_substr($label, 0, 1)) : '?';
+
+    return '<span class="ray-acc-logo ray-acc-logo--initial" aria-hidden="true">' . htmlspecialchars($initial, ENT_QUOTES, 'UTF-8') . '</span>';
+};
+
 $rayResolveParentIcon = static function (array $parentRow): array {
     $iconKey = strtolower(trim((string) ($parentRow['name'] ?? '') . ' ' . (string) ($parentRow['type'] ?? '') . ' ' . (string) ($parentRow['type_label'] ?? '')));
     $iconTone = 'slate';
@@ -743,6 +801,19 @@ $rayResolveParentIcon = static function (array $parentRow): array {
 
     return [$iconTone, $iconClass];
 };
+
+if (($_GET['from'] ?? '') === 'accounting-settings') {
+    $_SESSION['balances_coa_from'] = 'accounting-settings';
+} elseif (!str_contains((string) ($_SERVER['HTTP_REFERER'] ?? ''), '/balances/accounts')) {
+    unset($_SESSION['balances_coa_from']);
+}
+if (($_SESSION['balances_coa_from'] ?? '') === 'accounting-settings') {
+    $erpBreadcrumbs = [
+        ['label' => 'Accounting', 'href' => app_url('/modules/accounting/index.php?module=accounting')],
+        ['label' => 'Settings', 'href' => company_url('accounting/settings?module=accounting')],
+        ['label' => 'Chart of Accounts'],
+    ];
+}
 
 include __DIR__ . '/includes/header.php';
 ?>
@@ -777,7 +848,7 @@ include __DIR__ . '/includes/header.php';
     .ray-accounts-wrap { max-width: 1400px; margin: 0 auto; padding: 1.5rem 1.75rem 2.5rem; }
     .ray-accounts-grid {
         display: grid;
-        grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+        grid-template-columns: minmax(410px, 0.75fr) minmax(0, 1.25fr);
         gap: 1.25rem;
         align-items: start;
     }
@@ -808,7 +879,7 @@ include __DIR__ . '/includes/header.php';
         padding: 1rem 1.25rem;
         border-bottom: 1px solid #f1f5f9;
     }
-    .ray-panel-title { font-size: 1.125rem; font-weight: 600; color: #111827; margin: 0; }
+    .ray-panel-title { font-size: 1rem; font-weight: 600; color: #111827; margin: 0; }
     .ray-btn-new {
         display: inline-flex;
         align-items: center;
@@ -885,7 +956,7 @@ include __DIR__ . '/includes/header.php';
         padding: 0.65rem 0.85rem;
         border: 1px solid #e5e7eb;
         border-radius: 8px;
-        font-size: 0.875rem;
+        font-size: 0.8125rem;
         color: #111827;
         background: #fff;
     }
@@ -904,8 +975,8 @@ include __DIR__ . '/includes/header.php';
     }
     .ray-table { width: 100%; border-collapse: collapse; }
     .ray-table thead th {
-        padding: 0.7rem 1rem;
-        font-size: 0.75rem;
+        padding: 0.6rem 1rem;
+        font-size: 0.6875rem;
         font-weight: 500;
         color: #6b7280;
         text-align: left;
@@ -913,31 +984,75 @@ include __DIR__ . '/includes/header.php';
         background: #fafbfc;
     }
     .ray-table tbody td {
-        padding: 0.95rem 1rem;
+        padding: 0.55rem 1rem;
         border-bottom: 1px solid #f8fafc;
-        vertical-align: top;
-        font-size: 0.875rem;
+        vertical-align: middle;
+        font-size: 0.8125rem;
         color: #111827;
     }
     .ray-table tbody tr:last-child td { border-bottom: 0; }
     .ray-parent-row { cursor: pointer; transition: background 0.15s ease; }
     .ray-parent-row:hover { background: #f8fafc; }
     .ray-parent-row.is-selected { background: #eff6ff; }
-    .ray-account-name { font-weight: 600; color: #111827; display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+    .ray-acc-logo {
+        flex: 0 0 28px; width: 28px; height: 28px; border-radius: 8px; overflow: hidden;
+        display: inline-flex; align-items: center; justify-content: center; margin-right: 4px;
+        background: #fff; box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.08);
+    }
+    .ray-acc-logo img { width: 100%; height: 100%; object-fit: contain; }
+    .ray-acc-logo--initial { background: #ede9fe; color: #6d28d9; font-size: 0.75rem; font-weight: 700; box-shadow: none; }
+    html[data-theme="dark"] body.page-balances-accounts .ray-acc-logo--initial { background: #2a3942; color: #e9edef; }
+    .ray-account-name { font-weight: 600; color: #111827; display: flex; align-items: center; flex-wrap: nowrap; white-space: nowrap; gap: 6px; }
+    .ray-panel .dropdown-item,
+    .ray-m-floating-menu a,
+    .ray-m-floating-menu button { display: flex !important; align-items: center; gap: 0.55rem; }
+    .ray-menu-icon { width: 17px; height: 17px; flex-shrink: 0; opacity: 0.75; }
+    .dropdown-item.text-danger .ray-menu-icon, .ray-m-floating-menu .is-danger .ray-menu-icon { opacity: 1; }
+    .ray-sub-check { display: none; width: 15px; height: 15px; margin: 0 2px 0 0; accent-color: #dc2626; cursor: pointer; flex-shrink: 0; }
+    .ray-panel--subaccounts.is-selecting .ray-sub-check { display: inline-block; }
+    .ray-panel--subaccounts.is-selecting tr[data-sub-id].is-checked td { background: #fef2f2; }
+    .ray-btn-select[aria-pressed="true"] { background: #fee2e2; color: #b91c1c; border-color: #fecaca; }
+    .ray-select-bar { display: flex; align-items: center; gap: 10px; margin: 0 1rem 8px; padding: 6px 10px; border: 1px solid #fecaca; background: #fff7f7; border-radius: 8px; font-size: 0.78rem; color: #7f1d1d; }
+    .ray-select-bar[hidden] { display: none; }
+    .ray-select-all { display: inline-flex; align-items: center; gap: 5px; margin: 0; font-weight: 600; cursor: pointer; }
+    .ray-select-all input { accent-color: #dc2626; }
+    .ray-select-delete { margin-left: auto; border: 0; border-radius: 6px; padding: 4px 10px; background: #dc2626; color: #fff; font-weight: 600; }
+    .ray-select-delete:disabled { opacity: 0.45; cursor: not-allowed; }
+    .ray-select-cancel { border: 1px solid #e5e7eb; border-radius: 6px; padding: 4px 10px; background: #fff; color: #374151; }
+    html[data-theme="dark"] body.page-balances-accounts .ray-select-bar { background: #2a1416; border-color: #7f1d1d; color: #fecaca; }
+    html[data-theme="dark"] body.page-balances-accounts .ray-panel--subaccounts.is-selecting tr[data-sub-id].is-checked td { background: #2a1416 !important; }
     .ray-account-desc { font-size: 0.75rem; color: #6b7280; margin-top: 4px; line-height: 1.45; max-width: 360px; }
+    .ray-table tr.ray-sub-group-row td { background: #f8fafc; padding: 0.55rem 1rem; border-bottom: 1px solid #eef2f7; }
+    .ray-sub-group-row td, .ray-m-sub-group { font-size: 0.75rem; }
+    .ray-m-sub-group { display: flex; align-items: center; gap: 0.4rem; padding: 0.6rem 0.25rem 0.2rem; }
+    .ray-sub-group-name { font-weight: 800; color: #0f172a; text-transform: uppercase; letter-spacing: 0.03em; }
+    .ray-sub-group-count { display: inline-flex; min-width: 20px; justify-content: center; padding: 1px 6px; border-radius: 999px; background: #e2e8f0; color: #0f172a; font-weight: 800; margin-left: 6px; }
+    .ray-sub-group-total { float: right; font-weight: 600; color: #0f172a; font-variant-numeric: tabular-nums; }
+    .ray-m-sub-group .ray-sub-group-total { float: none; margin-left: auto; }
+    .ray-group-toggle { cursor: pointer; user-select: none; }
+    .ray-group-toggle:hover td, .ray-m-sub-group.ray-group-toggle:hover { background: #f1f5f9; }
+    .ray-group-chevron { font-size: 0.625rem; color: #64748b; width: 12px; margin-right: 6px; transition: transform 0.15s ease; }
+    .ray-group-toggle.is-collapsed .ray-group-chevron { transform: rotate(-90deg); }
+    [data-group-member].is-group-hidden { display: none !important; }
+    html[data-theme="dark"] body.page-balances-accounts .ray-group-toggle:hover td,
+    html[data-theme="dark"] body.page-balances-accounts .ray-m-sub-group.ray-group-toggle:hover { background: #202c33 !important; }
+    html[data-theme="dark"] body.page-balances-accounts .ray-table tr.ray-sub-group-row td { background: #0b141a !important; }
+    html[data-theme="dark"] body.page-balances-accounts .ray-sub-group-name { color: #e9edef; }
+    html[data-theme="dark"] body.page-balances-accounts .ray-sub-group-count { background: #2a3942; color: #e9edef; }
+    html[data-theme="dark"] body.page-balances-accounts .ray-sub-group-total { color: #e9edef; }
     .ray-badge {
         display: inline-flex;
         align-items: center;
         padding: 2px 7px;
         border-radius: 6px;
-        font-size: 0.6875rem;
+        font-size: 0.625rem;
         font-weight: 600;
         line-height: 1.2;
     }
     .ray-badge-code { background: #f3f4f6; color: #374151; }
     .ray-badge-dr { background: #dbeafe; color: #1d4ed8; }
     .ray-badge-cr { background: #ede9fe; color: #6d28d9; }
-    .ray-sub-count { font-size: 0.875rem; color: #111827; font-weight: 500; }
+    .ray-sub-count { font-size: 0.8125rem; color: #111827; font-weight: 500; }
     .ray-action-btn {
         width: 30px;
         height: 30px;
@@ -950,15 +1065,7 @@ include __DIR__ . '/includes/header.php';
     .ray-action-btn:hover { background: #f3f4f6; color: #374151; }
     .ray-panel-body { flex: 1; overflow: auto; }
     .ray-detail-head {
-        display: flex;
-        flex-direction: row;
         flex-wrap: nowrap;
-        align-items: center;
-        justify-content: space-between;
-        gap: 12px;
-        padding: 0;
-        border-bottom: none;
-        background: transparent;
     }
     .ray-detail-head > div:first-child {
         min-width: 0;
@@ -967,9 +1074,10 @@ include __DIR__ . '/includes/header.php';
     .ray-detail-title {
         display: flex;
         align-items: center;
-        flex-wrap: wrap;
+        flex-wrap: nowrap;
+        white-space: nowrap;
         gap: 8px;
-        font-size: 1.25rem;
+        font-size: 1.05rem;
         font-weight: 700;
         color: #111827;
     }
@@ -983,34 +1091,6 @@ include __DIR__ . '/includes/header.php';
         flex: 1;
         min-height: 0;
     }
-    .ray-sub-bulk-bar {
-        display: flex;
-        align-items: center;
-        justify-content: flex-end;
-        gap: 10px;
-        padding: 0 1rem 0.35rem;
-    }
-    .ray-sub-bulk-bar[hidden] { display: none !important; }
-    .ray-sub-bulk-count {
-        font-size: 0.8125rem;
-        font-weight: 500;
-        color: #6b7280;
-    }
-    .ray-sub-bulk-delete {
-        color: #9ca3af;
-    }
-    .ray-sub-bulk-delete:hover {
-        background: #f3f4f6;
-        color: #dc2626;
-    }
-    .ray-sub-check {
-        width: 16px;
-        height: 16px;
-        accent-color: #7c3aed;
-        cursor: pointer;
-    }
-    .ray-sub-check:disabled { cursor: not-allowed; opacity: 0.45; }
-    .ray-table tbody tr.is-sub-selected { background: #fef2f2; }
     .ray-empty {
         padding: 3rem 1.5rem;
         text-align: center;
@@ -1054,11 +1134,93 @@ include __DIR__ . '/includes/header.php';
     .sub-modal-count { font-size: 0.75rem; color: #9ca3af; }
     .sub-modal-input {
         width: 100%; padding: 0.8rem 0.9rem; border: 1px solid #d1d5db; border-radius: 8px;
-        font-size: 0.875rem; color: #111827;
+        font-size: 0.8125rem; color: #111827;
     }
     .sub-modal-input:focus {
         outline: none; border-color: #0f766e; box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.12);
     }
+    .sub-modal-opening-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .sub-modal-pair { display: flex; gap: 12px; }
+    .sub-modal-pair > * { flex: 1 1 0; min-width: 0; }
+    .sub-modal-pair > [hidden] { display: none; }
+    #subAccountModal .sub-modal { padding: 1.1rem 1.25rem 1rem; max-height: calc(100vh - 2rem); overflow-y: auto; }
+    #subAccountModal .sub-modal-head { margin-bottom: 0.75rem; }
+    #subAccountModal .sub-modal-label-row { margin-bottom: 5px; }
+    #subAccountModal .sub-modal-pair,
+    #subAccountModal .sub-modal-opening-row { margin-top: 12px; }
+    #subAccountModal .sub-modal-input { padding: 0.55rem 0.8rem; }
+    #subAccountModal .sub-modal-select { padding-top: 0.55rem; padding-bottom: 0.55rem; }
+    #subAccountModal .sub-cur-trigger { padding-top: 7px; padding-bottom: 7px; }
+    #subAccountModal .sub-modal-image { flex-basis: 38px; width: 38px; height: 38px; }
+    #subAccountModal .sub-modal-hint { margin: 5px 0 0; }
+    #subAccountModal .sub-modal-actions { margin-top: 1rem; }
+    #subAccountModal .sub-modal-btn { padding: 0.5rem 1.1rem; }
+    @media (max-width: 520px) {
+        .sub-modal-pair { flex-direction: column; gap: 0; }
+        .sub-modal-pair > * + * { margin-top: 12px; }
+    }
+    .sub-cur-picker { position: relative; }
+    .sub-cur-native { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); border: 0; }
+    .sub-cur-trigger {
+        width: 100%; display: flex; align-items: center; gap: 10px; padding: 10px 36px 10px 12px;
+        border: 1px solid #d1d5db; border-radius: 8px; font-size: 0.875rem; color: #111827; text-align: left; cursor: pointer;
+        background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' fill='none' stroke='%239ca3af' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M5 8l5 5 5-5'/%3E%3C/svg%3E") no-repeat right 10px center;
+    }
+    .sub-cur-trigger:focus { outline: none; border-color: #0f766e; box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.12); }
+    .sub-cur-flag { width: 24px; height: 17px; object-fit: cover; border-radius: 2px; box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.08); flex-shrink: 0; }
+    .sub-cur-code { font-weight: 600; color: #111827; min-width: 38px; }
+    .sub-cur-name { color: #6b7280; font-size: 0.8125rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .sub-cur-menu {
+        position: absolute; z-index: 30; top: calc(100% + 4px); left: 0; right: 0; max-height: 240px; overflow-y: auto;
+        background: #fff; border: 1px solid #d1d5db; border-radius: 8px; box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12); padding: 4px;
+    }
+    .sub-cur-menu[hidden] { display: none; }
+    .sub-cur-option {
+        width: 100%; display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: 0;
+        background: transparent; border-radius: 6px; cursor: pointer; text-align: left; font-size: 0.875rem;
+    }
+    .sub-cur-option:hover, .sub-cur-option.is-selected { background: #f3f4f6; }
+    html[data-theme="dark"] body.page-balances-accounts .sub-cur-trigger,
+    html[data-theme="dark"] body.page-balances-accounts .sub-cur-menu { background-color: #0b141a; border-color: #2a3942; color: #e9edef; }
+    html[data-theme="dark"] body.page-balances-accounts .sub-cur-code { color: #e9edef; }
+    html[data-theme="dark"] body.page-balances-accounts .sub-cur-name { color: #8696a0; }
+    html[data-theme="dark"] body.page-balances-accounts .sub-cur-option:hover,
+    html[data-theme="dark"] body.page-balances-accounts .sub-cur-option.is-selected { background: #202c33; }
+    .sub-modal-identity { display: flex; align-items: center; gap: 10px; }
+    .sub-inst-wrap { position: relative; flex: 1; min-width: 0; }
+    .sub-inst-wrap .sub-modal-input { width: 100%; }
+    .sub-inst-list {
+        position: absolute; z-index: 40; top: calc(100% + 4px); left: 0; right: 0; max-height: 320px; overflow-y: auto;
+        background: #fff; border: 1px solid #d1d5db; border-radius: 10px; box-shadow: 0 12px 28px rgba(15, 23, 42, 0.14); padding: 4px;
+    }
+    .sub-inst-list[hidden] { display: none; }
+    .sub-inst-item {
+        width: 100%; display: flex; align-items: center; gap: 10px; padding: 7px 10px; border: 0; background: transparent;
+        border-radius: 8px; cursor: pointer; text-align: left; font-size: 0.875rem; color: #111827;
+    }
+    .sub-inst-item:hover, .sub-inst-item.is-active { background: #f1f5f9; }
+    .sub-inst-item img { width: 32px; height: 32px; border-radius: 8px; object-fit: contain; background: #fff; box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.08); flex-shrink: 0; }
+    .sub-inst-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .sub-inst-type { font-size: 0.6875rem; font-weight: 600; padding: 2px 8px; border-radius: 999px; flex-shrink: 0; }
+    .sub-inst-type--bank { background: #dbeafe; color: #1d4ed8; }
+    .sub-inst-type--mobile { background: #fce7f3; color: #be185d; }
+    .sub-inst-type--cash { background: #dcfce7; color: #15803d; }
+    .sub-inst-type--saved { background: #f3f4f6; color: #4b5563; }
+    html[data-theme="dark"] body.page-balances-accounts .sub-inst-list { background: #0b141a; border-color: #2a3942; }
+    html[data-theme="dark"] body.page-balances-accounts .sub-inst-item { color: #e9edef; }
+    html[data-theme="dark"] body.page-balances-accounts .sub-inst-item:hover,
+    html[data-theme="dark"] body.page-balances-accounts .sub-inst-item.is-active { background: #202c33; }
+    .sub-modal-image {
+        position: relative; flex: 0 0 44px; width: 44px; height: 44px; border-radius: 10px;
+        border: 1px dashed #cbd5e1; background: #f8fafc; color: #64748b;
+        display: inline-flex; align-items: center; justify-content: center; cursor: pointer; overflow: hidden;
+    }
+    .sub-modal-image:hover { border-color: #0f766e; color: #0f766e; }
+    .sub-modal-image input[type="file"] { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+    .sub-modal-image img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+    .sub-modal-image.has-image { border-style: solid; }
+    .sub-modal-image.has-image i { display: none; }
+    html[data-theme="dark"] body.page-balances-accounts .sub-modal-image { background: #0b141a; border-color: #2a3942; color: #8696a0; }
     .sub-modal-select {
         width: 100%;
         padding: 0.8rem 2.25rem 0.8rem 0.9rem;
@@ -1128,7 +1290,6 @@ include __DIR__ . '/includes/header.php';
         color: #e9edef !important;
     }
     html[data-theme="dark"] body.page-balances-accounts .ray-account-desc,
-    html[data-theme="dark"] body.page-balances-accounts .ray-sub-bulk-count,
     html[data-theme="dark"] body.page-balances-accounts .ray-empty,
     html[data-theme="dark"] body.page-balances-accounts .sub-modal-hint,
     html[data-theme="dark"] body.page-balances-accounts .sub-modal-count,
@@ -1170,11 +1331,6 @@ include __DIR__ . '/includes/header.php';
     html[data-theme="dark"] body.page-balances-accounts .ray-parent-row.is-selected td {
         background: #202c33 !important;
         background-color: #202c33 !important;
-    }
-    html[data-theme="dark"] body.page-balances-accounts .ray-table tbody tr.is-sub-selected,
-    html[data-theme="dark"] body.page-balances-accounts .ray-table tbody tr.is-sub-selected td {
-        background: rgba(251, 113, 133, 0.12) !important;
-        background-color: rgba(251, 113, 133, 0.12) !important;
     }
     html[data-theme="dark"] body.page-balances-accounts .ray-badge-code {
         background: #2a3942;
@@ -1313,7 +1469,7 @@ include __DIR__ . '/includes/header.php';
             gap: 0.75rem;
         }
         .ray-panel[aria-label="My accounts"] .ray-panel-title {
-            font-size: 1.5rem;
+            font-size: 1.25rem;
             font-weight: 800;
             letter-spacing: -0.03em;
             color: #0f172a;
@@ -1407,7 +1563,7 @@ include __DIR__ . '/includes/header.php';
             width: 100%;
             max-width: 100%;
             margin: 0;
-            padding: 1rem 1.05rem;
+            padding: 0.6rem 0.9rem;
             border: 1px solid #e8edf3;
             border-radius: 16px;
             background: #fff;
@@ -1423,19 +1579,19 @@ include __DIR__ . '/includes/header.php';
         }
         .ray-m-card-main {
             display: flex;
-            align-items: flex-start;
-            gap: 0.85rem;
+            align-items: center;
+            gap: 0.75rem;
             width: 100%;
             min-width: 0;
         }
         .ray-m-icon {
-            width: 2.6rem;
-            height: 2.6rem;
+            width: 2.2rem;
+            height: 2.2rem;
             border-radius: 12px;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            flex: 0 0 2.6rem;
+            flex: 0 0 2.2rem;
             font-size: 1rem;
         }
         .ray-m-icon--violet { background: #f3e8ff; color: #7c3aed; }
@@ -1462,7 +1618,7 @@ include __DIR__ . '/includes/header.php';
             width: 100%;
         }
         .ray-m-name {
-            font-size: 0.98rem;
+            font-size: 0.875rem;
             font-weight: 700;
             color: #0f172a;
             line-height: 1.3;
@@ -1489,8 +1645,8 @@ include __DIR__ . '/includes/header.php';
         .ray-m-chevron { display: none !important; }
         .ray-accounts-mobile .ray-badge {
             border-radius: 999px;
-            padding: 0.18rem 0.52rem;
-            font-size: 0.68rem;
+            padding: 0.15rem 0.48rem;
+            font-size: 0.625rem;
             flex-shrink: 0;
             line-height: 1.2;
         }
@@ -1549,7 +1705,8 @@ include __DIR__ . '/includes/header.php';
             align-items: center;
             justify-content: space-between;
             gap: 0.55rem;
-            padding: 0.85rem 0.85rem;
+            padding: 0.55rem 0.85rem;
+            font-size: 0.8125rem;
             border: 1px solid #eef2f7;
             border-radius: 12px;
             background: #f8fafc;
@@ -1639,6 +1796,71 @@ include __DIR__ . '/includes/header.php';
         html[data-theme="dark"] body.page-balances-accounts .ray-m-name {
             color: #e9edef !important;
         }
+        html[data-theme="dark"] body.page-balances-accounts .ray-panel[aria-label="My accounts"] {
+            background: transparent !important;
+            border-color: transparent !important;
+            box-shadow: none !important;
+        }
+        html[data-theme="dark"] body.page-balances-accounts .ray-panel[aria-label="My accounts"] .ray-panel-head {
+            background: transparent !important;
+            border-bottom-color: transparent !important;
+        }
+        html[data-theme="dark"] body.page-balances-accounts .ray-panel[aria-label="My accounts"] .ray-search input[name="search"],
+        html[data-theme="dark"] body.page-balances-accounts .ray-panel[aria-label="My accounts"] .ray-search-field > input[type="text"] {
+            background: #111b21 !important;
+            border-color: #2a3942 !important;
+            color: #e9edef !important;
+            box-shadow: none;
+        }
+        html[data-theme="dark"] body.page-balances-accounts .ray-panel[aria-label="My accounts"] .ray-search input::placeholder {
+            color: #8696a0 !important;
+        }
+        html[data-theme="dark"] body.page-balances-accounts .ray-panel[aria-label="My accounts"] .ray-search input:focus {
+            border-color: #7c3aed !important;
+            box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.25) !important;
+        }
+        html[data-theme="dark"] body.page-balances-accounts .ray-m-card {
+            box-shadow: none;
+        }
+        html[data-theme="dark"] body.page-balances-accounts .ray-m-card.is-selected,
+        html[data-theme="dark"] body.page-balances-accounts .ray-m-card.is-open {
+            border-color: #6d28d9 !important;
+            background: #161f2b !important;
+            box-shadow: 0 0 0 1px rgba(124, 58, 237, 0.35);
+        }
+        html[data-theme="dark"] body.page-balances-accounts .ray-m-icon--violet { background: rgba(167, 139, 250, 0.16) !important; color: #c4b5fd !important; }
+        html[data-theme="dark"] body.page-balances-accounts .ray-m-icon--purple { background: rgba(139, 92, 246, 0.18) !important; color: #c4b5fd !important; }
+        html[data-theme="dark"] body.page-balances-accounts .ray-m-icon--orange { background: rgba(251, 146, 60, 0.16) !important; color: #fdba74 !important; }
+        html[data-theme="dark"] body.page-balances-accounts .ray-m-icon--green { background: rgba(74, 222, 128, 0.14) !important; color: #86efac !important; }
+        html[data-theme="dark"] body.page-balances-accounts .ray-m-icon--blue { background: rgba(96, 165, 250, 0.16) !important; color: #93c5fd !important; }
+        html[data-theme="dark"] body.page-balances-accounts .ray-m-icon--rose { background: rgba(251, 113, 133, 0.16) !important; color: #fda4af !important; }
+        html[data-theme="dark"] body.page-balances-accounts .ray-m-icon--amber { background: rgba(251, 191, 36, 0.16) !important; color: #fcd34d !important; }
+        html[data-theme="dark"] body.page-balances-accounts .ray-m-icon--indigo { background: rgba(129, 140, 248, 0.18) !important; color: #a5b4fc !important; }
+        html[data-theme="dark"] body.page-balances-accounts .ray-m-icon--slate { background: rgba(148, 163, 184, 0.16) !important; color: #cbd5e1 !important; }
+        html[data-theme="dark"] body.page-balances-accounts .ray-m-icon i {
+            color: inherit !important;
+        }
+        html[data-theme="dark"] body.page-balances-accounts .ray-m-lock {
+            color: #8696a0 !important;
+        }
+        html[data-theme="dark"] body.page-balances-accounts .ray-accounts-mobile .ray-badge-code {
+            background: #202c33 !important;
+            color: #aebac1 !important;
+        }
+        html[data-theme="dark"] body.page-balances-accounts .ray-m-sub-group {
+            color: #e9edef;
+        }
+        html[data-theme="dark"] body.page-balances-accounts .ray-m-sub-group .ray-sub-group-name,
+        html[data-theme="dark"] body.page-balances-accounts .ray-m-sub-group .ray-sub-group-total {
+            color: #e9edef !important;
+        }
+        html[data-theme="dark"] body.page-balances-accounts .ray-m-sub-group .ray-sub-group-count {
+            background: #2a3942 !important;
+            color: #e9edef !important;
+        }
+        html[data-theme="dark"] body.page-balances-accounts .ray-m-sub-empty {
+            color: #8696a0;
+        }
     }
 
     html[data-theme="dark"] body.page-balances-accounts .sidebar,
@@ -1663,7 +1885,7 @@ include __DIR__ . '/includes/header.php';
             <section class="ray-panel" aria-label="My accounts">
                 <div class="ray-panel-head">
                     <h1 class="ray-panel-title">My Accounts</h1>
-                    <?php if ($canManage): ?>
+                    <?php if (isAdmin()): ?>
                         <a href="<?= htmlspecialchars($coaCreateUrl, ENT_QUOTES, 'UTF-8') ?>" class="ray-btn-new ray-btn-new-account">
                             <i class="fas fa-plus text-xs"></i> New Account
                         </a>
@@ -1723,7 +1945,7 @@ include __DIR__ . '/includes/header.php';
                                     onclick="window.location.href=this.dataset.parentUrl">
                                     <td><?= $index + 1 ?></td>
                                     <td>
-                                        <div class="ray-account-name">
+                                        <div class="ray-account-name" title="<?= htmlspecialchars($parentRow['description'], ENT_QUOTES, 'UTF-8') ?>">
                                             <?= htmlspecialchars($parentRow['name'], ENT_QUOTES, 'UTF-8') ?>
                                             <?php if (!empty($parentRow['is_system'])): ?>
                                                 <i class="fas fa-lock text-gray-400 ms-1 text-xs" title="System Account"></i>
@@ -1731,7 +1953,6 @@ include __DIR__ . '/includes/header.php';
                                             <span class="ray-badge ray-badge-code"><?= htmlspecialchars($parentRow['code'], ENT_QUOTES, 'UTF-8') ?></span>
                                             <span class="ray-badge <?= $parentRow['normal_balance_short'] === 'Cr' ? 'ray-badge-cr' : 'ray-badge-dr' ?>"><?= htmlspecialchars($parentRow['normal_balance_short'], ENT_QUOTES, 'UTF-8') ?></span>
                                         </div>
-                                        <div class="ray-account-desc"><?= htmlspecialchars($parentRow['description'], ENT_QUOTES, 'UTF-8') ?></div>
                                     </td>
                                     <td><span class="ray-sub-count"><?= (int) $parentRow['child_count'] ?></span></td>
                                     <td onclick="event.stopPropagation();">
@@ -1743,20 +1964,20 @@ include __DIR__ . '/includes/header.php';
                                                     <i class="fas fa-ellipsis-v"></i>
                                                 </button>
                                                 <ul class="dropdown-menu dropdown-menu-end shadow-sm">
-                                                    <li><a class="dropdown-item" href="<?= htmlspecialchars('view_account.php?' . http_build_query(['module' => $moduleParam, 'id' => $parentId]), ENT_QUOTES, 'UTF-8') ?>">View</a></li>
+                                                    <li><a class="dropdown-item" href="<?= htmlspecialchars('view_account.php?' . http_build_query(['module' => $moduleParam, 'id' => $parentId]), ENT_QUOTES, 'UTF-8') ?>"><?= $rayMenuIcon('eye') ?>View</a></li>
                                                     <?php if ($canManage): ?>
                                                         <li>
                                                             <button type="button"
                                                                     class="dropdown-item"
                                                                     onclick="openMoveParentModal(<?= $parentId ?>)">
-                                                                Move under parent account
+                                                                <?= $rayMenuIcon('arrow-turn-down-right') ?>Move under parent account
                                                             </button>
                                                         </li>
                                                     <?php endif; ?>
                                                     <?php if (isAdmin()): ?>
-                                                        <li><a class="dropdown-item" href="<?= htmlspecialchars($editUrl, ENT_QUOTES, 'UTF-8') ?>">Edit</a></li>
+                                                        <li><a class="dropdown-item" href="<?= htmlspecialchars($editUrl, ENT_QUOTES, 'UTF-8') ?>"><?= $rayMenuIcon('pencil-square') ?>Edit</a></li>
                                                         <li><hr class="dropdown-divider"></li>
-                                                        <li><button type="button" class="dropdown-item text-danger" onclick="deleteAccount(<?= $parentId ?>)">Delete</button></li>
+                                                        <li><button type="button" class="dropdown-item text-danger" onclick="deleteAccount(<?= $parentId ?>)"><?= $rayMenuIcon('trash') ?>Delete</button></li>
                                                     <?php endif; ?>
                                                 </ul>
                                             </div>
@@ -1778,7 +1999,6 @@ include __DIR__ . '/includes/header.php';
                                     : ($childrenByParent[$parentId] ?? []);
                                 $parentMeta = $mobileParentMeta[$parentId] ?? ['assignable' => []];
                                 $hasAssignable = !empty($parentMeta['assignable']);
-                                $descText = trim((string) ($parentRow['description'] ?? ''));
                             ?>
                             <div class="ray-m-item">
                                 <article class="ray-m-card<?= $isSelected ? ' is-selected' : '' ?>"
@@ -1797,9 +2017,6 @@ include __DIR__ . '/includes/header.php';
                                                 <span class="ray-badge ray-badge-code"><?= htmlspecialchars($parentRow['code'], ENT_QUOTES, 'UTF-8') ?></span>
                                                 <span class="ray-badge <?= $parentRow['normal_balance_short'] === 'Cr' ? 'ray-badge-cr' : 'ray-badge-dr' ?>"><?= htmlspecialchars($parentRow['normal_balance_short'], ENT_QUOTES, 'UTF-8') ?></span>
                                             </div>
-                                            <?php if ($descText !== ''): ?>
-                                                <p class="ray-m-desc"><?= htmlspecialchars($descText, ENT_QUOTES, 'UTF-8') ?></p>
-                                            <?php endif; ?>
                                         </div>
                                     </div>
                                 </article>
@@ -1807,11 +2024,6 @@ include __DIR__ . '/includes/header.php';
                                     <div class="ray-m-accordion-panel">
                                         <?php if ($canManage): ?>
                                             <div class="ray-m-accordion-actions">
-                                                <?php if ($hasAssignable): ?>
-                                                    <button type="button" class="ray-btn-new ray-btn-new-account" onclick="event.stopPropagation(); openAssignForParent(<?= $parentId ?>)">
-                                                        <i class="fas fa-link text-xs"></i> Assign existing
-                                                    </button>
-                                                <?php endif; ?>
                                                 <button type="button" class="ray-btn-new ray-btn-new-account" onclick="event.stopPropagation(); openSubForParent(<?= $parentId ?>)">
                                                     <i class="fas fa-plus text-xs"></i> New Sub-account
                                                 </button>
@@ -1821,11 +2033,23 @@ include __DIR__ . '/includes/header.php';
                                             <div class="ray-m-sub-empty">No sub-accounts yet</div>
                                         <?php else: ?>
                                             <div class="ray-m-sub-list">
-                                                <?php foreach ($rowChildren as $childRow):
+                                                <?php foreach (balances_group_sub_accounts_by_payment_type($rowChildren) as $subGroup): ?>
+                                                <?php if ($subGroup['label'] !== null): ?>
+                                                <div class="ray-m-sub-group ray-group-toggle" role="button" tabindex="0" aria-expanded="true" data-group="<?= $parentId ?>-<?= htmlspecialchars($subGroup['key'], ENT_QUOTES, 'UTF-8') ?>">
+                                                    <i class="fas fa-chevron-down ray-group-chevron" aria-hidden="true"></i>
+                                                    <span class="ray-sub-group-name"><?= htmlspecialchars($subGroup['label'], ENT_QUOTES, 'UTF-8') ?></span>
+                                                    <span class="ray-sub-group-count"><?= count($subGroup['rows']) ?></span>
+                                                    <?php if ($subGroup['currency'] !== ''): ?>
+                                                        <span class="ray-sub-group-total"<?= !empty($subGroup['approx']) ? ' title="Mixed currencies converted with the latest exchange rates"' : '' ?>><?= !empty($subGroup['approx']) ? '&asymp; ' : '' ?><?= htmlspecialchars($subGroup['currency'], ENT_QUOTES, 'UTF-8') ?> <?= number_format($subGroup['total'], 2) ?></span>
+                                                    <?php endif; ?>
+                                                </div>
+                                                <?php endif; ?>
+                                                <?php foreach ($subGroup['rows'] as $childRow):
                                                     $childViewUrl = 'view_account.php?' . http_build_query(['module' => $moduleParam, 'id' => (int) $childRow['id']]);
                                                     $childEditUrl = 'coa_edit.php?id=' . (int) $childRow['id'] . ($moduleParam !== '' ? '&module=' . rawurlencode($moduleParam) : '');
                                                 ?>
-                                                <div class="ray-m-sub-item">
+                                                <div class="ray-m-sub-item"<?= $subGroup['label'] !== null ? ' data-group-member="' . $parentId . '-' . htmlspecialchars($subGroup['key'], ENT_QUOTES, 'UTF-8') . '"' : '' ?>>
+                                                    <?= $rayAccountAvatar($childRow) ?>
                                                     <div class="ray-m-sub-copy">
                                                         <div class="ray-m-title">
                                                             <span class="ray-m-name"><?= htmlspecialchars($childRow['name'], ENT_QUOTES, 'UTF-8') ?></span>
@@ -1858,6 +2082,7 @@ include __DIR__ . '/includes/header.php';
                                                     </div>
                                                 </div>
                                                 <?php endforeach; ?>
+                                                <?php endforeach; ?>
                                             </div>
                                         <?php endif; ?>
                                     </div>
@@ -1875,7 +2100,8 @@ include __DIR__ . '/includes/header.php';
                 <a class="ray-mobile-back" href="<?= htmlspecialchars($accountsListUrl, ENT_QUOTES, 'UTF-8') ?>">
                     <i class="fas fa-arrow-left" aria-hidden="true"></i> All accounts
                 </a>
-                <div class="ray-detail-head">
+                <section class="ray-panel ray-panel--subaccounts">
+                <div class="ray-panel-head ray-detail-head">
                     <div>
                         <div class="ray-detail-title">
                             <?= htmlspecialchars($selectedParent['name'], ENT_QUOTES, 'UTF-8') ?>
@@ -1885,9 +2111,9 @@ include __DIR__ . '/includes/header.php';
                     </div>
                     <?php if ($canManage): ?>
                         <div class="ray-head-actions">
-                            <?php if (!empty($assignableAccounts)): ?>
-                                <button type="button" class="ray-btn-new ray-btn-new-account" id="openAssignAccountModal">
-                                    <i class="fas fa-link text-xs"></i> Assign existing
+                            <?php if (isAdmin() && !empty($selectedChildren)): ?>
+                                <button type="button" class="ray-btn-new ray-btn-select" id="toggleSubSelect" aria-pressed="false">
+                                    <i class="fas fa-check-square text-xs"></i> Select
                                 </button>
                             <?php endif; ?>
                             <button type="button" class="ray-btn-new ray-btn-new-account" id="openSubAccountModal">
@@ -1896,7 +2122,6 @@ include __DIR__ . '/includes/header.php';
                         </div>
                     <?php endif; ?>
                 </div>
-                <section class="ray-panel ray-panel--subaccounts">
                     <form method="GET" action="<?= htmlspecialchars($accountsGetAction, ENT_QUOTES, 'UTF-8') ?>" class="ray-search">
                         <?php if ($moduleParam !== ''): ?>
                             <input type="hidden" name="module" value="<?= htmlspecialchars($moduleParam, ENT_QUOTES, 'UTF-8') ?>">
@@ -1907,6 +2132,14 @@ include __DIR__ . '/includes/header.php';
                         <?php endif; ?>
                         <input type="text" name="sub_search" value="<?= htmlspecialchars($subSearchQ, ENT_QUOTES, 'UTF-8') ?>" placeholder="Search sub-accounts">
                     </form>
+                    <?php if (isAdmin() && !empty($selectedChildren)): ?>
+                        <div class="ray-select-bar" id="subSelectBar" hidden>
+                            <label class="ray-select-all"><input type="checkbox" id="subSelectAll"> All</label>
+                            <span id="subSelectCount">0 selected</span>
+                            <button type="button" class="ray-select-delete" id="subSelectDelete" disabled><i class="fas fa-trash-alt text-xs"></i> Delete selected</button>
+                            <button type="button" class="ray-select-cancel" id="subSelectCancel">Cancel</button>
+                        </div>
+                    <?php endif; ?>
                     <div class="ray-panel-body">
                         <?php if (empty($selectedChildren)): ?>
                             <div class="ray-empty">
@@ -1914,64 +2147,44 @@ include __DIR__ . '/includes/header.php';
                                 <div>No sub-accounts yet</div>
                                 <?php if ($canManage): ?>
                                     <div class="ray-head-actions" style="margin-top:12px;justify-content:center;">
-                                        <?php if (!empty($assignableAccounts)): ?>
-                                            <button type="button" class="ray-btn-new ray-btn-new-account open-assign-modal-trigger">Assign existing account</button>
-                                        <?php endif; ?>
                                         <button type="button" class="ray-btn-new ray-btn-new-account open-sub-modal-trigger">Add first sub-account</button>
                                     </div>
                                 <?php endif; ?>
                             </div>
                         <?php else: ?>
-                            <?php
-                            $deletableSubCount = 0;
-                            foreach ($selectedChildren as $childRow) {
-                                if (empty($childRow['is_system'])) {
-                                    $deletableSubCount++;
-                                }
-                            }
-                            ?>
-                            <?php if (isAdmin() && $deletableSubCount > 0): ?>
-                                <div class="ray-sub-bulk-bar" id="subBulkBar" hidden>
-                                    <span class="ray-sub-bulk-count" id="subBulkCount">0 selected</span>
-                                    <button type="button" class="ray-action-btn ray-sub-bulk-delete" id="subBulkDeleteBtn" aria-label="Delete selected sub-accounts" title="Delete selected">
-                                        <i class="fas fa-trash-can" aria-hidden="true"></i>
-                                    </button>
-                                </div>
-                            <?php endif; ?>
                             <table class="ray-table" id="subAccountsTable">
                                 <thead>
                                     <tr>
-                                        <?php if (isAdmin() && $deletableSubCount > 0): ?>
-                                            <th style="width:40px;">
-                                                <input type="checkbox"
-                                                       class="ray-sub-check"
-                                                       id="subSelectAll"
-                                                       aria-label="Select all sub-accounts">
-                                            </th>
-                                        <?php endif; ?>
                                         <th>Sub-account</th>
                                         <th style="width:52px;">Action</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <?php foreach ($selectedChildren as $childRow):
+                                    <?php foreach (balances_group_sub_accounts_by_payment_type($selectedChildren) as $subGroup): ?>
+                                    <?php if ($subGroup['label'] !== null): ?>
+                                    <tr class="ray-sub-group-row ray-group-toggle" role="button" tabindex="0" aria-expanded="true" data-group="<?= (int) $selectedId ?>-<?= htmlspecialchars($subGroup['key'], ENT_QUOTES, 'UTF-8') ?>">
+                                        <td colspan="2">
+                                            <i class="fas fa-chevron-down ray-group-chevron" aria-hidden="true"></i>
+                                            <span class="ray-sub-group-name"><?= htmlspecialchars($subGroup['label'], ENT_QUOTES, 'UTF-8') ?></span>
+                                            <span class="ray-sub-group-count"><?= count($subGroup['rows']) ?></span>
+                                            <?php if ($subGroup['currency'] !== ''): ?>
+                                                <span class="ray-sub-group-total"<?= !empty($subGroup['approx']) ? ' title="Mixed currencies converted with the latest exchange rates"' : '' ?>><?= !empty($subGroup['approx']) ? '&asymp; ' : '' ?><?= htmlspecialchars($subGroup['currency'], ENT_QUOTES, 'UTF-8') ?> <?= number_format($subGroup['total'], 2) ?></span>
+                                            <?php endif; ?>
+                                        </td>
+                                    </tr>
+                                    <?php endif; ?>
+                                    <?php foreach ($subGroup['rows'] as $childRow):
                                         $childViewUrl = 'view_account.php?' . http_build_query(['module' => $moduleParam, 'id' => (int) $childRow['id']]);
                                         $childEditUrl = 'coa_edit.php?id=' . (int) $childRow['id'] . ($moduleParam !== '' ? '&module=' . rawurlencode($moduleParam) : '');
                                         $childIsSystem = !empty($childRow['is_system']);
                                     ?>
-                                    <tr data-sub-id="<?= (int) $childRow['id'] ?>"<?= $childIsSystem ? ' data-sub-system="1"' : '' ?>>
-                                        <?php if (isAdmin() && $deletableSubCount > 0): ?>
-                                            <td>
-                                                <?php if (!$childIsSystem): ?>
-                                                    <input type="checkbox"
-                                                           class="ray-sub-check sub-account-select"
-                                                           value="<?= (int) $childRow['id'] ?>"
-                                                           aria-label="Select <?= htmlspecialchars($childRow['name'], ENT_QUOTES, 'UTF-8') ?>">
-                                                <?php endif; ?>
-                                            </td>
-                                        <?php endif; ?>
+                                    <tr data-sub-id="<?= (int) $childRow['id'] ?>"<?= $childIsSystem ? ' data-sub-system="1"' : '' ?><?= $subGroup['label'] !== null ? ' data-group-member="' . (int) $selectedId . '-' . htmlspecialchars($subGroup['key'], ENT_QUOTES, 'UTF-8') . '"' : '' ?>>
                                         <td>
-                                            <div class="ray-account-name">
+                                            <div class="ray-account-name" title="<?= htmlspecialchars($childRow['description'], ENT_QUOTES, 'UTF-8') ?>">
+                                                <?php if (!$childIsSystem && isAdmin()): ?>
+                                                    <input type="checkbox" class="ray-sub-check" value="<?= (int) $childRow['id'] ?>" aria-label="Select <?= htmlspecialchars($childRow['name'], ENT_QUOTES, 'UTF-8') ?>">
+                                                <?php endif; ?>
+                                                <?= $rayAccountAvatar($childRow) ?>
                                                 <?= htmlspecialchars($childRow['name'], ENT_QUOTES, 'UTF-8') ?>
                                                 <?php if (!empty($childRow['is_system'])): ?>
                                                     <i class="fas fa-lock text-gray-400 ms-1 text-xs" title="System Account"></i>
@@ -1979,7 +2192,6 @@ include __DIR__ . '/includes/header.php';
                                                 <span class="ray-badge ray-badge-code"><?= htmlspecialchars($childRow['code'], ENT_QUOTES, 'UTF-8') ?></span>
                                                 <span class="ray-badge <?= $childRow['normal_balance_short'] === 'Cr' ? 'ray-badge-cr' : 'ray-badge-dr' ?>"><?= htmlspecialchars($childRow['normal_balance_short'], ENT_QUOTES, 'UTF-8') ?></span>
                                             </div>
-                                            <div class="ray-account-desc"><?= htmlspecialchars($childRow['description'], ENT_QUOTES, 'UTF-8') ?></div>
                                         </td>
                                         <td>
                                             <?php if (!empty($childRow['is_system'])): ?>
@@ -1990,28 +2202,29 @@ include __DIR__ . '/includes/header.php';
                                                         <i class="fas fa-ellipsis-v"></i>
                                                     </button>
                                                     <ul class="dropdown-menu dropdown-menu-end shadow-sm">
-                                                        <li><a class="dropdown-item" href="<?= htmlspecialchars($childViewUrl, ENT_QUOTES, 'UTF-8') ?>">View</a></li>
+                                                        <li><a class="dropdown-item" href="<?= htmlspecialchars($childViewUrl, ENT_QUOTES, 'UTF-8') ?>"><?= $rayMenuIcon('eye') ?>View</a></li>
                                                         <?php if (isAdmin()): ?>
-                                                            <li><a class="dropdown-item" href="<?= htmlspecialchars($childEditUrl, ENT_QUOTES, 'UTF-8') ?>">Edit</a></li>
+                                                            <li><a class="dropdown-item" href="<?= htmlspecialchars($childEditUrl, ENT_QUOTES, 'UTF-8') ?>"><?= $rayMenuIcon('pencil-square') ?>Edit</a></li>
                                                         <?php endif; ?>
                                                         <?php if ($canManage): ?>
                                                             <li>
                                                                 <button type="button"
                                                                         class="dropdown-item"
                                                                         onclick="unassignSubAccount(<?= (int) $childRow['id'] ?>, <?= (int) $selectedId ?>)">
-                                                                    Move to main accounts
+                                                                    <?= $rayMenuIcon('arrow-uturn-left') ?>Move to main accounts
                                                                 </button>
                                                             </li>
                                                         <?php endif; ?>
                                                         <?php if (isAdmin()): ?>
                                                             <li><hr class="dropdown-divider"></li>
-                                                            <li><button type="button" class="dropdown-item text-danger" onclick="deleteAccount(<?= (int) $childRow['id'] ?>)">Delete</button></li>
+                                                            <li><button type="button" class="dropdown-item text-danger" onclick="deleteAccount(<?= (int) $childRow['id'] ?>)"><?= $rayMenuIcon('trash') ?>Delete</button></li>
                                                         <?php endif; ?>
                                                     </ul>
                                                 </div>
                                             <?php endif; ?>
                                         </td>
                                     </tr>
+                                    <?php endforeach; ?>
                                     <?php endforeach; ?>
                                 </tbody>
                             </table>
@@ -2062,7 +2275,7 @@ include __DIR__ . '/includes/header.php';
 <?php if ($canManage): ?>
 <div class="sub-modal-backdrop" id="subAccountModal" role="presentation">
     <div class="sub-modal" role="dialog" aria-modal="true" aria-labelledby="subAccountModalTitle">
-        <form method="POST" action="" id="subAccountForm">
+        <form method="POST" action="" id="subAccountForm" enctype="multipart/form-data">
             <input type="hidden" name="action" value="create_sub_account">
             <input type="hidden" name="parent_id" id="subParentId" value="<?= (int) ($selectedParent['id'] ?? 0) ?>">
             <input type="hidden" name="module" value="<?= htmlspecialchars($moduleParam, ENT_QUOTES, 'UTF-8') ?>">
@@ -2075,26 +2288,101 @@ include __DIR__ . '/includes/header.php';
                 <label for="subAccountName">Name</label>
                 <span class="sub-modal-count"><span id="subNameCount">0</span>/100</span>
             </div>
-            <input type="text"
-                   class="sub-modal-input"
-                   id="subAccountName"
-                   name="account_name"
-                   maxlength="100"
-                   required
-                   placeholder="Enter sub-account name"
-                   autocomplete="off">
-            <div id="subPaymentTypeWrap"<?= $selectedParentShowsPaymentType ? '' : ' hidden' ?>>
-                <div class="sub-modal-label-row" style="margin-top:14px;">
-                    <label for="subPaymentWalletType">Payment type</label>
+            <div class="sub-modal-identity">
+                <label class="sub-modal-image" for="subAccountImage" title="Upload account image (optional)">
+                    <input type="file" id="subAccountImage" name="account_image" accept=".jpg,.jpeg,.png,.webp,.gif,image/*">
+                    <img id="subAccountImagePreview" alt="" hidden>
+                    <i class="fas fa-camera" aria-hidden="true"></i>
+                </label>
+                <div class="sub-inst-wrap">
+                    <input type="text"
+                           class="sub-modal-input"
+                           id="subAccountName"
+                           name="account_name"
+                           maxlength="100"
+                           required
+                           placeholder="Enter sub-account name, e.g. CRDB or M-Pesa"
+                           autocomplete="off"
+                           role="combobox"
+                           aria-autocomplete="list"
+                           aria-controls="subInstitutionList"
+                           aria-expanded="false">
+                    <div class="sub-inst-list" id="subInstitutionList" role="listbox" hidden></div>
+                </div>
+                <input type="hidden" name="institution" id="subInstitution" value="">
+            </div>
+            <p class="sub-modal-hint">Optional logo &middot; JPG, PNG, WEBP, GIF &middot; max 2MB &middot; <a href="<?= htmlspecialchars('institutions.php' . ($moduleParam !== '' ? '?module=' . rawurlencode($moduleParam) : ''), ENT_QUOTES, 'UTF-8') ?>">Manage saved logos</a></p>
+            <div class="sub-modal-pair">
+            <div>
+            <div class="sub-modal-label-row">
+                <label for="subCurrencyTrigger">Currency</label>
+            </div>
+            <?php
+            $subCurrencies = balances_currency_catalog();
+            $subDefaultCurrency = strtoupper((string) ($selectedParent['currency'] ?? 'TZS'));
+            if (!isset($subCurrencies[$subDefaultCurrency])) {
+                $subDefaultCurrency = 'TZS';
+            }
+            $subFlagUrl = static fn (string $flag): string => 'https://flagcdn.com/w40/' . strtolower($flag) . '.png';
+            ?>
+            <div class="sub-cur-picker" id="subCurrencyPicker">
+                <select id="subCurrency" name="currency" class="sub-cur-native" tabindex="-1" aria-hidden="true">
+                    <?php foreach ($subCurrencies as $curCode => $curMeta): ?>
+                        <option value="<?= htmlspecialchars($curCode, ENT_QUOTES, 'UTF-8') ?>"<?= $curCode === $subDefaultCurrency ? ' selected' : '' ?>><?= htmlspecialchars($curCode . ' - ' . $curMeta['name'], ENT_QUOTES, 'UTF-8') ?></option>
+                    <?php endforeach; ?>
+                </select>
+                <button type="button" class="sub-cur-trigger" id="subCurrencyTrigger" aria-haspopup="listbox" aria-expanded="false">
+                    <img src="<?= htmlspecialchars($subFlagUrl($subCurrencies[$subDefaultCurrency]['flag']), ENT_QUOTES, 'UTF-8') ?>" alt="" class="sub-cur-flag" id="subCurrencyFlag" width="24" height="17">
+                    <span class="sub-cur-code" id="subCurrencyCode"><?= htmlspecialchars($subDefaultCurrency, ENT_QUOTES, 'UTF-8') ?></span>
+                    <span class="sub-cur-name" id="subCurrencyName"><?= htmlspecialchars($subCurrencies[$subDefaultCurrency]['name'], ENT_QUOTES, 'UTF-8') ?></span>
+                </button>
+                <div class="sub-cur-menu" id="subCurrencyMenu" role="listbox" hidden>
+                    <?php foreach ($subCurrencies as $curCode => $curMeta): ?>
+                        <button type="button"
+                                class="sub-cur-option<?= $curCode === $subDefaultCurrency ? ' is-selected' : '' ?>"
+                                role="option"
+                                data-value="<?= htmlspecialchars($curCode, ENT_QUOTES, 'UTF-8') ?>"
+                                data-flag="<?= htmlspecialchars($subFlagUrl($curMeta['flag']), ENT_QUOTES, 'UTF-8') ?>"
+                                data-name="<?= htmlspecialchars($curMeta['name'], ENT_QUOTES, 'UTF-8') ?>"
+                                aria-selected="<?= $curCode === $subDefaultCurrency ? 'true' : 'false' ?>">
+                            <img src="<?= htmlspecialchars($subFlagUrl($curMeta['flag']), ENT_QUOTES, 'UTF-8') ?>" alt="" class="sub-cur-flag" width="24" height="17" loading="lazy">
+                            <span class="sub-cur-code"><?= htmlspecialchars($curCode, ENT_QUOTES, 'UTF-8') ?></span>
+                            <span class="sub-cur-name"><?= htmlspecialchars($curMeta['name'], ENT_QUOTES, 'UTF-8') ?></span>
+                        </button>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+            </div>
+            <div id="subPaymentTypeWrap"<?= $selectedParentPaymentMode !== 'none' ? '' : ' hidden' ?>>
+                <div class="sub-modal-label-row">
+                    <label for="subPaymentWalletType">Account type</label>
                 </div>
                 <select class="sub-modal-select" id="subPaymentWalletType" name="payment_wallet_type"<?= $selectedParentShowsPaymentType ? ' required' : '' ?>>
+                    <option value="" id="subPaymentTypeRegular"<?= $selectedParentShowsPaymentType ? ' hidden disabled' : ' selected' ?>>Regular asset account</option>
                     <?php foreach (balances_payment_wallet_types() as $walletSlug => $walletLabel): ?>
                         <option value="<?= htmlspecialchars($walletSlug, ENT_QUOTES, 'UTF-8') ?>"<?= $walletSlug === $selectedParentDefaultPaymentType ? ' selected' : '' ?>>
                             <?= htmlspecialchars($walletLabel, ENT_QUOTES, 'UTF-8') ?>
                         </option>
                     <?php endforeach; ?>
                 </select>
-                <p class="sub-modal-hint">How this wallet is treated on expenses and transfers (cash, bank, or mobile money).</p>
+            </div>
+            </div>
+            <div id="subOpeningWrap" hidden>
+                <div class="sub-modal-opening-row">
+                    <div>
+                        <div class="sub-modal-label-row">
+                            <label for="subOpeningBalance">Opening balance</label>
+                        </div>
+                        <input type="text" class="sub-modal-input" id="subOpeningBalance" name="opening_balance" inputmode="decimal" placeholder="0.00" autocomplete="off">
+                    </div>
+                    <div>
+                        <div class="sub-modal-label-row">
+                            <label for="subOpeningDate">As of date</label>
+                        </div>
+                        <input type="date" class="sub-modal-input" id="subOpeningDate" name="opening_date" value="<?= date('Y-m-d') ?>">
+                    </div>
+                </div>
+                <p class="sub-modal-hint">Balance on the statement or wallet on that date; later money in or out is recorded as transactions.</p>
             </div>
             <div class="sub-modal-actions">
                 <button type="button" class="sub-modal-btn sub-modal-btn-cancel" id="cancelSubAccountModal">Cancel</button>
@@ -2158,14 +2446,15 @@ include __DIR__ . '/includes/header.php';
     <input type="hidden" name="selected" value="<?= (int) $selectedId ?>">
 </form>
 
+<?php if (isAdmin() && !empty($selectedChildren)): ?>
 <form id="bulkDeleteForm" method="POST" class="d-none">
     <input type="hidden" name="action" value="bulk_delete_sub_accounts">
     <input type="hidden" name="delete_mode" id="bulkDeleteMode" value="deactivate">
     <input type="hidden" name="parent_id" value="<?= (int) $selectedId ?>">
     <input type="hidden" name="module" value="<?= htmlspecialchars($moduleParam, ENT_QUOTES, 'UTF-8') ?>">
     <input type="hidden" name="selected" value="<?= (int) $selectedId ?>">
-    <div id="bulkDeleteIdsContainer"></div>
 </form>
+<?php endif; ?>
 
 <script>
 var moveParentTargets = <?= json_encode($moveParentTargets, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
@@ -2210,19 +2499,25 @@ function rayOpenMobileSubMenu(btn) {
     var canManage = btn.getAttribute('data-can-manage') === '1';
     var canDelete = btn.getAttribute('data-can-delete') === '1';
 
+    var icons = <?= json_encode([
+        'eye' => $rayMenuIcon('eye'),
+        'edit' => $rayMenuIcon('pencil-square'),
+        'move' => $rayMenuIcon('arrow-uturn-left'),
+        'trash' => $rayMenuIcon('trash'),
+    ], JSON_UNESCAPED_SLASHES | JSON_HEX_TAG) ?>;
     var html = '';
     if (viewUrl) {
-        html += '<a role="menuitem" href="' + viewUrl.replace(/"/g, '&quot;') + '">View</a>';
+        html += '<a role="menuitem" href="' + viewUrl.replace(/"/g, '&quot;') + '">' + icons.eye + 'View</a>';
     }
     if (canEdit && editUrl) {
-        html += '<a role="menuitem" href="' + editUrl.replace(/"/g, '&quot;') + '">Edit</a>';
+        html += '<a role="menuitem" href="' + editUrl.replace(/"/g, '&quot;') + '">' + icons.edit + 'Edit</a>';
     }
     if (canManage && childId > 0 && parentId > 0) {
-        html += '<button type="button" role="menuitem" data-ray-action="unassign" data-child-id="' + childId + '" data-parent-id="' + parentId + '">Move to main accounts</button>';
+        html += '<button type="button" role="menuitem" data-ray-action="unassign" data-child-id="' + childId + '" data-parent-id="' + parentId + '">' + icons.move + 'Move to main accounts</button>';
     }
     if (canDelete && childId > 0) {
         html += '<div class="ray-m-menu-sep" role="separator"></div>';
-        html += '<button type="button" role="menuitem" class="is-danger" data-ray-action="delete" data-child-id="' + childId + '">Delete</button>';
+        html += '<button type="button" role="menuitem" class="is-danger" data-ray-action="delete" data-child-id="' + childId + '">' + icons.trash + 'Delete</button>';
     }
     if (!html) return;
 
@@ -2272,6 +2567,241 @@ function rayToggleParentAccordion(row) {
     }
 }
 
+function raySyncOpeningField() {
+    var payWrap = document.getElementById('subPaymentTypeWrap');
+    var paySelect = document.getElementById('subPaymentWalletType');
+    var openingWrap = document.getElementById('subOpeningWrap');
+    if (!openingWrap) return;
+    openingWrap.hidden = !payWrap || payWrap.hidden || !paySelect || ['bank', 'mobile', 'cash'].indexOf(paySelect.value) === -1;
+}
+function raySetSubCurrency(code) {
+    var menu = document.getElementById('subCurrencyMenu');
+    var select = document.getElementById('subCurrency');
+    var opt = menu ? menu.querySelector('.sub-cur-option[data-value="' + code + '"]') : null;
+    if (!select || !opt) return;
+    select.value = code;
+    document.getElementById('subCurrencyFlag').src = opt.getAttribute('data-flag');
+    document.getElementById('subCurrencyCode').textContent = code;
+    document.getElementById('subCurrencyName').textContent = opt.getAttribute('data-name');
+    menu.querySelectorAll('.sub-cur-option').forEach(function (o) {
+        var on = o === opt;
+        o.classList.toggle('is-selected', on);
+        o.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+}
+document.addEventListener('DOMContentLoaded', function () {
+    var picker = document.getElementById('subCurrencyPicker');
+    var trigger = document.getElementById('subCurrencyTrigger');
+    var menu = document.getElementById('subCurrencyMenu');
+    if (!picker || !trigger || !menu) return;
+    function setOpen(open) {
+        menu.hidden = !open;
+        trigger.setAttribute('aria-expanded', open ? 'true' : 'false');
+    }
+    trigger.addEventListener('click', function () { setOpen(menu.hidden); });
+    menu.querySelectorAll('.sub-cur-option').forEach(function (opt) {
+        opt.addEventListener('click', function () {
+            raySetSubCurrency(opt.getAttribute('data-value'));
+            setOpen(false);
+        });
+    });
+    document.addEventListener('click', function (e) {
+        if (!picker.contains(e.target)) setOpen(false);
+    });
+});
+
+function rayResetSubImage() {
+    var input = document.getElementById('subAccountImage');
+    var preview = document.getElementById('subAccountImagePreview');
+    var institution = document.getElementById('subInstitution');
+    if (input) input.value = '';
+    if (institution) institution.value = '';
+    if (preview) { preview.hidden = true; preview.removeAttribute('src'); }
+    if (input && input.parentElement) input.parentElement.classList.remove('has-image');
+}
+
+var balancesInstitutions = <?= json_encode(array_values(array_map(static fn ($i) => [
+    'slug' => $i['slug'],
+    'name' => $i['name'],
+    'type' => $i['type'],
+    'aliases' => $i['aliases'],
+    'logo' => $i['logo'] !== '' ? balancesAccountImageUrl($i['logo']) : '',
+    'custom' => $i['custom'],
+], balances_institutions($pdo))), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+
+document.addEventListener('DOMContentLoaded', function () {
+    var nameInput = document.getElementById('subAccountName');
+    var list = document.getElementById('subInstitutionList');
+    var hidden = document.getElementById('subInstitution');
+    var payWrap = document.getElementById('subPaymentTypeWrap');
+    var paySelect = document.getElementById('subPaymentWalletType');
+    var preview = document.getElementById('subAccountImagePreview');
+    var imageInput = document.getElementById('subAccountImage');
+    if (!nameInput || !list || !hidden) return;
+    var matches = [];
+    var active = -1;
+    var typeLabels = { bank: 'Bank', mobile: 'Mobile money', cash: 'Cash' };
+
+    function close() {
+        list.hidden = true;
+        nameInput.setAttribute('aria-expanded', 'false');
+        active = -1;
+    }
+    function render() {
+        list.innerHTML = '';
+        matches.forEach(function (inst, i) {
+            var item = document.createElement('button');
+            item.type = 'button';
+            item.className = 'sub-inst-item' + (i === active ? ' is-active' : '');
+            item.setAttribute('role', 'option');
+            var img = document.createElement('img');
+            img.alt = '';
+            img.src = inst.logo;
+            var name = document.createElement('span');
+            name.className = 'sub-inst-name';
+            name.textContent = inst.name;
+            var badge = document.createElement('span');
+            badge.className = 'sub-inst-type sub-inst-type--' + inst.type;
+            badge.textContent = typeLabels[inst.type] || inst.type;
+            item.appendChild(img);
+            item.appendChild(name);
+            if (inst.custom) {
+                var saved = document.createElement('span');
+                saved.className = 'sub-inst-type sub-inst-type--saved';
+                saved.textContent = 'Saved';
+                item.appendChild(saved);
+            }
+            item.appendChild(badge);
+            item.addEventListener('mousedown', function (e) { e.preventDefault(); choose(inst); });
+            list.appendChild(item);
+        });
+        list.hidden = matches.length === 0;
+        nameInput.setAttribute('aria-expanded', matches.length ? 'true' : 'false');
+    }
+    function search() {
+        var q = nameInput.value.trim().toLowerCase();
+        if (q.length < 1 || (payWrap && payWrap.hidden)) { matches = []; close(); return; }
+        var scored = [];
+        balancesInstitutions.forEach(function (inst) {
+            var hay = [inst.name.toLowerCase()].concat(inst.aliases);
+            var best = -1;
+            hay.forEach(function (h) {
+                if (h.indexOf(q) === 0) best = Math.max(best, 2);
+                else if (h.indexOf(' ' + q) !== -1 || h.indexOf(q) !== -1) best = Math.max(best, 1);
+            });
+            if (best >= 0) scored.push({ inst: inst, score: best });
+        });
+        scored.sort(function (a, b) { return b.score - a.score || a.inst.name.localeCompare(b.inst.name); });
+        matches = scored.slice(0, 8).map(function (s) { return s.inst; });
+        active = matches.length ? 0 : -1;
+        render();
+    }
+    function choose(inst) {
+        nameInput.value = inst.name;
+        nameInput.dispatchEvent(new Event('input', { bubbles: true }));
+        hidden.value = inst.slug;
+        if (imageInput) imageInput.value = '';
+        if (paySelect) {
+            var opt = paySelect.querySelector('option[value="' + inst.type + '"]');
+            if (opt && !opt.disabled) {
+                paySelect.value = inst.type;
+                raySyncOpeningField();
+            }
+        }
+        if (preview && inst.logo) {
+            preview.src = inst.logo;
+            preview.hidden = false;
+            preview.parentElement.classList.add('has-image');
+        }
+        matches = [];
+        close();
+    }
+
+    nameInput.addEventListener('input', function (e) {
+        if (hidden.value && e.isTrusted) {
+            hidden.value = '';
+            if (preview && !(imageInput && imageInput.files && imageInput.files.length)) {
+                preview.hidden = true;
+                preview.removeAttribute('src');
+                preview.parentElement.classList.remove('has-image');
+            }
+        }
+        if (e.isTrusted) search();
+    });
+    nameInput.addEventListener('focus', function () { if (!hidden.value) search(); });
+    nameInput.addEventListener('blur', function () { setTimeout(close, 120); });
+    nameInput.addEventListener('keydown', function (e) {
+        if (list.hidden || !matches.length) return;
+        if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+            e.preventDefault();
+            active = (active + (e.key === 'ArrowDown' ? 1 : matches.length - 1)) % matches.length;
+            render();
+        } else if (e.key === 'Enter' && active >= 0) {
+            e.preventDefault();
+            choose(matches[active]);
+        } else if (e.key === 'Escape') {
+            e.preventDefault();
+            e.stopPropagation();
+            close();
+        }
+    });
+    if (imageInput) imageInput.addEventListener('change', function () { hidden.value = ''; });
+});
+document.addEventListener('DOMContentLoaded', function () {
+    var storageKey = 'balancesCollapsedGroups';
+    var searching = <?= json_encode($subSearchQ !== '') ?>;
+    var collapsed = {};
+    try { collapsed = JSON.parse(localStorage.getItem(storageKey) || '{}') || {}; } catch (e) { collapsed = {}; }
+
+    function apply(toggle, isCollapsed) {
+        var key = toggle.getAttribute('data-group');
+        toggle.classList.toggle('is-collapsed', isCollapsed);
+        toggle.setAttribute('aria-expanded', isCollapsed ? 'false' : 'true');
+        document.querySelectorAll('[data-group-member="' + key + '"]').forEach(function (el) {
+            el.classList.toggle('is-group-hidden', isCollapsed);
+        });
+    }
+    document.querySelectorAll('.ray-group-toggle').forEach(function (toggle) {
+        var key = toggle.getAttribute('data-group');
+        if (!searching && collapsed[key]) apply(toggle, true);
+        function flip() {
+            var next = !toggle.classList.contains('is-collapsed');
+            apply(toggle, next);
+            if (next) collapsed[key] = 1; else delete collapsed[key];
+            try { localStorage.setItem(storageKey, JSON.stringify(collapsed)); } catch (e) {}
+        }
+        toggle.addEventListener('click', flip);
+        toggle.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); flip(); }
+        });
+    });
+});
+document.addEventListener('DOMContentLoaded', function () {
+    var paySelect = document.getElementById('subPaymentWalletType');
+    if (paySelect) paySelect.addEventListener('change', raySyncOpeningField);
+    raySyncOpeningField();
+
+    var imageInput = document.getElementById('subAccountImage');
+    var imagePreview = document.getElementById('subAccountImagePreview');
+    if (imageInput && imagePreview) {
+        imageInput.addEventListener('change', function () {
+            var file = imageInput.files && imageInput.files[0];
+            if (!file || !file.type || file.type.indexOf('image/') !== 0) {
+                rayResetSubImage();
+                return;
+            }
+            if (file.size > 2 * 1024 * 1024) {
+                alert('Account image must be 2MB or smaller.');
+                rayResetSubImage();
+                return;
+            }
+            imagePreview.src = URL.createObjectURL(file);
+            imagePreview.hidden = false;
+            imageInput.parentElement.classList.add('has-image');
+        });
+    }
+});
+
 function openSubForParent(parentId) {
     var meta = mobileParentMeta[String(parentId)] || mobileParentMeta[parentId] || {};
     var modal = document.getElementById('subAccountModal');
@@ -2288,17 +2818,21 @@ function openSubForParent(parentId) {
         title.textContent = 'Add New Sub-account to ' + (meta.name || 'account');
     }
     if (payWrap && paySelect) {
-        if (meta.shows_payment_type) {
-            payWrap.hidden = false;
-            paySelect.required = true;
-            if (meta.default_payment_type) {
-                paySelect.value = meta.default_payment_type;
-            }
-        } else {
-            payWrap.hidden = true;
-            paySelect.required = false;
+        var mode = meta.payment_type_mode || 'none';
+        var regularOpt = document.getElementById('subPaymentTypeRegular');
+        payWrap.hidden = mode === 'none';
+        paySelect.required = mode === 'required';
+        if (regularOpt) {
+            regularOpt.hidden = mode === 'required';
+            regularOpt.disabled = mode === 'required';
         }
+        paySelect.value = mode === 'required' ? (meta.default_payment_type || 'cash') : '';
     }
+    var openingInput = document.getElementById('subOpeningBalance');
+    if (openingInput) openingInput.value = '';
+    raySyncOpeningField();
+    raySetSubCurrency(meta.currency || 'TZS');
+    rayResetSubImage();
     modal.classList.add('is-open');
     document.body.style.overflow = 'hidden';
     var nameInput = document.getElementById('subAccountName');
@@ -2426,71 +2960,84 @@ function deleteAccount(id) {
     });
 }
 
-function getSelectedSubAccountIds() {
-    return Array.prototype.slice.call(document.querySelectorAll('.sub-account-select:checked'))
-        .map(function (el) { return parseInt(el.value, 10); })
-        .filter(function (id) { return id > 0; });
-}
+(function () {
+    var toggle = document.getElementById('toggleSubSelect');
+    var panel = document.querySelector('.ray-panel--subaccounts');
+    var bar = document.getElementById('subSelectBar');
+    var form = document.getElementById('bulkDeleteForm');
+    if (!toggle || !panel || !bar || !form) return;
+    var allBox = document.getElementById('subSelectAll');
+    var countEl = document.getElementById('subSelectCount');
+    var deleteBtn = document.getElementById('subSelectDelete');
 
-function updateSubBulkBar() {
-    var bar = document.getElementById('subBulkBar');
-    var countEl = document.getElementById('subBulkCount');
-    var deleteBtn = document.getElementById('subBulkDeleteBtn');
-    var selectAll = document.getElementById('subSelectAll');
-    if (!bar || !countEl || !deleteBtn) return;
+    function boxes() { return Array.prototype.slice.call(panel.querySelectorAll('.ray-sub-check')); }
+    function visibleBoxes() { return boxes().filter(function (b) { return b.offsetParent !== null; }); }
+    function checked() { return boxes().filter(function (b) { return b.checked; }); }
 
-    var ids = getSelectedSubAccountIds();
-    var total = document.querySelectorAll('.sub-account-select').length;
-    bar.hidden = ids.length === 0;
-    countEl.textContent = ids.length === 1 ? '1 selected' : ids.length + ' selected';
-
-    document.querySelectorAll('.sub-account-select').forEach(function (cb) {
-        var row = cb.closest('tr');
-        if (row) row.classList.toggle('is-sub-selected', cb.checked);
-    });
-
-    if (selectAll) {
-        selectAll.indeterminate = ids.length > 0 && ids.length < total;
-        selectAll.checked = total > 0 && ids.length === total;
-    }
-}
-
-function deleteSelectedSubAccounts() {
-    var ids = getSelectedSubAccountIds();
-    if (ids.length === 0) return;
-
-    var noun = ids.length === 1 ? 'this sub-account' : ids.length + ' sub-accounts';
-    Swal.fire({
-        icon: 'warning',
-        title: 'Remove selected sub-accounts?',
-        text: 'Remove from list keeps transaction history (recommended). Delete permanently erases the selected accounts and their transactions.',
-        showCancelButton: true,
-        showDenyButton: true,
-        confirmButtonText: 'Remove from list',
-        denyButtonText: 'Delete permanently',
-        cancelButtonText: 'Cancel',
-        confirmButtonColor: '#2563eb',
-        denyButtonColor: '#dc2626'
-    }).then(function (result) {
-        if (!result.isConfirmed && !result.isDenied) return;
-
-        var form = document.getElementById('bulkDeleteForm');
-        var container = document.getElementById('bulkDeleteIdsContainer');
-        var modeInput = document.getElementById('bulkDeleteMode');
-        if (!form || !container || !modeInput) return;
-
-        container.innerHTML = '';
-        ids.forEach(function (id) {
-            var input = document.createElement('input');
-            input.type = 'hidden';
-            input.name = 'ids[]';
-            input.value = String(id);
-            container.appendChild(input);
+    function refresh() {
+        var n = checked().length;
+        countEl.textContent = n + ' selected';
+        deleteBtn.disabled = n === 0;
+        var vis = visibleBoxes();
+        allBox.checked = vis.length > 0 && vis.every(function (b) { return b.checked; });
+        allBox.indeterminate = n > 0 && !allBox.checked;
+        boxes().forEach(function (b) {
+            var row = b.closest('tr');
+            if (row) row.classList.toggle('is-checked', b.checked);
         });
-        modeInput.value = result.isDenied ? 'delete_permanent' : 'deactivate';
-        form.submit();
+    }
+
+    function setMode(on) {
+        panel.classList.toggle('is-selecting', on);
+        toggle.setAttribute('aria-pressed', on ? 'true' : 'false');
+        bar.hidden = !on;
+        if (!on) boxes().forEach(function (b) { b.checked = false; });
+        refresh();
+    }
+
+    toggle.addEventListener('click', function () { setMode(!panel.classList.contains('is-selecting')); });
+    document.getElementById('subSelectCancel').addEventListener('click', function () { setMode(false); });
+    allBox.addEventListener('change', function () {
+        visibleBoxes().forEach(function (b) { b.checked = allBox.checked; });
+        refresh();
     });
-}
+    panel.addEventListener('change', function (e) {
+        if (e.target.classList && e.target.classList.contains('ray-sub-check')) refresh();
+    });
+    panel.addEventListener('click', function (e) {
+        if (e.target.classList && e.target.classList.contains('ray-sub-check')) e.stopPropagation();
+    }, true);
+
+    deleteBtn.addEventListener('click', function () {
+        var ids = checked().map(function (b) { return b.value; });
+        if (!ids.length) return;
+        var label = ids.length === 1 ? 'this sub-account' : ids.length + ' sub-accounts';
+        Swal.fire({
+            icon: 'warning',
+            title: 'Remove ' + label + '?',
+            text: 'Remove from list keeps transaction history (recommended). Delete permanently erases the accounts and their transactions.',
+            showCancelButton: true,
+            showDenyButton: true,
+            confirmButtonText: 'Remove from list',
+            denyButtonText: 'Delete permanently',
+            cancelButtonText: 'Cancel',
+            confirmButtonColor: '#2563eb',
+            denyButtonColor: '#dc2626'
+        }).then(function (result) {
+            if (!result.isConfirmed && !result.isDenied) return;
+            form.querySelectorAll('input[name="ids[]"]').forEach(function (el) { el.remove(); });
+            ids.forEach(function (id) {
+                var input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'ids[]';
+                input.value = id;
+                form.appendChild(input);
+            });
+            document.getElementById('bulkDeleteMode').value = result.isDenied ? 'delete_permanent' : 'deactivate';
+            form.submit();
+        });
+    });
+})();
 
 document.addEventListener('DOMContentLoaded', function () {
     var subModal = document.getElementById('subAccountModal');
@@ -2591,25 +3138,6 @@ document.addEventListener('DOMContentLoaded', function () {
             if (e.target === moveParentModal) closeMoveParentModal();
         });
     }
-
-    var subSelectAll = document.getElementById('subSelectAll');
-    if (subSelectAll) {
-        subSelectAll.addEventListener('change', function () {
-            var checked = subSelectAll.checked;
-            document.querySelectorAll('.sub-account-select').forEach(function (cb) {
-                cb.checked = checked;
-            });
-            updateSubBulkBar();
-        });
-    }
-    document.querySelectorAll('.sub-account-select').forEach(function (cb) {
-        cb.addEventListener('change', updateSubBulkBar);
-    });
-    var subBulkDeleteBtn = document.getElementById('subBulkDeleteBtn');
-    if (subBulkDeleteBtn) {
-        subBulkDeleteBtn.addEventListener('click', deleteSelectedSubAccounts);
-    }
-    updateSubBulkBar();
 
     // Mobile: if URL has an explicit selection, open that accordion on load.
     if (rayIsMobileAccounts()) {

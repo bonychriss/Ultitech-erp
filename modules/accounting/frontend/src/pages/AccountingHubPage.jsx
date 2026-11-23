@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { ArrowLeft, Search } from 'lucide-react'
+import { ArrowLeft, BarChart3, BookOpen, Landmark, Scale, Search, Wallet } from 'lucide-react'
 import balancesIcon from '../assets/balances-icon.png'
 import revenueIcon from '../assets/revenue-icon.png'
 import expensesIcon from '../assets/expenses-icon.png'
@@ -23,6 +23,14 @@ const SECTION_ICONS = {
   'financial-statements': trialBalanceIcon,
   'trial-balance': trialBalanceIcon,
   reconciliation: reconciliationIcon,
+}
+
+const SECTION_GLYPHS = {
+  'trial-balance': Scale,
+  'profit-loss': BarChart3,
+  'balance-sheet': Landmark,
+  'cash-flow': Wallet,
+  'general-ledger': BookOpen,
 }
 
 function readBoot() {
@@ -49,10 +57,19 @@ function hasChildren(section) {
 }
 
 function SectionIcon({ id, iconUrl, title, tone }) {
+  const Glyph = SECTION_GLYPHS[id]
+  const toneClass = typeof tone === 'string' && tone.trim() ? ` acct-ico--${tone.trim()}` : ''
+  if (Glyph) {
+    return (
+      <span className={`acct-ico acct-ico--glyph${toneClass}`} title={title || ''} aria-hidden="true">
+        <Glyph size={27} strokeWidth={1.8} />
+      </span>
+    )
+  }
+
   const bootUrl = typeof iconUrl === 'string' ? iconUrl.trim() : ''
   const src = SECTION_ICONS[id] || bootUrl || ''
   if (!src) return null
-  const toneClass = typeof tone === 'string' && tone.trim() ? ` acct-ico--${tone.trim()}` : ''
   return (
     <span
       className={`acct-ico acct-ico--img${toneClass}`}

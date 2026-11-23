@@ -4,6 +4,52 @@ requireLogin();
 
 global $pdo;
 
+require_once __DIR__ . '/../includes/gl/gl_reports.php';
+if (!isset($_GET['legacy'])) {
+    define('GL_VIEW', true);
+    if (gl_report_source($pdo) === 'ledger') {
+        require __DIR__ . '/gl-views/trial-balance.php';
+        exit;
+    }
+
+    require_once __DIR__ . '/../includes/gl/gl_view_helpers.php';
+    [$trialFrom, $trialTo] = gl_period_params();
+    $legacyStmt = $pdo->prepare(
+        "SELECT a.id, COALESCE(a.code, '') AS code, a.name, a.type,
+                COALESCE(SUM(CASE WHEN je.date < ? THEN ji.debit - ji.credit ELSE 0 END), 0) AS opening,
+                COALESCE(SUM(CASE WHEN je.date BETWEEN ? AND ? THEN ji.debit ELSE 0 END), 0) AS debit,
+                COALESCE(SUM(CASE WHEN je.date BETWEEN ? AND ? THEN ji.credit ELSE 0 END), 0) AS credit
+         FROM erp_accounts a
+         LEFT JOIN erp_journal_items ji ON a.id = ji.account_id
+         LEFT JOIN erp_journal_entries je ON ji.journal_id = je.id
+         WHERE je.date IS NULL OR je.date <= ?
+         GROUP BY a.id, a.code, a.name, a.type
+         ORDER BY CAST(a.code AS UNSIGNED) ASC, a.code ASC, a.name ASC"
+    );
+    $legacyStmt->execute([$trialFrom, $trialFrom, $trialTo, $trialFrom, $trialTo, $trialTo]);
+    $trialBalanceRows = [];
+    foreach ($legacyStmt->fetchAll(PDO::FETCH_ASSOC) ?: [] as $account) {
+        $opening = round((float) $account['opening'], 2);
+        $debit = round((float) $account['debit'], 2);
+        $credit = round((float) $account['credit'], 2);
+        if (abs($opening) < 0.005 && $debit < 0.005 && $credit < 0.005) {
+            continue;
+        }
+        $trialBalanceRows[] = [
+            'id' => (int) $account['id'],
+            'code' => (string) $account['code'],
+            'name' => (string) $account['name'],
+            'type' => gl_normal_type((string) $account['type']),
+            'opening' => $opening,
+            'debit' => $debit,
+            'credit' => $credit,
+            'closing' => round($opening + $debit - $credit, 2),
+        ];
+    }
+    require __DIR__ . '/gl-views/trial-balance.php';
+    exit;
+}
+
 $jeModule = isset($_GET['module']) ? htmlspecialchars((string) $_GET['module']) : 'balances';
 $fromDate = (string) ($_GET['from_date'] ?? date('Y-m-01'));
 $toDate = (string) ($_GET['to_date'] ?? date('Y-m-t'));
@@ -72,47 +118,6 @@ foreach ($rawAccounts as $acc) {
         'credit' => $credit,
         'net' => $debit - $credit,
     ];
-}
-
-// Temporary demo data to visualize layout when the selected period has no transactions.
-if ($totalAccounts === 0) {
-    $byType = [
-        'asset' => [
-            ['code' => '1100', 'name' => 'Current Assets', 'type' => 'Asset', 'debit' => 2100750000, 'credit' => 895250000, 'net' => 1205500000],
-            ['code' => '1110', 'name' => 'Cash and Bank', 'type' => 'Asset', 'debit' => 1250750000, 'credit' => 450250000, 'net' => 800500000],
-            ['code' => '1111', 'name' => 'Cash on Hand', 'type' => 'Asset', 'debit' => 85750000, 'credit' => 35250000, 'net' => 50500000],
-            ['code' => '1112', 'name' => 'Bank - CRDB', 'type' => 'Asset', 'debit' => 1165000000, 'credit' => 415000000, 'net' => 750000000],
-            ['code' => '1200', 'name' => 'Accounts Receivable', 'type' => 'Asset', 'debit' => 850000000, 'credit' => 445000000, 'net' => 405000000],
-            ['code' => '1300', 'name' => 'Inventory', 'type' => 'Asset', 'debit' => 60000000, 'credit' => 0, 'net' => 60000000],
-            ['code' => '1400', 'name' => 'Prepayments', 'type' => 'Asset', 'debit' => 100000000, 'credit' => 0, 'net' => 100000000],
-        ],
-        'liability' => [
-            ['code' => '2100', 'name' => 'Current Liabilities', 'type' => 'Liability', 'debit' => 220000000, 'credit' => 1150000000, 'net' => -930000000],
-            ['code' => '2110', 'name' => 'Accounts Payable', 'type' => 'Liability', 'debit' => 0, 'credit' => 850000000, 'net' => -850000000],
-            ['code' => '2120', 'name' => 'Accrued Expenses', 'type' => 'Liability', 'debit' => 0, 'credit' => 80000000, 'net' => -80000000],
-            ['code' => '2130', 'name' => 'Taxes Payable', 'type' => 'Liability', 'debit' => 220000000, 'credit' => 220000000, 'net' => 0],
-        ],
-        'equity' => [
-            ['code' => '3100', 'name' => "Owner's Equity", 'type' => 'Equity', 'debit' => 0, 'credit' => 1000000000, 'net' => -1000000000],
-            ['code' => '3110', 'name' => 'Capital', 'type' => 'Equity', 'debit' => 0, 'credit' => 1000000000, 'net' => -1000000000],
-        ],
-        'revenue' => [
-            ['code' => '4100', 'name' => 'Sales Revenue', 'type' => 'Revenue', 'debit' => 0, 'credit' => 2250000000, 'net' => -2250000000],
-        ],
-        'expense' => [
-            ['code' => '5100', 'name' => 'Operating Expenses', 'type' => 'Expense', 'debit' => 2500000000, 'credit' => 0, 'net' => 2500000000],
-        ],
-    ];
-    $totalDebit = 0.0;
-    $totalCredit = 0.0;
-    $totalAccounts = 0;
-    foreach ($byType as $rows) {
-        foreach ($rows as $r) {
-            $totalDebit += (float) $r['debit'];
-            $totalCredit += (float) $r['credit'];
-            $totalAccounts++;
-        }
-    }
 }
 
 $page_title = 'Trial Balance';
@@ -207,6 +212,9 @@ include __DIR__ . '/../modules/balances/includes/header.php';
               </tr>
             </thead>
             <tbody>
+              <?php if ($totalAccounts === 0): ?>
+                <tr><td colspan="6" style="text-align:center;padding:24px;color:#64748b;">No posted entries in this period.</td></tr>
+              <?php endif; ?>
               <?php foreach ($groups as $typeKey => $meta): ?>
                 <?php if (empty($byType[$typeKey])) continue; ?>
                 <?php

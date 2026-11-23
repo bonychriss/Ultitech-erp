@@ -3,6 +3,13 @@ require_once __DIR__ . '/../includes/functions.php';
 requireLogin();
 global $pdo;
 
+require_once __DIR__ . '/../includes/gl/gl_reports.php';
+if (gl_report_source($pdo) === 'ledger' && !isset($_GET['legacy'])) {
+    define('GL_VIEW', true);
+    require __DIR__ . '/gl-views/cash-flow.php';
+    exit;
+}
+
 $startDate = $_GET['start_date'] ?? date('Y-01-01');
 $endDate = $_GET['end_date'] ?? date('Y-12-31');
 

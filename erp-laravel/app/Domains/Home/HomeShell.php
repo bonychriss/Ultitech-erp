@@ -82,9 +82,20 @@ final class HomeShell
 
         $seoPartial = $root . '/includes/partials/seo.php';
         $headMarkup = '';
+        $seoBody = '';
         if (is_file($seoPartial)) {
             require_once $seoPartial;
             $headMarkup .= erp_seo_tags($seo);
+            if (function_exists('erp_seo_fallback_html')) {
+                $seoBody = erp_seo_fallback_html($pageKey, $seo, [
+                    'home' => $bootCfg['homeUrl'],
+                    'pricing' => $bootCfg['pricingUrl'],
+                    'trial' => $bootCfg['trialUrl'],
+                    'about' => $bootCfg['aboutUrl'],
+                    'contact' => $bootCfg['contactUrl'],
+                    'login' => $bootCfg['loginUrl'],
+                ]);
+            }
         }
         $headMarkup .= '<link rel="preconnect" href="https://fonts.googleapis.com">' . "\n"
             . '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>' . "\n"
@@ -106,6 +117,7 @@ final class HomeShell
             'pageTitle' => $pageTitle,
             'bodyClass' => 'home-ui-page',
             'headMarkup' => $headMarkup,
+            'seoBody' => $seoBody,
             'footerScripts' => $footerScripts,
         ];
     }

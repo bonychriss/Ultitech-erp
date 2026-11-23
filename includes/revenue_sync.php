@@ -235,6 +235,122 @@ function generateRevenueVoucherNumber(PDO $pdo, ?string $entryDate = null): stri
 }
 
 /**
+ * Keep journal / outstanding invoice refs in sync when a voucher number changes.
+ */
+function revenueSyncVoucherNumberReferences(PDO $pdo, string $oldVn, string $newVn): void
+{
+    $oldVn = trim($oldVn);
+    $newVn = trim($newVn);
+    if ($oldVn === '' || $newVn === '' || $oldVn === $newVn) {
+        return;
+    }
+
+    $hasTable = static function (string $table) use ($pdo): bool {
+        if (function_exists('tableExists')) {
+            return tableExists($table, $pdo);
+        }
+        try {
+            $pdo->query('SELECT 1 FROM `' . str_replace('`', '``', $table) . '` LIMIT 1');
+
+            return true;
+        } catch (Throwable $e) {
+            return false;
+        }
+    };
+
+    if ($hasTable('erp_journal_entries')) {
+        try {
+            $cols = $pdo->query('SHOW COLUMNS FROM erp_journal_entries')->fetchAll(PDO::FETCH_COLUMN) ?: [];
+            if (in_array('reference', $cols, true)) {
+                $pdo->prepare('UPDATE erp_journal_entries SET reference = ? WHERE reference = ?')
+                    ->execute([$newVn, $oldVn]);
+            }
+        } catch (Throwable $e) {
+            // Best-effort: voucher renumber must not fail because of journal schema drift.
+        }
+    }
+
+    if ($hasTable('erp_outstanding_invoices')) {
+        try {
+            $cols = $pdo->query('SHOW COLUMNS FROM erp_outstanding_invoices')->fetchAll(PDO::FETCH_COLUMN) ?: [];
+            if (in_array('invoice_number', $cols, true)) {
+                $pdo->prepare('UPDATE erp_outstanding_invoices SET invoice_number = ? WHERE invoice_number = ?')
+                    ->execute([$newVn, $oldVn]);
+            }
+        } catch (Throwable $e) {
+            // Best-effort.
+        }
+    }
+}
+
+/**
+ * Reassign voucher_number for one entry_date year-month: REV-{year}-{month}-1, 2, 3…
+ * Order is entry_date ASC, id ASC so gaps left by deletes are closed.
+ *
+ * @return array{updated:int,year:string,month:string}
+ */
+function renumberRevenueVouchersForYearMonth(PDO $pdo, string $year, string $month, bool $manageTransaction = true): array
+{
+    $year = trim($year);
+    $monthNum = (int) $month;
+    if ($year === '' || $monthNum < 1 || $monthNum > 12) {
+        return ['updated' => 0, 'year' => $year, 'month' => (string) $monthNum];
+    }
+    $month = (string) $monthNum;
+
+    $stmt = $pdo->prepare(
+        "SELECT id, entry_date, voucher_number
+         FROM revenue_entries
+         WHERE YEAR(COALESCE(entry_date, '1970-01-01')) = ?
+           AND MONTH(COALESCE(entry_date, '1970-01-01')) = ?
+         ORDER BY COALESCE(entry_date, '1970-01-01') ASC, id ASC"
+    );
+    $stmt->execute([(int) $year, $monthNum]);
+    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+    $updated = 0;
+    $startedTx = false;
+    if ($manageTransaction && !$pdo->inTransaction()) {
+        $pdo->beginTransaction();
+        $startedTx = true;
+    }
+
+    try {
+        $upd = $pdo->prepare('UPDATE revenue_entries SET voucher_number = ? WHERE id = ?');
+        $seq = 0;
+        foreach ($rows as $row) {
+            $id = (int) ($row['id'] ?? 0);
+            if ($id <= 0) {
+                continue;
+            }
+            $seq++;
+            $newVn = 'REV-' . $year . '-' . $month . '-' . $seq;
+            $oldVn = trim((string) ($row['voucher_number'] ?? ''));
+            if ($oldVn === $newVn) {
+                continue;
+            }
+            $upd->execute([$newVn, $id]);
+            revenueSyncVoucherNumberReferences($pdo, $oldVn, $newVn);
+            $updated++;
+        }
+        if ($startedTx) {
+            $pdo->commit();
+        }
+    } catch (Throwable $e) {
+        if ($startedTx && $pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        throw $e;
+    }
+
+    return [
+        'updated' => $updated,
+        'year' => $year,
+        'month' => $month,
+    ];
+}
+
+/**
  * Reassign voucher_number for all revenue_entries by entry_date month sequence.
  * January → REV-YYYY-1-1, REV-YYYY-1-2, … then February → REV-YYYY-2-1, …
  *
@@ -242,40 +358,24 @@ function generateRevenueVoucherNumber(PDO $pdo, ?string $entryDate = null): stri
  */
 function renumberRevenueVouchersByEntryMonth(PDO $pdo): array
 {
-    $rows = $pdo->query(
-        "SELECT id, entry_date, voucher_number
+    $months = $pdo->query(
+        "SELECT DISTINCT YEAR(COALESCE(entry_date, '1970-01-01')) AS y,
+                MONTH(COALESCE(entry_date, '1970-01-01')) AS m
          FROM revenue_entries
-         ORDER BY COALESCE(entry_date, '1970-01-01') ASC, id ASC"
+         ORDER BY y ASC, m ASC"
     )->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
-    $seqByMonth = [];
     $updated = 0;
-    $monthsTouched = [];
-
     $pdo->beginTransaction();
     try {
-        $upd = $pdo->prepare('UPDATE revenue_entries SET voucher_number = ? WHERE id = ?');
-        foreach ($rows as $row) {
-            $id = (int) ($row['id'] ?? 0);
-            if ($id <= 0) {
-                continue;
-            }
-            [$year, $month] = revenueVoucherYearMonthFromDate(
-                isset($row['entry_date']) ? (string) $row['entry_date'] : null
+        foreach ($months as $ym) {
+            $result = renumberRevenueVouchersForYearMonth(
+                $pdo,
+                (string) (int) ($ym['y'] ?? 0),
+                (string) (int) ($ym['m'] ?? 0),
+                false
             );
-            $key = $year . '-' . $month;
-            if (!isset($seqByMonth[$key])) {
-                $seqByMonth[$key] = 0;
-            }
-            $seqByMonth[$key]++;
-            $monthsTouched[$key] = true;
-            $newVn = 'REV-' . $year . '-' . $month . '-' . $seqByMonth[$key];
-            $oldVn = trim((string) ($row['voucher_number'] ?? ''));
-            if ($oldVn === $newVn) {
-                continue;
-            }
-            $upd->execute([$newVn, $id]);
-            $updated++;
+            $updated += (int) ($result['updated'] ?? 0);
         }
         $pdo->commit();
     } catch (Throwable $e) {
@@ -287,7 +387,7 @@ function renumberRevenueVouchersByEntryMonth(PDO $pdo): array
 
     return [
         'updated' => $updated,
-        'months' => count($monthsTouched),
+        'months' => count($months),
     ];
 }
 

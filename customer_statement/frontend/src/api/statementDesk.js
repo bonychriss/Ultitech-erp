@@ -33,6 +33,26 @@ export async function fetchStatementInit(params = {}) {
   return data;
 }
 
+export async function fetchStatementHistory(page = 1, id = null) {
+  const params = new URLSearchParams(id ? { id: String(id) } : { page: String(page) });
+  const res = await fetch(`${getApiBase()}/history.php?${params}`, { credentials: 'same-origin' });
+  const data = await parseJson(res);
+  if (!res.ok || data.error) throw new Error(data.error || `Request failed (${res.status})`);
+  return data;
+}
+
+export async function saveStatementHistory(filters, csrfToken) {
+  const res = await fetch(`${getApiBase()}/history.php`, {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ...filters, csrf_token: csrfToken }),
+  });
+  const data = await parseJson(res);
+  if (!res.ok || data.error) throw new Error(data.error || `Request failed (${res.status})`);
+  return data;
+}
+
 export function buildStatementQuery(filters, module) {
   const params = new URLSearchParams();
   if (module) params.set('module', module);

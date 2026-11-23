@@ -1,6 +1,7 @@
 .pl-page {
   max-width: 1440px;
   margin: 0 auto;
+  gap: 0.75rem;
 }
 
 .pl-toolbar {
@@ -8,7 +9,7 @@
   align-items: center;
   justify-content: flex-end;
   gap: 0.75rem;
-  margin-bottom: 1.25rem;
+  margin-bottom: 0;
 }
 
 .pl-settings-link {
@@ -40,7 +41,7 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1rem;
-  margin-bottom: 1.5rem;
+  margin-bottom: 0;
 }
 
 @media (min-width: 768px) {
@@ -109,49 +110,58 @@
 
 .pl-table-section {
   background: #fff;
-  border: 1px solid #e7edf3;
-  border-radius: 16px;
-  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.04);
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  box-shadow: none;
 }
 
-/* Ledger table look (matches quotations) */
 .pl-table-section .exp-desk-table-wrap {
   border: 0;
-  border-radius: 16px 16px 0 0;
+  border-radius: 14px 14px 0 0;
+  max-height: max(20rem, calc(100dvh - 11rem));
+  overflow: auto;
 }
 
 .pl-table.exp-desk-table {
   border-collapse: separate;
   border-spacing: 0;
+  font-size: 0.78rem;
 }
 
 .pl-table.exp-desk-table thead th {
-  background: #1e293b;
-  color: #fff;
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  background: #f8fafc;
+  color: #0f172a;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: normal;
+  text-transform: none;
   white-space: nowrap;
-  padding-top: 0.72rem;
-  padding-bottom: 0.72rem;
-  border-bottom: 0;
+  padding: 0.55rem 0.45rem;
+  border-bottom: 1px solid #e2e8f0;
+  vertical-align: middle;
 }
 
-.pl-table.exp-desk-table thead th:first-child { border-top-left-radius: 15px; }
-.pl-table.exp-desk-table thead th:last-child { border-top-right-radius: 15px; }
+.pl-table.exp-desk-table thead th:first-child { border-top-left-radius: 13px; }
+.pl-table.exp-desk-table thead th:last-child { border-top-right-radius: 13px; }
 
 .pl-table.exp-desk-table tbody td {
-  padding-top: 0.6rem;
-  padding-bottom: 0.6rem;
-  border-bottom: 1px solid #eef2f6;
-  font-size: 0.875rem;
+  padding: 0.55rem 0.45rem;
+  border-bottom: 1px solid #f1f5f9;
+  font-size: 0.78rem;
   background: #fff;
 }
 
-.pl-table.exp-desk-table tbody tr:nth-child(even) td { background: #f8fafc; }
-.pl-table.exp-desk-table tbody tr:hover td { background: #eef4ff; }
-.pl-table.exp-desk-table tbody tr.is-selected td { background: #e0e7ff; }
+.pl-table.exp-desk-table tbody tr:hover td { background: #fffbeb; }
+.pl-table.exp-desk-table tbody tr.is-selected td { background: #c9d3df; }
+.pl-table.exp-desk-table tbody tr.is-selected:hover td { background: #b8c4d2; }
+
+.pl-table.exp-desk-table th:first-child,
+.pl-table.exp-desk-table td:first-child { padding-left: 0.75rem; }
+.pl-table.exp-desk-table th:last-child,
+.pl-table.exp-desk-table td:last-child { padding-right: 0.75rem; }
 
 .pl-table.exp-desk-table td.pl-col-num {
   color: #64748b;
@@ -160,23 +170,30 @@
 
 .pl-table.exp-desk-table .exp-desk-cell-main {
   color: #0f172a;
-  font-weight: 700;
+  font-weight: 600;
+}
+
+.pl-table.exp-desk-table .exp-desk-ref {
+  font-size: 0.78rem;
 }
 
 .pl-table-section .pl-pagination {
-  border-radius: 0 0 16px 16px;
+  border-radius: 0 0 14px 14px;
 }
 
-html[data-theme="dark"] .pl-table.exp-desk-table thead th { background: #0f172a; }
-html[data-theme="dark"] .pl-table.exp-desk-table tbody td,
-html[data-theme="dark"] .pl-table.exp-desk-table tbody tr:nth-child(even) td { background: #1e293b; color: #e2e8f0; border-color: #334155; }
-html[data-theme="dark"] .pl-table.exp-desk-table tbody tr:hover td { background: #334155; }
-html[data-theme="dark"] .pl-table.exp-desk-table tbody tr.is-selected td { background: #312e81; }
-html[data-theme="dark"] .pl-table.exp-desk-table .exp-desk-cell-main { color: #f8fafc; }
+html[data-theme="dark"] body.page-pricelist-desk .pl-table.exp-desk-table tbody tr.is-selected td {
+  background: #202c33 !important;
+}
+html[data-theme="dark"] body.page-pricelist-desk .pl-table.exp-desk-table tbody tr.is-selected:hover td {
+  background: #2a3942 !important;
+}
 
 .pl-filters {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
   padding: 0;
-  margin-bottom: 1.25rem;
+  margin-bottom: 0;
   background: transparent;
   border: none;
   border-radius: 0;
@@ -394,7 +411,12 @@ html[data-theme="dark"] .pl-table.exp-desk-table .exp-desk-cell-main { color: #f
   flex-wrap: wrap;
   align-items: center;
   gap: 0.5rem;
-  margin-top: 1rem;
+  margin-top: 0;
+}
+
+.exp-desk-filters-panel .exp-desk-unpaid-toggle input:focus-visible + .exp-desk-unpaid-toggle-switch {
+  outline: 2px solid #6366f1;
+  outline-offset: 3px;
 }
 
 .pl-chip {
@@ -489,7 +511,7 @@ html[data-theme="dark"] .pl-table.exp-desk-table .exp-desk-cell-main { color: #f
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
-  margin-bottom: 1rem;
+  margin-bottom: 0;
   padding: 0.75rem 1rem;
   border: 1px solid #ede9fe;
   border-radius: 12px;
@@ -519,8 +541,8 @@ html[data-theme="dark"] .pl-table.exp-desk-table .exp-desk-cell-main { color: #f
 
 .pl-product-image-wrap {
   position: relative;
-  width: 3rem;
-  height: 3rem;
+  width: 2.25rem;
+  height: 2.25rem;
 }
 
 .pl-image-skeleton {
@@ -535,8 +557,8 @@ html[data-theme="dark"] .pl-table.exp-desk-table .exp-desk-cell-main { color: #f
 
 .pl-product-image {
   position: relative;
-  width: 3rem;
-  height: 3rem;
+  width: 2.25rem;
+  height: 2.25rem;
   border-radius: 8px;
   border: 1px solid #e2e8f0;
   object-fit: cover;
@@ -571,7 +593,7 @@ html[data-theme="dark"] .pl-table.exp-desk-table .exp-desk-cell-main { color: #f
   margin-left: auto;
   display: block;
   text-align: right;
-  font-size: 1rem;
+  font-size: 0.78rem;
   font-weight: 700;
   color: #2563eb;
   background: transparent;
@@ -913,7 +935,20 @@ html[data-theme="dark"] body.page-pricelist-desk .pl-kpi-card--blue .pl-kpi-icon
 html[data-theme="dark"] body.page-pricelist-desk .pl-kpi-card--green .pl-kpi-icon { background: #16a34a; }
 html[data-theme="dark"] body.page-pricelist-desk .pl-kpi-card--amber .pl-kpi-icon { background: #ea8a0c; }
 
-html[data-theme="dark"] body.page-pricelist-desk .pl-table-section,
+html[data-theme="dark"] body.page-pricelist-desk .pl-table-section {
+  background: #111b21;
+  border-color: #2a3942;
+}
+
+html[data-theme="dark"] body.page-pricelist-desk .pl-pagination {
+  background: #111b21;
+  border-color: #2a3942;
+}
+
+html[data-theme="dark"] body.page-pricelist-desk .pl-pagination p {
+  color: #8696a0;
+}
+
 html[data-theme="dark"] body.page-pricelist-desk .pl-modal {
   background: #1e293b;
   border-color: #334155;

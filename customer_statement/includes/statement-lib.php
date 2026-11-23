@@ -43,6 +43,13 @@ function customer_statement_pdo(): PDO
     return $pdo;
 }
 
+function customer_statement_delete_history(PDO $db, int $companyId, int $statementId): bool
+{
+    $delete = $db->prepare('DELETE FROM customer_statement_history WHERE id = ? AND company_id = ?');
+    $delete->execute([$statementId, $companyId]);
+    return $delete->rowCount() > 0;
+}
+
 function customer_statement_web_base(): string
 {
     $script = str_replace('\\', '/', (string) ($_SERVER['SCRIPT_NAME'] ?? ''));
@@ -219,7 +226,7 @@ function customer_statement_parse_filters(array $query): array
 function customer_statement_fetch_customers(PDO $db): array
 {
     try {
-        $stmtC = $db->query('SELECT id, customer_code, company_name, phone, email FROM customers ORDER BY company_name ASC');
+        $stmtC = $db->query('SELECT id, customer_code, company_name, phone, email, address FROM customers ORDER BY company_name ASC');
         return $stmtC ? ($stmtC->fetchAll(PDO::FETCH_ASSOC) ?: []) : [];
     } catch (Throwable $e) {
         error_log('customer_statement_fetch_customers: ' . $e->getMessage());
@@ -231,7 +238,7 @@ function customer_statement_fetch_customers(PDO $db): array
  * @param array{customer_ids:list<int>,date_from:string,date_to:string,period:string} $filters
  * @return array<string, mixed>
  */
-function customer_statement_build(PDO $db, array $filters): array
+function customer_statement_build(PDO $db, array $filters, bool $strict = false): array
 {
     $customerIds = $filters['customer_ids'];
     $dateFrom = $filters['date_from'];
@@ -239,6 +246,7 @@ function customer_statement_build(PDO $db, array $filters): array
 
     $selectedCustomers = [];
     $rows = [];
+    $transactions = [];
     $monthly = [];
     $grandTotal = 0.0;
     $sumPaid = 0.0;
@@ -249,6 +257,7 @@ function customer_statement_build(PDO $db, array $filters): array
         return [
             'selected_customers' => [],
             'rows' => [],
+            'transactions' => [],
             'monthly' => [],
             'grand_total' => 0.0,
             'sum_paid' => 0.0,
@@ -264,6 +273,7 @@ function customer_statement_build(PDO $db, array $filters): array
     try {
         $invCols = $db->query('SHOW COLUMNS FROM invoices')->fetchAll(PDO::FETCH_COLUMN, 0) ?: [];
     } catch (Throwable $e) {
+        if ($strict) throw $e;
         $invCols = [];
     }
     $hasInvoiceDate = in_array('invoice_date', $invCols, true);
@@ -273,31 +283,83 @@ function customer_statement_build(PDO $db, array $filters): array
     $invDateExpr = $hasInvoiceDate ? 'i.invoice_date' : 'DATE(i.created_at)';
     $dueDateExpr = $hasDueDate ? 'i.due_date' : "DATE_ADD($invDateExpr, INTERVAL 30 DAY)";
     $amountPaidExpr = $hasAmountPaid ? 'COALESCE(i.amount_paid, 0)' : '0';
+    $invoiceCreatedExpr = in_array('created_at', $invCols, true) ? 'i.created_at' : $invDateExpr;
+    $paymentCols = [];
+    $paymentTableExists = false;
+    try {
+        $paymentTableExists = (bool) $db->query("SHOW TABLES LIKE 'sales_payments'")->fetchColumn();
+        if ($paymentTableExists) {
+            $paymentCols = $db->query('SHOW COLUMNS FROM sales_payments')->fetchAll(PDO::FETCH_COLUMN, 0) ?: [];
+        }
+    } catch (Throwable $e) {
+        if ($strict) throw $e;
+        error_log('customer_statement_build: payment schema lookup failed: ' . $e->getMessage());
+    }
+    $hasPaymentLedger = $paymentTableExists
+        && in_array('id', $paymentCols, true)
+        && in_array('invoice_id', $paymentCols, true)
+        && in_array('amount', $paymentCols, true)
+        && in_array('payment_date', $paymentCols, true);
+    if ($paymentTableExists && !$hasPaymentLedger) {
+        error_log('customer_statement_build: sales_payments table is missing required ledger columns.');
+    }
+    $paymentReferenceExpr = in_array('reference', $paymentCols, true) ? "COALESCE(sp.reference, '')" : "''";
+    $paymentCreatedExpr = in_array('created_at', $paymentCols, true) ? 'sp.created_at' : 'sp.payment_date';
+    [$customerScope, $customerScopeParams] = $strict && function_exists('salesCompanyScopeSql')
+        ? salesCompanyScopeSql('customers', 'c') : ['', []];
+    [$invoiceScope, $invoiceScopeParams] = $strict && function_exists('salesCompanyScopeSql')
+        ? salesCompanyScopeSql('invoices', 'i') : ['', []];
+    [$paymentScope, $paymentScopeParams] = $strict && $hasPaymentLedger && function_exists('salesCompanyScopeSql')
+        ? salesCompanyScopeSql('sales_payments', 'sp') : ['', []];
 
     try {
         $in = implode(',', array_fill(0, count($customerIds), '?'));
-        $stCust = $db->prepare("SELECT id, customer_code, company_name, phone, email FROM customers WHERE id IN ($in) ORDER BY company_name ASC");
-        $stCust->execute($customerIds);
+        $stCust = $db->prepare("SELECT c.id, c.customer_code, c.company_name, c.phone, c.email, c.address FROM customers c WHERE c.id IN ($in) $customerScope ORDER BY c.company_name ASC");
+        $stCust->execute(array_merge($customerIds, $customerScopeParams));
         $selectedCustomers = $stCust->fetchAll(PDO::FETCH_ASSOC) ?: [];
     } catch (Throwable $e) {
+        if ($strict) throw $e;
         $selectedCustomers = [];
     }
 
     if ($dateFrom !== '') {
         try {
             $inO = implode(',', array_fill(0, count($customerIds), '?'));
+            $openingPaidExpr = $amountPaidExpr;
             $paramsO = $customerIds;
+            if ($hasPaymentLedger) {
+                $openingPaidExpr = "CASE
+                    WHEN EXISTS (SELECT 1 FROM sales_payments spx WHERE spx.invoice_id = i.id)
+                    THEN COALESCE((
+                        SELECT SUM(spx.amount)
+                        FROM sales_payments spx
+                        WHERE spx.invoice_id = i.id AND spx.payment_date < ?
+                    ), 0) + GREATEST(
+                        $amountPaidExpr - COALESCE((
+                            SELECT SUM(spx.amount)
+                            FROM sales_payments spx
+                            WHERE spx.invoice_id = i.id
+                        ), 0),
+                        0
+                    )
+                    ELSE $amountPaidExpr
+                END";
+                array_unshift($paramsO, $dateFrom);
+            }
             $paramsO[] = $dateFrom;
+            $paramsO = array_merge($paramsO, $invoiceScopeParams);
             $stO = $db->prepare("
-                SELECT COALESCE(SUM(i.total_amount - $amountPaidExpr), 0) AS ob
+                SELECT COALESCE(SUM(i.total_amount - $openingPaidExpr), 0) AS ob
                 FROM invoices i
                 WHERE i.customer_id IN ($inO)
                   AND i.status != 'cancelled'
                   AND $invDateExpr < ?
+                  $invoiceScope
             ");
             $stO->execute($paramsO);
             $openingBalance = (float) $stO->fetchColumn();
         } catch (Throwable $e) {
+            if ($strict) throw $e;
             $openingBalance = 0.0;
         }
     }
@@ -314,6 +376,8 @@ function customer_statement_build(PDO $db, array $filters): array
             $where .= " AND $invDateExpr <= ?";
             $params[] = $dateTo;
         }
+        $where .= $invoiceScope;
+        $params = array_merge($params, $invoiceScopeParams);
 
         $sql = "SELECT
                     i.id,
@@ -323,6 +387,7 @@ function customer_statement_build(PDO $db, array $filters): array
                     i.total_amount,
                     $amountPaidExpr AS amount_paid,
                     (i.total_amount - $amountPaidExpr) AS line_balance,
+                    $invoiceCreatedExpr AS generated_on,
                     i.status AS invoice_status,
                     c.company_name,
                     c.customer_code,
@@ -336,6 +401,7 @@ function customer_statement_build(PDO $db, array $filters): array
         $stmt->execute($params);
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
     } catch (Throwable $e) {
+        if ($strict) throw $e;
         $rows = [];
     }
 
@@ -348,6 +414,19 @@ function customer_statement_build(PDO $db, array $filters): array
         $sumBalance += $bal;
 
         $date = (string) ($r['invoice_date'] ?? '');
+        $invoiceNumber = trim((string) ($r['invoice_number'] ?? ''));
+        $transactions[] = [
+            'id' => 'invoice-' . (int) ($r['id'] ?? 0),
+            'invoice_id' => (int) ($r['id'] ?? 0),
+            'transaction_date' => $date,
+            'description' => $invoiceNumber !== '' ? 'Sales Invoice #' . $invoiceNumber : 'Sales Invoice',
+            'reference' => $invoiceNumber,
+            'total_sales' => $amount,
+            'total_payments' => 0.0,
+            'generated_on' => (string) ($r['generated_on'] ?? $date),
+            'sort_order' => 0,
+            'sort_id' => (int) ($r['id'] ?? 0),
+        ];
         $monthKey = $date !== '' ? date('Y-m', strtotime($date)) : 'unknown';
         if (!isset($monthly[$monthKey])) {
             $monthly[$monthKey] = [
@@ -378,6 +457,80 @@ function customer_statement_build(PDO $db, array $filters): array
     }
     unset($r);
 
+    if ($hasPaymentLedger) {
+        try {
+            $in = implode(',', array_fill(0, count($customerIds), '?'));
+            $where = "i.customer_id IN ($in) AND i.status != 'cancelled'";
+            $params = $customerIds;
+            if ($dateFrom !== '') {
+                $where .= ' AND sp.payment_date >= ?';
+                $params[] = $dateFrom;
+            }
+            if ($dateTo !== '') {
+                $where .= ' AND sp.payment_date <= ?';
+                $params[] = $dateTo;
+            }
+            $where .= $invoiceScope . $paymentScope;
+            $params = array_merge($params, $invoiceScopeParams, $paymentScopeParams);
+
+            $stPayments = $db->prepare("
+                SELECT
+                    sp.id,
+                    sp.invoice_id,
+                    sp.payment_date AS transaction_date,
+                    sp.amount,
+                    $paymentReferenceExpr AS payment_reference,
+                    $paymentCreatedExpr AS generated_on
+                FROM sales_payments sp
+                INNER JOIN invoices i ON i.id = sp.invoice_id
+                WHERE $where
+                ORDER BY sp.payment_date ASC, sp.id ASC
+            ");
+            $stPayments->execute($params);
+            foreach ($stPayments->fetchAll(PDO::FETCH_ASSOC) ?: [] as $payment) {
+                $paymentId = (int) ($payment['id'] ?? 0);
+                $transactions[] = [
+                    'id' => 'payment-' . $paymentId,
+                    'invoice_id' => (int) ($payment['invoice_id'] ?? 0),
+                    'transaction_date' => (string) ($payment['transaction_date'] ?? ''),
+                    'description' => 'Payment Received',
+                    'reference' => trim((string) ($payment['payment_reference'] ?? '')),
+                    'total_sales' => 0.0,
+                    'total_payments' => (float) ($payment['amount'] ?? 0),
+                    'generated_on' => (string) ($payment['generated_on'] ?? $payment['transaction_date'] ?? ''),
+                    'sort_order' => 1,
+                    'sort_id' => $paymentId,
+                ];
+            }
+        } catch (Throwable $e) {
+            if ($strict) throw $e;
+            error_log('customer_statement_build: payment ledger query failed: ' . $e->getMessage());
+        }
+    }
+
+    usort($transactions, static function (array $a, array $b): int {
+        $dateOrder = strcmp((string) $a['transaction_date'], (string) $b['transaction_date']);
+        if ($dateOrder !== 0) return $dateOrder;
+        $typeOrder = (int) $a['sort_order'] <=> (int) $b['sort_order'];
+        return $typeOrder !== 0 ? $typeOrder : ((int) $a['sort_id'] <=> (int) $b['sort_id']);
+    });
+    $runningBalance = $openingBalance;
+    foreach ($transactions as &$transaction) {
+        $runningBalance += (float) $transaction['total_sales'] - (float) $transaction['total_payments'];
+        $transaction['balance'] = $runningBalance;
+    }
+    unset($transaction);
+    usort($transactions, static function (array $a, array $b): int {
+        $dateOrder = strcmp((string) $b['transaction_date'], (string) $a['transaction_date']);
+        if ($dateOrder !== 0) return $dateOrder;
+        $typeOrder = (int) $b['sort_order'] <=> (int) $a['sort_order'];
+        return $typeOrder !== 0 ? $typeOrder : ((int) $b['sort_id'] <=> (int) $a['sort_id']);
+    });
+    foreach ($transactions as &$transaction) {
+        unset($transaction['sort_order'], $transaction['sort_id']);
+    }
+    unset($transaction);
+
     if ($monthly !== []) {
         $firstKey = array_key_first($monthly);
         if ($firstKey !== null) {
@@ -402,6 +555,7 @@ function customer_statement_build(PDO $db, array $filters): array
     return [
         'selected_customers' => $selectedCustomers,
         'rows' => $rows,
+        'transactions' => array_values($transactions),
         'monthly' => array_values($monthly),
         'grand_total' => $grandTotal,
         'sum_paid' => $sumPaid,
@@ -496,12 +650,14 @@ function customer_statement_init_data(): array
                 'company_name' => (string) ($c['company_name'] ?? ''),
                 'phone' => (string) ($c['phone'] ?? ''),
                 'email' => (string) ($c['email'] ?? ''),
+                'address' => (string) ($c['address'] ?? ''),
             ];
         }, $customers),
         'filters' => $filters,
         'statement' => $statement,
         'urls' => $urls,
         'company_name' => defined('COMPANY_NAME') ? (string) COMPANY_NAME : 'Company',
+        'csrf_token' => csrf_token(),
     ];
 }
 
@@ -755,6 +911,20 @@ function customerStatementRenderReactShell(): void
 
     $page_title = 'Customer statement';
     $employeeHeaderTitle = 'Customer statement';
+    $homeUrl = function_exists('company_url')
+        ? company_url('select-module')
+        : (function_exists('app_url') ? app_url('/select-module.php') : '../select-module.php');
+    $salesUrl = function_exists('sales_module_url')
+        ? sales_module_url('index.php', ['module' => 'sales'])
+        : (function_exists('app_url') ? app_url('/modules/sales/index.php') . '?module=sales' : '../modules/sales/index.php?module=sales');
+    $employeeHeaderSubtitle = '<nav class="vv-breadcrumb exp-desk-breadcrumb" aria-label="Breadcrumb">'
+        . '<a class="vv-breadcrumb-link erp-nav-back-ignore" href="' . htmlspecialchars($homeUrl, ENT_QUOTES, 'UTF-8') . '">Home</a>'
+        . '<span class="vv-breadcrumb-sep">/</span>'
+        . '<a class="vv-breadcrumb-link vv-breadcrumb-link--active erp-nav-back-ignore" href="'
+        . htmlspecialchars($salesUrl, ENT_QUOTES, 'UTF-8') . '">Sales</a>'
+        . '<span class="vv-breadcrumb-sep">/</span>'
+        . '<span class="vv-breadcrumb-current" aria-current="page">Customer statement</span>'
+        . '</nav>';
     $hideHeaderCompanyBranding = true;
     $employeeHeaderExtraClass = 'employee-header--exp-desk';
 

@@ -1,40 +1,151 @@
-.ms-period {
-  margin: 0 0 1rem;
-  font-size: 0.8125rem;
-  color: #64748b;
-}
-
-.ms-actions {
+.ms-header-actions-slot {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.625rem;
-  justify-content: flex-end;
-  margin-bottom: 1rem;
+  align-items: center;
+  min-width: 0;
 }
 
-.ms-actions .ms-btn {
-  appearance: none;
-  -webkit-appearance: none;
-  min-height: 2.375rem;
-  padding: 0.55rem 1.35rem !important;
-  border-radius: 9999px !important;
-  line-height: 1.2;
+.ms-header-actions {
+  position: relative;
+  z-index: 80;
 }
 
-.ms-actions .ms-btn--download {
-  background: #fff !important;
-  border: 1px solid #ddd6fe !important;
-  color: #6d28d9 !important;
+.ms-header-actions-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 36px;
+  padding: 0.28rem 0.8rem 0.28rem 0.7rem;
+  color: #334155;
+  background: #fff;
+  border: 1px solid #e8eef5;
+  border-radius: 999px !important;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+  font: inherit;
+  font-size: 0.92rem;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
 }
 
-.ms-actions .ms-btn--download:hover {
-  background: #f5f3ff !important;
-  border-color: #c4b5fd !important;
-  color: #5b21b6 !important;
+.ms-header-actions-trigger:hover,
+.ms-header-actions.is-open .ms-header-actions-trigger {
+  color: #1e293b;
+  background: #fff;
+  border-color: #dbe7f3;
+  box-shadow: 0 3px 10px rgba(15, 23, 42, 0.1);
 }
 
-.ms-actions .ms-btn--purple {
-  border: 1px solid transparent !important;
+.ms-header-actions-trigger:focus-visible,
+.ms-header-actions-item:focus-visible {
+  outline: 2px solid #38bdf8;
+  outline-offset: 2px;
+}
+
+.ms-header-actions-bolt {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  color: #38bdf8;
+}
+
+.ms-header-actions-caret {
+  color: #94a3b8;
+}
+
+.ms-header-actions-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 90;
+  min-width: 15.5rem;
+  padding: 0.4rem;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.16);
+}
+
+.ms-header-actions-item {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  width: 100%;
+  padding: 0.55rem 0.65rem;
+  color: #334155;
+  background: transparent;
+  border: 0;
+  border-radius: 12px;
+  font: inherit;
+  font-size: 0.92rem;
+  font-weight: 600;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.ms-header-actions-item:hover {
+  color: #0f172a;
+  background: #f1f5f9;
+}
+
+.ms-header-actions-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
+  flex: 0 0 auto;
+}
+
+.ms-header-actions-icon--download {
+  color: #475569;
+  background: #e2e8f0;
+}
+
+.ms-header-actions-icon--quote {
+  color: #7c3aed;
+  background: #ede9fe;
+}
+
+.ms-header-actions-icon--invoice {
+  color: #6d28d9;
+  background: #eee6ff;
+}
+
+.ms-header-actions.is-nudge .ms-header-actions-trigger {
+  animation: ms-cta-pulse 2.2s ease-in-out infinite;
+}
+
+html[data-theme="dark"] .ms-header-actions-trigger {
+  color: #e2e8f0;
+  background: #1e293b;
+  border-color: #334155;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.28);
+}
+
+html[data-theme="dark"] .ms-header-actions-trigger:hover,
+html[data-theme="dark"] .ms-header-actions.is-open .ms-header-actions-trigger {
+  color: #f8fafc;
+  background: #243044;
+  border-color: #475569;
+}
+
+html[data-theme="dark"] .ms-header-actions-menu {
+  background: #1e293b;
+  border-color: #334155;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.4);
+}
+
+html[data-theme="dark"] .ms-header-actions-item {
+  color: #e2e8f0;
+}
+
+html[data-theme="dark"] .ms-header-actions-item:hover {
+  color: #fff;
+  background: #334155;
 }
 
 .ms-btn {
@@ -63,18 +174,6 @@
   background: linear-gradient(135deg, #6d28d9, #5b21b6);
   color: #fff !important;
   box-shadow: 0 4px 14px rgba(124, 58, 237, 0.4);
-}
-
-.ms-btn--download {
-  background: #fff;
-  color: #6d28d9 !important;
-  border-color: #ddd6fe;
-}
-
-.ms-btn--download:hover {
-  background: #f5f3ff;
-  color: #5b21b6 !important;
-  border-color: #c4b5fd;
 }
 
 .ms-btn--ghost {
@@ -398,57 +497,385 @@
   height: 100%;
 }
 
-.ms-desk-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.8125rem;
+.ms-orders-card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  margin-bottom: 1.1rem;
 }
 
-.ms-desk-table th {
-  text-align: left;
-  font-size: 0.6875rem;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: #64748b;
-  padding: 0.5rem 0.625rem;
-  border-bottom: 1px solid #e2e8f0;
+.ms-orders-card-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  height: 3rem;
+  flex: 0 0 auto;
+  color: #1265f5;
+  background: #eaf0ff;
+  border-radius: 1.15rem;
 }
 
-.ms-desk-table td {
-  padding: 0.625rem;
-  border-bottom: 1px solid #f1f5f9;
-  vertical-align: middle;
+.ms-orders-card-heading {
+  min-width: 0;
 }
 
-.ms-desk-table tr:last-child td {
-  border-bottom: none;
+.ms-orders-card-title {
+  margin: 0;
+  color: #111a45;
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.2;
 }
 
-.ms-desk-table a {
-  color: #0f172a;
+.ms-orders-card-subtitle {
+  margin: 0.3rem 0 0;
+  color: #5b6e9a;
+  font-size: 0.85rem;
+  line-height: 1.35;
+}
+
+.ms-orders-view-all {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  min-height: 3rem;
+  margin-left: auto;
+  padding: 0.65rem 1.1rem;
+  flex: 0 0 auto;
+  color: #075ff5;
+  background: transparent;
+  border: 0;
+  font-size: 0.95rem;
   font-weight: 600;
+  white-space: nowrap;
+}
+
+.ms-orders-view-all:hover {
+  color: #034ecc;
+  background: transparent;
+}
+
+.ms-orders-table-scroll {
+  width: 100%;
+}
+
+.ms-mobile-records {
+  display: none;
+}
+
+.ms-mobile-record {
+  display: block;
+  padding: 0.9rem 1rem;
+  color: inherit;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 1.15rem;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04);
   text-decoration: none;
 }
 
-.ms-desk-table a:hover {
+.ms-mobile-record:hover {
+  color: inherit;
+  border-color: #cbd8ef;
+}
+
+.ms-mobile-record-main,
+.ms-mobile-record-info,
+.ms-mobile-record-summary {
+  display: flex;
+}
+
+.ms-mobile-record-main {
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.7rem;
+}
+
+.ms-mobile-record-info {
+  align-items: center;
+  min-width: 0;
+  gap: 0.65rem;
+  flex: 1 1 auto;
+}
+
+.ms-mobile-record-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.65rem;
+  height: 2.65rem;
+  flex: 0 0 auto;
+  color: #9333ea;
+  background: #f3e8ff;
+  border: 1px solid #e9d5ff;
+  border-radius: 50%;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.ms-mobile-record-copy {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 0.2rem;
+}
+
+.ms-mobile-record-reference {
+  overflow: hidden;
+  color: #172033;
+  font-size: 0.91rem;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ms-mobile-record-customer {
+  overflow: hidden;
+  color: #64748b;
+  font-size: 0.82rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ms-mobile-record-summary {
+  align-items: flex-end;
+  flex: 0 0 auto;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.ms-mobile-record-amount {
+  color: #138557;
+  font-size: 0.9rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.ms-mobile-record-summary .ms-orders-status {
+  gap: 0.3rem;
+  padding: 0.28rem 0.55rem;
+  font-size: 0.74rem;
+}
+
+.ms-mobile-record-summary .ms-orders-status svg {
+  width: 13px;
+  height: 13px;
+  flex: 0 0 auto;
+}
+
+.ms-mobile-record-footer {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+  padding-top: 0.65rem;
+  color: #64748b;
+  border-top: 1px solid #e8edfb;
+  font-size: 0.76rem;
+}
+
+.ms-mobile-record-footer > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  white-space: nowrap;
+}
+
+.ms-mobile-record-footer > span:nth-child(2) {
+  margin-left: auto;
+}
+
+.ms-mobile-record-footer > svg {
+  flex: 0 0 auto;
+  color: #94a3b8;
+}
+
+.ms-orders-table {
+  width: 100%;
+  min-width: 760px;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.94rem;
+}
+
+.ms-orders-table th {
+  padding: 1rem 1.2rem;
+  color: #17234a;
+  background: #f0f3ff;
+  font-size: 0.92rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.ms-orders-table th:first-child {
+  border-radius: 1rem 0 0 1rem;
+}
+
+.ms-orders-table th:last-child {
+  border-radius: 0 1rem 1rem 0;
+}
+
+.ms-orders-table td {
+  padding: 0.78rem 1.2rem;
+  color: #121b3c;
+  border-bottom: 1px solid #e8edfb;
+  vertical-align: middle;
+}
+
+.ms-orders-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.ms-orders-reference,
+.ms-orders-customer,
+.ms-orders-when {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.8rem;
+  white-space: nowrap;
+}
+
+.ms-orders-reference-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  flex: 0 0 auto;
+  color: #1265f5;
+  background: #edf2ff;
+  border-radius: 0.75rem;
+}
+
+.ms-orders-reference a {
+  color: #111a45;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.ms-orders-reference a:hover {
+  color: #075ff5;
   text-decoration: underline;
 }
 
-.ms-status {
-  display: inline-block;
-  padding: 0.15rem 0.45rem;
-  border-radius: 999px;
-  font-size: 0.6875rem;
-  font-weight: 600;
-  text-transform: capitalize;
-  background: #f1f5f9;
-  color: #475569;
+.ms-orders-customer-name {
+  max-width: 13rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.ms-status--green { background: #dcfce7; color: #166534; }
-.ms-status--amber { background: #fef3c7; color: #92400e; }
-.ms-status--red { background: #fee2e2; color: #991b1b; }
-.ms-status--blue { background: #dbeafe; color: #1d4ed8; }
+.ms-orders-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.45rem 0.8rem;
+  border-radius: 999px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.ms-orders-status--green {
+  color: #167447;
+  background: #e2f6eb;
+}
+
+.ms-orders-status--amber {
+  color: #a45b00;
+  background: #fff0da;
+}
+
+.ms-orders-status--red {
+  color: #b42332;
+  background: #ffeaec;
+}
+
+.ms-orders-status--blue {
+  color: #075ff5;
+  background: #e2edff;
+}
+
+.ms-orders-amount {
+  white-space: nowrap;
+}
+
+.ms-orders-when {
+  gap: 0.65rem;
+  color: #5b6e9a;
+}
+
+.ms-orders-view-all:focus-visible {
+  outline: 2px solid #38bdf8;
+  outline-offset: 2px;
+}
+
+html[data-theme="dark"] .ms-orders-card-title,
+html[data-theme="dark"] .ms-orders-table th,
+html[data-theme="dark"] .ms-orders-reference a,
+html[data-theme="dark"] .ms-orders-table td {
+  color: #e2e8f0;
+}
+
+html[data-theme="dark"] .ms-orders-card-subtitle,
+html[data-theme="dark"] .ms-orders-when {
+  color: #a6b6d3;
+}
+
+html[data-theme="dark"] .ms-orders-card-icon,
+html[data-theme="dark"] .ms-orders-reference-icon {
+  background: #243552;
+}
+
+html[data-theme="dark"] .ms-orders-view-all {
+  color: #bfdbfe;
+  background: transparent;
+}
+
+html[data-theme="dark"] .ms-orders-view-all:hover {
+  color: #dbeafe;
+  background: transparent;
+}
+
+html[data-theme="dark"] .ms-orders-table th {
+  background: #202c43;
+}
+
+html[data-theme="dark"] .ms-orders-table td {
+  border-color: #334155;
+}
+
+html[data-theme="dark"] .ms-orders-status--green { color: #86efac; background: #173a2a; }
+html[data-theme="dark"] .ms-orders-status--amber { color: #fcd34d; background: #493410; }
+html[data-theme="dark"] .ms-orders-status--red { color: #fda4af; background: #4a2028; }
+html[data-theme="dark"] .ms-orders-status--blue { color: #93c5fd; background: #1d3558; }
+
+html[data-theme="dark"] .ms-mobile-record {
+  color: #e2e8f0;
+  background: #1e293b;
+  border-color: #334155;
+}
+
+html[data-theme="dark"] .ms-mobile-record-reference {
+  color: #e2e8f0;
+}
+
+html[data-theme="dark"] .ms-mobile-record-customer,
+html[data-theme="dark"] .ms-mobile-record-footer {
+  color: #a6b6d3;
+}
+
+html[data-theme="dark"] .ms-mobile-record-footer {
+  border-color: #334155;
+}
+
+html[data-theme="dark"] .ms-mobile-record-avatar {
+  color: #d8b4fe;
+  background: #3b2454;
+  border-color: #5b347b;
+}
 
 .ms-empty {
   padding: 1.5rem;
@@ -467,29 +894,109 @@
   font-size: 0.95rem;
 }
 
-.ms-card-link {
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-decoration: none;
+@media (min-width: 576px) {
+  .ms-orders-table {
+    min-width: 0;
+    table-layout: fixed;
+    font-size: 0.78rem;
+  }
+
+  .ms-orders-table th {
+    padding: 0.65rem 0.45rem;
+    font-size: 0.78rem;
+  }
+
+  .ms-orders-table td {
+    padding: 0.55rem 0.45rem;
+  }
+
+  .ms-orders-table th:nth-child(1),
+  .ms-orders-table td:nth-child(1) { width: 26.5%; }
+  .ms-orders-table th:nth-child(2),
+  .ms-orders-table td:nth-child(2) { width: 25%; }
+  .ms-orders-table th:nth-child(3),
+  .ms-orders-table td:nth-child(3) { width: 17.5%; }
+  .ms-orders-table th:nth-child(4),
+  .ms-orders-table td:nth-child(4) { width: 16%; }
+  .ms-orders-table th:nth-child(5),
+  .ms-orders-table td:nth-child(5) { width: 15%; }
+
+  .ms-orders-reference,
+  .ms-orders-customer,
+  .ms-orders-when {
+    display: flex;
+    min-width: 0;
+    gap: 0.3rem;
+    overflow: hidden;
+  }
+
+  .ms-orders-reference-icon {
+    width: 1.6rem;
+    height: 1.6rem;
+    border-radius: 0.6rem;
+  }
+
+  .ms-orders-customer-name {
+    min-width: 0;
+    font-size: 0.76rem;
+  }
+
+  .ms-orders-status {
+    gap: 0.3rem;
+    padding: 0.3rem 0.4rem;
+    font-size: 0.74rem;
+  }
+
+  .ms-orders-status svg {
+    width: 14px;
+    height: 14px;
+    flex: 0 0 auto;
+  }
+
+  .ms-orders-when {
+    gap: 0.35rem;
+    font-size: 0.74rem;
+  }
+
 }
 
-.ms-card-link:hover {
-  text-decoration: underline;
+@media (max-width: 575.98px) {
+  .ms-orders-table-scroll {
+    display: none !important;
+  }
+
+  .ms-mobile-records {
+    display: grid;
+    gap: 0.65rem;
+  }
+
+  .ms-orders-card-header {
+      gap: 0.75rem;
+  }
+
+  .ms-orders-card-icon {
+    width: 3rem;
+    height: 3rem;
+    border-radius: 0.9rem;
+  }
+
+  .ms-orders-card-title {
+    font-size: 1rem;
+  }
+
+  .ms-orders-card-subtitle {
+    font-size: 0.75rem;
+  }
+
+  .ms-orders-view-all {
+    min-height: 2.5rem;
+    gap: 0.3rem;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8rem;
+  }
 }
 
-.ms-card-link-btn {
-  background: none;
-  border: none;
-  padding: 0;
-  cursor: pointer;
-  color: inherit;
-}
-
-/* Empty activity � animated prompts to create first sale */
-.ms-page--empty .ms-period {
-  margin-top: 0;
-}
-
+/* Empty activity - animated prompts to create first sale */
 .ms-empty-hero {
   display: flex;
   align-items: flex-start;
@@ -528,10 +1035,6 @@
   font-size: 0.8125rem;
   color: #6d28d9;
   line-height: 1.45;
-}
-
-.ms-actions--nudge .ms-btn--primary-cta {
-  animation: ms-cta-pulse 2.2s ease-in-out infinite;
 }
 
 .ms-kpi-overview--nudge .kpi-card {
@@ -707,7 +1210,7 @@
 @media (prefers-reduced-motion: reduce) {
   .ms-empty-hero,
   .ms-empty-hero-icon,
-  .ms-actions--nudge .ms-btn--primary-cta,
+  .ms-header-actions.is-nudge .ms-header-actions-trigger,
   .ms-kpi-overview--nudge .kpi-card,
   .ms-list-card--nudge,
   .ms-list-card--nudge::before,

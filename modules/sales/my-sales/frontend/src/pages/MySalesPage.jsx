@@ -1,7 +1,11 @@
 import {
   AlertTriangle,
   ArrowDown,
+  ArrowRight,
   ArrowUp,
+  ChevronDown,
+  ChevronRight,
+  CircleCheck,
   Clock,
   DollarSign,
   Download,
@@ -10,9 +14,12 @@ import {
   Loader2,
   Plus,
   Receipt,
+  ShoppingCart,
   Sparkles,
+  Zap,
 } from 'lucide-react';
-import { useCallback, useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import DownloadPdfModal from '../components/DownloadPdfModal.jsx';
 import EmptyListPrompt from '../components/EmptyListPrompt.jsx';
 import { fetchMySalesInit } from '../api/mySalesDesk.js';
@@ -50,37 +57,145 @@ function statusClass(status) {
   return 'ms-status--blue';
 }
 
-function SalesTable({ rows, currency, emptyMessage, emptyPrompt = null }) {
+function statusIcon(tone) {
+  if (tone === 'amber') return Clock;
+  if (tone === 'red') return AlertTriangle;
+  return CircleCheck;
+}
+
+function customerInitials(name) {
+  const words = String(name || '').trim().split(/\s+/).filter(Boolean);
+  return words.slice(0, 2).map((word) => word[0].toUpperCase()).join('') || '-';
+}
+
+function MobileSalesRecords({ rows, currency, recordType }) {
+  const recordLabel = recordType === 'invoice' ? 'Sales invoice' : 'Sales order';
+
+  return (
+    <div className="ms-mobile-records">
+      {rows.map((row) => {
+        const tone = statusClass(row.status).replace('ms-status--', '');
+        const StatusIcon = statusIcon(tone);
+        const fullCustomerName = String(row.customer_name || '').trim();
+
+        return (
+          <a
+            key={`${row.ref_number}-${row.id}`}
+            className="ms-mobile-record"
+            href={row.url}
+          >
+            <div className="ms-mobile-record-main">
+              <div className="ms-mobile-record-info">
+                <span className="ms-mobile-record-avatar" aria-hidden="true">
+                  {customerInitials(fullCustomerName)}
+                </span>
+                <span className="ms-mobile-record-copy">
+                  <span className="ms-mobile-record-reference">{row.ref_number}</span>
+                  <span
+                    className="ms-mobile-record-customer"
+                    title={fullCustomerName || undefined}
+                    aria-label={fullCustomerName || '-'}
+                  >
+                    {displayCustomerName(fullCustomerName)}
+                  </span>
+                </span>
+              </div>
+              <span className="ms-mobile-record-summary">
+                <span className="ms-mobile-record-amount">{formatMoney(row.total_amount, currency)}</span>
+                <span className={`ms-orders-status ms-orders-status--${tone}`}>
+                  <StatusIcon size={14} aria-hidden="true" />
+                  {statusLabel(row.status)}
+                </span>
+              </span>
+            </div>
+            <span className="ms-mobile-record-footer">
+              <span>{timeAgo(row.created_at)}</span>
+              <span>
+                <FileText size={15} aria-hidden="true" />
+                {recordLabel}
+              </span>
+              <ChevronRight size={17} aria-hidden="true" />
+            </span>
+          </a>
+        );
+      })}
+    </div>
+  );
+}
+
+function displayCustomerName(name) {
+  const fullName = String(name || '').trim();
+  const words = fullName.split(/\s+/).filter(Boolean);
+  return words.length > 2 ? words.slice(0, 2).join(' ') : fullName || '-';
+}
+
+function RecentSalesTable({ rows, currency, recordType, emptyMessage, emptyPrompt = null }) {
   if (!rows?.length) {
     if (emptyPrompt) return emptyPrompt;
     return <div className="ms-empty">{emptyMessage}</div>;
   }
 
   return (
-    <div className="table-responsive">
-      <table className="ms-desk-table">
-        <thead>
-          <tr>
-            <th>Reference</th>
-            <th>Customer</th>
-            <th>Status</th>
-            <th className="text-end">Amount</th>
-            <th>When</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row) => (
-            <tr key={`${row.ref_number}-${row.id}`}>
-              <td><a href={row.url}>{row.ref_number}</a></td>
-              <td>{row.customer_name}</td>
-              <td><span className={`ms-status ${statusClass(row.status)}`}>{statusLabel(row.status)}</span></td>
-              <td className="text-end">{formatMoney(row.total_amount, currency)}</td>
-              <td>{timeAgo(row.created_at)}</td>
+    <>
+      <div className="table-responsive ms-orders-table-scroll">
+        <table className="ms-orders-table">
+          <thead>
+            <tr>
+              <th>Reference</th>
+              <th>Customer</th>
+              <th>Status</th>
+              <th className="text-end">Amount</th>
+              <th>When</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+          </thead>
+          <tbody>
+            {rows.map((row) => {
+              const tone = statusClass(row.status).replace('ms-status--', '');
+              const StatusIcon = statusIcon(tone);
+              const ReferenceIcon = recordType === 'invoice' ? Receipt : FileText;
+              const fullCustomerName = String(row.customer_name || '').trim();
+
+              return (
+                <tr key={`${row.ref_number}-${row.id}`}>
+                  <td>
+                    <div className="ms-orders-reference">
+                      <span className="ms-orders-reference-icon" aria-hidden="true">
+                        <ReferenceIcon size={18} />
+                      </span>
+                      <a href={row.url}>{row.ref_number}</a>
+                    </div>
+                  </td>
+                  <td>
+                    <div className="ms-orders-customer">
+                      <span
+                        className="ms-orders-customer-name"
+                        title={fullCustomerName || undefined}
+                        aria-label={fullCustomerName || '-'}
+                      >
+                        {displayCustomerName(fullCustomerName)}
+                      </span>
+                    </div>
+                  </td>
+                  <td>
+                    <span className={`ms-orders-status ms-orders-status--${tone}`}>
+                      <StatusIcon size={17} aria-hidden="true" />
+                      {statusLabel(row.status)}
+                    </span>
+                  </td>
+                  <td className="text-end ms-orders-amount">{formatMoney(row.total_amount, currency)}</td>
+                  <td>
+                    <div className="ms-orders-when">
+                      <span>{timeAgo(row.created_at)}</span>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      <MobileSalesRecords rows={rows} currency={currency} recordType={recordType} />
+    </>
   );
 }
 
@@ -89,6 +204,9 @@ export default function MySalesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [downloadOpen, setDownloadOpen] = useState(false);
+  const [headerActionsEl, setHeaderActionsEl] = useState(null);
+  const [actionsOpen, setActionsOpen] = useState(false);
+  const actionsMenuRef = useRef(null);
   const [showAllOrders, setShowAllOrders] = useState(false);
   const [showAllInvoices, setShowAllInvoices] = useState(false);
 
@@ -109,6 +227,30 @@ export default function MySalesPage() {
   useEffect(() => {
     load();
   }, [load]);
+
+  useEffect(() => {
+    setHeaderActionsEl(document.getElementById('my-sales-header-actions'));
+  }, []);
+
+  useEffect(() => {
+    if (!actionsOpen) return undefined;
+
+    const onDocumentMouseDown = (event) => {
+      if (actionsMenuRef.current && !actionsMenuRef.current.contains(event.target)) {
+        setActionsOpen(false);
+      }
+    };
+    const onDocumentKeyDown = (event) => {
+      if (event.key === 'Escape') setActionsOpen(false);
+    };
+
+    document.addEventListener('mousedown', onDocumentMouseDown);
+    document.addEventListener('keydown', onDocumentKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', onDocumentMouseDown);
+      document.removeEventListener('keydown', onDocumentKeyDown);
+    };
+  }, [actionsOpen]);
 
   if (loading) {
     return (
@@ -141,9 +283,79 @@ export default function MySalesPage() {
   const isEmptyActivity = allOrders.length === 0
     && allInvoices.length === 0
     && Number(metrics.monthly_sales) === 0;
+  const hasHeaderActions = Boolean(urls.download_record || urls.create_quote || urls.create_invoice);
 
   return (
     <div className={isEmptyActivity ? 'ms-page ms-page--empty' : 'ms-page'}>
+      {headerActionsEl && hasHeaderActions ? createPortal(
+        <div
+          className={`ms-header-actions${actionsOpen ? ' is-open' : ''}${isEmptyActivity ? ' is-nudge' : ''}`}
+          ref={actionsMenuRef}
+        >
+          <button
+            type="button"
+            className="ms-header-actions-trigger"
+            aria-haspopup="menu"
+            aria-expanded={actionsOpen}
+            aria-controls="my-sales-actions-menu"
+            onClick={() => setActionsOpen((open) => !open)}
+          >
+            <span className="ms-header-actions-bolt" aria-hidden="true">
+              <Zap size={16} strokeWidth={2.4} />
+            </span>
+            Actions
+            <ChevronDown size={16} className="ms-header-actions-caret" aria-hidden="true" />
+          </button>
+          {actionsOpen ? (
+            <div className="ms-header-actions-menu" id="my-sales-actions-menu" role="menu">
+              {urls.download_record ? (
+                <button
+                  type="button"
+                  className="ms-header-actions-item"
+                  role="menuitem"
+                  onClick={() => {
+                    setActionsOpen(false);
+                    setDownloadOpen(true);
+                  }}
+                >
+                  <span className="ms-header-actions-icon ms-header-actions-icon--download" aria-hidden="true">
+                    <Download size={15} />
+                  </span>
+                  Download PDF
+                </button>
+              ) : null}
+              {urls.create_quote ? (
+                <a
+                  className="ms-header-actions-item"
+                  role="menuitem"
+                  href={urls.create_quote}
+                  onClick={() => setActionsOpen(false)}
+                >
+                  <span className="ms-header-actions-icon ms-header-actions-icon--quote" aria-hidden="true">
+                    <Plus size={15} />
+                  </span>
+                  New Quote
+                </a>
+              ) : null}
+              {urls.create_invoice ? (
+                <a
+                  className="ms-header-actions-item"
+                  role="menuitem"
+                  href={urls.create_invoice}
+                  onClick={() => setActionsOpen(false)}
+                >
+                  <span className="ms-header-actions-icon ms-header-actions-icon--invoice" aria-hidden="true">
+                    <Receipt size={15} />
+                  </span>
+                  New Invoice
+                </a>
+              ) : null}
+            </div>
+          ) : null}
+        </div>,
+        headerActionsEl,
+      ) : null}
+
       {isEmptyActivity ? (
         <div className="ms-empty-hero" role="status">
           <div className="ms-empty-hero-icon" aria-hidden="true">
@@ -157,35 +369,6 @@ export default function MySalesPage() {
           </div>
         </div>
       ) : null}
-
-      <p className="ms-period">
-        Performance for
-        {' '}
-        <strong>{data.user?.display_name}</strong>
-        {' '}
-        -
-        {' '}
-        {data.period_label}
-      </p>
-
-      <div className={`ms-actions${isEmptyActivity ? ' ms-actions--nudge' : ''}`}>
-        {urls.download_record ? (
-          <button type="button" className="ms-btn ms-btn--download" onClick={() => setDownloadOpen(true)}>
-            <Download size={14} />
-            Download PDF
-          </button>
-        ) : null}
-        <a href={urls.create_quote} className="ms-btn ms-btn--purple ms-btn--primary-cta">
-          <Plus size={14} />
-          New Quote
-        </a>
-        {urls.create_invoice ? (
-          <a href={urls.create_invoice} className="ms-btn ms-btn--ghost ms-btn--secondary-cta">
-            <Receipt size={14} />
-            New Invoice
-          </a>
-        ) : null}
-      </div>
 
       <DownloadPdfModal
         open={downloadOpen}
@@ -240,21 +423,29 @@ export default function MySalesPage() {
       <div className="row g-3 mb-3">
         <div className="col-xl-6">
           <div className={`dash-card ms-list-card${isEmptyActivity ? ' ms-list-card--nudge' : ''}`}>
-            <div className="d-flex justify-content-between align-items-center mb-2">
-              <h3 className="dash-card-title mb-0">My Recent Orders</h3>
+            <div className="ms-orders-card-header">
+              <span className="ms-orders-card-icon" aria-hidden="true">
+                <ShoppingCart size={24} strokeWidth={2.2} />
+              </span>
+              <div className="ms-orders-card-heading">
+                <h3 className="ms-orders-card-title">My Recent Orders</h3>
+                <p className="ms-orders-card-subtitle">Your latest sales orders at a glance</p>
+              </div>
               {canExpandOrders ? (
                 <button
                   type="button"
-                  className="ms-card-link ms-card-link-btn"
+                  className="ms-orders-view-all"
                   onClick={() => setShowAllOrders((value) => !value)}
                 >
                   {showAllOrders ? 'Show less' : 'View all'}
+                  <ArrowRight size={18} aria-hidden="true" />
                 </button>
               ) : null}
             </div>
-            <SalesTable
+            <RecentSalesTable
               rows={visibleOrders}
               currency={currency}
+              recordType="order"
               emptyMessage="No orders yet."
               emptyPrompt={isEmptyActivity ? (
                 <EmptyListPrompt
@@ -271,21 +462,29 @@ export default function MySalesPage() {
         </div>
         <div className="col-xl-6">
           <div className={`dash-card ms-list-card${isEmptyActivity ? ' ms-list-card--nudge ms-list-card--nudge-delayed' : ''}`}>
-            <div className="d-flex justify-content-between align-items-center mb-2">
-              <h3 className="dash-card-title mb-0">My Recent Invoices</h3>
+            <div className="ms-orders-card-header">
+              <span className="ms-orders-card-icon" aria-hidden="true">
+                <Receipt size={24} strokeWidth={2.2} />
+              </span>
+              <div className="ms-orders-card-heading">
+                <h3 className="ms-orders-card-title">My Recent Invoices</h3>
+                <p className="ms-orders-card-subtitle">Your latest sales invoices at a glance</p>
+              </div>
               {canExpandInvoices ? (
                 <button
                   type="button"
-                  className="ms-card-link ms-card-link-btn"
+                  className="ms-orders-view-all"
                   onClick={() => setShowAllInvoices((value) => !value)}
                 >
                   {showAllInvoices ? 'Show less' : 'View all'}
+                  <ArrowRight size={18} aria-hidden="true" />
                 </button>
               ) : null}
             </div>
-            <SalesTable
+            <RecentSalesTable
               rows={visibleInvoices}
               currency={currency}
+              recordType="invoice"
               emptyMessage="No invoices yet."
               emptyPrompt={isEmptyActivity ? (
                 <EmptyListPrompt

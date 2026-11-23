@@ -317,6 +317,7 @@ function RowActionsMenu({
   canDelete,
   payablesUrl,
   csrfToken,
+  onPayablesSent,
 }) {
   const btnRef = useRef(null)
   const menuRef = useRef(null)
@@ -468,6 +469,7 @@ function RowActionsMenu({
           const result = await response.json()
           if (!response.ok || !result.ok || !result.message) throw new Error(result.error || result.message || 'Could not send this voucher to Payables.')
           showPayablesNotification(result.message)
+          onPayablesSent?.()
         } catch (error) {
           window.alert(error instanceof Error ? error.message : 'Could not send this voucher to Payables.')
         }
@@ -1618,6 +1620,7 @@ export default function VouchersDeskPage() {
                             canDelete={canDelete}
                             payablesUrl={payablesAction?.url}
                             csrfToken={payablesAction?.token}
+                            onPayablesSent={() => loadData(filters, true)}
                           />
                         ) : null}
                       </td>

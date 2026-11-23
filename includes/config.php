@@ -442,6 +442,20 @@ if (session_status() == PHP_SESSION_NONE) {
         define('PVS_SESSION_NAMED', true);
     }
 
+    // Remove the old base-path cookie so it cannot override the root cookie after login.
+    if (defined('APP_BASE_PATH') && APP_BASE_PATH !== '' && APP_BASE_PATH !== '/' && !headers_sent()) {
+        $legacySessionPath = rtrim((string) APP_BASE_PATH, '/') . '/';
+        if (!setcookie(session_name(), '', [
+            'expires' => time() - 3600,
+            'path' => $legacySessionPath,
+            'secure' => $sessionSecure,
+            'httponly' => true,
+            'samesite' => 'Lax',
+        ])) {
+            error_log('Unable to clear the legacy session cookie.');
+        }
+    }
+
     // Pass cookie options directly to session_start so the host cannot ignore
     // session_set_cookie_params and later emit Max-Age=0 (which deletes the cookie).
     session_start([

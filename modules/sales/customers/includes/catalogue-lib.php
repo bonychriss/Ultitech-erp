@@ -436,6 +436,20 @@ function customersDeskRenderReactShell(string $deskPage, string $pageTitle, stri
 
     $page_title = $pageTitle;
     $employeeHeaderTitle = $pageTitle;
+    if ($deskPage === 'index') {
+        $customersHomeUrl = function_exists('company_url')
+            ? company_url('select-module')
+            : (function_exists('app_url') ? app_url('/select-module.php') : '../../select-module.php');
+        $salesUrl = sales_module_url('index.php', ['module' => 'sales']);
+        $employeeHeaderSubtitle = '<nav class="vv-breadcrumb exp-desk-breadcrumb" aria-label="Breadcrumb">'
+            . '<a class="vv-breadcrumb-link erp-nav-back-ignore" href="' . htmlspecialchars($customersHomeUrl, ENT_QUOTES, 'UTF-8') . '">Home</a>'
+            . '<span class="vv-breadcrumb-sep">/</span>'
+            . '<a class="vv-breadcrumb-link vv-breadcrumb-link--active erp-nav-back-ignore" href="'
+            . htmlspecialchars($salesUrl, ENT_QUOTES, 'UTF-8') . '">Sales</a>'
+            . '<span class="vv-breadcrumb-sep">/</span>'
+            . '<span class="vv-breadcrumb-current">Customers</span>'
+            . '</nav>';
+    }
     $hideHeaderCompanyBranding = true;
     $employeeHeaderExtraClass = 'employee-header--exp-desk';
     $customersDeskPage = $deskPage;

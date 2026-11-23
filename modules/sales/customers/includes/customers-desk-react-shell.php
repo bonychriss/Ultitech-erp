@@ -6,6 +6,10 @@ $GLOBALS['_erp_header_style_linked'] = true;
 $customersDeskPage = $customersDeskPage ?? 'catalogue';
 $customersBodyClass = $customersBodyClass ?? 'page-customer-catalogue-desk';
 $customersNoscriptMessage = $customersNoscriptMessage ?? 'Enable JavaScript to use this page.';
+if ($customersDeskPage === 'index') {
+    $employeeHeaderRightHtml = ($employeeHeaderRightHtml ?? '')
+        . '<div id="exp-desk-header-tools" class="exp-desk-header-tools"></div>';
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">

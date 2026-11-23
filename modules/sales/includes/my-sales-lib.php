@@ -807,6 +807,22 @@ function mySalesRenderReactShell(): void
     $employeeHeaderTitle = 'My Sales';
     $hideHeaderCompanyBranding = true;
     $employeeHeaderExtraClass = 'employee-header--exp-desk';
+    $employeeHeaderRightHtml = '<div id="my-sales-header-actions" class="ms-header-actions-slot"></div>';
+    $mySalesHomeUrl = function_exists('company_url')
+        ? company_url('select-module')
+        : '../../../select-module.php';
+    $mySalesSalesUrl = function_exists('company_url')
+        ? company_url('modules/sales/index.php')
+        : '../index.php';
+    $employeeHeaderSubtitle = '<nav class="vv-breadcrumb exp-desk-breadcrumb" aria-label="Breadcrumb">'
+        . '<a class="vv-breadcrumb-link erp-nav-back-ignore" href="'
+        . htmlspecialchars($mySalesHomeUrl, ENT_QUOTES, 'UTF-8') . '">Home</a>'
+        . '<span class="vv-breadcrumb-sep">/</span>'
+        . '<a class="vv-breadcrumb-link vv-breadcrumb-link--active erp-nav-back-ignore" href="'
+        . htmlspecialchars($mySalesSalesUrl, ENT_QUOTES, 'UTF-8') . '">Sales</a>'
+        . '<span class="vv-breadcrumb-sep">/</span>'
+        . '<span class="vv-breadcrumb-current">My Sales</span>'
+        . '</nav>';
 
     $init = mySalesInitData();
     $themeColor = (string) (($init['company']['theme_color'] ?? '') ?: '#3b82f6');

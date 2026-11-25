@@ -648,6 +648,7 @@ switch ($active_module) {
             addItem($menuItems, 'ua-dashboard', 'Dashboard', 'layout-wtf', $__ua('/'));
             addItem($menuItems, 'ua-balances', 'Balances', 'wallet2', $__ua('/banking'));
             addItem($menuItems, 'ua-revenue', 'Revenue', 'cash-coin', $__ua('/revenue'));
+            addItem($menuItems, 'ua-expenses', 'Expenses', 'receipt', $__ua('/expenses'));
             addItem($menuItems, 'ua-purchases', 'Purchases', 'cart-check', $__ua('/purchases'));
             addItem($menuItems, 'ua-journals', 'Journal Entries', 'journal-text', $__ua('/journals'));
             addItem($menuItems, 'ua-vat', 'VAT Control', 'percent', $__ua('/tax'));
@@ -1750,28 +1751,50 @@ if (!isset($_GET['print'])) {
         gap: 6px;
         margin: 0 auto;
     }
-    .sidebar-collapse-btn {
+    .sidebar-collapse-btn,
+    .sidebar-collapse-btn.btn,
+    .sidebar-collapse-btn.btn-link,
+    .sidebar-collapse-btn.btn-sm {
         display: none !important;
         align-items: center;
         justify-content: center;
         line-height: 1;
         text-decoration: none !important;
         color: var(--sidebar-text, #212529) !important;
+        background: transparent !important;
+        background-color: transparent !important;
+        border: 0 !important;
+        border-color: transparent !important;
+        outline: none !important;
         box-shadow: none !important;
+        border-radius: 0 !important;
         opacity: 1 !important;
         min-width: 2rem;
         min-height: 2rem;
+        padding: 0 !important;
+        -webkit-appearance: none;
+        appearance: none;
     }
     .sidebar-collapse-btn .erp-hamburger {
         display: inline-flex !important;
         color: var(--sidebar-text, #212529) !important;
+        background: transparent !important;
+        border: 0 !important;
+        box-shadow: none !important;
     }
     .sidebar-collapse-btn .erp-hamburger > span {
         background: var(--sidebar-text, #212529) !important;
     }
     .sidebar-collapse-btn:hover,
-    .sidebar-collapse-btn:focus {
+    .sidebar-collapse-btn:focus,
+    .sidebar-collapse-btn:focus-visible,
+    .sidebar-collapse-btn:active {
         color: var(--sidebar-text, #212529) !important;
+        background: transparent !important;
+        background-color: transparent !important;
+        border: 0 !important;
+        outline: none !important;
+        box-shadow: none !important;
         opacity: 0.75 !important;
     }
 
@@ -1911,7 +1934,7 @@ if (!isset($_GET['print'])) {
         </span>
         
         <!-- Standard Toggle Button (Hidden in collapsed) -->
-        <button type="button" class="btn btn-sm btn-link p-0 sidebar-collapse-btn" onclick="toggleSidebarCollapse()" aria-label="Collapse sidebar">
+        <button type="button" class="btn btn-sm btn-link p-0 sidebar-collapse-btn" onclick="toggleSidebarCollapse()" aria-label="Collapse sidebar" style="background:transparent;border:0;box-shadow:none;outline:none;">
             <span class="erp-hamburger" aria-hidden="true"><span></span><span></span><span></span></span>
         </button>
     </div>
@@ -2357,9 +2380,50 @@ html[data-theme="dark"] #native-sidebar .sidebar-header img.vv-logo-recolored { 
     }
 
     function toggleNativeSidebar() {
-        document.getElementById('native-sidebar').classList.toggle('show');
-        document.getElementById('sidebar-overlay').classList.toggle('show');
+        var sidebar = document.getElementById('native-sidebar');
+        var overlay = document.getElementById('sidebar-overlay');
+        if (!sidebar) return;
+        var willOpen = !sidebar.classList.contains('show');
+        sidebar.classList.toggle('show', willOpen);
+        if (overlay) overlay.classList.toggle('show', willOpen);
+        if (!willOpen) {
+            document.body.classList.remove('sidebar-mobile-open');
+            try {
+                window.dispatchEvent(new CustomEvent('erp:native-sidebar-closed'));
+            } catch (e) { /* ignore */ }
+        }
     }
+
+    window.closeNativeSidebarMobile = function closeNativeSidebarMobile() {
+        var sidebar = document.getElementById('native-sidebar');
+        var overlay = document.getElementById('sidebar-overlay');
+        if (!sidebar || !sidebar.classList.contains('show')) return;
+        sidebar.classList.remove('show');
+        if (overlay) overlay.classList.remove('show');
+        document.body.classList.remove('sidebar-mobile-open');
+        try {
+            window.dispatchEvent(new CustomEvent('erp:native-sidebar-closed'));
+        } catch (e) { /* ignore */ }
+    };
+
+    // Mobile: hide drawer after a real shortcut/nav click (keep open for submenu expand).
+    // Use pointerup as well — iOS Safari sometimes delays/skips click after touch.
+    function maybeCloseSidebarFromNavEvent(e) {
+        if (window.innerWidth > 992) return;
+        var t = e.target;
+        if (!t || !t.closest) return;
+        if (t.closest('.submenu-chevron-btn')) return;
+        var link = t.closest('#native-sidebar a.nav-link');
+        if (!link) return;
+        var href = (link.getAttribute('href') || '').trim();
+        var isParentToggle = link.classList.contains('sidebar-parent-toggle')
+            || link.classList.contains('sidebar-child-parent-toggle');
+        if (isParentToggle && (!href || href === '#' || href.indexOf('javascript:') === 0)) return;
+        if (!href || href === '#' || href.indexOf('javascript:') === 0) return;
+        closeNativeSidebarMobile();
+    }
+    document.addEventListener('click', maybeCloseSidebarFromNavEvent, true);
+    document.addEventListener('pointerup', maybeCloseSidebarFromNavEvent, true);
     
     function openThemeModal() {
         var myModal = new bootstrap.Modal(document.getElementById('themeModal'));

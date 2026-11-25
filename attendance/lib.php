@@ -248,6 +248,7 @@ if (!function_exists('attendanceSettingsFetchPayload')) {
                 'longitude' => null,
                 'radius_meters' => 100,
                 'geofence_enabled' => 1,
+                'biometric_required' => 1,
             ];
         }
 
@@ -262,6 +263,11 @@ if (!function_exists('attendanceSettingsFetchPayload')) {
         } else {
             $geofenceEnabled = trim((string) ($settings['latitude'] ?? '')) !== ''
                 && trim((string) ($settings['longitude'] ?? '')) !== '';
+        }
+
+        $biometricRequired = true;
+        if (array_key_exists('biometric_required', $settings)) {
+            $biometricRequired = (int) $settings['biometric_required'] === 1;
         }
 
         $currentIp = '';
@@ -291,6 +297,7 @@ if (!function_exists('attendanceSettingsFetchPayload')) {
                 'longitude' => $settings['longitude'] !== null && $settings['longitude'] !== ''
                     ? (float) $settings['longitude'] : null,
                 'radius_meters' => (int) ($settings['radius_meters'] ?? 100),
+                'biometric_required' => $biometricRequired,
             ],
             'current_ip' => $currentIp,
             'links' => [
@@ -344,9 +351,11 @@ if (!function_exists('attendanceSettingsSave')) {
         $longitude = ($longitudeRaw !== null && $longitudeRaw !== '') ? round((float) $longitudeRaw, 8) : null;
         $radiusMeters = ($radiusRaw !== null && $radiusRaw !== '') ? (int) $radiusRaw : 100;
         $geofenceEnabled = !empty($input['geofence_enabled']) ? 1 : 0;
+        $biometricRequired = !empty($input['biometric_required']) ? 1 : 0;
 
         try {
             $hasGeofenceCol = function_exists('columnExists') && columnExists('attendance_settings', 'geofence_enabled', $pdo);
+            $hasBiometricCol = function_exists('columnExists') && columnExists('attendance_settings', 'biometric_required', $pdo);
             $setSql = "
                 office_ip_address = ?,
                 start_time = ?,
@@ -361,6 +370,10 @@ if (!function_exists('attendanceSettingsSave')) {
                 $setSql .= ", geofence_enabled = ?";
                 $saveParams[] = $geofenceEnabled;
             }
+            if ($hasBiometricCol) {
+                $setSql .= ", biometric_required = ?";
+                $saveParams[] = $biometricRequired;
+            }
 
             $upd = $pdo->prepare("UPDATE attendance_settings SET {$setSql} WHERE id = 1");
             $upd->execute($saveParams);
@@ -374,6 +387,11 @@ if (!function_exists('attendanceSettingsSave')) {
                         $cols .= ', geofence_enabled';
                         $vals .= ', ?';
                         $insParams[] = $geofenceEnabled;
+                    }
+                    if ($hasBiometricCol) {
+                        $cols .= ', biometric_required';
+                        $vals .= ', ?';
+                        $insParams[] = $biometricRequired;
                     }
                     $ins = $pdo->prepare("INSERT INTO attendance_settings ({$cols}) VALUES ({$vals})");
                     if (!$ins->execute($insParams)) {

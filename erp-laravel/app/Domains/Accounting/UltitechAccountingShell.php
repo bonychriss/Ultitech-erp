@@ -139,6 +139,18 @@ final class UltitechAccountingShell
     if (!a) return;
     // Same document: let hash update, then sync (avoid leaving stale .active).
     setTimeout(syncUltitechSidebarActive, 0);
+    // Mobile SPA hash nav does not reload — close the drawer after the shortcut.
+    if (window.innerWidth <= 992 && typeof window.closeNativeSidebarMobile === 'function') {
+      window.closeNativeSidebarMobile();
+    } else if (window.innerWidth <= 992) {
+      var sidebar = document.getElementById('native-sidebar');
+      var overlay = document.getElementById('sidebar-overlay');
+      if (sidebar && sidebar.classList.contains('show')) {
+        sidebar.classList.remove('show');
+        if (overlay) overlay.classList.remove('show');
+        document.body.classList.remove('sidebar-mobile-open');
+      }
+    }
   });
 })();
 </script>
@@ -434,6 +446,37 @@ html[data-theme="dark"] body.page-ultitech-accounting .layout-main-wrapper,
 html[data-theme="dark"] body.page-ultitech-accounting .layout-main-wrapper > .flex-grow-1,
 html[data-theme="dark"] body.page-ultitech-accounting main.main-content.ultitech-accounting-root {
     background: #0f172a !important;
+}
+@media print {
+    html.ua-printing-journal,
+    html.ua-printing-journal body,
+    body.ua-printing-journal,
+    body.ua-printing-journal.page-ultitech-accounting,
+    body.ua-printing-journal.page-ultitech-accounting.dashboard,
+    body.ua-printing-journal .layout-main-wrapper,
+    body.ua-printing-journal .layout-main-wrapper > .flex-grow-1,
+    body.ua-printing-journal main.main-content.ultitech-accounting-root,
+    body.ua-printing-journal main.main-content.ultitech-accounting-root #root {
+        height: auto !important;
+        max-height: none !important;
+        overflow: visible !important;
+        position: static !important;
+        background: #fff !important;
+    }
+    body.ua-printing-journal #native-sidebar,
+    body.ua-printing-journal .sidebar-overlay,
+    body.ua-printing-journal .employee-header,
+    body.ua-printing-journal .mobile-footer,
+    body.ua-printing-journal nav.mobile-footer,
+    body.ua-printing-journal .mf-floating-instagram,
+    body.ua-printing-journal #erp-auto-breadcrumb,
+    body.ua-printing-journal .layout-main-wrapper,
+    body.ua-printing-journal main.main-content.ultitech-accounting-root {
+        display: none !important;
+    }
+    body.ua-printing-journal #ua-journal-print-root {
+        display: block !important;
+    }
 }
 </style>
 CSS;

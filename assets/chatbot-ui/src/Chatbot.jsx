@@ -4,7 +4,7 @@ import { createCallController } from './callRtc';
 import CallDashboard from './CallDashboard';
 
 const STORAGE_KEY_DESKTOP = 'chatbot_pos_v5';
-const STORAGE_KEY_MOBILE = 'chatbot_pos_mobile_v3';
+const STORAGE_KEY_MOBILE = 'chatbot_pos_mobile_v4';
 const DRAG_THRESHOLD = 6;
 const FAB_SIZE = 48;
 
@@ -13,7 +13,16 @@ function clamp(n, min, max) {
 }
 
 function isMobileViewport() {
-  return typeof window !== 'undefined' && window.matchMedia('(max-width: 767.98px)').matches;
+  // Match ERP native sidebar off-canvas breakpoint (≤992px), not only phones.
+  return typeof window !== 'undefined' && window.matchMedia('(max-width: 991.98px)').matches;
+}
+
+function viewportSize() {
+  const vv = typeof window !== 'undefined' ? window.visualViewport : null;
+  return {
+    width: Math.round(vv?.width || window.innerWidth || 0),
+    height: Math.round(vv?.height || window.innerHeight || 0),
+  };
 }
 
 function storageKey() {
@@ -22,14 +31,15 @@ function storageKey() {
 
 function mobileBottomClearance() {
   if (!isMobileViewport()) return 20;
-  // Floating mobile nav (~54px) + inset + gap
-  return 82;
+  // Safe-area + thumb gap (mobile footer is disabled site-wide).
+  return 28;
 }
 
 function clampPos(x, y) {
-  const maxX = Math.max(0, window.innerWidth - FAB_SIZE);
-  const bottomGap = isMobileViewport() ? mobileBottomClearance() - 20 : 8;
-  const maxY = Math.max(0, window.innerHeight - bottomGap - 28);
+  const { width, height } = viewportSize();
+  const maxX = Math.max(0, width - FAB_SIZE);
+  const bottomGap = isMobileViewport() ? mobileBottomClearance() : 8;
+  const maxY = Math.max(0, height - FAB_SIZE - bottomGap);
   return {
     x: clamp(x, 0, maxX),
     y: clamp(y, 0, maxY),
@@ -51,8 +61,14 @@ function sidebarBox() {
   if (typeof document === 'undefined') return null;
   const el = document.querySelector('#native-sidebar, .sidebar-container');
   if (!el) return null;
+  // Mobile off-canvas: ignore the drawer unless it is open (.show).
+  if (isMobileViewport() && el.id === 'native-sidebar' && !el.classList.contains('show')) {
+    return null;
+  }
   const box = el.getBoundingClientRect();
   if (box.width < 64 || box.width > 420) return null;
+  // Fully off-screen (closed drawer still reports width after translateX).
+  if (box.right <= 8 || box.left < -40) return null;
   return box;
 }
 
@@ -66,16 +82,21 @@ function logoutAnchor() {
 }
 
 function defaultPos() {
+  const { height } = viewportSize();
+  // On mobile/off-canvas layouts always park bottom-left — never dock to the drawer.
+  if (isMobileViewport()) {
+    return clampPos(16, height - FAB_SIZE - mobileBottomClearance());
+  }
   const box = sidebarBox();
-  if (box && !isMobileViewport()) {
+  if (box) {
     const logout = logoutAnchor();
-    const bottom = Math.min(box.bottom, window.innerHeight);
+    const bottom = Math.min(box.bottom, height);
     // Under the Logout label, on the bottom edge of the sidebar.
     let y = bottom - 36;
     if (logout) y = Math.max(y, logout.bottom + 2);
     return clampPos(box.right - FAB_SIZE / 2, y);
   }
-  return clampPos(16, window.innerHeight - FAB_SIZE - mobileBottomClearance());
+  return clampPos(16, height - FAB_SIZE - mobileBottomClearance());
 }
 
 function coversSidebarLabels(x) {
@@ -95,6 +116,14 @@ function isLegacyBottomRight(x, y) {
 
 function readSavedPos() {
   try {
+    // iPhone/iPad: never restore a parked mid-screen dock after sidebar use.
+    if (isMobileViewport()) {
+      try {
+        localStorage.removeItem('chatbot_pos_mobile_v3');
+        localStorage.removeItem(STORAGE_KEY_MOBILE);
+      } catch { /* ignore */ }
+      return null;
+    }
     const raw = localStorage.getItem(storageKey());
     if (!raw) return null;
     const pos = JSON.parse(raw);
@@ -102,10 +131,6 @@ function readSavedPos() {
     const y = parseFloat(pos?.top);
     if (Number.isNaN(x) || Number.isNaN(y)) return null;
     const next = clampPos(x, y);
-    // Desktop coords on a phone are usually off-screen — fall back to default
-    if (isMobileViewport() && (x > window.innerWidth || y > window.innerHeight)) {
-      return null;
-    }
     if (isLegacyBottomRight(next.x, next.y) || coversSidebarLabels(next.x)) return null;
     return next;
   } catch {
@@ -208,20 +233,49 @@ export default function Chatbot() {
   }, [pos, open, callOpen]);
 
   useEffect(() => {
-    const sync = () => {
+    const sync = (forceReseat = false) => {
       setPos((prev) => {
-        if (coversSidebarLabels(prev.x)) return defaultPos();
+        if (forceReseat || isMobileViewport() || coversSidebarLabels(prev.x)) {
+          const reset = defaultPos();
+          if (isMobileViewport()) {
+            try {
+              localStorage.removeItem('chatbot_pos_mobile_v3');
+              localStorage.removeItem(STORAGE_KEY_MOBILE);
+            } catch { /* ignore */ }
+          } else {
+            persistPos(reset);
+          }
+          if (reset.x === prev.x && reset.y === prev.y) return prev;
+          return reset;
+        }
         const next = clampPos(prev.x, prev.y);
         if (next.x === prev.x && next.y === prev.y) return prev;
         return next;
       });
     };
-    sync();
-    window.addEventListener('resize', sync);
-    window.addEventListener('orientationchange', sync);
+    sync(true);
+    const onResize = () => sync(isMobileViewport());
+    const onSidebarClosed = () => sync(true);
+    window.addEventListener('resize', onResize);
+    window.addEventListener('orientationchange', onResize);
+    window.addEventListener('pageshow', onSidebarClosed);
+    window.addEventListener('erp:native-sidebar-closed', onSidebarClosed);
+    window.visualViewport?.addEventListener('resize', onResize);
+    const sidebar = document.getElementById('native-sidebar');
+    let observer = null;
+    if (sidebar && typeof MutationObserver !== 'undefined') {
+      observer = new MutationObserver(() => {
+        if (isMobileViewport() && !sidebar.classList.contains('show')) sync(true);
+      });
+      observer.observe(sidebar, { attributes: true, attributeFilter: ['class'] });
+    }
     return () => {
-      window.removeEventListener('resize', sync);
-      window.removeEventListener('orientationchange', sync);
+      window.removeEventListener('resize', onResize);
+      window.removeEventListener('orientationchange', onResize);
+      window.removeEventListener('pageshow', onSidebarClosed);
+      window.removeEventListener('erp:native-sidebar-closed', onSidebarClosed);
+      window.visualViewport?.removeEventListener('resize', onResize);
+      if (observer) observer.disconnect();
     };
   }, []);
 

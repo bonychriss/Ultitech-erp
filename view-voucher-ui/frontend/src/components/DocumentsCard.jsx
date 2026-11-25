@@ -258,7 +258,8 @@ export default function DocumentsCard({ data, onPreview, onDeleteAttachment, onU
                 iconClass="fa-file-pdf"
                 name={`${so.orderNumber}.pdf`}
                 sub="Sales Order"
-                onView={() => onPreview(viewUrl, 'supporting', false)}
+                caption="Sales order"
+                onView={() => onPreview(viewUrl, 'sales_order', false)}
                 downloadHref={downloadUrl}
                 previewUrl={viewUrl}
                 htmlEmbed
@@ -292,6 +293,7 @@ export default function DocumentsCard({ data, onPreview, onDeleteAttachment, onU
               sub={po.createdBy
                 ? `Purchase Order \u00b7 Created by ${po.createdBy}`
                 : 'Purchase Order'}
+              caption="Purchase order"
               viewHref={po.viewLink}
               downloadHref={po.viewLink}
               previewUrl={po.viewLink}

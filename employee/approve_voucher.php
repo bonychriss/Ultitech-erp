@@ -204,6 +204,22 @@ try {
         }
     }
 
+    // Must validate GM eligibility before mutating approvals. Updating the GM row first
+    // made userCanVoucherGeneralManagerApprove() see status=approved and reject wrongly.
+    if ($finalizeAsGm) {
+        if (!function_exists('userCanVoucherGeneralManagerApprove')
+            || !userCanVoucherGeneralManagerApprove($pdo, $voucherAssignees, $userId)) {
+            $pdo->rollBack();
+            $coreDone = function_exists('voucherCoreApprovalRolesComplete')
+                && voucherCoreApprovalRolesComplete($pdo, $voucher_id, $voucherAssignees);
+            $message = $coreDone
+                ? 'General Manager approval could not be completed. Refresh and try again.'
+                : 'General Manager approval is not available yet. Complete Applicant, Department Manager, and Checked By first.';
+            echo json_encode(['success' => false, 'message' => $message]);
+            exit;
+        }
+    }
+
     $signaturePath = null;
     $useProfile = isset($_POST['use_profile_signature']) && (string) $_POST['use_profile_signature'] === '1';
     if ($useProfile) {
@@ -256,12 +272,6 @@ try {
     }
 
     if ($finalizeAsGm) {
-        if (!function_exists('userCanVoucherGeneralManagerApprove')
-            || !userCanVoucherGeneralManagerApprove($pdo, $voucherAssignees, $userId)) {
-            $pdo->rollBack();
-            echo json_encode(['success' => false, 'message' => 'General Manager approval is not available yet. Complete Applicant, Department Manager, and Checked By first.']);
-            exit;
-        }
         $gmName = function_exists('resolveVoucherApproverGeneralManagerName')
             ? resolveVoucherApproverGeneralManagerName($pdo, $userId)
             : $uname;

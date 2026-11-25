@@ -362,6 +362,37 @@ if ($lastLoginTs) {
 }
 $roleLabel = ucfirst((string) ($user['role'] ?? 'user'));
 $isActiveUser = !isset($user['is_active']) || (int) $user['is_active'] === 1;
+
+$psBiometricApiUrl = function_exists('company_url')
+    ? company_url('attendance/api/action.php')
+    : (function_exists('app_url') ? app_url('/attendance/api/action.php') : '../attendance/api/action.php');
+$psBiometricStatus = [
+    'required' => false,
+    'enrolled' => false,
+    'count' => 0,
+    'max' => 2,
+    'devices' => [],
+    'library_ok' => false,
+    'secure_ok' => false,
+    'rp_id' => '',
+];
+try {
+    if (function_exists('ensureAttendanceClockModuleSchema')) {
+        ensureAttendanceClockModuleSchema();
+    }
+    $waClass = __DIR__ . '/../attendance/classes/AttendanceWebAuthn.php';
+    if (is_file($waClass)) {
+        require_once $waClass;
+    }
+    if (class_exists('AttendanceWebAuthn') && isset($pdo) && $pdo instanceof PDO) {
+        $psBiometricStatus = (new AttendanceWebAuthn($pdo))->statusForUser((int) $userId);
+    }
+} catch (Throwable $e) {
+    // Profile still loads without biometric panel data.
+}
+$psBiometricJsUrl = function_exists('app_url')
+    ? app_url('/assets/js/profile-biometric.js')
+    : '../assets/js/profile-biometric.js';
 ?>
 
 <!DOCTYPE html>
@@ -377,7 +408,18 @@ $isActiveUser = !isset($user['is_active']) || (int) $user['is_active'] === 1;
 	<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 	<link rel="stylesheet" href="<?= $esc(app_url('/assets/css/profile-shell.css')) ?>?v=<?= (int) @filemtime(__DIR__ . '/../assets/css/profile-shell.css') ?>">
 </head>
-<body class="dashboard ps-page">
+<body class="dashboard ps-page ps-page--profile">
+<script>
+(function () {
+    try {
+        if (window.matchMedia('(max-width: 768px)').matches) {
+            document.body.setAttribute('data-ps-view', location.hash ? 'detail' : 'menu');
+        } else {
+            document.body.setAttribute('data-ps-view', 'desktop');
+        }
+    } catch (e) {}
+})();
+</script>
 <?php $hideErpBreadcrumbs = true; require_once __DIR__ . '/../includes/header_employee.php'; ?>
 
 <div class="main-content-wrapper">
@@ -436,21 +478,28 @@ $isActiveUser = !isset($user['is_active']) || (int) $user['is_active'] === 1;
             </section>
 
             <nav class="section-nav" aria-label="Profile sections">
-                <ul>
-                    <li><a href="#profile-photo" class="is-active"><i class="far fa-user"></i> Profile</a></li>
-                    <li><a href="#personal-details"><i class="far fa-id-card"></i> Details</a></li>
-                    <li><a href="#change-password"><i class="fas fa-lock"></i> Security</a></li>
-                    <li><a href="#digital-signature"><i class="fas fa-signature"></i> Signature</a></li>
-                    <li><a href="#personal-email"><i class="far fa-envelope"></i> Email</a></li>
-                    <li class="ps-nav-sep" aria-hidden="true"></li>
-                    <li><a href="javascript:void(0)" role="button" class="ps-nav-link ps-pref-toggle" id="psPrefToggle" aria-haspopup="menu" aria-expanded="false" aria-controls="psPrefMenu"><i class="fas fa-sliders"></i> Preferences <i class="fas fa-chevron-down ps-pref-caret"></i></a></li>
-                    </ul>
-                <div class="ps-pref-menu" id="psPrefMenu" role="menu" hidden>
-                    <a href="#ps-pref-ai" role="menuitem" data-ps-section="ps-pref-ai"><i class="fas fa-robot"></i><span><strong>AI Agent</strong><small>Smart alerts and insights</small></span></a>
-                    <a href="#ps-pref-personalization" role="menuitem" data-ps-section="ps-pref-personalization"><i class="fas fa-palette"></i><span><strong>Personalization</strong><small>System font and look &amp; feel</small></span></a>
-                    <a href="#ps-pref-appearance" role="menuitem" data-ps-section="ps-pref-appearance"><i class="fas fa-paintbrush"></i><span><strong>Appearance</strong><small>Light / dark mode and sidebar theme</small></span></a>
+                <div class="ps-settings-heading" aria-hidden="true">
+                    <span>Settings</span>
                 </div>
+                <ul>
+                    <li><a href="#profile-photo" class="is-active"><i class="far fa-user" aria-hidden="true"></i><span class="ps-nav-text"><strong>Profile</strong></span></a></li>
+                    <li><a href="#personal-details"><i class="far fa-address-card" aria-hidden="true"></i><span class="ps-nav-text"><strong>Account details</strong></span></a></li>
+                    <li><a href="#change-password"><i class="ps-nav-svg" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></i><span class="ps-nav-text"><strong>Security</strong></span></a></li>
+                    <li><a href="#digital-signature"><i class="far fa-pen-to-square" aria-hidden="true"></i><span class="ps-nav-text"><strong>Signature</strong></span></a></li>
+                    <li><a href="#personal-email"><i class="far fa-envelope" aria-hidden="true"></i><span class="ps-nav-text"><strong>Email</strong></span></a></li>
+                    <li class="ps-nav-sep" aria-hidden="true"></li>
+                    <li><a href="#ps-pref-ai"><i class="far fa-lightbulb" aria-hidden="true"></i><span class="ps-nav-text"><strong>AI Agent</strong></span></a></li>
+                    <li><a href="#ps-pref-appearance"><i class="far fa-moon" aria-hidden="true"></i><span class="ps-nav-text"><strong>Appearance</strong></span></a></li>
+                    <li><a href="#ps-pref-accessibility"><i class="far fa-eye" aria-hidden="true"></i><span class="ps-nav-text"><strong>Accessibility</strong></span></a></li>
+                    </ul>
             </nav>
+
+            <div class="ps-mobile-back" id="psMobileBack" hidden>
+                <button type="button" class="ps-mobile-back-btn" id="psMobileBackBtn" aria-label="Back to settings">
+                    <i class="fas fa-chevron-left" aria-hidden="true"></i>
+                </button>
+                <span class="ps-mobile-back-title" id="psMobileBackTitle">Settings</span>
+            </div>
                 
             <div class="ps-body">
                 <div class="editor-main">
@@ -642,67 +691,215 @@ $isActiveUser = !isset($user['is_active']) || (int) $user['is_active'] === 1;
                 </div>
             </section>
 
-            <section class="editor-section ps-pref" id="ps-pref-personalization" hidden>
-                <div class="section-header ps-sec-head">
+            <section class="editor-section ps-pref" id="ps-pref-appearance" hidden>
+                <div class="section-header ps-sec-head ps-pref-appearance-head">
                     <span class="ps-sec-icon"><i class="fas fa-palette"></i></span>
                     <div>
-                        <h2 class="section-title">System Font</h2>
-                        <p class="section-subtitle">Choose the font used for menus, forms and dashboards on your account.</p>
+                        <h2 class="section-title">Appearance</h2>
+                        <p class="section-subtitle">Font, light / dark mode, and sidebar look.</p>
                     </div>
                 </div>
-                <?php if ($psFontConfig === null): ?>
-                <p class="ps-pref-empty">Font settings are not available right now.</p>
-                <?php else: ?>
-                <?php
-                $psFontSelected = (string) ($psFontConfig['selectedKey'] ?? '');
-                $psCompanyFont = $psFontConfig['companyFont'] ?? ['label' => 'Company default', 'stack' => 'inherit'];
-                ?>
-                <div class="ps-font-grid" id="psFontGrid" data-api="<?= $esc($psFontApiUrl) ?>" data-selected="<?= $esc($psFontSelected) ?>">
-                    <button type="button" class="ps-font-card<?= $psFontSelected === '' ? ' is-selected' : '' ?>" data-font="" style="--ps-font: <?= $esc($psCompanyFont['stack'] ?? 'inherit') ?>;">
-                        <span class="ps-font-sample" title="<?= $esc($psCompanyFont['label'] ?? '') ?>">Company default</span>
-                        <i class="fas fa-check ps-font-check"></i>
-                    </button>
-                    <?php foreach (($psFontConfig['fonts'] ?? []) as $psFont): ?>
-                    <button type="button" class="ps-font-card<?= $psFontSelected === (string) $psFont['id'] ? ' is-selected' : '' ?>" data-font="<?= $esc($psFont['id']) ?>" data-google="<?= $esc($psFont['google'] ?? '') ?>" data-local="<?= $esc($psFont['localCss'] ?? '') ?>" style="--ps-font: <?= $esc($psFont['stack'] ?? 'inherit') ?>;">
-                        <span class="ps-font-sample"><?= $esc($psFont['label']) ?></span>
-                        <i class="fas fa-check ps-font-check"></i>
-                    </button>
-                    <?php endforeach; ?>
+
+                <div class="ps-pref-block">
+                    <p class="subsection-label">Font size and style</p>
+                    <?php if ($psFontConfig === null): ?>
+                    <p class="ps-pref-empty">Font settings are not available right now.</p>
+                    <?php else: ?>
+                    <?php
+                    $psFontSelected = (string) ($psFontConfig['selectedKey'] ?? '');
+                    $psCompanyFont = $psFontConfig['companyFont'] ?? ['label' => 'Company default', 'stack' => 'inherit'];
+                    $psEffectiveStack = (string) ($psFontConfig['effectiveFont']['stack'] ?? ($psCompanyFont['stack'] ?? 'inherit'));
+                    $psEffectiveLabel = (string) ($psFontConfig['effectiveFont']['label'] ?? 'Company default');
+                    ?>
+                    <div class="ps-font-samsung" id="psFontSamsung">
+                        <div class="ps-font-preview-card" id="psFontPreviewCard">
+                            <p class="ps-font-preview-text" id="psFontPreview" style="font-family: <?= $esc($psEffectiveStack) ?>;">
+                                While resolving a conflict with a colleague, remember to keep a positive attitude and focus on finding a solution that works for everyone.
+                            </p>
+                            <div class="ps-font-loading" id="psFontLoading" hidden aria-live="polite">
+                                <span class="ps-font-loading-ring" aria-hidden="true"></span>
+                                <span class="ps-font-loading-copy">
+                                    <strong id="psFontLoadingTitle">Applying font</strong>
+                                    <small id="psFontLoadingSub">Please wait…</small>
+                                </span>
+                            </div>
+                        </div>
+                        <p class="ps-font-style-label">Font style</p>
+                        <div class="ps-font-panel">
+                            <div class="ps-font-grid" id="psFontGrid" data-api="<?= $esc($psFontApiUrl) ?>" data-selected="<?= $esc($psFontSelected) ?>">
+                                <button type="button" class="ps-font-card<?= $psFontSelected === '' ? ' is-selected' : '' ?>" data-font="" data-label="Company default" style="--ps-font: <?= $esc($psCompanyFont['stack'] ?? 'inherit') ?>;">
+                                    <span class="ps-font-sample" title="<?= $esc($psCompanyFont['label'] ?? '') ?>">Company default</span>
+                                    <i class="fas fa-check ps-font-check"></i>
+                                </button>
+                                <?php foreach (($psFontConfig['fonts'] ?? []) as $psFont): ?>
+                                <button type="button" class="ps-font-card<?= $psFontSelected === (string) $psFont['id'] ? ' is-selected' : '' ?>" data-font="<?= $esc($psFont['id']) ?>" data-label="<?= $esc($psFont['label']) ?>" data-google="<?= $esc($psFont['google'] ?? '') ?>" data-local="<?= $esc($psFont['localCss'] ?? '') ?>" style="--ps-font: <?= $esc($psFont['stack'] ?? 'inherit') ?>;">
+                                    <span class="ps-font-sample"><?= $esc($psFont['label']) ?></span>
+                                    <i class="fas fa-check ps-font-check"></i>
+                                </button>
+                                <?php endforeach; ?>
+                            </div>
+                            <div class="ps-pref-actions ps-font-note-row">
+                                <span class="ps-pref-note" id="psFontNote">Current: <?= $esc($psEffectiveLabel) ?><?= empty($psFontConfig['isPersonalChoice']) ? ' (company default)' : ' (your choice)' ?></span>
+                            </div>
+                        </div>
+                    </div>
+                    <?php endif; ?>
                 </div>
-                <div class="ps-pref-actions">
-                    <span class="ps-pref-note" id="psFontNote">Current: <?= $esc($psFontConfig['effectiveFont']['label'] ?? '') ?><?= empty($psFontConfig['isPersonalChoice']) ? ' (company default)' : ' (your choice)' ?></span>
+
+                <div class="ps-pref-block">
+                    <p class="subsection-label">Mode</p>
+                    <div class="ps-mode-grid" id="psModeGrid">
+                        <button type="button" class="ps-mode-card" data-mode="light">
+                            <span class="ps-mode-phone ps-mode-preview--light" aria-hidden="true">
+                                <span class="ps-mode-phone-notch"></span>
+                                <span class="ps-mode-phone-screen">
+                                    <span class="ps-mode-phone-bar"></span>
+                                    <span class="ps-mode-phone-row"></span>
+                                    <span class="ps-mode-phone-row ps-mode-phone-row--short"></span>
+                                    <span class="ps-mode-phone-row"></span>
+                                </span>
+                            </span>
+                            <span class="ps-mode-label">
+                                <span class="ps-mode-radio" aria-hidden="true"></span>
+                                Light
+                            </span>
+                        </button>
+                        <button type="button" class="ps-mode-card" data-mode="dark">
+                            <span class="ps-mode-phone ps-mode-preview--dark" aria-hidden="true">
+                                <span class="ps-mode-phone-notch"></span>
+                                <span class="ps-mode-phone-screen">
+                                    <span class="ps-mode-phone-bar"></span>
+                                    <span class="ps-mode-phone-row"></span>
+                                    <span class="ps-mode-phone-row ps-mode-phone-row--short"></span>
+                                    <span class="ps-mode-phone-row"></span>
+                                </span>
+                            </span>
+                            <span class="ps-mode-label">
+                                <span class="ps-mode-radio" aria-hidden="true"></span>
+                                Dark
+                            </span>
+                        </button>
+                        <button type="button" class="ps-mode-card" data-mode="system">
+                            <span class="ps-mode-phone ps-mode-preview--system" aria-hidden="true">
+                                <span class="ps-mode-phone-notch"></span>
+                                <span class="ps-mode-phone-screen">
+                                    <span class="ps-mode-phone-half ps-mode-phone-half--light">
+                                        <span class="ps-mode-phone-bar"></span>
+                                        <span class="ps-mode-phone-row"></span>
+                                        <span class="ps-mode-phone-row ps-mode-phone-row--short"></span>
+                                    </span>
+                                    <span class="ps-mode-phone-half ps-mode-phone-half--dark">
+                                        <span class="ps-mode-phone-bar"></span>
+                                        <span class="ps-mode-phone-row"></span>
+                                        <span class="ps-mode-phone-row ps-mode-phone-row--short"></span>
+                                    </span>
+                                </span>
+                            </span>
+                            <span class="ps-mode-label">
+                                <span class="ps-mode-radio" aria-hidden="true"></span>
+                                System
+                            </span>
+                        </button>
+                    </div>
+                    <p class="ps-pref-note ps-mode-hint">System follows your phone’s light or dark setting.</p>
                 </div>
-                <?php endif; ?>
+
+                <div class="ps-pref-block">
+                    <p class="subsection-label">Sidebar theme <small>(used in light mode)</small></p>
+                    <div class="ps-theme-grid">
+                        <?php foreach ($psSidebarThemes as $psThemeKey => [$psThemeLabel, $psThemeBg, $psThemeFg, $psThemeBorder]): ?>
+                        <a href="<?= $esc($psThemeUrl($psThemeKey)) ?>" class="ps-theme-card<?= $psCurrentTheme === $psThemeKey ? ' is-selected' : '' ?>" data-theme-key="<?= $esc($psThemeKey) ?>">
+                            <span class="ps-theme-swatch<?= $psThemeBorder ? ' has-border' : '' ?>" style="background: <?= $esc($psThemeBg) ?>; color: <?= $esc($psThemeFg) ?>;"><i class="fas fa-bars"></i></span>
+                            <span class="ps-theme-label"><?= $esc($psThemeLabel) ?></span>
+                            <i class="fas fa-circle-check ps-theme-check"></i>
+                        </a>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
             </section>
 
-            <section class="editor-section ps-pref" id="ps-pref-appearance" hidden>
+            <?php
+            $psA11yCompany = function_exists('erp_get_accessibility_prefs')
+                ? erp_get_accessibility_prefs()
+                : (function_exists('erp_accessibility_defaults') ? erp_accessibility_defaults() : [
+                    'textScale' => '100',
+                    'highContrast' => false,
+                    'reduceMotion' => false,
+                    'underlineLinks' => false,
+                    'largeTargets' => false,
+                ]);
+            $psA11yCompanyJson = json_encode($psA11yCompany, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+            if (!is_string($psA11yCompanyJson)) {
+                $psA11yCompanyJson = '{}';
+            }
+            ?>
+            <section class="editor-section ps-pref" id="ps-pref-accessibility" hidden
+                data-a11y-company="<?= $esc($psA11yCompanyJson) ?>">
                 <div class="section-header ps-sec-head">
-                    <span class="ps-sec-icon"><i class="fas fa-paintbrush"></i></span>
+                    <span class="ps-sec-icon"><i class="fas fa-universal-access"></i></span>
                     <div>
-                        <h2 class="section-title">Appearance</h2>
-                        <p class="section-subtitle">Switch between light and dark mode, and pick a sidebar theme.</p>
+                        <h2 class="section-title">Accessibility</h2>
+                        <p class="section-subtitle">Personal reading and interaction preferences for your account on this device.</p>
                     </div>
                 </div>
-                <p class="subsection-label">Mode</p>
-                <div class="ps-mode-grid" id="psModeGrid">
-                    <button type="button" class="ps-mode-card" data-mode="light">
-                        <span class="ps-mode-preview ps-mode-preview--light"><span></span><span></span><span></span></span>
-                        <span class="ps-mode-label"><i class="fas fa-sun"></i> Light</span>
-                    </button>
-                    <button type="button" class="ps-mode-card" data-mode="dark">
-                        <span class="ps-mode-preview ps-mode-preview--dark"><span></span><span></span><span></span></span>
-                        <span class="ps-mode-label"><i class="fas fa-moon"></i> Dark</span>
-                    </button>
+
+                <p class="subsection-label">Text size</p>
+                <div class="ps-a11y-slider" id="psA11yScale">
+                    <p class="ps-a11y-slider-sample" id="psA11yPreview">The quick brown fox jumps over the lazy dog.</p>
+                    <div class="ps-a11y-slider-row">
+                        <span class="ps-a11y-slider-end ps-a11y-slider-end--sm" aria-hidden="true">A</span>
+                        <input type="range" id="psA11yRange" class="ps-a11y-range" min="100" max="200" step="1" value="100" aria-label="Text size">
+                        <span class="ps-a11y-slider-end ps-a11y-slider-end--lg" aria-hidden="true">A</span>
+                    </div>
                 </div>
-                <p class="subsection-label" style="margin-top:1.1rem;">Sidebar theme <small>(used in light mode)</small></p>
-                <div class="ps-theme-grid">
-                    <?php foreach ($psSidebarThemes as $psThemeKey => [$psThemeLabel, $psThemeBg, $psThemeFg, $psThemeBorder]): ?>
-                    <a href="<?= $esc($psThemeUrl($psThemeKey)) ?>" class="ps-theme-card<?= $psCurrentTheme === $psThemeKey ? ' is-selected' : '' ?>" data-theme-key="<?= $esc($psThemeKey) ?>">
-                        <span class="ps-theme-swatch<?= $psThemeBorder ? ' has-border' : '' ?>" style="background: <?= $esc($psThemeBg) ?>; color: <?= $esc($psThemeFg) ?>;"><i class="fas fa-bars"></i></span>
-                        <span class="ps-theme-label"><?= $esc($psThemeLabel) ?></span>
-                        <i class="fas fa-circle-check ps-theme-check"></i>
-                    </a>
-                    <?php endforeach; ?>
+
+                <p class="subsection-label" style="margin-top:1.15rem;">Display &amp; interaction</p>
+                <div class="ps-a11y-toggles" id="psA11yToggles">
+                    <label class="ps-a11y-toggle">
+                        <span class="ps-a11y-toggle-copy">
+                            <strong>High contrast</strong>
+                            <small>Stronger borders and clearer text</small>
+                        </span>
+                        <span class="ps-switch">
+                            <input type="checkbox" data-a11y-key="highContrast" aria-label="High contrast">
+                            <span class="ps-switch-track" aria-hidden="true"><span class="ps-switch-thumb"></span></span>
+                        </span>
+                    </label>
+                    <label class="ps-a11y-toggle">
+                        <span class="ps-a11y-toggle-copy">
+                            <strong>Reduce motion</strong>
+                            <small>Turn off animations and transitions</small>
+                        </span>
+                        <span class="ps-switch">
+                            <input type="checkbox" data-a11y-key="reduceMotion" aria-label="Reduce motion">
+                            <span class="ps-switch-track" aria-hidden="true"><span class="ps-switch-thumb"></span></span>
+                        </span>
+                    </label>
+                    <label class="ps-a11y-toggle">
+                        <span class="ps-a11y-toggle-copy">
+                            <strong>Underline links</strong>
+                            <small>Mark links by more than colour alone</small>
+                        </span>
+                        <span class="ps-switch">
+                            <input type="checkbox" data-a11y-key="underlineLinks" aria-label="Underline links">
+                            <span class="ps-switch-track" aria-hidden="true"><span class="ps-switch-thumb"></span></span>
+                        </span>
+                    </label>
+                    <label class="ps-a11y-toggle">
+                        <span class="ps-a11y-toggle-copy">
+                            <strong>Larger tap targets</strong>
+                            <small>Bigger buttons and controls</small>
+                        </span>
+                        <span class="ps-switch">
+                            <input type="checkbox" data-a11y-key="largeTargets" aria-label="Larger tap targets">
+                            <span class="ps-switch-track" aria-hidden="true"><span class="ps-switch-thumb"></span></span>
+                        </span>
+                    </label>
+                </div>
+
+                <div class="ps-pref-actions" style="margin-top:1.1rem;">
+                    <button type="button" class="ps-pref-btn ps-pref-btn--ghost" id="psA11yReset">Reset to company default</button>
+                    <span class="ps-pref-note" id="psA11yNote">Changes apply instantly on this device.</span>
                 </div>
             </section>
                 </div>
@@ -1195,8 +1392,36 @@ var psShowTab = (function () {
     var sections = Array.prototype.slice.call(document.querySelectorAll('.editor-section[id]'));
     if (!navLinks.length || !sections.length) return function () {};
     var storageKey = 'psActiveTab';
+    var viewKey = 'psMobileView';
+    var backBar = document.getElementById('psMobileBack');
+    var backBtn = document.getElementById('psMobileBackBtn');
+    var backTitle = document.getElementById('psMobileBackTitle');
 
-    function show(id, updateHash) {
+    function isMobileLayout() {
+        return window.matchMedia('(max-width: 768px)').matches;
+    }
+
+    function titleFor(id) {
+        var link = document.querySelector('.section-nav a[href="#' + id + '"]');
+        if (link) {
+            var strong = link.querySelector('.ps-nav-text strong');
+            if (strong && strong.textContent) return strong.textContent.trim();
+            return (link.textContent || id).replace(/\s+/g, ' ').trim();
+        }
+        return 'Settings';
+    }
+
+    function setMobileView(view) {
+        var next = view === 'detail' ? 'detail' : 'menu';
+        document.body.setAttribute('data-ps-view', next);
+        if (backBar) backBar.hidden = !(isMobileLayout() && next === 'detail');
+        try { sessionStorage.setItem(viewKey, next); } catch (e) {}
+        if (isMobileLayout()) {
+            window.scrollTo(0, 0);
+        }
+    }
+
+    function show(id, updateHash, forceDetail) {
         if (!sections.some(function (s) { return s.id === id; })) id = sections[0].id;
         sections.forEach(function (section) {
             section.hidden = section.id !== id;
@@ -1206,12 +1431,18 @@ var psShowTab = (function () {
             link.classList.toggle('is-active', on);
             link.setAttribute('aria-selected', on ? 'true' : 'false');
         });
-        var prefToggle = document.getElementById('psPrefToggle');
-        if (prefToggle) prefToggle.classList.toggle('is-active', id.indexOf('ps-pref-') === 0);
         document.body.setAttribute('data-ps-tab', id);
+        if (backTitle) backTitle.textContent = titleFor(id);
         document.dispatchEvent(new CustomEvent('ps:tab', { detail: { id: id } }));
         try { sessionStorage.setItem(storageKey, id); } catch (e) {}
         if (updateHash && history.replaceState) history.replaceState(null, '', '#' + id);
+        if (isMobileLayout()) {
+            if (forceDetail === false) setMobileView('menu');
+            else setMobileView('detail');
+        } else {
+            document.body.setAttribute('data-ps-view', 'desktop');
+            if (backBar) backBar.hidden = true;
+        }
         if (id === 'digital-signature' && typeof resizeCanvas === 'function') {
             requestAnimationFrame(resizeCanvas);
         }
@@ -1221,61 +1452,51 @@ var psShowTab = (function () {
         link.setAttribute('role', 'tab');
         link.addEventListener('click', function (e) {
             e.preventDefault();
-            show(link.getAttribute('href').slice(1), true);
+            show(link.getAttribute('href').slice(1), true, true);
         });
     });
+
+    if (backBtn) {
+        backBtn.addEventListener('click', function () {
+            setMobileView('menu');
+            if (history.replaceState) history.replaceState(null, '', location.pathname + location.search);
+            try { sessionStorage.setItem(viewKey, 'menu'); } catch (e) {}
+        });
+    }
 
     var initial = (location.hash || '').slice(1);
     if (!initial) {
         try { initial = sessionStorage.getItem(storageKey) || ''; } catch (e) { initial = ''; }
     }
-    show(initial, false);
+    if (initial === 'ps-pref-personalization') initial = 'ps-pref-appearance';
+    var startInDetail = !!location.hash;
+    if (!startInDetail && isMobileLayout()) {
+        try { startInDetail = sessionStorage.getItem(viewKey) === 'detail' && !!initial; } catch (e) {}
+    }
+    show(initial, false, startInDetail);
+    if (!startInDetail && isMobileLayout()) setMobileView('menu');
     if (location.hash) {
         window.addEventListener('load', function () { window.scrollTo(0, 0); });
     }
-    window.addEventListener('hashchange', function () { show(location.hash.slice(1), false); });
+    window.addEventListener('hashchange', function () {
+        var id = location.hash.slice(1);
+        if (id === 'ps-pref-personalization') id = 'ps-pref-appearance';
+        if (!id && isMobileLayout()) {
+            setMobileView('menu');
+            return;
+        }
+        show(id, false, true);
+    });
+    window.addEventListener('resize', function () {
+        if (!isMobileLayout()) {
+            document.body.setAttribute('data-ps-view', 'desktop');
+            if (backBar) backBar.hidden = true;
+        } else if (!document.body.getAttribute('data-ps-view') || document.body.getAttribute('data-ps-view') === 'desktop') {
+            setMobileView(location.hash ? 'detail' : 'menu');
+        }
+    });
 
     return show;
-})();
-
-(function () {
-    var toggle = document.getElementById('psPrefToggle');
-    var menu = document.getElementById('psPrefMenu');
-    if (!toggle || !menu) return;
-    document.body.appendChild(menu);
-
-    function place() {
-        var r = toggle.getBoundingClientRect();
-        var w = menu.offsetWidth;
-        var left = Math.min(Math.max(8, r.right - w), window.innerWidth - w - 8);
-        menu.style.top = (r.bottom + 6) + 'px';
-        menu.style.left = left + 'px';
-    }
-    function setOpen(open) {
-        menu.hidden = !open;
-        toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
-        if (open) place();
-    }
-    toggle.addEventListener('click', function (e) {
-        e.preventDefault();
-        e.stopPropagation();
-        setOpen(menu.hidden);
-    });
-    menu.addEventListener('click', function (e) {
-        var item = e.target.closest('[data-ps-section]');
-        if (!item) return;
-        e.preventDefault();
-        setOpen(false);
-        if (typeof psShowTab === 'function') psShowTab(item.getAttribute('data-ps-section'), true);
-    });
-    document.addEventListener('click', function (e) {
-        if (!menu.hidden && !menu.contains(e.target)) setOpen(false);
-    });
-    document.addEventListener('keydown', function (e) {
-        if (e.key === 'Escape' && !menu.hidden) { setOpen(false); toggle.focus(); }
-    });
-    window.addEventListener('resize', function () { if (!menu.hidden) place(); });
-    window.addEventListener('scroll', function () { if (!menu.hidden) place(); }, true);
 })();
 
 function psOnTab(id, fn) {
@@ -1348,22 +1569,81 @@ function psOnTab(id, fn) {
     if (refresh) refresh.addEventListener('click', load);
 })();
 
+function psNotify(message, type) {
+    type = type === 'error' ? 'error' : (type === 'info' ? 'info' : 'success');
+    var existing = document.getElementById('psToast');
+    if (existing) existing.remove();
+    var toast = document.createElement('div');
+    toast.className = 'ps-toast ps-toast--' + type;
+    toast.id = 'psToast';
+    toast.setAttribute('role', 'status');
+    toast.setAttribute('aria-live', 'polite');
+    var icon = type === 'error' ? 'fa-circle-exclamation' : (type === 'info' ? 'fa-circle-info' : 'fa-circle-check');
+    toast.innerHTML = '<i class="fas ' + icon + '" aria-hidden="true"></i><span></span><button type="button" class="ps-toast-close" aria-label="Dismiss">&times;</button>';
+    toast.querySelector('span').textContent = message || '';
+    toast.querySelector('.ps-toast-close').addEventListener('click', function () { toast.remove(); });
+    document.body.appendChild(toast);
+    requestAnimationFrame(function () { toast.classList.add('is-in'); });
+    setTimeout(function () {
+        toast.classList.remove('is-in');
+        setTimeout(function () { if (toast.parentNode) toast.remove(); }, 250);
+    }, 3000);
+}
+
 (function () {
     var grid = document.getElementById('psFontGrid');
     if (!grid) return;
+    var wrap = document.getElementById('psFontSamsung');
+    var previewCard = document.getElementById('psFontPreviewCard');
+    var loading = document.getElementById('psFontLoading');
+    var loadingTitle = document.getElementById('psFontLoadingTitle');
+    var loadingSub = document.getElementById('psFontLoadingSub');
     var note = document.getElementById('psFontNote');
+    var preview = document.getElementById('psFontPreview');
     var original = grid.getAttribute('data-selected') || '';
     var busy = false;
+
+    function applyPreview(btn) {
+        if (!preview || !btn) return;
+        var stack = '';
+        try { stack = getComputedStyle(btn).getPropertyValue('--ps-font').trim(); } catch (e) {}
+        if (!stack) stack = 'inherit';
+        preview.style.fontFamily = stack;
+        if (previewCard) {
+            previewCard.classList.remove('is-swapping');
+            void previewCard.offsetWidth;
+            previewCard.classList.add('is-swapping');
+        }
+    }
+
+    function setLoading(on, label) {
+        if (wrap) wrap.classList.toggle('is-loading', !!on);
+        if (previewCard) previewCard.classList.toggle('is-loading', !!on);
+        if (loading) loading.hidden = !on;
+        if (on) {
+            if (loadingTitle) loadingTitle.textContent = 'Applying ' + (label || 'font');
+            if (loadingSub) loadingSub.textContent = 'Updating your look…';
+            if (note) note.innerHTML = '<i class="fas fa-circle-notch fa-spin" aria-hidden="true"></i> Saving ' + (label || 'font') + '…';
+        }
+    }
+
+    function scrollSelectedIntoView() {
+        var selected = grid.querySelector('.ps-font-card.is-selected');
+        if (!selected || typeof selected.scrollIntoView !== 'function') return;
+        try { selected.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' }); } catch (e) {
+            selected.scrollIntoView(false);
+        }
+    }
 
     try {
         var saved = sessionStorage.getItem('psFontSaved');
         if (saved) {
             sessionStorage.removeItem('psFontSaved');
-            if (typeof showToast === 'function') showToast(saved, 'success');
+            psNotify(saved, 'success');
         }
     } catch (err) {}
 
-    psOnTab('ps-pref-personalization', function () {
+    psOnTab('ps-pref-appearance', function () {
         grid.querySelectorAll('[data-google],[data-local]').forEach(function (btn) {
             ['data-local', 'data-google'].forEach(function (attr) {
                 var href = btn.getAttribute(attr);
@@ -1374,20 +1654,30 @@ function psOnTab(id, fn) {
                 document.head.appendChild(link);
             });
         });
+        applyPreview(grid.querySelector('.ps-font-card.is-selected'));
+        setTimeout(scrollSelectedIntoView, 50);
     });
 
     grid.addEventListener('click', function (e) {
         var btn = e.target.closest('.ps-font-card');
         if (!btn || busy) return;
         var chosen = btn.getAttribute('data-font') || '';
-        if (chosen === original) return;
+        if (chosen === original) {
+            applyPreview(btn);
+            return;
+        }
         var cards = grid.querySelectorAll('.ps-font-card');
         var previous = grid.querySelector('.ps-font-card.is-selected');
-        var label = (btn.querySelector('.ps-font-sample') || btn).textContent.trim();
+        var label = btn.getAttribute('data-label') || (btn.querySelector('.ps-font-sample') || btn).textContent.trim();
         busy = true;
         grid.style.pointerEvents = 'none';
-        cards.forEach(function (c) { c.classList.toggle('is-selected', c === btn); });
-        note.textContent = 'Saving ' + label + '…';
+        cards.forEach(function (c) {
+            c.classList.toggle('is-selected', c === btn);
+            c.classList.toggle('is-applying', c === btn);
+        });
+        applyPreview(btn);
+        scrollSelectedIntoView();
+        setLoading(true, label);
         fetch(grid.getAttribute('data-api'), {
             method: 'POST',
             credentials: 'same-origin',
@@ -1397,17 +1687,22 @@ function psOnTab(id, fn) {
             .then(function (res) { return res.json(); })
             .then(function (data) {
                 if (!data || !data.ok) throw new Error((data && data.error) || 'Save failed');
-                note.textContent = 'Saved. Applying ' + label + '…';
+                if (loadingSub) loadingSub.textContent = 'Almost done…';
+                if (note) note.innerHTML = '<i class="fas fa-circle-notch fa-spin" aria-hidden="true"></i> Applying ' + label + '…';
                 try { sessionStorage.setItem('psFontSaved', 'Font changed to ' + label); } catch (err) {}
                 window.location.reload();
             })
             .catch(function (err) {
                 busy = false;
                 grid.style.pointerEvents = '';
-                cards.forEach(function (c) { c.classList.toggle('is-selected', c === previous); });
-                note.textContent = 'Current font unchanged.';
-                var msg = err.message || 'Could not save your font. Please try again.';
-                if (typeof showToast === 'function') showToast(msg, 'error'); else alert(msg);
+                cards.forEach(function (c) {
+                    c.classList.toggle('is-selected', c === previous);
+                    c.classList.remove('is-applying');
+                });
+                applyPreview(previous);
+                setLoading(false);
+                if (note) note.textContent = 'Current font unchanged.';
+                psNotify(err.message || 'Could not save your font. Please try again.', 'error');
             });
     });
 })();
@@ -1415,26 +1710,190 @@ function psOnTab(id, fn) {
 (function () {
     var grid = document.getElementById('psModeGrid');
     if (!grid) return;
-    function current() { return document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light'; }
+    var busy = false;
+    function preference() {
+        if (window.erpThemeToggle && typeof window.erpThemeToggle.getPreference === 'function') {
+            return window.erpThemeToggle.getPreference();
+        }
+        try {
+            var stored = localStorage.getItem('theme');
+            if (stored === 'dark' || stored === 'system' || stored === 'light') return stored;
+        } catch (err) {}
+        var pref = document.documentElement.getAttribute('data-theme-pref');
+        if (pref === 'dark' || pref === 'system' || pref === 'light') return pref;
+        return document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+    }
+    function applyMode(mode, opts) {
+        opts = opts || {};
+        if (window.erpThemeToggle && typeof window.erpThemeToggle.setTheme === 'function') {
+            window.erpThemeToggle.setTheme(mode, { toast: false });
+            return;
+        }
+        var resolved = mode;
+        if (mode === 'system') {
+            try {
+                resolved = (window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+            } catch (err) { resolved = 'light'; }
+        }
+        try { localStorage.setItem('theme', mode); } catch (err) {}
+        document.documentElement.setAttribute('data-theme-pref', mode);
+        document.documentElement.setAttribute('data-theme', resolved === 'dark' ? 'dark' : 'light');
+    }
     function sync() {
-        var mode = current();
-        grid.querySelectorAll('.ps-mode-card').forEach(function (c) { c.classList.toggle('is-selected', c.getAttribute('data-mode') === mode); });
+        var mode = preference();
+        grid.querySelectorAll('.ps-mode-card').forEach(function (c) {
+            c.classList.toggle('is-selected', c.getAttribute('data-mode') === mode);
+        });
     }
     grid.addEventListener('click', function (e) {
         var btn = e.target.closest('.ps-mode-card');
-        if (!btn || btn.getAttribute('data-mode') === current()) return;
-        var toggle = document.querySelector('[data-erp-theme-toggle]');
-        if (toggle) {
-            toggle.click();
-        } else {
-            var mode = btn.getAttribute('data-mode');
-            try { localStorage.setItem('theme', mode); } catch (err) {}
-            document.documentElement.setAttribute('data-theme', mode);
-        }
-        setTimeout(sync, 50);
+        if (!btn || busy) return;
+        var mode = btn.getAttribute('data-mode') || '';
+        if (!mode || mode === preference()) return;
+        busy = true;
+        grid.querySelectorAll('.ps-mode-card').forEach(function (c) {
+            c.classList.toggle('is-selected', c === btn);
+            c.classList.toggle('is-applying', c === btn);
+        });
+        applyMode(mode);
+        var label = mode === 'system' ? 'System' : (mode === 'dark' ? 'Dark' : 'Light');
+        var msg = mode === 'system'
+            ? 'Matching your device theme'
+            : ('Switched to ' + label + ' mode');
+        setTimeout(function () {
+            sync();
+            grid.querySelectorAll('.ps-mode-card').forEach(function (c) { c.classList.remove('is-applying'); });
+            busy = false;
+            if (typeof psNotify === 'function') psNotify(msg, 'success');
+        }, 220);
     });
-    new MutationObserver(sync).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+    new MutationObserver(sync).observe(document.documentElement, {
+        attributes: true,
+        attributeFilter: ['data-theme', 'data-theme-pref']
+    });
+    window.addEventListener('themeChanged', sync);
     sync();
+})();
+
+(function () {
+    var section = document.getElementById('ps-pref-accessibility');
+    if (!section) return;
+    var range = document.getElementById('psA11yRange');
+    var preview = document.getElementById('psA11yPreview');
+    var toggles = document.getElementById('psA11yToggles');
+    var note = document.getElementById('psA11yNote');
+    var resetBtn = document.getElementById('psA11yReset');
+    var storageKey = 'erp-a11y';
+    var minScale = 100;
+    var maxScale = 200;
+    var company = {};
+    try { company = JSON.parse(section.getAttribute('data-a11y-company') || '{}') || {}; } catch (e) { company = {}; }
+
+    function clampScale(value) {
+        var n = parseInt(value, 10);
+        if (!isFinite(n)) n = 100;
+        if (n < minScale) n = minScale;
+        if (n > maxScale) n = maxScale;
+        return String(n);
+    }
+
+    function defaults() {
+        return {
+            textScale: clampScale(company.textScale || '100'),
+            highContrast: !!company.highContrast,
+            reduceMotion: !!company.reduceMotion,
+            underlineLinks: !!company.underlineLinks,
+            largeTargets: !!company.largeTargets,
+            deliveryNoteQr: company.deliveryNoteQr !== false
+        };
+    }
+
+    function readStored() {
+        var base = defaults();
+        try {
+            var o = JSON.parse(localStorage.getItem(storageKey) || 'null');
+            if (o && typeof o === 'object') {
+                Object.keys(o).forEach(function (k) { base[k] = o[k]; });
+            }
+        } catch (e) {}
+        base.textScale = clampScale(base.textScale);
+        return base;
+    }
+
+    function apply(prefs) {
+        var root = document.documentElement;
+        var scale = clampScale(prefs.textScale || '100');
+        root.setAttribute('data-a11y-text', scale);
+        root.style.setProperty('--erp-a11y-text-scale', scale + '%');
+        root.setAttribute('data-a11y-contrast', prefs.highContrast ? '1' : '0');
+        root.setAttribute('data-a11y-motion', prefs.reduceMotion ? '1' : '0');
+        root.setAttribute('data-a11y-underline', prefs.underlineLinks ? '1' : '0');
+        root.setAttribute('data-a11y-tap', prefs.largeTargets ? '1' : '0');
+    }
+
+    function save(prefs, quiet) {
+        try { localStorage.setItem(storageKey, JSON.stringify(prefs)); } catch (e) {}
+        apply(prefs);
+        if (note) note.textContent = 'Saved for this device.';
+        if (!quiet && typeof showToast === 'function') showToast('Accessibility preferences updated', 'success');
+    }
+
+    function syncUi(prefs) {
+        var scale = clampScale(prefs.textScale);
+        var n = parseInt(scale, 10);
+        if (range) {
+            range.value = scale;
+            range.style.setProperty('--ps-a11y-pct', (((n - minScale) / (maxScale - minScale)) * 100) + '%');
+        }
+        if (preview) {
+            preview.style.fontSize = (0.95 * (n / 100)) + 'rem';
+        }
+        if (toggles) {
+            toggles.querySelectorAll('input[data-a11y-key]').forEach(function (input) {
+                var key = input.getAttribute('data-a11y-key');
+                input.checked = !!prefs[key];
+            });
+        }
+    }
+
+    var state = readStored();
+    apply(state);
+    syncUi(state);
+
+    if (range) {
+        range.addEventListener('input', function () {
+            state = readStored();
+            state.textScale = clampScale(range.value);
+            apply(state);
+            syncUi(state);
+        });
+        range.addEventListener('change', function () {
+            state = readStored();
+            state.textScale = clampScale(range.value);
+            save(state, true);
+            syncUi(state);
+        });
+    }
+    if (toggles) {
+        toggles.addEventListener('change', function (e) {
+            var input = e.target.closest('input[data-a11y-key]');
+            if (!input) return;
+            state = readStored();
+            state[input.getAttribute('data-a11y-key')] = !!input.checked;
+            save(state);
+            syncUi(state);
+        });
+    }
+    if (resetBtn) {
+        resetBtn.addEventListener('click', function () {
+            try { localStorage.removeItem(storageKey); } catch (e) {}
+            state = defaults();
+            apply(state);
+            syncUi(state);
+            if (note) note.textContent = 'Reset to company default.';
+            if (typeof showToast === 'function') showToast('Accessibility reset to company default', 'success');
+        });
+    }
 })();
 
 (function () {
@@ -1464,6 +1923,13 @@ function psOnTab(id, fn) {
     });
 })();
 </script>
+<script>
+window.__PROFILE_BIOMETRIC__ = <?= json_encode([
+    'apiUrl' => $psBiometricApiUrl,
+    'biometric' => $psBiometricStatus,
+], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>;
+</script>
+<script src="<?= $esc($psBiometricJsUrl) ?>?v=<?= (int) @filemtime(__DIR__ . '/../assets/js/profile-biometric.js') ?>" defer></script>
 </body>
 </html>
 

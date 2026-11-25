@@ -1,15 +1,20 @@
 /**
- * Company accessibility preferences (Admin → Settings → Accessibility).
- * Driven by html[data-a11y-*] attributes set before first paint.
+ * Company / personal accessibility preferences.
+ * Driven by html[data-a11y-*] and --erp-a11y-text-scale (set before first paint).
  */
 
-html[data-a11y-text="112"] {
+html[data-a11y-text] {
+  font-size: var(--erp-a11y-text-scale, 100%);
+}
+
+/* Legacy discrete values still work if the CSS variable is missing */
+html[data-a11y-text="112"]:not([style*="--erp-a11y-text-scale"]) {
   font-size: 112.5%;
 }
-html[data-a11y-text="125"] {
+html[data-a11y-text="125"]:not([style*="--erp-a11y-text-scale"]) {
   font-size: 125%;
 }
-html[data-a11y-text="150"] {
+html[data-a11y-text="150"]:not([style*="--erp-a11y-text-scale"]) {
   font-size: 150%;
 }
 
@@ -22,8 +27,8 @@ html[data-a11y-contrast="1"] body {
 html[data-a11y-contrast="1"] a {
   text-decoration-thickness: 0.1em;
 }
-html[data-a11y-contrast="1"] button,
-html[data-a11y-contrast="1"] .btn,
+html[data-a11y-contrast="1"] button:not(.employee-header-menu-btn):not(.sidebar-collapse-btn):not(.ps-mobile-back-btn):not(.erp-hamburger),
+html[data-a11y-contrast="1"] .btn:not(.employee-header-menu-btn):not(.sidebar-collapse-btn):not(.ps-mobile-back-btn),
 html[data-a11y-contrast="1"] input,
 html[data-a11y-contrast="1"] select,
 html[data-a11y-contrast="1"] textarea,
@@ -32,6 +37,20 @@ html[data-a11y-contrast="1"] .ncr-row,
 html[data-a11y-contrast="1"] .card {
   border-color: #0f172a !important;
   outline-color: #0f172a;
+}
+html[data-a11y-contrast="1"] .employee-header-menu-btn,
+html[data-a11y-contrast="1"] .employee-header-menu-btn.btn,
+html[data-a11y-contrast="1"] .employee-header-menu-btn.btn-link,
+html[data-a11y-contrast="1"] .sidebar-collapse-btn,
+html[data-a11y-contrast="1"] .sidebar-collapse-btn.btn,
+html[data-a11y-contrast="1"] .sidebar-collapse-btn.btn-link,
+html[data-a11y-contrast="1"] .sidebar-toggle-icon.erp-hamburger {
+  border: 0 !important;
+  border-color: transparent !important;
+  outline: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  background-color: transparent !important;
 }
 html[data-a11y-contrast="1"] :focus-visible {
   outline: 3px solid #2563eb !important;

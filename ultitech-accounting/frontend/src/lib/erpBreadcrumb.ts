@@ -84,7 +84,14 @@ export function crumbsForPath(pathname: string): ErpCrumb[] {
     return [{ label: 'Balances' }]
   }
   if (path === '/revenue') return [{ label: 'Revenue' }]
+  if (path === '/expenses') return [{ label: 'Expenses' }]
   if (path === '/purchases') return [{ label: 'Purchases' }]
+  if (/^\/journals\/-?\d+$/.test(path)) {
+    return [
+      { label: 'Journal Entries', href: '#/journals' },
+      { label: 'Journal' },
+    ]
+  }
   if (path === '/journals') return [{ label: 'Journal Entries' }]
   if (path === '/tax') return [{ label: 'VAT Control' }]
   if (path === '/reconciliation') return [{ label: 'Reconciliation' }]
@@ -107,7 +114,9 @@ export function titleForPath(pathname: string): string {
   if (path === '/banking/movements') return 'Money in and out'
   if (path === '/banking') return 'Cash & Bank'
   if (path === '/revenue') return 'Revenue'
+  if (path === '/expenses') return 'Expenses'
   if (path === '/purchases') return 'Purchases'
+  if (/^\/journals\/-?\d+$/.test(path)) return 'Journal'
   if (path === '/journals') return 'Journal Entries'
   if (path === '/tax') return 'VAT Control'
   if (path === '/reconciliation') return 'Reconciliation'

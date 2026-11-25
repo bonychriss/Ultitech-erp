@@ -539,7 +539,7 @@ export function DocPreviewModal({ open, onClose, url, kind, isImage }) {
   const frameSrc = (() => {
     if (isImg || !url) return url
     // HTML print sheets (sales orders / PO docs) render cleaner with embed=1
-    if (/orders\/print\.php|po-document\.php|view_po\.php/i.test(String(url))) {
+    if (/orders\/print\.php|invoices\/print\.php|po-document\.php|view_po\.php/i.test(String(url))) {
       try {
         const u = new URL(url, window.location.href)
         u.searchParams.set('embed', '1')
@@ -553,21 +553,27 @@ export function DocPreviewModal({ open, onClose, url, kind, isImage }) {
     return url
   })()
 
+  const isHtmlDoc = /orders\/print\.php|invoices\/print\.php|po-document\.php|view_po\.php/i.test(String(frameSrc || url || ''))
+
   return (
-    <div className="no-print" style={{ display: 'flex', position: 'fixed', inset: 0, background: 'rgba(0,0,0,.6)', zIndex: 3000 }} onMouseDown={(e) => { if (e.target === e.currentTarget) onClose() }}>
-      <div style={{ background: '#fff', width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', borderBottom: '1px solid #e5e7eb', flexShrink: 0 }}>
-          <div style={{ fontWeight: 600, fontSize: 14 }}>{title}</div>
+    <div
+      className="no-print vv-doc-preview-modal"
+      style={{ display: 'flex', position: 'fixed', inset: 0, background: 'rgba(15,23,42,.72)', zIndex: 10050 }}
+      onMouseDown={(e) => { if (e.target === e.currentTarget) onClose() }}
+    >
+      <div style={{ background: '#fff', width: '100%', height: '100%', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '10px 12px', borderBottom: '1px solid #e5e7eb', flexShrink: 0, background: '#fff', color: '#0f172a' }}>
+          <div style={{ fontWeight: 600, fontSize: 14, color: '#0f172a' }}>{title}</div>
           <button type="button" onClick={onClose} className="btn-sm-black" style={{ background: '#111', color: '#fff', borderColor: '#111' }}>Close</button>
         </div>
         <div
           style={{
-            padding: 16,
-            overflow: 'auto',
-            background: '#fff',
+            padding: isHtmlDoc ? 0 : 16,
+            overflow: 'hidden',
+            background: isHtmlDoc ? '#525659' : '#fff',
             flex: 1,
             display: 'flex',
-            alignItems: 'center',
+            alignItems: isHtmlDoc ? 'stretch' : 'center',
             justifyContent: 'center',
             width: '100%',
             minHeight: 0,
@@ -590,13 +596,14 @@ export function DocPreviewModal({ open, onClose, url, kind, isImage }) {
           ) : (
             <iframe
               src={frameSrc}
-              title="PDF Preview"
+              title="Document Preview"
               style={{
-                width: 'min(100%, 960px)',
-                height: 'calc(100vh - 96px)',
+                width: '100%',
+                height: '100%',
                 border: 'none',
-                margin: '0 auto',
-                background: '#fff',
+                margin: 0,
+                background: isHtmlDoc ? '#525659' : '#fff',
+                display: 'block',
               }}
             />
           )}

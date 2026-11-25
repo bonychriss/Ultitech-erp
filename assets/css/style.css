@@ -755,6 +755,37 @@ body {
         min-height: 2.5rem;
         line-height: 1;
         flex-shrink: 0;
+        background: transparent !important;
+        background-color: transparent !important;
+        border: 0 !important;
+        border-color: transparent !important;
+        box-shadow: none !important;
+        outline: none !important;
+        border-radius: 0 !important;
+        -webkit-appearance: none;
+        appearance: none;
+    }
+    .employee-header .employee-header-menu-btn:hover,
+    .employee-header .employee-header-menu-btn:focus,
+    .employee-header .employee-header-menu-btn:active,
+    .admin-header .employee-header-menu-btn:hover,
+    .admin-header .employee-header-menu-btn:focus,
+    .admin-header .employee-header-menu-btn:active,
+    body.page-products-desk .employee-header--products-desk .employee-header-menu-btn:hover,
+    body.page-products-desk .employee-header--products-desk .employee-header-menu-btn:focus,
+    body.page-products-desk .employee-header--products-desk .employee-header-menu-btn:active {
+        background: transparent !important;
+        background-color: transparent !important;
+        border: 0 !important;
+        box-shadow: none !important;
+        outline: none !important;
+    }
+    .employee-header .employee-header-menu-btn .erp-hamburger,
+    .admin-header .employee-header-menu-btn .erp-hamburger,
+    body.page-products-desk .employee-header--products-desk .employee-header-menu-btn .erp-hamburger {
+        background: transparent !important;
+        border: 0 !important;
+        box-shadow: none !important;
     }
 
     .employee-header .employee-header-page-heading,
@@ -2779,12 +2810,24 @@ body.sidebar-collapsed .menu-chevron {
 .erp-hamburger > span:nth-child(2) {
     width: 55%;
 }
+.employee-header-menu-btn,
+.employee-header-menu-btn.btn,
+.employee-header-menu-btn.btn-link {
+    background: transparent !important;
+    background-color: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    outline: none !important;
+}
 .employee-header-menu-btn .erp-hamburger,
 .admin-header .header-left .erp-hamburger {
     width: 1.45rem;
     height: 1.15rem;
     gap: 5.5px;
     color: #333;
+    background: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
 }
 .employee-header-menu-btn .erp-hamburger > span,
 .admin-header .header-left .erp-hamburger > span {

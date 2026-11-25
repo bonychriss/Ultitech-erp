@@ -350,6 +350,7 @@ function salesInvoiceViewRenderDocumentHtml(
     string $brandingLogoUrl
 ): string {
     $currency = $invoice['currency'] ?? ($company_settings['default_currency'] ?? 'TZS');
+    $logoUrl = trim((string) $brandingLogoUrl);
 
     ob_start();
     echo '<div id="invoice-content">';

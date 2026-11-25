@@ -194,6 +194,47 @@ class Milestone05TaxAndStandardsTest extends TestCase
             ->assertJsonPath('data.framework.code', 'IFRS');
     }
 
+    public function test_backfill_builds_tax_register_from_invoice_tax_totals(): void
+    {
+        $invoice = app(ReceivableService::class)->createAndPostInvoice($this->book, $this->user, [
+            'customer_id' => $this->customer->id,
+            'invoice_date' => '2026-03-05',
+            'currency_code' => 'TZS',
+            'tax_code_id' => $this->vatCode->id,
+            'lines' => [[
+                'description' => 'Taxable sale for backfill',
+                'quantity' => 1,
+                'unit_price' => '50000',
+                'revenue_account_id' => $this->revenue->id,
+            ]],
+        ]);
+
+        // Simulate ERP import style: wipe native tax txn, keep tax_total on invoice.
+        \App\Models\TaxTransaction::withoutGlobalScopes()
+            ->where('source_type', 'customer_invoice')
+            ->where('source_id', $invoice->id)
+            ->delete();
+
+        $stats = app(TaxEngineService::class)->backfillFromCustomerInvoices($this->book);
+        $this->assertGreaterThanOrEqual(1, $stats['created']);
+
+        $this->assertDatabaseHas('acc_tax_transactions', [
+            'source_type' => 'customer_invoice',
+            'source_id' => $invoice->id,
+            'direction' => 'output',
+            'tax_amount' => 9000,
+        ]);
+
+        $token = $this->user->createToken('test')->plainTextToken;
+        $this->withHeaders([
+            'Authorization' => 'Bearer '.$token,
+            'X-Company-Id' => (string) $this->company->id,
+            'X-Book-Id' => (string) $this->book->id,
+            'Accept' => 'application/json',
+        ])->postJson('/api/v1/tax/sync-register')->assertOk()
+            ->assertJsonPath('data.output.updated', 1);
+    }
+
     private function bootDemo(): void
     {
         $adminRole = Role::query()->whereNull('company_id')->where('code', 'admin')->firstOrFail();

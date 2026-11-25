@@ -10,7 +10,7 @@ if (!isset($document_footer_closing)) {
 
 $layout = (int) ($company_settings['truck_layout'] ?? 1);
 // 1 = Watermark (navy header, borderless), 2 = Classic (stone + boxed), 3 = Minimalist (navy + ruled)
-$headerBg = ($layout === 2) ? '#dbd7d2' : '#003366';
+$headerBg = ($layout === 2) ? '#ffd700' : '#003366';
 $headerColor = ($layout === 2) ? '#000' : '#fff';
 $tableBorder = ($layout === 1) ? 'none' : '2px solid #000';
 $thBorder = ($layout === 1) ? 'none' : '2px solid #000';
@@ -560,14 +560,18 @@ $docFontImport = function_exists('sales_document_font_import_css')
     }
 
     .truck-table th {
-        background-color: <?= $headerBg ?>;
-        color: <?= $headerColor ?>;
+        background-color: <?= $headerBg ?> !important;
+        background: <?= $headerBg ?> !important;
+        color: <?= $headerColor ?> !important;
         border: <?= $thBorder ?>;
         padding: 6px 10px;
         font-size: 11px;
         font-weight: 800;
         text-align: center;
         text-transform: uppercase;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        color-adjust: exact !important;
     }
 
     .truck-table td {
@@ -975,11 +979,15 @@ $docFontImport = function_exists('sales_document_font_import_css')
     <table class="truck-table">
         <thead>
             <tr>
-                <th style="width: 180px;">IMAGE</th>
-                <th>DESCRIPTION</th>
-                <th style="width: 60px;">QTY</th>
-                <th style="width: 145px;">UNIT PRICE (INC)<br><span style="font-size:9px;font-weight:600;"><?= htmlspecialchars(implode(' / ', $truckDisplayCurrencies)) ?></span></th>
-                <th style="width: 145px;">TOTAL (INC)<br><span style="font-size:9px;font-weight:600;"><?= htmlspecialchars(implode(' / ', $truckDisplayCurrencies)) ?></span></th>
+                <?php
+                $thFill = 'background-color:' . $headerBg . ';background:' . $headerBg . ';color:' . $headerColor
+                    . ';-webkit-print-color-adjust:exact;print-color-adjust:exact;color-adjust:exact;';
+                ?>
+                <th style="width: 180px; <?= $thFill ?>">IMAGE</th>
+                <th style="<?= $thFill ?>">DESCRIPTION</th>
+                <th style="width: 60px; <?= $thFill ?>">QTY</th>
+                <th style="width: 145px; <?= $thFill ?>">UNIT PRICE (INC)<br><span style="font-size:9px;font-weight:600;"><?= htmlspecialchars(implode(' / ', $truckDisplayCurrencies)) ?></span></th>
+                <th style="width: 145px; <?= $thFill ?>">TOTAL (INC)<br><span style="font-size:9px;font-weight:600;"><?= htmlspecialchars(implode(' / ', $truckDisplayCurrencies)) ?></span></th>
             </tr>
         </thead>
         <tbody>

@@ -69,13 +69,27 @@
         margin-bottom: 32px;
     }
 
-    /* Cards Layout */
+    /* Cards Layout — single column by default; desktop clock page gets side panel */
     .att-grid {
         display: grid;
-        grid-template-columns: 350px 1fr;
+        grid-template-columns: minmax(0, 1fr);
         gap: 24px;
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
     }
-    @media (max-width: 1200px) { .att-grid { grid-template-columns: 1fr; } }
+    .att-col-left,
+    .att-col-right {
+        min-width: 0;
+        max-width: 100%;
+        width: 100%;
+        box-sizing: border-box;
+    }
+    @media (min-width: 1201px) {
+        .att-page-clock .att-grid {
+            grid-template-columns: minmax(280px, 350px) minmax(0, 1fr);
+        }
+    }
 
     .clock-card-v2 {
         background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
@@ -145,6 +159,260 @@
         display: flex;
         align-items: center;
         justify-content: center;
+    }
+
+    .att-bio-card {
+        margin-top: 16px;
+        background: #fff;
+        border-radius: 20px;
+        padding: 20px 22px;
+        box-shadow: var(--dash-card-shadow);
+        border: 1px solid #f1f5f9;
+        text-align: left;
+    }
+    .att-bio-card-head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 12px;
+    }
+    .att-bio-label {
+        font-size: 13px;
+        font-weight: 600;
+        color: #0f172a;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .att-bio-sub {
+        margin: 6px 0 0;
+        font-size: 12px;
+        color: #64748b;
+        line-height: 1.45;
+    }
+    .att-bio-pill {
+        flex-shrink: 0;
+        font-size: 11px;
+        font-weight: 600;
+        padding: 4px 10px;
+        border-radius: 999px;
+        border: 1px solid transparent;
+    }
+    .att-bio-pill.is-ok {
+        color: #166534;
+        background: #f0fdf4;
+        border-color: #bbf7d0;
+    }
+    .att-bio-pill.is-warn {
+        color: #9a3412;
+        background: #fff7ed;
+        border-color: #fed7aa;
+    }
+    .att-bio-help {
+        margin: 0 0 12px;
+        font-size: 12px;
+        color: #64748b;
+    }
+    .att-bio-devices {
+        list-style: none;
+        margin: 0 0 12px;
+        padding: 0;
+        display: grid;
+        gap: 8px;
+    }
+    .att-bio-devices li {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 10px 12px;
+        border-radius: 12px;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        font-size: 12px;
+        color: #334155;
+    }
+    .att-bio-devices em {
+        font-style: normal;
+        color: #94a3b8;
+    }
+    .att-bio-remove {
+        border: 0;
+        background: transparent;
+        color: #b91c1c;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        padding: 0;
+    }
+    .att-bio-remove:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+    .att-bio-sheet {
+        position: fixed;
+        inset: 0;
+        z-index: 11600;
+        display: flex;
+        align-items: flex-end;
+        justify-content: center;
+        padding: 0;
+        background: rgba(15, 23, 42, 0.28);
+    }
+    .att-bio-sheet-panel {
+        width: 100%;
+        max-width: 480px;
+        margin: 0;
+        border-radius: 20px 20px 0 0;
+        background: #fff;
+        border-top: 1px solid #eceff3;
+        box-shadow: none;
+        padding: 0.25rem 1.35rem calc(1.35rem + env(safe-area-inset-bottom, 0px));
+        animation: att-review-sheet-in 0.32s ease forwards;
+    }
+    .att-bio-sheet-handle {
+        width: 36px;
+        height: 3px;
+        border-radius: 999px;
+        background: #e5e7eb;
+        margin: 0.55rem auto 1.15rem;
+    }
+    .att-bio-gate {
+        margin: 0;
+        padding: 0 0 0.15rem;
+        border-radius: 0;
+        background: transparent;
+        border: 0;
+        box-shadow: none;
+        color: #111827;
+        text-align: left;
+    }
+    .att-glass-btn--muted {
+        opacity: 0.7;
+        cursor: default;
+    }
+    .att-phone-nudge {
+        margin-top: 1.25rem;
+        padding: 1.1rem 1rem;
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.92);
+        border: 1px solid rgba(255, 255, 255, 0.5);
+        color: #111827;
+        text-align: left;
+    }
+    .att-phone-nudge-icon {
+        width: 2rem;
+        height: 2rem;
+        border-radius: 10px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: #f4f4f5;
+        color: #18181b;
+        font-size: 0.95rem;
+        margin-bottom: 0.75rem;
+    }
+    .att-phone-nudge-title {
+        margin: 0 0 0.3rem;
+        font-size: 1rem;
+        font-weight: 650;
+        letter-spacing: -0.02em;
+    }
+    .att-phone-nudge-copy {
+        margin: 0;
+        font-size: 0.88rem;
+        line-height: 1.45;
+        color: #52525b;
+        font-weight: 450;
+    }
+    .att-bio-gate-icon {
+        width: 2rem;
+        height: 2rem;
+        border-radius: 10px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: #f4f4f5;
+        color: #18181b;
+        font-size: 0.95rem;
+        margin-bottom: 0.95rem;
+    }
+    .att-bio-gate-title {
+        margin: 0 0 0.4rem;
+        font-size: 1.05rem;
+        font-weight: 650;
+        color: #111827;
+        letter-spacing: -0.02em;
+    }
+    .att-bio-gate-copy {
+        margin: 0;
+        font-size: 0.9rem;
+        line-height: 1.5;
+        color: #71717a;
+        font-weight: 450;
+        max-width: 28rem;
+    }
+    .att-bio-gate-copy a {
+        color: #18181b;
+        font-weight: 550;
+        text-decoration: underline;
+        text-underline-offset: 2px;
+    }
+    .att-bio-enroll {
+        width: 100%;
+        margin-top: 1.35rem;
+        border: 1px solid #e4e4e7;
+        border-radius: 12px;
+        background: #18181b;
+        color: #fff;
+        font-weight: 600;
+        font-size: 0.95rem;
+        padding: 0.95rem 1rem;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        box-shadow: none;
+        text-shadow: none;
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+        transition: background 0.15s ease, opacity 0.15s ease;
+    }
+    .att-bio-enroll:hover:not(:disabled) {
+        background: #27272a;
+    }
+    .att-bio-enroll:active:not(:disabled) {
+        background: #3f3f46;
+    }
+    .att-bio-enroll:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+    }
+    .att-clock-actions {
+        margin-top: 1.35rem;
+        display: grid;
+        gap: 0.65rem;
+    }
+    .att-alert--bio {
+        background: rgba(124, 58, 237, 0.12);
+        border-color: rgba(124, 58, 237, 0.28);
+    }
+    .att-alert--bio .att-alert-title {
+        color: #c4b5fd;
+    }
+    html[data-theme="dark"] .att-bio-card {
+        background: #0f172a;
+        border-color: #1e293b;
+    }
+    html[data-theme="dark"] .att-bio-label {
+        color: #e2e8f0;
+    }
+    html[data-theme="dark"] .att-bio-devices li {
+        background: #020617;
+        border-color: #1e293b;
+        color: #cbd5e1;
     }
 
     .activity-card {
@@ -522,26 +790,45 @@
             display: none;
         }
         .att-grid {
+            display: flex !important;
+            flex-direction: column;
             gap: 12px;
+            width: 100% !important;
+            max-width: 100% !important;
+            grid-template-columns: none !important;
+        }
+        .att-col-left {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            width: 100% !important;
+            max-width: 100% !important;
+            min-width: 0;
+            flex: 1 1 auto;
         }
         .clock-card-v2 {
-            padding: 24px 20px 22px;
-            border-radius: 18px;
-            margin-bottom: 12px;
+            padding: 22px 16px 18px;
+            border-radius: 20px;
+            margin-bottom: 0;
             box-shadow: 0 12px 32px rgba(99, 102, 241, 0.28);
+            width: 100% !important;
+            max-width: 100% !important;
+            box-sizing: border-box;
+            overflow: hidden;
         }
         .v2-date {
             font-size: 10px;
-            margin-bottom: 12px;
+            margin-bottom: 10px;
         }
         .v2-time {
-            font-size: 2.25rem;
-            margin-bottom: 14px;
+            font-size: 2.45rem;
+            margin-bottom: 12px;
             letter-spacing: -0.5px;
         }
         .v2-status-pill {
             font-size: 10px;
             padding: 5px 12px;
+            margin-bottom: 0;
         }
         .att-alert {
             margin-top: 16px;
@@ -549,25 +836,63 @@
             font-size: 11px;
             text-align: left;
         }
+        .att-bio-sheet-panel {
+            max-width: 100%;
+            border-radius: 20px 20px 0 0;
+            padding: 0.2rem 1.25rem calc(1.4rem + env(safe-area-inset-bottom, 0px));
+        }
+        .att-bio-gate {
+            width: 100%;
+            max-width: 100%;
+            box-sizing: border-box;
+        }
+        .att-bio-gate-title {
+            font-size: 1.15rem;
+        }
+        .att-bio-gate-copy {
+            font-size: 0.92rem;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+        }
+        .att-bio-enroll {
+            min-height: 50px;
+            font-size: 0.95rem;
+            border-radius: 12px;
+            margin-top: 1.4rem;
+        }
+        .att-clock-actions {
+            margin-top: 1.15rem;
+        }
+        .att-glass-btn,
+        .att-btn-clock-out {
+            width: 100%;
+            min-height: 48px;
+        }
         .sig-card {
             display: flex;
             align-items: center;
             gap: 14px;
+            width: 100%;
+            margin: 0;
             padding: 14px 16px;
-            border-radius: 14px;
+            border-radius: 16px;
             text-align: left;
+            box-sizing: border-box;
         }
         .sig-label {
             margin-bottom: 0;
             flex: 0 0 auto;
-            font-size: 11px;
-            max-width: 5.5rem;
+            font-size: 12px;
+            max-width: 5.75rem;
             line-height: 1.3;
+            color: #334155;
+            font-weight: 600;
         }
         .sig-box {
             flex: 1;
-            height: 72px;
+            height: 68px;
             min-width: 0;
+            background: #fafafa;
         }
         .att-kpi-row {
             --bs-gutter-x: 10px;

@@ -13,8 +13,8 @@ class ErpSyncPullCommand extends Command
 {
     protected $signature = 'erp:sync
         {--company=DEMO : Company code}
-        {--scopes=accounts,customers,suppliers,journals : Comma-separated scopes}
-        {--journal-limit=50 : Max journals to import this run}
+        {--scopes=accounts,customers,suppliers,invoices,journals,wallets : Comma-separated scopes}
+        {--journal-limit=500 : Max journals to import this run}
         {--test : Only test read-only ERP connection}';
 
     protected $description = 'Read-only pull from UltiTech ERP into UltiTech Accounting (never writes ERP)';

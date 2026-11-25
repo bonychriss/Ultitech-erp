@@ -9,6 +9,7 @@ import ApprovalFlowCard from '../components/ApprovalFlowCard.jsx'
 import ApprovalCommentsCard from '../components/ApprovalCommentsCard.jsx'
 import DocumentsCard from '../components/DocumentsCard.jsx'
 import { MarkPaidModal, AdminApprovalModal, DocPreviewModal, ApproveModal } from '../components/Modals.jsx'
+import { downloadVoucherPdf, printVoucher } from '../utils/pdf.js'
 
 export default function ViewVoucherPage() {
   const [data, setData] = useState(CFG.data)
@@ -66,11 +67,64 @@ export default function ViewVoucherPage() {
   }, [data])
 
   useEffect(() => {
+    if (loading || !data) return
+
     const url = new URL(window.location.href)
-    if (url.searchParams.get('print') === '1') {
-      setTimeout(() => window.print(), 500)
+    const wantsPrint = url.searchParams.get('print') === '1'
+    const wantsDownload = url.searchParams.get('download') === '1'
+    const wantsPay = url.searchParams.get('pay') === '1'
+    if (!wantsPrint && !wantsDownload && !wantsPay) return
+
+    let cleaned = false
+    const cleanParams = () => {
+      if (cleaned) return
+      cleaned = true
+      ;['print', 'download', 'pay'].forEach((key) => url.searchParams.delete(key))
+      const next = `${url.pathname}${url.searchParams.toString() ? `?${url.searchParams}` : ''}${url.hash}`
+      window.history.replaceState({}, '', next)
     }
-  }, [loading])
+
+    if (wantsPay) {
+      if (data.permissions?.canMarkPaid) {
+        setMarkPaidOpen(true)
+      } else if (!data.voucher?.is_paid) {
+        showToast('This voucher is not ready to mark paid yet.', 'error')
+      }
+      cleanParams()
+    }
+
+    if (wantsPrint) {
+      cleanParams()
+      setTimeout(() => {
+        const run = async () => {
+          for (let i = 0; i < 20; i += 1) {
+            if (document.getElementById('voucherFull')) break
+            await new Promise((r) => setTimeout(r, 150))
+          }
+          printVoucher()
+        }
+        void run()
+      }, 200)
+    }
+
+    if (wantsDownload) {
+      cleanParams()
+      const voucherNo = data.voucher?.voucher_no || String(data.voucher?.id || 'voucher')
+      const run = async () => {
+        // Wait for the printable preview node to mount.
+        for (let i = 0; i < 20; i += 1) {
+          if (document.getElementById('voucherFull')) break
+          await new Promise((r) => setTimeout(r, 150))
+        }
+        try {
+          await downloadVoucherPdf(voucherNo)
+        } catch {
+          showToast('Could not prepare the PDF download.', 'error')
+        }
+      }
+      void run()
+    }
+  }, [loading, data])
 
   const deleteAttachment = useCallback(async (att) => {
     const id = att.id
@@ -215,7 +269,7 @@ export default function ViewVoucherPage() {
       <div className="page-shell">
         <div className="vv-view-layout">
           <div className="vv-voucher-toolbar vv-mobile-toolbar no-print voucher-actions-bar">
-            {data.actions?.fromPurchases ? (
+            {(data.actions?.fromPurchases || data.actions?.fromExpenses) ? (
               <a
                 className="vv-purchases-back erp-nav-back-ignore"
                 href={data.actions.backUrl}
@@ -225,7 +279,7 @@ export default function ViewVoucherPage() {
                 }}
               >
                 <i className="fas fa-arrow-left" aria-hidden="true" />
-                {data.actions.backLabel || 'Back to Purchases'}
+                {data.actions.backLabel || (data.actions?.fromExpenses ? 'Back to Expenses' : 'Back to Purchases')}
               </a>
             ) : data.status?.label ? (
               <span className={`vv-status-badge ${data.status.className || 'vv-status-pending'}`}>

@@ -111,7 +111,7 @@ $fontFamily = function_exists('sales_document_font_family_css')
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <?php echo $fontLinks; ?>
     <style>
-        body {
+        html, body {
             background: #525659;
             margin: 0;
             padding: 0;
@@ -121,11 +121,15 @@ $fontFamily = function_exists('sales_document_font_family_css')
         #pdf-content {
             max-width: 210mm;
             margin: 0 auto;
+            width: 100%;
+            box-sizing: border-box;
         }
+        /* Outer page only — nested .sheet must stay 100% or content overflows and clips. */
         .sheet-container,
-        .sheet,
-        .doc-sheet {
+        .doc-sheet,
+        .spare-sheet {
             width: 210mm;
+            max-width: 100%;
             min-height: 270mm;
             padding: 10mm 15mm;
             margin: 10mm auto;
@@ -134,28 +138,55 @@ $fontFamily = function_exists('sales_document_font_family_css')
             position: relative;
             page-break-after: always;
             box-sizing: border-box;
+            overflow: hidden;
+        }
+        .sheet-container > .sheet,
+        .doc-sheet > .sheet {
+            width: 100% !important;
+            max-width: 100% !important;
+            min-width: 0 !important;
+            min-height: 0 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            box-shadow: none !important;
+            background: transparent !important;
+            box-sizing: border-box !important;
         }
         .sheet-container:last-child,
-        .sheet:last-child,
-        .doc-sheet:last-child {
-            page-break-after: auto; 
+        .doc-sheet:last-child,
+        .spare-sheet:last-child {
+            page-break-after: auto;
         }
         body.pdf-mode { background: white; }
         body.pdf-mode .sheet-container,
-        body.pdf-mode .sheet,
-        body.pdf-mode .doc-sheet {
-            box-shadow: none; 
-            margin: 0; 
+        body.pdf-mode .doc-sheet,
+        body.pdf-mode .spare-sheet {
+            box-shadow: none;
+            margin: 0;
             border: none;
             width: 100% !important;
+            max-width: 100% !important;
             min-height: auto !important;
             padding-top: 5mm !important;
-            padding-bottom: 5mm !important; 
+            padding-bottom: 5mm !important;
         }
         body.pdf-mode .no-print,
         body.pdf-mode #downloadBtn { display: none; }
         tr { page-break-inside: avoid; }
+        .o-table {
+            width: 100%;
+            table-layout: fixed;
+            border-collapse: collapse;
+            margin-bottom: 10px;
+        }
         .o-table th {
+            border-bottom: 2px solid #000 !important;
+            text-transform: uppercase;
+            font-weight: 400;
+            padding: 8px 5px;
+            vertical-align: middle;
+            word-break: break-word;
+            overflow-wrap: anywhere;
             background-color: #ffd700 !important;
             background: #ffd700 !important;
             color: #000 !important;
@@ -163,7 +194,44 @@ $fontFamily = function_exists('sales_document_font_family_css')
             print-color-adjust: exact !important;
             color-adjust: exact !important;
         }
-        .sheet-container { position: relative; overflow: hidden; }
+        .o-table td {
+            padding: 8px 5px;
+            border-bottom: 1px solid #eee !important;
+            vertical-align: middle;
+            word-break: break-word;
+            overflow-wrap: anywhere;
+        }
+        .o-table .num,
+        .o-table th.num {
+            text-align: right;
+        }
+        .spare-table th,
+        .truck-table th {
+            /* Keep company layout theme colors (do not force gold). */
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            color-adjust: exact !important;
+        }
+        .quot-sheet-header {
+            gap: 12px;
+            min-width: 0;
+        }
+        .quot-sheet-header .sheet-title {
+            flex: 1 1 auto;
+            min-width: 0;
+            padding-right: 8px;
+        }
+        .quot-company-block {
+            flex: 0 1 48%;
+            max-width: 48%;
+            min-width: 0;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+        }
+        .quot-company-block img {
+            max-width: 100%;
+            height: auto;
+        }
         .invoice-paid-watermark {
             position: absolute;
             top: 50%;
@@ -185,21 +253,51 @@ $fontFamily = function_exists('sales_document_font_family_css')
             print-color-adjust: exact !important;
             color-adjust: exact !important;
         }
+        /* Embed / iframe preview: fit page to iframe width (no transform clipping). */
+        body.embed-mode {
+            overflow-x: hidden;
+            overflow-y: auto;
+            padding: 12px 8px 24px;
+            box-sizing: border-box;
+        }
+        body.embed-mode #pdf-content {
+            max-width: 100%;
+            width: 100%;
+        }
+        body.embed-mode .sheet-container,
+        body.embed-mode .doc-sheet,
+        body.embed-mode .spare-sheet {
+            width: 100% !important;
+            max-width: 210mm !important;
+            margin: 0 auto 12px !important;
+            padding: 8mm !important;
+        }
         @media print {
             body { background: white; }
-            .sheet-container, .sheet, .doc-sheet { width: 100%; margin: 0; box-shadow: none; padding: 0; }
+            .sheet-container,
+            .doc-sheet,
+            .spare-sheet { width: 100%; max-width: 100%; margin: 0; box-shadow: none; padding: 0; }
             .no-print { display: none; }
-            .o-table th {
-                background-color: #ffd700 !important;
-                background: #ffd700 !important;
+            .o-table th,
+            .spare-table th,
+            .truck-table th {
+                border-bottom: 2px solid #000 !important;
                 -webkit-print-color-adjust: exact !important;
                 print-color-adjust: exact !important;
                 color-adjust: exact !important;
             }
+            .o-table th {
+                background-color: #ffd700 !important;
+                background: #ffd700 !important;
+                color: #000 !important;
+            }
+            .o-table td {
+                border-bottom: 1px solid #eee !important;
+            }
         }
     </style>
 </head>
-<body>
+<body class="<?php echo $embedMode ? 'embed-mode' : ''; ?>">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script>
         function notifySalesDocPdfStart() {

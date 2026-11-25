@@ -113,9 +113,47 @@ function createVoucherBuildClientCfg(array $data = []): array
                 : 'general');
     }
 
+    $fromDesk = strtolower(trim((string) ($_GET['from'] ?? '')));
+    $fromPurchases = ($fromDesk === 'purchases' || $module === 'purchases');
+    $fromExpenses = ($fromDesk === 'expenses' || $module === 'expenses');
+    $lockPurpose = ($fromPurchases && $defaultPurpose === 'stock_purchase')
+        || ($fromExpenses && $defaultPurpose === 'general');
+
+    if ($fromPurchases) {
+        // Prefer New Accounting Purchases desk; fall back to classic purchases index.
+        $bridgeCancel = function_exists('company_url')
+            ? company_url('accounting/ultitech-bridge') . '?module=accounting#/purchases'
+            : (function_exists('app_url')
+                ? app_url('/accounting/ultitech-bridge.php') . '?module=accounting#/purchases'
+                : '../accounting/ultitech-bridge.php?module=accounting#/purchases');
+        $classicCancel = function_exists('company_url')
+            ? company_url('modules/purchases/index') . '?module=purchases'
+            : (function_exists('app_url')
+                ? app_url('/modules/purchases/index.php') . '?module=purchases'
+                : '../modules/purchases/index.php?module=purchases');
+        $cvCancelUrl = $bridgeCancel !== '' ? $bridgeCancel : $classicCancel;
+    } elseif ($fromExpenses) {
+        // Prefer New Accounting Expenses desk; fall back to classic expenses index.
+        $bridgeCancel = function_exists('company_url')
+            ? company_url('accounting/ultitech-bridge') . '?module=accounting#/expenses'
+            : (function_exists('app_url')
+                ? app_url('/accounting/ultitech-bridge.php') . '?module=accounting#/expenses'
+                : '../accounting/ultitech-bridge.php?module=accounting#/expenses');
+        $classicCancel = function_exists('company_url')
+            ? company_url('modules/expenses/index') . '?module=expenses'
+            : (function_exists('app_url')
+                ? app_url('/modules/expenses/index.php') . '?module=expenses'
+                : '../modules/expenses/index.php?module=expenses');
+        $cvCancelUrl = $bridgeCancel !== '' ? $bridgeCancel : $classicCancel;
+        $module = 'accounting';
+    }
+
     return [
         'postUrl' => $cvPostUrl,
         'cancelUrl' => $cvCancelUrl,
+        'fromPurchases' => $fromPurchases,
+        'fromExpenses' => $fromExpenses,
+        'lockPurpose' => $lockPurpose,
         'module' => $module,
         'preparedBy' => trim((string) ($_SESSION['full_name'] ?? $_SESSION['username'] ?? '')),
         'today' => date('Y-m-d'),

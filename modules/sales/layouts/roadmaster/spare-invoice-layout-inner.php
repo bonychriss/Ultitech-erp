@@ -10,7 +10,7 @@ if (!isset($document_footer_closing)) {
 }
 
 $layout = (int) ($company_settings['spare_part_layout'] ?? 1);
-$headerBg = ($layout == 2 || $layout == 1) ? '#dbd7d2' : '#003366'; // Stone for Layout 1 & 2, Dark Blue for Layout 3
+$headerBg = ($layout == 2 || $layout == 1) ? '#ffd700' : '#003366'; // Gold for Layout 1 & 2, Dark Blue for Layout 3
 $headerColor = ($layout == 3) ? '#fff' : '#000'; // White text for Layout 3, Black for others
 
 // Border definitions: Layout 1 is borderless (white/faint), others are boxed
@@ -381,15 +381,19 @@ $docFontImport = function_exists('sales_document_font_import_css')
     }
 
     .spare-table th {
-        background-color: <?= $headerBg ?>;
-        /* Gold Header */
-        color: <?= $headerColor ?>;
+        background-color: <?= $headerBg ?> !important;
+        background: <?= $headerBg ?> !important;
+        /* Gold / branded header — keep fill when printing & PDF */
+        color: <?= $headerColor ?> !important;
         border: <?= $thBorder ?>;
         padding: 6px 10px;
         font-size: 11px;
         font-weight: 800;
         text-align: center;
         text-transform: uppercase;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        color-adjust: exact !important;
     }
 
     .truck-dual-price {
@@ -714,12 +718,16 @@ $docFontImport = function_exists('sales_document_font_import_css')
     <table class="spare-table">
         <thead>
             <tr>
-                <th style="width: 95px;">IMAGE</th>
-                <th>PART NAME</th>
-                <th style="width: 140px;">PART NUMBER</th>
-                <th style="width: 60px;">QTY</th>
-                <th style="width: 120px;">UNIT PRICE (INC)<?php if ($spareDualCurrencies !== []): ?><br><span style="font-size:9px;font-weight:600;"><?= htmlspecialchars(implode(' / ', $spareDualCurrencies)) ?></span><?php endif; ?></th>
-                <th style="width: 130px;">TOTAL (INC)<?php if ($spareDualCurrencies !== []): ?><br><span style="font-size:9px;font-weight:600;"><?= htmlspecialchars(implode(' / ', $spareDualCurrencies)) ?></span><?php endif; ?></th>
+                <?php
+                $thFill = 'background-color:' . $headerBg . ';background:' . $headerBg . ';color:' . $headerColor
+                    . ';-webkit-print-color-adjust:exact;print-color-adjust:exact;color-adjust:exact;';
+                ?>
+                <th style="width: 95px; <?= $thFill ?>">IMAGE</th>
+                <th style="<?= $thFill ?>">PART NAME</th>
+                <th style="width: 140px; <?= $thFill ?>">PART NUMBER</th>
+                <th style="width: 60px; <?= $thFill ?>">QTY</th>
+                <th style="width: 120px; <?= $thFill ?>">UNIT PRICE (INC)<?php if ($spareDualCurrencies !== []): ?><br><span style="font-size:9px;font-weight:600;"><?= htmlspecialchars(implode(' / ', $spareDualCurrencies)) ?></span><?php endif; ?></th>
+                <th style="width: 130px; <?= $thFill ?>">TOTAL (INC)<?php if ($spareDualCurrencies !== []): ?><br><span style="font-size:9px;font-weight:600;"><?= htmlspecialchars(implode(' / ', $spareDualCurrencies)) ?></span><?php endif; ?></th>
             </tr>
         </thead>
         <tbody>

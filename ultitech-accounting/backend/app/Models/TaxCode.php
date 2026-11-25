@@ -19,6 +19,7 @@ class TaxCode extends Model
         'code',
         'name',
         'applies_to',
+        'supply_category',
         'is_recoverable',
         'is_active',
     ];

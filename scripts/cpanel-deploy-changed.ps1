@@ -8,7 +8,8 @@
 # and skip the monorepo root .htaccess (it must not overwrite company rules).
 
 param(
-    [string]$SinceCommit = 'origin/main'
+    [string]$SinceCommit = 'origin/main',
+    [switch]$IncludeWorkingTree
 )
 
 $ErrorActionPreference = 'Stop'
@@ -82,7 +83,7 @@ function Resolve-DeployUpload {
 
         # Keep shared PHP/config/media on the parent app root, not under /ultimate/.
         # accounting/* and erp/* are rewritten from /ultimate/... to ../... (see ultimate/.htaccess).
-        if ($rel -match '^(includes|accounting|erp|erp-laravel|modules|assets|vendor|letterhead|home-ui|weekly-tasks-ui|weekly_tasks|select-module-ui)/' -or $rel -match '^env(\.|$)') {
+        if ($rel -match '^(includes|accounting|erp|erp-laravel|modules|assets|vendor|letterhead|home-ui|weekly-tasks-ui|weekly_tasks|select-module-ui|ultitech-accounting)/' -or $rel -match '^env(\.|$)') {
             return @(
                 @{ Local = $rel; RemoteBase = $parentBase; Remote = $rel }
             )
@@ -105,7 +106,19 @@ $ErrorActionPreference = 'Continue'
 & $git fetch origin main 2>&1 | Out-Null
 $ErrorActionPreference = $prevEap
 
-$changed = & $git diff --name-only --diff-filter=ACMRT "$SinceCommit" HEAD
+if ($IncludeWorkingTree) {
+    $changed = @()
+    $status = & $git status --porcelain --untracked-files=normal
+    foreach ($line in $status) {
+        if (-not $line) { continue }
+        $path = $line.Substring(3).Trim().Trim('"')
+        if ($path -match ' -> ') { $path = ($path -split ' -> ')[-1] }
+        $path = $path -replace '\\', '/'
+        $changed += $path
+    }
+} else {
+    $changed = & $git diff --name-only --diff-filter=ACMRT "$SinceCommit" HEAD
+}
 if (-not $changed) {
     Write-Host 'No changed files to deploy.'
     exit 0
@@ -114,8 +127,11 @@ if (-not $changed) {
 $files = $changed | Where-Object {
     $_ -and
     (Test-Path (Join-Path $root $_)) -and
+    -not (Test-Path (Join-Path $root $_) -PathType Container) -and
     $_ -notmatch '(^|/)(node_modules|vendor|\.git)(/|$)' -and
-    $_ -notmatch '\.(exe|zip|7z|sql|md)$'
+    $_ -notmatch '(^|/)tests(/|$)' -and
+    $_ -notmatch '(^|/)_tmp_' -and
+    $_ -notmatch '\.(exe|zip|7z|sql|md|gif|HEIC)$'
 }
 
 if (-not $files) {

@@ -77,6 +77,8 @@ Route::prefix('v1')->group(function () {
             Route::post('/suppliers', [SupplierController::class, 'store'])->middleware(EnsurePermission::class.':ap.manage');
             Route::get('/supplier-bills', [SupplierController::class, 'bills'])->middleware(EnsurePermission::class.':ap.view');
             Route::post('/supplier-bills', [SupplierController::class, 'storeBill'])->middleware(EnsurePermission::class.':ap.bill');
+            Route::get('/purchase-vouchers', [SupplierController::class, 'purchaseVouchers'])->middleware(EnsurePermission::class.':ap.view');
+            Route::get('/expense-vouchers', [SupplierController::class, 'expenseVouchers'])->middleware(EnsurePermission::class.':ap.view');
             Route::get('/supplier-payments', [SupplierController::class, 'payments'])->middleware(EnsurePermission::class.':ap.view');
             Route::post('/supplier-payments', [SupplierController::class, 'storePayment'])->middleware(EnsurePermission::class.':ap.payment');
 
@@ -118,7 +120,11 @@ Route::prefix('v1')->group(function () {
             Route::get('/tax-returns', [TaxController::class, 'returns'])->middleware(EnsurePermission::class.':tax.view');
             Route::post('/tax-returns', [TaxController::class, 'prepareReturn'])->middleware(EnsurePermission::class.':tax.manage');
             Route::post('/tax-returns/{id}/reconcile', [TaxController::class, 'reconcile'])->middleware(EnsurePermission::class.':tax.manage');
+            Route::post('/tax-returns/{id}/file', [TaxController::class, 'file'])->middleware(EnsurePermission::class.':tax.manage');
+            Route::post('/tax-returns/{id}/pay', [TaxController::class, 'pay'])->middleware(EnsurePermission::class.':tax.manage');
+            Route::post('/tax/adjustments', [TaxController::class, 'adjust'])->middleware(EnsurePermission::class.':tax.manage');
             Route::get('/tax-reconciliations', [TaxController::class, 'reconciliations'])->middleware(EnsurePermission::class.':tax.view');
+            Route::post('/tax/sync-register', [TaxController::class, 'syncRegister'])->middleware(EnsurePermission::class.':tax.manage');
 
             Route::get('/standards/frameworks', [StandardsController::class, 'frameworks'])->middleware(EnsurePermission::class.':standards.view');
             Route::get('/standards/disclosures', [StandardsController::class, 'disclosures'])->middleware(EnsurePermission::class.':standards.view');

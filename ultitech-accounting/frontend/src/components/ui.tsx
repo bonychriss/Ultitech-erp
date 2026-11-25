@@ -7,13 +7,14 @@ export function PageHeader({
   breadcrumb,
   crumbExtra,
 }: {
-  title: string
+  title?: string
   subtitle?: string
   actions?: ReactNode
   breadcrumb?: ReactNode
   /** Renders on the same row as the breadcrumb (e.g. search). */
   crumbExtra?: ReactNode
 }) {
+  const hasTitleBlock = Boolean(title || subtitle)
   return (
     <div className="ua-page-header mb-3">
       {breadcrumb || crumbExtra ? (
@@ -22,20 +23,26 @@ export function PageHeader({
           {crumbExtra}
         </div>
       ) : null}
-      <div className="ua-page-header__main flex flex-wrap items-end justify-between gap-2">
-        <div>
-          <div className="ua-page-title">{title}</div>
-          {subtitle ? <div className="ua-page-sub">{subtitle}</div> : null}
+      {hasTitleBlock || actions ? (
+        <div className="ua-page-header__main flex flex-wrap items-end justify-between gap-2">
+          {hasTitleBlock ? (
+            <div>
+              {title ? <div className="ua-page-title">{title}</div> : null}
+              {subtitle ? <div className="ua-page-sub">{subtitle}</div> : null}
+            </div>
+          ) : (
+            <div />
+          )}
+          {actions}
         </div>
-        {actions}
-      </div>
+      ) : null}
     </div>
   )
 }
 
 export function Card({ children, className = '' }: { children: ReactNode; className?: string }) {
   return (
-    <div className={`rounded-lg border border-[var(--line)] bg-white p-3 shadow-[0_1px_2px_rgba(16,24,40,0.03)] ${className}`}>
+    <div className={`rounded-lg border border-[var(--line)] bg-[var(--card)] p-3 shadow-[0_1px_2px_rgba(16,24,40,0.03)] ${className}`}>
       {children}
     </div>
   )
@@ -57,7 +64,7 @@ export function Button({
       ? 'bg-[var(--brand)] text-white hover:bg-[var(--brand-dark)]'
       : variant === 'danger'
         ? 'bg-[var(--danger)] text-white hover:opacity-90'
-        : 'bg-white text-[var(--ink)] border border-[var(--line)] hover:bg-[var(--surface)]'
+        : 'bg-[var(--card)] text-[var(--ink)] border border-[var(--line)] hover:bg-[var(--surface)]'
 
   return (
     <button
@@ -72,7 +79,7 @@ export function Button({
 export function Input(props: InputHTMLAttributes<HTMLInputElement>) {
   return (
     <input
-      className="w-full rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm outline-none ring-[var(--brand)] focus:ring-2"
+      className="w-full rounded-md border border-[var(--line)] bg-[var(--card)] px-3 py-2 text-sm text-[var(--ink)] outline-none ring-[var(--brand)] focus:ring-2"
       {...props}
     />
   )
@@ -81,7 +88,7 @@ export function Input(props: InputHTMLAttributes<HTMLInputElement>) {
 export function Select(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
   return (
     <select
-      className="w-full rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm outline-none ring-[var(--brand)] focus:ring-2"
+      className="w-full rounded-md border border-[var(--line)] bg-[var(--card)] px-3 py-2 text-sm text-[var(--ink)] outline-none ring-[var(--brand)] focus:ring-2"
       {...props}
     />
   )

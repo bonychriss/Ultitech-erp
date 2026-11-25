@@ -527,13 +527,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (strcasecmp(trim((string) $item['payment_type']), 'Credit') === 0) {
                 $creditAmount += (float) $item['amount'];
             }
-            $voucherDueDate = trim((string) ($_POST['due_date'] ?? ''));
-            if ($voucherDueDate !== '' && !validOutstandingDueDate($voucherDueDate)) {
-                throw new Exception('Please enter a valid due date.');
-            }
-            if (!$isDraft && $creditAmount > 0 && $voucherDueDate === '') {
-                throw new Exception('Please enter a due date for the credit payment.');
-            }
+        }
+        $voucherDueDate = trim((string) ($_POST['due_date'] ?? ''));
+        if ($voucherDueDate !== '' && function_exists('validOutstandingDueDate') && !validOutstandingDueDate($voucherDueDate)) {
+            throw new Exception('Please enter a valid due date.');
+        }
+        if (!$isDraft && $creditAmount > 0 && $voucherDueDate === '') {
+            throw new Exception('Please enter a due date for the credit payment.');
+        }
+        // Stock purchase: To date is required and stored as due_date for overdue tracking.
+        if (!$isDraft && $voucher_purpose === 'stock_purchase' && $voucherDueDate === '') {
+            throw new Exception('Please choose the To date (due date) for Stock Purchase vouchers.');
+        }
+        if (
+            !$isDraft
+            && $voucher_purpose === 'stock_purchase'
+            && $voucherDueDate !== ''
+            && $date_created !== ''
+            && $voucherDueDate < $date_created
+        ) {
+            throw new Exception('To date must be on or after the From date.');
+        }
+        if (function_exists('ensurePaymentVoucherDueDateColumn')) {
             ensurePaymentVoucherDueDateColumn($pdo);
         }
         $createPayable = !$isDraft
@@ -584,7 +599,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $is_restricted
         ];
         $insertCols[] = 'due_date';
-        $insertVals[] = $creditAmount > 0 && $voucherDueDate !== '' ? $voucherDueDate : null;
+        // Stock purchase always stores To date as due_date; credit lines also require it.
+        $insertVals[] = ($voucherDueDate !== '' && ($voucher_purpose === 'stock_purchase' || $creditAmount > 0))
+            ? $voucherDueDate
+            : null;
 
         if (in_array('checked_by', $pvCols, true)) {
             $insertCols[] = 'checked_by';
@@ -977,12 +995,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             // Send the user back to their vouchers list and highlight the new one.
             $_SESSION['success_msg'] = 'Voucher ' . $voucher_no . ' created successfully.';
-            $qsParts = [];
-            if (isset($_GET['module']) && (string) $_GET['module'] !== '') {
-                $qsParts[] = 'module=' . rawurlencode((string) $_GET['module']);
+            $fromDeskRedirect = strtolower(trim((string) ($_GET['from'] ?? '')));
+            if ($fromDeskRedirect === 'expenses' && function_exists('company_url')) {
+                $redirectUrl = company_url('accounting/ultitech-bridge') . '?module=accounting#/expenses';
+            } elseif ($fromDeskRedirect === 'purchases' && function_exists('company_url')) {
+                $redirectUrl = company_url('accounting/ultitech-bridge') . '?module=accounting#/purchases';
+            } else {
+                $qsParts = [];
+                if (isset($_GET['module']) && (string) $_GET['module'] !== '') {
+                    $qsParts[] = 'module=' . rawurlencode((string) $_GET['module']);
+                }
+                $qsParts[] = 'created=' . (int) $voucher_id;
+                $redirectUrl = 'my-vouchers.php?' . implode('&', $qsParts);
             }
-            $qsParts[] = 'created=' . (int) $voucher_id;
-            $redirectUrl = 'my-vouchers.php?' . implode('&', $qsParts);
         }
         if (!headers_sent()) {
             header('Location: ' . $redirectUrl);
@@ -1046,7 +1071,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 if (!isset($_GET['module']) || (string) $_GET['module'] === '') {
     $_GET['module'] = 'voucher';
 }
-$_SESSION['active_module'] = 'voucher';
+// Keep Accounting / Purchases / Expenses desk sidebar when creating from those modules.
+$createModule = strtolower(trim((string) ($_GET['module'] ?? 'voucher')));
+$fromDesk = strtolower(trim((string) ($_GET['from'] ?? '')));
+if (in_array($createModule, ['accounting', 'purchases', 'expenses'], true)
+    || in_array($fromDesk, ['purchases', 'expenses'], true)) {
+    $_SESSION['active_module'] = in_array($fromDesk, ['purchases', 'expenses'], true)
+        ? 'accounting'
+        : $createModule;
+    if ($fromDesk === 'purchases' || $fromDesk === 'expenses') {
+        $_GET['module'] = 'accounting';
+    }
+} else {
+    $_SESSION['active_module'] = 'voucher';
+}
 
 $slug = trim((string) ($_SESSION['company_slug'] ?? (function_exists('getRequestedCompanySlug') ? getRequestedCompanySlug() : '')));
 if ($slug === '' && function_exists('getRequestedCompanySlug')) {

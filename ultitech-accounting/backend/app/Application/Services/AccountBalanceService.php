@@ -53,6 +53,10 @@ class AccountBalanceService
 
             return [
                 'account_id' => (int) $accountId,
+                'opening_debit' => $openingDebit,
+                'opening_credit' => $openingCredit,
+                'movement_debit' => $movementDebit,
+                'movement_credit' => $movementCredit,
                 'debit' => $debit,
                 'credit' => $credit,
             ];

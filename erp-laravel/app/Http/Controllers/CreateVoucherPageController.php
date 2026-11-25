@@ -20,10 +20,24 @@ class CreateVoucherPageController extends Controller
         }
 
         $clientCfg = $this->clientCfg($erp);
+        $fromPurchases = !empty($clientCfg['fromPurchases']);
+        $fromExpenses = !empty($clientCfg['fromExpenses']);
+        $activeModule = 'voucher';
+        if ($fromPurchases || $fromExpenses) {
+            $activeModule = 'accounting';
+        } else {
+            $module = strtolower(trim((string) ($clientCfg['module'] ?? ($erp['module'] ?? 'voucher'))));
+            if (in_array($module, ['accounting', 'purchases', 'expenses'], true)) {
+                $activeModule = $module === 'purchases' || $module === 'expenses' ? 'accounting' : $module;
+            }
+        }
+
+        $pageTitle = $fromExpenses ? 'Create Expense' : 'Create Voucher';
         $viewData = (new VoucherShell())->viewData([
-            'pageTitle' => 'Create Voucher',
+            'pageTitle' => $pageTitle,
             'headerTitle' => '',
             'clientCfg' => $clientCfg,
+            'activeModule' => $activeModule,
         ]);
 
         if ($viewData === null) {
@@ -41,12 +55,14 @@ class CreateVoucherPageController extends Controller
         $employeeHeaderTitle = $viewData['employeeHeaderTitle'];
         $hideHeaderCompanyBranding = $viewData['hideHeaderCompanyBranding'];
         $employeeHeaderExtraClass = $viewData['employeeHeaderExtraClass'];
+        $active_module = (string) ($viewData['active_module'] ?? $activeModule);
 
         return view('erp.react-shell', $viewData + [
             'page_title' => $page_title,
             'employeeHeaderTitle' => $employeeHeaderTitle,
             'hideHeaderCompanyBranding' => $hideHeaderCompanyBranding,
             'employeeHeaderExtraClass' => $employeeHeaderExtraClass,
+            'active_module' => $active_module,
         ]);
     }
 

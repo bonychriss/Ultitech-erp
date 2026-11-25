@@ -8,7 +8,7 @@ export function ErpIntegrationPage() {
   const {token, companyId } = useAuth()
   const client = useQueryClient()
   const [error, setError] = useState('')
-  const [journalLimit, setJournalLimit] = useState('50')
+  const [journalLimit, setJournalLimit] = useState('500')
   const [testResult, setTestResult] = useState<any>(null)
 
   const status = useQuery({
@@ -34,7 +34,7 @@ export function ErpIntegrationPage() {
         token,
         companyId,
         body: {
-          scopes: ['accounts', 'customers', 'suppliers', 'invoices', 'journals'],
+          scopes: ['accounts', 'customers', 'suppliers', 'invoices', 'journals', 'wallets'],
           journal_limit: Number(journalLimit),
         },
       }),

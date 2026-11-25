@@ -215,6 +215,22 @@ body.page-attendance-desk .employee-header--products-desk .header-content {
 body.page-attendance-desk .employee-header--products-desk .header-right.header-actions-tray {
     margin-left: auto !important;
 }
+body.page-attendance-desk .employee-header-menu-btn,
+body.page-attendance-desk .employee-header-menu-btn.btn,
+body.page-attendance-desk .employee-header-menu-btn.btn-link,
+body.page-attendance-desk .employee-header-menu-btn[style] {
+    background: transparent !important;
+    background-color: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    outline: none !important;
+    border-radius: 0 !important;
+}
+body.page-attendance-desk .employee-header-menu-btn .erp-hamburger {
+    background: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+}
 body.page-attendance-analytics .employee-header--products-desk .employee-header-page-title {
     font-weight: 500 !important;
 }
@@ -238,6 +254,25 @@ main.main-content.att-react-root #root {
     body.page-attendance-desk .employee-header.employee-header--products-desk { padding: 0 0.75rem !important; }
     main.main-content.att-react-root {
         padding: 0 0.75rem 1.25rem !important;
+        overflow-x: hidden !important;
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+    main.main-content.att-react-root #root,
+    body.page-attendance-desk .att-shell,
+    body.page-attendance-desk .att-main,
+    body.page-attendance-desk .att-grid,
+    body.page-attendance-desk .att-col-left,
+    body.page-attendance-desk .clock-card-v2,
+    body.page-attendance-desk .sig-card {
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+    }
+    body.page-attendance-desk .att-grid {
+        display: flex !important;
+        flex-direction: column !important;
+        grid-template-columns: none !important;
     }
 }
 @media (max-width: 575.98px) {

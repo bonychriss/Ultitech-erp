@@ -30,23 +30,23 @@ $docFontStack = function_exists('sales_document_font_family_css')
 $showPaidWatermark = !empty($showPaidWatermark)
     || strtolower(trim((string) ($order['status'] ?? ''))) === 'paid';
 ?>
-<div class="sheet-container" style="font-family: <?= $docFontStack ?>; font-size: 12px; position: relative; overflow: hidden;">
+<div class="sheet-container" style="font-family: <?= $docFontStack ?>; font-size: 12px; position: relative; overflow: hidden; box-sizing: border-box;">
     <?php if ($showPaidWatermark): ?>
     <div class="invoice-paid-watermark" aria-hidden="true"><span>PAID</span></div>
     <?php endif; ?>
-    <div class="sheet" style="display: flex; flex-direction: column; font-family: inherit;">
-        <div class="sheet-header-title quot-sheet-header" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
-            <h1 class="sheet-title" style="font-size: 1.15rem;">
+    <div class="sheet" style="display: flex; flex-direction: column; font-family: inherit; width: 100%; max-width: 100%; min-width: 0; box-sizing: border-box;">
+        <div class="sheet-header-title quot-sheet-header" style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 12px; min-width: 0;">
+            <h1 class="sheet-title" style="font-size: 1.15rem; flex: 1 1 auto; min-width: 0; padding-right: 8px;">
                 <?php echo htmlspecialchars($sheetTitleLabel, ENT_QUOTES, 'UTF-8'); ?> #
                 <?php echo htmlspecialchars($displayOrderNumber); ?>
             </h1>
-            <div class="quot-company-block" style="text-align: right;">
+            <div class="quot-company-block" style="text-align: right; flex: 0 1 48%; max-width: 48%; min-width: 0; overflow-wrap: anywhere; word-break: break-word;">
                 <?php 
                     $logoPath = !empty($company_settings['company_logo_url']) ? $company_settings['company_logo_url'] : '/assets/images/' . ($company_settings['company_logo'] ?: 'Untitled.jpg');
                 ?>
-                <img src="<?php echo htmlspecialchars((string) $logoPath, ENT_QUOTES, 'UTF-8'); ?>" alt="Company Logo" crossorigin="anonymous" style="max-height: 56px; margin-bottom: 6px;" onerror="this.style.display='none'">
+                <img src="<?php echo htmlspecialchars((string) $logoPath, ENT_QUOTES, 'UTF-8'); ?>" alt="Company Logo" crossorigin="anonymous" style="max-height: 56px; max-width: 100%; height: auto; margin-bottom: 6px;" onerror="this.style.display='none'">
                 <h5 class="mb-1 fw-bold"><?php echo htmlspecialchars($company_settings['company_name']); ?></h5>
-                <p class="text-muted mb-0" style="white-space: pre-line; color: #000;"><?php echo htmlspecialchars($company_settings['company_address']); ?><?php if(!empty($company_settings['company_location'])): ?>, <?php echo htmlspecialchars($company_settings['company_location']); ?><?php endif; ?></p>
+                <p class="text-muted mb-0" style="white-space: pre-line; color: #000; overflow-wrap: anywhere;"><?php echo htmlspecialchars($company_settings['company_address']); ?><?php if(!empty($company_settings['company_location'])): ?>, <?php echo htmlspecialchars($company_settings['company_location']); ?><?php endif; ?></p>
                 <?php if(!empty($company_settings['company_tin'])): ?>
                     <p class="text-muted mb-0" style="color: #000;">TIN: <?php echo htmlspecialchars($company_settings['company_tin']); ?></p>
                 <?php endif; ?>
@@ -108,23 +108,23 @@ $showPaidWatermark = !empty($showPaidWatermark)
             </div>
 
             <div class="notebook">
-                <table class="o-table">
+                <table class="o-table" style="width: 100%; table-layout: fixed; border-collapse: collapse;">
                     <thead>
                         <tr style="background-color: #ffd700;">
-                            <th class="num" style="width: 6%; background-color: #ffd700; -webkit-print-color-adjust: exact; print-color-adjust: exact;">S/N</th>
-                            <th style="width: 10%; background-color: #ffd700; -webkit-print-color-adjust: exact; print-color-adjust: exact;">Image</th>
-                            <th style="width: 16%; background-color: #ffd700; -webkit-print-color-adjust: exact; print-color-adjust: exact;">Product</th>
-                            <th style="width: 29%; background-color: #ffd700; -webkit-print-color-adjust: exact; print-color-adjust: exact;">Description</th>
-                            <th class="num" style="width: 10%; background-color: #ffd700; -webkit-print-color-adjust: exact; print-color-adjust: exact;">Qty</th>
-                            <th class="num" style="width: 14.5%; background-color: #ffd700; -webkit-print-color-adjust: exact; print-color-adjust: exact;">Unit Price</th>
-                            <th class="num" style="width: 14.5%; background-color: #ffd700; -webkit-print-color-adjust: exact; print-color-adjust: exact;">Subtotal</th>
+                            <th class="num" style="width: 6%; padding: 8px 5px; text-align: right; border-bottom: 2px solid #000; font-weight: normal; background-color: #ffd700; -webkit-print-color-adjust: exact; print-color-adjust: exact;">S/N</th>
+                            <th style="width: 10%; padding: 8px 5px; text-align: left; border-bottom: 2px solid #000; font-weight: normal; background-color: #ffd700; -webkit-print-color-adjust: exact; print-color-adjust: exact;">Image</th>
+                            <th style="width: 16%; padding: 8px 5px; text-align: left; border-bottom: 2px solid #000; font-weight: normal; background-color: #ffd700; -webkit-print-color-adjust: exact; print-color-adjust: exact;">Product</th>
+                            <th style="width: 28%; padding: 8px 5px; text-align: left; border-bottom: 2px solid #000; font-weight: normal; background-color: #ffd700; -webkit-print-color-adjust: exact; print-color-adjust: exact;">Description</th>
+                            <th class="num" style="width: 10%; padding: 8px 5px; text-align: right; border-bottom: 2px solid #000; font-weight: normal; background-color: #ffd700; -webkit-print-color-adjust: exact; print-color-adjust: exact;">Qty</th>
+                            <th class="num" style="width: 15%; padding: 8px 5px; text-align: right; border-bottom: 2px solid #000; font-weight: normal; background-color: #ffd700; -webkit-print-color-adjust: exact; print-color-adjust: exact;">Unit Price</th>
+                            <th class="num" style="width: 15%; padding: 8px 5px; text-align: right; border-bottom: 2px solid #000; font-weight: normal; background-color: #ffd700; -webkit-print-color-adjust: exact; print-color-adjust: exact;">Subtotal</th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php foreach ($items as $itemIdx => $item): ?>
                             <tr style="page-break-inside: avoid; break-inside: avoid;">
-                                <td class="num"><?php echo $itemIdx + 1; ?></td>
-                                <td style="padding: 4px 6px;">
+                                <td class="num" style="padding: 8px 5px; border-bottom: 1px solid #eee; vertical-align: middle; text-align: right;"><?php echo $itemIdx + 1; ?></td>
+                                <td style="padding: 8px 5px; border-bottom: 1px solid #eee; vertical-align: middle;">
                                     <?php 
                                         $pid = (int)($item['product_id'] ?? 0);
                                         $img = $item['main_image'] ?? '';
@@ -137,18 +137,18 @@ $showPaidWatermark = !empty($showPaidWatermark)
                                     ?>
                                         <img src="<?php echo htmlspecialchars($imgUrl, ENT_QUOTES, 'UTF-8'); ?>"
                                              crossorigin="anonymous"
-                                             style="width: 60px; height: 60px; object-fit: cover;"
+                                             style="width: 60px; height: 60px; object-fit: cover; border-radius: 4px;"
                                              onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
                                         <div style="display: none; width: 60px; height: 60px; background: #eee; border-radius: 4px; align-items: center; justify-content: center; font-size: 10px; color: #aaa;">No Image</div>
                                     <?php else: ?>
                                         <div style="width: 60px; height: 60px; background: #eee; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #aaa;">No Image</div>
                                     <?php endif; ?>
                                 </td>
-                                <td><?php echo htmlspecialchars($item['product_name']); ?></td>
-                                <td><?php echo nl2br(htmlspecialchars($item['description'] ?? '')); ?></td>
-                                <td class="num"><?php echo number_format($item['quantity'], 2); ?></td>
-                                <td class="num"><?php echo number_format($item['unit_price'], 2); ?></td>
-                                <td class="num"><?php echo number_format((float) ($item['line_total'] ?? ((float) ($item['quantity'] ?? 0) * (float) ($item['unit_price'] ?? 0))), 2); ?></td>
+                                <td style="padding: 8px 5px; border-bottom: 1px solid #eee; vertical-align: middle;"><?php echo htmlspecialchars($item['product_name']); ?></td>
+                                <td style="padding: 8px 5px; border-bottom: 1px solid #eee; vertical-align: middle;"><?php echo nl2br(htmlspecialchars($item['description'] ?? '')); ?></td>
+                                <td class="num" style="padding: 8px 5px; border-bottom: 1px solid #eee; vertical-align: middle; text-align: right;"><?php echo number_format($item['quantity'], 2); ?></td>
+                                <td class="num" style="padding: 8px 5px; border-bottom: 1px solid #eee; vertical-align: middle; text-align: right;"><?php echo number_format($item['unit_price'], 2); ?></td>
+                                <td class="num" style="padding: 8px 5px; border-bottom: 1px solid #eee; vertical-align: middle; text-align: right;"><?php echo number_format((float) ($item['line_total'] ?? ((float) ($item['quantity'] ?? 0) * (float) ($item['unit_price'] ?? 0))), 2); ?></td>
                             </tr>
                         <?php endforeach; ?>
                     </tbody>

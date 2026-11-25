@@ -1,3 +1,4 @@
+import { Fragment } from 'react'
 import { fmtDate } from '../utils/format.js'
 import PaidStamp from './PaidStamp.jsx'
 import PostedStamp from './PostedStamp.jsx'
@@ -29,7 +30,7 @@ export default function VoucherPreview({ data }) {
         <img
           src={media.logoUrl}
           alt="Logo"
-          style={{ maxHeight: 60, maxWidth: 140, objectFit: 'contain', marginRight: 40 }}
+          style={{ maxHeight: 60, maxWidth: 140, objectFit: 'contain', marginRight: 40, flexShrink: 0 }}
           onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = media.fallbackLogoUrl }}
         />
         <h1 style={{ fontSize: 24, fontWeight: 500, margin: 0, color: '#000', letterSpacing: 2, flexGrow: 1, textAlign: 'center', textTransform: 'uppercase' }}>
@@ -95,7 +96,7 @@ export default function VoucherPreview({ data }) {
           <thead>
             <tr>
               {['Payment Type', 'Budget Type', 'Name', 'Amount', 'Description'].map((h) => (
-                <th key={h} style={{ ...cellStyle(), textAlign: h === 'Amount' ? 'right' : 'left' }}>{h}</th>
+                <th key={h} style={{ ...cellStyle(), textAlign: h === 'Amount' ? 'right' : 'left', fontWeight: 500 }}>{h}</th>
               ))}
             </tr>
           </thead>
@@ -115,32 +116,67 @@ export default function VoucherPreview({ data }) {
           </tbody>
         </table>
 
-        <table className="vv-approvals-table" style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', marginTop: 10, marginBottom: 20, border: '1px solid #000' }}>
+        <table
+          className="vv-approvals-table"
+          style={{
+            width: '100%',
+            borderCollapse: 'collapse',
+            tableLayout: 'fixed',
+            marginTop: 10,
+            marginBottom: 0,
+            border: '1px solid #000',
+          }}
+        >
           <colgroup>
-            <col className="vv-approval-col-label" />
-            <col className="vv-approval-col-value" />
-            <col className="vv-approval-col-label" />
-            <col className="vv-approval-col-value" />
+            <col style={{ width: '16%' }} />
+            <col style={{ width: '34%' }} />
+            <col style={{ width: '16%' }} />
+            <col style={{ width: '34%' }} />
           </colgroup>
           <tbody>
             {[[0, 1], [2, 3]].map((pair) => (
               <tr key={pair.join('-')} className="vv-approval-grid-row">
                 {pair.map((idx) => {
-                  const slot = approvalSlots[idx]
-                  if (!slot) return null
-                  return [
-                    <td key={`${idx}-l`} className="vv-approval-label">{slot.label}</td>,
-                    <td key={`${idx}-v`} className="vv-approval-value">
-                      <div className="vv-approval-signatory">
-                        <div className="vv-approval-name-wrap">
-                          {slot.name ? <span className="vv-approval-name">{slot.name}</span> : null}
-                          {slot.approved && slot.name && slot.sig ? (
-                            <img src={slot.sig} alt="Signature" className="vv-approval-signature vv-approval-signature--inline" style={{ maxHeight: 40, width: 'auto' }} onError={(e) => { e.currentTarget.style.display = 'none' }} />
-                          ) : null}
+                  const slot = approvalSlots?.[idx] || { label: '\u00a0', name: '', approved: false, sig: '' }
+                  return (
+                    <Fragment key={`slot-${idx}`}>
+                      <td
+                        className="vv-approval-label"
+                        style={{
+                          ...cellStyle({ width: '16%', textAlign: 'center', fontWeight: 500 }),
+                        }}
+                      >
+                        {slot.label || '\u00a0'}
+                      </td>
+                      <td
+                        className="vv-approval-value"
+                        style={{
+                          ...cellStyle({ width: '34%', textAlign: 'left', minHeight: 44 }),
+                        }}
+                      >
+                        <div className="vv-approval-signatory" style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 30 }}>
+                          <div className="vv-approval-name-wrap" style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 8, minWidth: 0, width: '100%' }}>
+                            {slot.name ? (
+                              <span className="vv-approval-name" style={{ textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
+                                {slot.name}
+                              </span>
+                            ) : (
+                              <span aria-hidden="true">&nbsp;</span>
+                            )}
+                            {slot.approved && slot.name && slot.sig ? (
+                              <img
+                                src={slot.sig}
+                                alt="Signature"
+                                className="vv-approval-signature vv-approval-signature--inline"
+                                style={{ maxHeight: 40, width: 'auto', maxWidth: 120 }}
+                                onError={(e) => { e.currentTarget.style.display = 'none' }}
+                              />
+                            ) : null}
+                          </div>
                         </div>
-                      </div>
-                    </td>,
-                  ]
+                      </td>
+                    </Fragment>
+                  )
                 })}
               </tr>
             ))}

@@ -16,6 +16,7 @@ const mainNav: NavItem[] = [
   { to: '/', label: 'Dashboard', icon: 'grid', end: true },
   { to: '/banking', label: 'Balances', icon: 'wallet' },
   { to: '/revenue', label: 'Revenue', icon: 'banknote' },
+  { to: '/expenses', label: 'Expenses', icon: 'receipt' },
   { to: '/purchases', label: 'Purchases', icon: 'cart' },
   { to: '/journals', label: 'Journal Entries', icon: 'book' },
   { to: '/tax', label: 'VAT Control', icon: 'percent' },
@@ -152,7 +153,7 @@ function Icon({ name }: { name: string }) {
   return <svg {...common}>{paths[name] || paths.grid}</svg>
 }
 
-function NavRow({ item }: { item: NavItem }) {
+function NavRow({ item, onNavigate }: { item: NavItem; onNavigate?: () => void }) {
   const location = useLocation()
   const childActive = Boolean(item.children?.some((c) => location.pathname === c.to))
   const [open, setOpen] = useState(childActive)
@@ -163,7 +164,7 @@ function NavRow({ item }: { item: NavItem }) {
 
   if (item.externalHref) {
     return (
-      <a className="erp-nav-link" href={item.externalHref}>
+      <a className="erp-nav-link" href={item.externalHref} onClick={() => onNavigate?.()}>
         <Icon name={item.icon} />
         <span className="erp-nav-text">{item.label}</span>
       </a>
@@ -190,6 +191,7 @@ function NavRow({ item }: { item: NavItem }) {
               <NavLink
                 key={child.to}
                 to={child.to}
+                onClick={() => onNavigate?.()}
                 className={({ isActive }) => `erp-nav-link erp-nav-sublink${isActive ? ' active' : ''}`}
               >
                 <span className="erp-nav-dot" aria-hidden="true" />
@@ -206,6 +208,7 @@ function NavRow({ item }: { item: NavItem }) {
     <NavLink
       to={item.to || '/'}
       end={item.end}
+      onClick={() => onNavigate?.()}
       className={({ isActive }) => `erp-nav-link${isActive ? ' active' : ''}`}
     >
       <Icon name={item.icon} />
@@ -323,14 +326,14 @@ export function AppShell() {
         <div className="erp-section-label">Main</div>
         <nav className="erp-nav">
           {mainNav.map((item) => (
-            <NavRow key={item.to || item.label} item={item} />
+            <NavRow key={item.to || item.label} item={item} onNavigate={() => setMobileOpen(false)} />
           ))}
         </nav>
 
         <div className="erp-section-label">More</div>
         <nav className="erp-nav">
           {moreNav.map((item) => (
-            <NavRow key={item.to || item.label} item={item} />
+            <NavRow key={item.to || item.label} item={item} onNavigate={() => setMobileOpen(false)} />
           ))}
         </nav>
 

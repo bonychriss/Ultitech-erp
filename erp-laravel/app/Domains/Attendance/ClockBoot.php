@@ -104,6 +104,29 @@ final class ClockBoot
         $currentIp = $attendance->getCurrentUserIp();
         $historyMonth = $attendance->normalizeHistoryMonth(null);
 
+        $biometric = [
+            'required' => false,
+            'enrolled' => false,
+            'count' => 0,
+            'max' => 2,
+            'devices' => [],
+            'library_ok' => false,
+            'secure_ok' => false,
+            'rp_id' => '',
+        ];
+        try {
+            $waFile = $root . '/attendance/classes/AttendanceWebAuthn.php';
+            if (is_file($waFile)) {
+                require_once $waFile;
+            }
+            if (class_exists('AttendanceWebAuthn')) {
+                $wa = new \AttendanceWebAuthn($pdo);
+                $biometric = $wa->statusForUser($userId);
+            }
+        } catch (Throwable $e) {
+            // Keep defaults; desk still renders.
+        }
+
         return [
             'page' => 'clock',
             'data' => [
@@ -118,6 +141,7 @@ final class ClockBoot
                 'pendingTasks' => $pendingTasks,
                 'isIpAllowed' => (bool) $attendance->isIpAllowed($currentIp),
                 'currentIp' => (string) $currentIp,
+                'biometric' => $biometric,
                 'message' => '',
                 'msgType' => '',
                 'clockInSuccess' => null,
@@ -195,16 +219,28 @@ final class ClockBoot
     }
 
     /**
-     * @return array{modules:string,logout:string,settings:string}
+     * @return array{modules:string,logout:string,settings:string,profileSecurity:string}
      */
     private function links(): array
     {
+        $profileSecurity = function_exists('user_profile_settings_url')
+            ? (string) user_profile_settings_url(null, 'attendance')
+            : (function_exists('company_url')
+                ? (string) company_url('employee/account.php?module=attendance')
+                : (function_exists('app_url')
+                    ? (string) app_url('/employee/account.php?module=attendance')
+                    : '/employee/account.php?module=attendance'));
+        if ($profileSecurity !== '' && strpos($profileSecurity, '#') === false) {
+            $profileSecurity .= '#change-password';
+        }
+
         return [
             'modules' => function_exists('app_url') ? (string) app_url('/select-module.php') : '/select-module.php',
             'logout' => function_exists('app_url') ? (string) app_url('/logout.php') : '/logout.php',
             'settings' => function_exists('app_url')
                 ? (string) app_url('/attendance/settings.php')
                 : '/attendance/settings.php',
+            'profileSecurity' => $profileSecurity,
         ];
     }
 

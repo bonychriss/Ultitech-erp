@@ -670,6 +670,7 @@ export function RevenuePage() {
       setReference('')
       setCustomerId('')
       setRevenueDate(todayIso())
+      setFormOpen(false)
       await invalidateRevenue()
       setPayFilter('paid')
     },
@@ -804,14 +805,14 @@ export function RevenuePage() {
             </div>
             <Button
               type="button"
+              aria-haspopup="dialog"
               aria-expanded={formOpen}
-              aria-controls="ua-record-revenue-panel"
               onClick={() => {
-                setFormOpen((open) => !open)
-                if (formOpen) setError('')
+                setFormOpen(true)
+                setError('')
               }}
             >
-              {formOpen ? 'Close' : 'Create revenue'}
+              Create revenue
             </Button>
           </div>
         }
@@ -889,7 +890,7 @@ export function RevenuePage() {
             crumbSearchHost,
           )
         : null}
-      {error ? <ErrorBanner message={error} /> : null}
+      {error && !formOpen ? <ErrorBanner message={error} /> : null}
       {notice && !formOpen ? (
         <div className="ua-revenue-notice" role="status">
           {notice}
@@ -955,123 +956,174 @@ export function RevenuePage() {
         </article>
       </section>
 
-      {formOpen ? (
-        <section id="ua-record-revenue-panel" className="ua-revenue-compose" aria-label="Create revenue">
-          <div className="ua-revenue-compose__head">
-            <div>
-              <h2 className="ua-revenue-compose__title">Create revenue</h2>
-              <p className="ua-revenue-compose__sub">
-                Other income paid now. Leave customer blank for walk-in.
-              </p>
-            </div>
-          </div>
-          {notice ? (
-            <div className="ua-revenue-notice ua-revenue-notice--inpanel" role="status">
-              {notice}
-            </div>
-          ) : null}
-          <form className="ua-revenue-compose__form" onSubmit={onRecordRevenue}>
-            <div className="ua-revenue-compose__grid">
-              <div>
-                <Label>Date</Label>
-                <Input type="date" value={revenueDate} onChange={(e) => setRevenueDate(e.target.value)} required />
-              </div>
-              <div>
-                <Label>Customer (optional)</Label>
-                <Select value={customerId} onChange={(e) => setCustomerId(e.target.value)}>
-                  <option value="">Walk-in / Other income</option>
-                  {(customers.data?.data ?? []).map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.code} — {c.name}
-                    </option>
-                  ))}
-                </Select>
-              </div>
-              <div className="ua-revenue-compose__span2">
-                <Label>Description</Label>
-                <Input
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="e.g. Scrap sale, service fee, interest"
-                  required
-                />
-              </div>
-              <div>
-                <Label>Revenue account</Label>
-                <Select value={revenueAccountId} onChange={(e) => setRevenueAccountId(e.target.value)} required>
-                  <option value="">Select account</option>
-                  {revenueAccounts.map((a) => (
-                    <option key={a.id} value={a.id}>
-                      {a.code} — {a.name}
-                    </option>
-                  ))}
-                </Select>
-              </div>
-              <div>
-                <Label>Amount (TZS)</Label>
-                <Input value={amount} onChange={(e) => setAmount(e.target.value)} required />
-              </div>
-              <div>
-                <Label>Deposit to</Label>
-                <Select value={depositKind} onChange={(e) => setDepositKind(e.target.value as DepositKind)}>
-                  <option value="bank">Bank / mobile</option>
-                  <option value="cash">Cash</option>
-                </Select>
-              </div>
-              <div>
-                {depositKind === 'bank' ? (
-                  <>
-                    <Label>Bank / mobile account</Label>
-                    <Select value={bankAccountId} onChange={(e) => setBankAccountId(e.target.value)} required>
-                      <option value="">Select account</option>
-                      {(banks.data?.data ?? []).map((b) => (
-                        <option key={b.id} value={b.id}>
-                          {b.code} — {b.name}
-                        </option>
-                      ))}
-                    </Select>
-                  </>
-                ) : (
-                  <>
-                    <Label>Cash account</Label>
-                    <Select value={cashAccountId} onChange={(e) => setCashAccountId(e.target.value)} required>
-                      <option value="">Select cash account</option>
-                      {(cashAccounts.data?.data ?? []).map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.code} — {c.name}
-                        </option>
-                      ))}
-                    </Select>
-                  </>
-                )}
-              </div>
-              <div className="ua-revenue-compose__span2">
-                <Label>Reference (optional)</Label>
-                <Input
-                  value={reference}
-                  onChange={(e) => setReference(e.target.value)}
-                  placeholder="Receipt no. / narration"
-                />
-              </div>
-            </div>
-            <div className="ua-revenue-compose__actions">
-              <Button disabled={createRevenue.isPending}>
-                {createRevenue.isPending ? 'Posting…' : 'Record revenue'}
-              </Button>
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => {
-                  setFormOpen(false)
-                  setError('')
-                }}
+      {formOpen
+        ? createPortal(
+            <div
+              className="ua-revenue-modal-overlay"
+              role="presentation"
+              onClick={() => {
+                setFormOpen(false)
+                setError('')
+              }}
+            >
+              <div
+                id="ua-record-revenue-panel"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="ua-create-revenue-title"
+                className="ua-revenue-modal"
+                onClick={(event) => event.stopPropagation()}
               >
-                Cancel
-              </Button>
-            </div>
-          </form>
-        </section>
-      ) : null}
+                <div className="ua-revenue-compose__head ua-revenue-modal__head">
+                  <div>
+                    <h2 id="ua-create-revenue-title" className="ua-revenue-compose__title">
+                      Create revenue
+                    </h2>
+                    <p className="ua-revenue-compose__sub">
+                      Other income paid now. Leave customer blank for walk-in.
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => {
+                      setFormOpen(false)
+                      setError('')
+                    }}
+                  >
+                    Close
+                  </Button>
+                </div>
+                {error ? (
+                  <div className="ua-revenue-modal__banner">
+                    <ErrorBanner message={error} />
+                  </div>
+                ) : null}
+                <form className="ua-revenue-compose__form" onSubmit={onRecordRevenue}>
+                  <div className="ua-revenue-compose__grid">
+                    <div>
+                      <Label>Date</Label>
+                      <Input
+                        type="date"
+                        value={revenueDate}
+                        onChange={(e) => setRevenueDate(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <Label>Customer (optional)</Label>
+                      <Select value={customerId} onChange={(e) => setCustomerId(e.target.value)}>
+                        <option value="">Walk-in / Other income</option>
+                        {(customers.data?.data ?? []).map((c) => (
+                          <option key={c.id} value={c.id}>
+                            {c.code} — {c.name}
+                          </option>
+                        ))}
+                      </Select>
+                    </div>
+                    <div className="ua-revenue-compose__span2">
+                      <Label>Description</Label>
+                      <Input
+                        value={description}
+                        onChange={(e) => setDescription(e.target.value)}
+                        placeholder="e.g. Scrap sale, service fee, interest"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <Label>Revenue account</Label>
+                      <Select
+                        value={revenueAccountId}
+                        onChange={(e) => setRevenueAccountId(e.target.value)}
+                        required
+                      >
+                        <option value="">Select account</option>
+                        {revenueAccounts.map((a) => (
+                          <option key={a.id} value={a.id}>
+                            {a.code} — {a.name}
+                          </option>
+                        ))}
+                      </Select>
+                    </div>
+                    <div>
+                      <Label>Amount (TZS)</Label>
+                      <Input value={amount} onChange={(e) => setAmount(e.target.value)} required />
+                    </div>
+                    <div>
+                      <Label>Deposit to</Label>
+                      <Select
+                        value={depositKind}
+                        onChange={(e) => setDepositKind(e.target.value as DepositKind)}
+                      >
+                        <option value="bank">Bank / mobile</option>
+                        <option value="cash">Cash</option>
+                      </Select>
+                    </div>
+                    <div>
+                      {depositKind === 'bank' ? (
+                        <>
+                          <Label>Bank / mobile account</Label>
+                          <Select
+                            value={bankAccountId}
+                            onChange={(e) => setBankAccountId(e.target.value)}
+                            required
+                          >
+                            <option value="">Select account</option>
+                            {(banks.data?.data ?? []).map((b) => (
+                              <option key={b.id} value={b.id}>
+                                {b.code} — {b.name}
+                              </option>
+                            ))}
+                          </Select>
+                        </>
+                      ) : (
+                        <>
+                          <Label>Cash account</Label>
+                          <Select
+                            value={cashAccountId}
+                            onChange={(e) => setCashAccountId(e.target.value)}
+                            required
+                          >
+                            <option value="">Select cash account</option>
+                            {(cashAccounts.data?.data ?? []).map((c) => (
+                              <option key={c.id} value={c.id}>
+                                {c.code} — {c.name}
+                              </option>
+                            ))}
+                          </Select>
+                        </>
+                      )}
+                    </div>
+                    <div className="ua-revenue-compose__span2">
+                      <Label>Reference (optional)</Label>
+                      <Input
+                        value={reference}
+                        onChange={(e) => setReference(e.target.value)}
+                        placeholder="Receipt no. / narration"
+                      />
+                    </div>
+                  </div>
+                  <div className="ua-revenue-compose__actions">
+                    <Button disabled={createRevenue.isPending}>
+                      {createRevenue.isPending ? 'Posting…' : 'Record revenue'}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={() => {
+                        setFormOpen(false)
+                        setError('')
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </form>
+              </div>
+            </div>,
+            document.body,
+          )
+        : null}
 
       <section className="ua-revenue-desk" aria-label="Invoices">
         <div className="ua-revenue-desk__toolbar">
@@ -1095,7 +1147,7 @@ export function RevenuePage() {
           ) : null}
           {!invoices.isLoading && filteredInvoices.length ? (
             <div className="ua-revenue-table-card">
-              <table className="ua-revenue-table">
+              <table className="ua-revenue-table ua-revenue-table--full">
                 <colgroup>
                   <col className="ua-revenue-col-number" />
                   <col className="ua-revenue-col-customer" />
@@ -1134,13 +1186,30 @@ export function RevenuePage() {
                         <td className="ua-revenue-cell ua-revenue-cell--customer" title={invoice.customer?.name || ''}>
                           {invoice.customer?.name || '—'}
                         </td>
-                        <td className="ua-revenue-cell ua-revenue-cell--money">{money(invoice.total)}</td>
+                        <td className="ua-revenue-cell ua-revenue-cell--money ua-revenue-cell--total" data-label="Total">
+                          <div className="ua-revenue-amount-stack">
+                            <span className="ua-revenue-amount">{money(invoice.total)}</span>
+                            <span className="ua-revenue-amount-sub ua-revenue-amount-sub--mobile">
+                              Balance{' '}
+                              <span
+                                className={
+                                  Number(invoice.balance_due) > 0.009
+                                    ? 'ua-revenue-cell--balance-due'
+                                    : 'ua-revenue-cell--balance-clear'
+                                }
+                              >
+                                {money(invoice.balance_due)}
+                              </span>
+                            </span>
+                          </div>
+                        </td>
                         <td
-                          className={`ua-revenue-cell ua-revenue-cell--money${
+                          className={`ua-revenue-cell ua-revenue-cell--money ua-revenue-cell--balance${
                             Number(invoice.balance_due) > 0.009
                               ? ' ua-revenue-cell--balance-due'
                               : ' ua-revenue-cell--balance-clear'
                           }`}
+                          data-label="Balance"
                         >
                           {money(invoice.balance_due)}
                         </td>

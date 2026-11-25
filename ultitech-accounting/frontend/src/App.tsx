@@ -15,9 +15,10 @@ import { ErpIntegrationPage } from './pages/ErpIntegrationPage'
 import { FinancialStatementsPage } from './pages/FinancialStatementsPage'
 import { GovernancePage } from './pages/GovernancePage'
 import { InventoryPage } from './pages/InventoryPage'
+import { JournalDetailPage } from './pages/JournalDetailPage'
 import { JournalsPage } from './pages/JournalsPage'
 import { LoginPage } from './pages/LoginPage'
-import { PurchasesPage } from './pages/PurchasesPage'
+import { ExpensesPage, PurchasesPage } from './pages/PurchasesPage'
 import { ReconciliationPage } from './pages/ReconciliationPage'
 import { RevenuePage } from './pages/RevenuePage'
 import { SettingsPage } from './pages/SettingsPage'
@@ -50,6 +51,7 @@ function AppRoutes() {
       >
         <Route index element={<DashboardPage />} />
         <Route path="revenue" element={<RevenuePage />} />
+        <Route path="expenses" element={<ExpensesPage />} />
         <Route path="purchases" element={<PurchasesPage />} />
         <Route path="banking" element={<BankingPage />} />
         <Route path="banking/movements" element={<BankingMovementsPage />} />
@@ -58,6 +60,7 @@ function AppRoutes() {
         <Route path="inventory" element={<InventoryPage />} />
         <Route path="accounts" element={<AccountsPage />} />
         <Route path="journals" element={<JournalsPage />} />
+        <Route path="journals/:id" element={<JournalDetailPage />} />
         <Route path="trial-balance" element={<TrialBalancePage />} />
         <Route path="financial-statements" element={<FinancialStatementsPage />} />
         <Route path="tax" element={<TaxControlPage />} />

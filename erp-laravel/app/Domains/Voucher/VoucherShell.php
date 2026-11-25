@@ -30,6 +30,10 @@ final class VoucherShell
         $pageTitle = (string) ($cfg['pageTitle'] ?? 'Create Voucher');
         $headerTitle = (string) ($cfg['headerTitle'] ?? '');
         $clientCfg = is_array($cfg['clientCfg'] ?? null) ? $cfg['clientCfg'] : [];
+        $activeModule = strtolower(trim((string) ($cfg['activeModule'] ?? 'voucher')));
+        if ($activeModule === '') {
+            $activeModule = 'voucher';
+        }
 
         $cssUrl = $assets['assetBase'] . $assets['cssFile'] . '?v=' . $assets['cssVersion'];
         $jsUrl = $assets['assetBase'] . $assets['jsFile'] . '?v=' . $assets['jsVersion'];
@@ -56,8 +60,8 @@ final class VoucherShell
             'hideHeaderCompanyBranding' => true,
             'employeeHeaderExtraClass' => 'employee-header--create-voucher',
             'mainRootClass' => 'create-voucher-react-root',
-            // Keep sidebar + Google coach tip on Laravel /voucher/create (SCRIPT_NAME is not create-voucher.php).
-            'active_module' => 'voucher',
+            // Prefer desk module (accounting) when creating from Expenses / Purchases.
+            'active_module' => $activeModule,
         ];
     }
 

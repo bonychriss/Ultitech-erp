@@ -21,11 +21,13 @@ class TaxTransaction extends Model
         'source_id',
         'tax_date',
         'direction',
+        'supply_category',
         'taxable_amount',
         'tax_amount',
         'rate_percent',
         'journal_id',
         'status',
+        'memo',
     ];
 
     protected function casts(): array

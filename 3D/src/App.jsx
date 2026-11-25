@@ -39,6 +39,10 @@ export default function App() {
 
   // Light / Dark Theme
   const [theme, setTheme] = useState(() => localStorage.getItem('bcut-theme') || 'light');
+  const [textScale, setTextScale] = useState(() => {
+    const saved = Number(localStorage.getItem('bcut-text-scale'));
+    return [100, 112, 125, 150].includes(saved) ? saved : 100;
+  });
 
   // Removal Engine States
   const [removalMode, setRemovalMode] = useState('ai'); // 'ai' | 'chroma' | 'wand' | 'brush'
@@ -143,6 +147,11 @@ export default function App() {
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem('bcut-theme', theme);
   }, [theme]);
+
+  useEffect(() => {
+    document.documentElement.style.setProperty('--text-scale', String(textScale / 100));
+    localStorage.setItem('bcut-text-scale', String(textScale));
+  }, [textScale]);
 
   // Warm the AI model while the user is on the upload screen
   useEffect(() => {
@@ -522,6 +531,8 @@ export default function App() {
         hasImage={!!originalCanvas}
         theme={theme}
         setTheme={setTheme}
+        textScale={textScale}
+        setTextScale={setTextScale}
       />
 
       {/* Main Content Workspace */}

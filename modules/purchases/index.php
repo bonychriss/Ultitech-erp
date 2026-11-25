@@ -55,7 +55,7 @@ $expensesWebBase = function_exists('app_url')
 $assets['assetBase'] = $expensesWebBase . '/frontend/dist/assets/';
 $expensesApiBase = $expensesWebBase . '/api';
 
-$createVoucherQs = 'module=voucher&purpose=stock_purchase';
+$createVoucherQs = 'module=purchases&from=purchases&purpose=stock_purchase';
 $createVoucherUrl = function_exists('company_url')
     ? company_url('employee/create-voucher.php') . '?' . $createVoucherQs
     : (function_exists('app_url')

@@ -41,6 +41,17 @@ button.erp-chatbot-fab,
   pointer-events: auto;
 }
 
+/* iPhone/iPad: pin Support FAB to bottom-left so sidebar close cannot leave it mid-content. */
+@media (max-width: 991.98px) {
+  .erp-chatbot-dock:not(.is-dragging) {
+    left: 16px !important;
+    right: auto !important;
+    top: auto !important;
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px)) !important;
+    transform: none !important;
+  }
+}
+
 .erp-chatbot-speed {
   position: absolute;
   inset: 0;

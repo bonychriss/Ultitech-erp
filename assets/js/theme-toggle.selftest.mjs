@@ -14,7 +14,7 @@ function assert(cond, msg) {
   if (!cond) throw new Error(msg);
 }
 
-function createEnv(initialTheme) {
+function createEnv(initialTheme, prefersDark = false) {
   const store = new Map();
   if (initialTheme) store.set('theme', initialTheme);
   const listeners = {};
@@ -30,14 +30,32 @@ function createEnv(initialTheme) {
     setAttribute(k, v) { this.attrs[k] = String(v); },
     getAttribute(k) { return Object.prototype.hasOwnProperty.call(this.attrs, k) ? this.attrs[k] : null; },
     addEventListener() {},
+    querySelector() { return null; },
   };
+  const resolved = initialTheme === 'system'
+    ? (prefersDark ? 'dark' : 'light')
+    : (initialTheme === 'dark' ? 'dark' : 'light');
   const documentElement = {
-    attrs: { 'data-theme': initialTheme || 'light' },
+    attrs: {
+      'data-theme': resolved,
+      'data-theme-pref': initialTheme || 'light',
+    },
     setAttribute(k, v) { this.attrs[k] = String(v); },
     getAttribute(k) { return this.attrs[k] || null; },
   };
+  const mediaListeners = [];
   const global = {
     window: null,
+    matchMedia(query) {
+      return {
+        matches: prefersDark && String(query).includes('dark'),
+        media: query,
+        addEventListener(_type, fn) { mediaListeners.push(fn); },
+        addListener(fn) { mediaListeners.push(fn); },
+        removeEventListener() {},
+        removeListener() {},
+      };
+    },
     document: {
       readyState: 'complete',
       documentElement,
@@ -69,7 +87,7 @@ function createEnv(initialTheme) {
   };
   global.window = global;
   vm.runInNewContext(src, global, { filename: 'theme-toggle.js' });
-  return { global, store, btn, documentElement };
+  return { global, store, btn, documentElement, mediaListeners };
 }
 
 {
@@ -89,6 +107,23 @@ function createEnv(initialTheme) {
   global.erpThemeToggle.setTheme('light', { toast: false });
   assert(documentElement.getAttribute('data-theme') === 'light', 'back to light');
   assert(store.get('theme') === 'light', 'localStorage persists light');
+}
+
+{
+  const { global, store, documentElement } = createEnv('light', true);
+  global.erpThemeToggle.setTheme('system', { toast: false });
+  assert(store.get('theme') === 'system', 'localStorage persists system');
+  assert(documentElement.getAttribute('data-theme-pref') === 'system', 'pref attr system');
+  assert(documentElement.getAttribute('data-theme') === 'dark', 'system resolves to device dark');
+  assert(global.erpThemeToggle.getPreference() === 'system', 'getPreference system');
+}
+
+{
+  const { global, store, documentElement } = createEnv('system', false);
+  assert(global.erpThemeToggle.getPreference() === 'system', 'keeps system preference');
+  assert(documentElement.getAttribute('data-theme') === 'light', 'system resolves to device light');
+  global.erpThemeToggle.setTheme('dark', { toast: false });
+  assert(store.get('theme') === 'dark', 'explicit dark exits system');
 }
 
 console.log('theme-toggle.selftest: all checks passed');

@@ -10,6 +10,7 @@ function normalizeSettings(raw) {
     grace_period_minutes: Number(s.grace_period_minutes ?? 15),
     office_ips: ips,
     geofence_enabled: !!s.geofence_enabled,
+    biometric_required: s.biometric_required == null ? true : !!s.biometric_required,
     latitude: s.latitude != null && s.latitude !== '' ? Number(s.latitude) : null,
     longitude: s.longitude != null && s.longitude !== '' ? Number(s.longitude) : null,
     radius_meters: Number(s.radius_meters ?? 100) || 100,
@@ -81,6 +82,7 @@ const SECTIONS = [
   { id: 'working-hours', label: 'Working Hours' },
   { id: 'network-security', label: 'Network' },
   { id: 'location-settings', label: 'Location' },
+  { id: 'biometric-security', label: 'Biometrics' },
 ];
 
 export default function AttendanceSettings({ data }) {
@@ -238,6 +240,7 @@ export default function AttendanceSettings({ data }) {
           : 15,
         office_ips: form.office_ips,
         geofence_enabled: form.geofence_enabled ? 1 : 0,
+        biometric_required: form.biometric_required ? 1 : 0,
         latitude: form.latitude,
         longitude: form.longitude,
         radius_meters: Number.isFinite(form.radius_meters) ? form.radius_meters : 100,
@@ -516,6 +519,31 @@ export default function AttendanceSettings({ data }) {
                   </div>
                 </>
               ) : null}
+            </section>
+
+            <section className="att-settings__section" id="biometric-security">
+              <h2 className="att-settings__section-title">Smartphone Biometrics</h2>
+              <p className="att-settings__section-sub">
+                Require phone unlock (Face ID, fingerprint, or device passcode) before clock in or clock out.
+              </p>
+
+              <div className="att-settings__geo-toggle">
+                <div>
+                  <p className="att-settings__geo-title">Require phone unlock verification</p>
+                  <p className="att-settings__geo-desc">
+                    When on, staff must enroll a smartphone and unlock with Face ID, fingerprint, or passcode for every clock action.
+                    This confirms the responsible user is present, not only that their account is logged in.
+                  </p>
+                </div>
+                <label className="att-settings__switch" aria-label="Require phone unlock verification">
+                  <input
+                    type="checkbox"
+                    checked={!!form.biometric_required}
+                    onChange={(e) => setField('biometric_required', e.target.checked)}
+                  />
+                  <span className="att-settings__slider" />
+                </label>
+              </div>
             </section>
 
             <div className="att-settings__actions">

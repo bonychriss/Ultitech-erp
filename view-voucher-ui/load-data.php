@@ -1090,9 +1090,11 @@ function vv_load_view_payload(PDO $pdo, int $voucherId, array $opts = []): array
     $fromExpenses = ($fromDesk === 'expenses');
     if ($fromExpenses) {
         $expensesBack = function_exists('company_url')
-            ? company_url('modules/expenses/index')
-            : (function_exists('app_url') ? app_url('/modules/expenses/index.php') : '/modules/expenses/index.php');
-        $backLink = $vvJoinQs((string) $expensesBack, 'module=expenses');
+            ? company_url('accounting/ultitech-bridge') . '?module=accounting#/expenses'
+            : (function_exists('app_url')
+                ? app_url('/accounting/ultitech-bridge.php') . '?module=accounting#/expenses'
+                : '/accounting/ultitech-bridge.php?module=accounting#/expenses');
+        $backLink = (string) $expensesBack;
         $homeLink = function_exists('company_url')
             ? company_url('select-module')
             : (function_exists('app_url') ? app_url('/select-module.php') : '/select-module.php');
@@ -1100,9 +1102,11 @@ function vv_load_view_payload(PDO $pdo, int $voucherId, array $opts = []): array
     }
     if ($fromPurchases) {
         $purchasesBack = function_exists('company_url')
-            ? company_url('modules/purchases/index')
-            : (function_exists('app_url') ? app_url('/modules/purchases/index.php') : '/modules/purchases/index.php');
-        $backLink = $vvJoinQs((string) $purchasesBack, 'module=purchases');
+            ? company_url('accounting/ultitech-bridge') . '?module=accounting#/purchases'
+            : (function_exists('app_url')
+                ? app_url('/accounting/ultitech-bridge.php') . '?module=accounting#/purchases'
+                : '/accounting/ultitech-bridge.php?module=accounting#/purchases');
+        $backLink = (string) $purchasesBack;
         $homeLink = function_exists('company_url')
             ? company_url('select-module')
             : (function_exists('app_url') ? app_url('/select-module.php') : '/select-module.php');
@@ -1433,10 +1437,15 @@ function vv_load_view_payload(PDO $pdo, int $voucherId, array $opts = []): array
                 'commentReplyUrl' => app_url('/view-voucher-ui/api/comment-reply.php'),
                 'csrfToken' => csrf_token(),
                 'backUrl' => $backLink,
-                'backLabel' => $fromPurchases ? 'Back to Purchases' : 'Back',
+                'backLabel' => $fromPurchases
+                    ? 'Back to Purchases'
+                    : ($fromExpenses ? 'Back to Expenses' : 'Back'),
                 'fromPurchases' => $fromPurchases,
+                'fromExpenses' => $fromExpenses,
                 'editHref' => $editHref,
-                'markPaidUrl' => app_url(isAdmin() ? '/mark-paid.php' : '/employee/mark-paid.php'),
+                'markPaidUrl' => function_exists('company_url')
+                    ? company_url(isAdmin() ? 'mark-paid.php' : 'employee/mark-paid.php')
+                    : app_url(isAdmin() ? '/mark-paid.php' : '/employee/mark-paid.php'),
                 // Always absolute under company slug so /ultimate/view-voucher.php can POST approve.
                 'approveUrl' => function_exists('company_url')
                     ? company_url('employee/approve_voucher.php')

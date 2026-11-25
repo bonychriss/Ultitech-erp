@@ -2,8 +2,18 @@
 // Immediate theme loading to prevent style flashing
 echo '<script>
 (function() {
-    var t = localStorage.getItem("theme") || "light";
-    document.documentElement.setAttribute("data-theme", t);
+    try {
+        var p = localStorage.getItem("theme") || "light";
+        if (p !== "light" && p !== "dark" && p !== "system") p = "light";
+        var t = p === "system"
+            ? (window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")
+            : p;
+        document.documentElement.setAttribute("data-theme-pref", p);
+        document.documentElement.setAttribute("data-theme", t);
+    } catch (e) {
+        document.documentElement.setAttribute("data-theme-pref", "light");
+        document.documentElement.setAttribute("data-theme", "light");
+    }
 })();
 </script>';
 

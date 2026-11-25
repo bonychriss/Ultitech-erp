@@ -50,13 +50,13 @@ class ErpIntegrationController extends Controller
         $payload = $request->validate([
             'scopes' => ['nullable', 'array'],
             'scopes.*' => ['string', 'in:accounts,customers,suppliers,invoices,journals,wallets'],
-            'journal_limit' => ['nullable', 'integer', 'min:1', 'max:500'],
+            'journal_limit' => ['nullable', 'integer', 'min:1', 'max:5000'],
         ]);
 
         $run = $this->sync->pull(
             $request->attributes->get('book'),
             $request->user(),
-            $payload['scopes'] ?? ['accounts', 'customers', 'suppliers', 'invoices', 'journals'],
+            $payload['scopes'] ?? ['accounts', 'customers', 'suppliers', 'invoices', 'journals', 'wallets'],
             $payload['journal_limit'] ?? null
         );
 

@@ -9646,10 +9646,10 @@ function erp_render_theme_toggle_html(string $extraClass = '', string $id = 'the
     return (string) ob_get_clean();
 }
 
-/** Inline script: apply saved theme before first paint (prevents flash). */
+/** Inline script: apply saved theme before first paint (prevents flash). Supports light|dark|system. */
 function erp_get_theme_init_html(): string
 {
-    return '<script id="erp-theme-init">(function(){try{var t=localStorage.getItem("theme")||"light";document.documentElement.setAttribute("data-theme",t);}catch(e){document.documentElement.setAttribute("data-theme","light");}})();</script>' . "\n";
+    return '<script id="erp-theme-init">(function(){try{var p=localStorage.getItem("theme")||"light";if(p!=="light"&&p!=="dark"&&p!=="system")p="light";var t=p==="system"?(window.matchMedia&&matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"):p;document.documentElement.setAttribute("data-theme-pref",p);document.documentElement.setAttribute("data-theme",t);}catch(e){document.documentElement.setAttribute("data-theme-pref","light");document.documentElement.setAttribute("data-theme","light");}})();</script>' . "\n";
 }
 
 /**
@@ -9688,10 +9688,12 @@ function erp_accessibility_defaults(): array
 function erp_normalize_accessibility_prefs(array $raw): array
 {
     $defaults = erp_accessibility_defaults();
-    $scale = trim((string) ($raw['textScale'] ?? $raw['text_scale'] ?? $defaults['textScale']));
-    if (!in_array($scale, ['100', '112', '125', '150'], true)) {
-        $scale = $defaults['textScale'];
+    $scaleRaw = trim((string) ($raw['textScale'] ?? $raw['text_scale'] ?? $defaults['textScale']));
+    $scaleNum = (int) round((float) $scaleRaw);
+    if ($scaleNum < 100 || $scaleNum > 200) {
+        $scaleNum = (int) $defaults['textScale'];
     }
+    $scale = (string) $scaleNum;
 
     $bool = static function ($value, bool $default = false): bool {
         if ($value === null) {
@@ -9810,7 +9812,9 @@ function erp_get_accessibility_init_html(): string
     return '<script id="erp-a11y-init">(function(){try{var d=' . $json
         . ';try{var o=JSON.parse(localStorage.getItem("erp-a11y")||"null");if(o&&typeof o==="object"){for(var k in o){if(Object.prototype.hasOwnProperty.call(o,k))d[k]=o[k];}}}catch(e){}'
         . 'var r=document.documentElement;'
-        . 'r.setAttribute("data-a11y-text",String(d.textScale||"100"));'
+        . 'var s=parseInt(d.textScale,10);if(!isFinite(s)||s<100||s>200)s=100;'
+        . 'r.setAttribute("data-a11y-text",String(s));'
+        . 'r.style.setProperty("--erp-a11y-text-scale",s+"%");'
         . 'r.setAttribute("data-a11y-contrast",d.highContrast?"1":"0");'
         . 'r.setAttribute("data-a11y-motion",d.reduceMotion?"1":"0");'
         . 'r.setAttribute("data-a11y-underline",d.underlineLinks?"1":"0");'
@@ -18600,6 +18604,9 @@ function ensureAttendanceClockModuleSchema()
             try {
                 $pdo->exec("ALTER TABLE attendance_settings ADD COLUMN geofence_enabled TINYINT(1) NOT NULL DEFAULT 1");
             } catch (PDOException $eAdd) {}
+            try {
+                $pdo->exec("ALTER TABLE attendance_settings ADD COLUMN biometric_required TINYINT(1) NOT NULL DEFAULT 1");
+            } catch (PDOException $eAdd) {}
             repairAttendanceSettingsTable($pdo);
             $settingsCount = (int) $pdo->query('SELECT COUNT(*) FROM attendance_settings WHERE id = 1')->fetchColumn();
             if ($settingsCount === 0) {
@@ -18664,6 +18671,23 @@ function ensureAttendanceClockModuleSchema()
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
     } catch (PDOException $e) {
         error_log('ensureAttendanceClockModuleSchema(user_tasks): ' . $e->getMessage());
+    }
+    try {
+        $pdo->exec("CREATE TABLE IF NOT EXISTS attendance_webauthn_credentials (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            user_id INT NOT NULL,
+            credential_id VARBINARY(255) NOT NULL,
+            public_key TEXT NOT NULL,
+            sign_count INT UNSIGNED NOT NULL DEFAULT 0,
+            device_label VARCHAR(120) NULL,
+            aaguid VARCHAR(64) NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            last_used_at DATETIME NULL,
+            UNIQUE KEY uq_att_webauthn_cred (credential_id),
+            INDEX idx_att_webauthn_user (user_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+    } catch (PDOException $e) {
+        error_log('ensureAttendanceClockModuleSchema(webauthn): ' . $e->getMessage());
     }
     $auxReady = true;
 }

@@ -4,6 +4,7 @@
  */
 require_once dirname(__DIR__) . '/config/database.php';
 require_once dirname(__DIR__) . '/classes/Attendance.php';
+require_once dirname(__DIR__) . '/classes/AttendanceWebAuthn.php';
 requireLogin();
 
 header('Content-Type: application/json; charset=utf-8');
@@ -35,7 +36,54 @@ if ($userId <= 0) {
     exit;
 }
 
-$attendance = new Attendance($pdo);
+try {
+    if (function_exists('ensureAttendanceClockModuleSchema')) {
+        ensureAttendanceClockModuleSchema();
+    }
+    $attendance = new Attendance($pdo);
+    $webauthn = new AttendanceWebAuthn($pdo);
+} catch (Throwable $e) {
+    error_log('attendance api bootstrap: ' . $e->getMessage() . ' @ ' . $e->getFile() . ':' . $e->getLine());
+    http_response_code(500);
+    echo json_encode([
+        'success' => false,
+        'message' => 'Attendance biometric service failed to start. Please try again.',
+        'detail' => (defined('APP_DEBUG') && APP_DEBUG) ? $e->getMessage() : null,
+    ]);
+    exit;
+}
+
+function attendance_webauthn_public_key_payload($publicKey)
+{
+    if ($publicKey === null) {
+        return null;
+    }
+    try {
+        $json = json_encode($publicKey, JSON_THROW_ON_ERROR);
+        return json_decode($json, true);
+    } catch (Throwable $e) {
+        error_log('attendance webauthn json: ' . $e->getMessage());
+        return null;
+    }
+}
+
+function attendance_user_names(PDO $pdo, int $userId): array
+{
+    try {
+        $stmt = $pdo->prepare('SELECT username, full_name FROM users WHERE id = ? LIMIT 1');
+        $stmt->execute([$userId]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+        return [
+            'username' => (string) ($row['username'] ?? ('user' . $userId)),
+            'display' => (string) ($row['full_name'] ?? $row['username'] ?? ('User ' . $userId)),
+        ];
+    } catch (Throwable $e) {
+        return [
+            'username' => 'user' . $userId,
+            'display' => 'User ' . $userId,
+        ];
+    }
+}
 
 function attendance_pending_tasks(PDO $pdo, int $userId): array
 {
@@ -54,10 +102,26 @@ function attendance_pending_tasks(PDO $pdo, int $userId): array
     }
 }
 
-function attendance_desk_payload(Attendance $attendance, PDO $pdo, int $userId, ?string $historyMonth = null): array
+function attendance_desk_payload(Attendance $attendance, PDO $pdo, int $userId, ?string $historyMonth = null, ?AttendanceWebAuthn $webauthn = null): array
 {
     $currentIp = $attendance->getCurrentUserIp();
     $month = $attendance->normalizeHistoryMonth($historyMonth);
+    $biometric = null;
+    try {
+        $wa = $webauthn instanceof AttendanceWebAuthn ? $webauthn : new AttendanceWebAuthn($pdo);
+        $biometric = $wa->statusForUser($userId);
+    } catch (Throwable $e) {
+        $biometric = [
+            'required' => false,
+            'enrolled' => false,
+            'count' => 0,
+            'max' => AttendanceWebAuthn::MAX_CREDENTIALS_PER_USER,
+            'devices' => [],
+            'library_ok' => false,
+            'secure_ok' => false,
+            'rp_id' => '',
+        ];
+    }
     return [
         'todayRecord' => $attendance->getTodayRecord($userId) ?: null,
         'history' => $attendance->getHistory($userId, $month) ?: [],
@@ -68,6 +132,7 @@ function attendance_desk_payload(Attendance $attendance, PDO $pdo, int $userId, 
         'pendingTasks' => attendance_pending_tasks($pdo, $userId),
         'isIpAllowed' => $attendance->isIpAllowed($currentIp),
         'currentIp' => $currentIp,
+        'biometric' => $biometric,
     ];
 }
 
@@ -80,8 +145,83 @@ $lon = isset($payload['longitude']) && $payload['longitude'] !== '' && $payload[
 
 $historyMonth = isset($payload['history_month']) ? (string) $payload['history_month'] : null;
 
+if (str_starts_with($action, 'webauthn_')) {
+    try {
+        if ($action === 'webauthn_status') {
+            echo json_encode([
+                'success' => true,
+                'message' => '',
+                'data' => [
+                    'biometric' => $webauthn->statusForUser($userId),
+                ],
+            ]);
+            exit;
+        }
+
+        if ($action === 'webauthn_register_options') {
+            $names = attendance_user_names($pdo, $userId);
+            $result = $webauthn->createRegisterOptions($userId, $names['username'], $names['display']);
+            echo json_encode([
+                'success' => !empty($result['success']),
+                'message' => (string) ($result['message'] ?? ''),
+                'publicKey' => attendance_webauthn_public_key_payload($result['publicKey'] ?? null),
+                'data' => ['biometric' => $webauthn->statusForUser($userId)],
+            ]);
+            exit;
+        }
+
+        if ($action === 'webauthn_register') {
+            $client = is_array($payload['credential'] ?? null) ? $payload['credential'] : [];
+            $deviceLabel = isset($payload['device_label']) ? (string) $payload['device_label'] : null;
+            $result = $webauthn->finishRegister($userId, $client, $deviceLabel);
+            echo json_encode([
+                'success' => !empty($result['success']),
+                'message' => (string) ($result['message'] ?? ''),
+                'data' => array_merge(
+                    attendance_desk_payload($attendance, $pdo, $userId, $historyMonth, $webauthn),
+                    is_array($result['data'] ?? null) ? $result['data'] : ['biometric' => $webauthn->statusForUser($userId)]
+                ),
+            ]);
+            exit;
+        }
+
+        if ($action === 'webauthn_assert_options') {
+            $result = $webauthn->createAssertOptions($userId);
+            echo json_encode([
+                'success' => !empty($result['success']),
+                'message' => (string) ($result['message'] ?? ''),
+                'publicKey' => attendance_webauthn_public_key_payload($result['publicKey'] ?? null),
+                'data' => ['biometric' => $webauthn->statusForUser($userId)],
+            ]);
+            exit;
+        }
+
+        if ($action === 'webauthn_remove') {
+            $credId = (int) ($payload['credential_row_id'] ?? $payload['id'] ?? 0);
+            $result = $webauthn->removeCredential($userId, $credId);
+            echo json_encode([
+                'success' => !empty($result['success']),
+                'message' => (string) ($result['message'] ?? ''),
+                'data' => array_merge(
+                    attendance_desk_payload($attendance, $pdo, $userId, $historyMonth, $webauthn),
+                    is_array($result['data'] ?? null) ? $result['data'] : ['biometric' => $webauthn->statusForUser($userId)]
+                ),
+            ]);
+            exit;
+        }
+    } catch (Throwable $e) {
+        error_log('attendance webauthn action ' . $action . ': ' . $e->getMessage() . ' @ ' . $e->getFile() . ':' . $e->getLine());
+        http_response_code(500);
+        echo json_encode([
+            'success' => false,
+            'message' => 'Biometric request failed: ' . $e->getMessage(),
+        ]);
+        exit;
+    }
+}
+
 if ($action === 'history') {
-    $desk = attendance_desk_payload($attendance, $pdo, $userId, $historyMonth);
+    $desk = attendance_desk_payload($attendance, $pdo, $userId, $historyMonth, $webauthn);
     echo json_encode([
         'success' => true,
         'message' => '',
@@ -90,6 +230,7 @@ if ($action === 'history') {
             'historyMonth' => $desk['historyMonth'],
             'historyMonthLabel' => $desk['historyMonthLabel'],
             'historyMonths' => $desk['historyMonths'],
+            'biometric' => $desk['biometric'],
         ],
     ]);
     exit;
@@ -130,6 +271,18 @@ if ($action === 'analytics') {
 }
 
 if ($action === 'clock_in') {
+    $assertion = is_array($payload['webauthn'] ?? null) ? $payload['webauthn'] : null;
+    $bioCheck = $webauthn->verifyAssertion($userId, $assertion);
+    if (empty($bioCheck['success'])) {
+        echo json_encode([
+            'success' => false,
+            'message' => (string) ($bioCheck['message'] ?? 'Biometric verification required.'),
+            'data' => attendance_desk_payload($attendance, $pdo, $userId, $historyMonth, $webauthn),
+            'biometricRequired' => true,
+        ]);
+        exit;
+    }
+
     $pendingBefore = attendance_pending_tasks($pdo, $userId);
     $carriedOverCount = count($pendingBefore);
     $result = $attendance->clockIn($userId, $lat, $lon);
@@ -138,7 +291,7 @@ if ($action === 'clock_in') {
         echo json_encode([
             'success' => false,
             'message' => (string) ($result['message'] ?? 'Clock in failed.'),
-            'data' => attendance_desk_payload($attendance, $pdo, $userId, $historyMonth),
+            'data' => attendance_desk_payload($attendance, $pdo, $userId, $historyMonth, $webauthn),
         ]);
         exit;
     }
@@ -177,12 +330,24 @@ if ($action === 'clock_in') {
         'success' => true,
         'message' => 'Clocked in successfully.',
         'clockInSuccess' => $clockInSuccess,
-        'data' => attendance_desk_payload($attendance, $pdo, $userId, $historyMonth),
+        'data' => attendance_desk_payload($attendance, $pdo, $userId, $historyMonth, $webauthn),
     ]);
     exit;
 }
 
 if ($action === 'clock_out') {
+    $assertion = is_array($payload['webauthn'] ?? null) ? $payload['webauthn'] : null;
+    $bioCheck = $webauthn->verifyAssertion($userId, $assertion);
+    if (empty($bioCheck['success'])) {
+        echo json_encode([
+            'success' => false,
+            'message' => (string) ($bioCheck['message'] ?? 'Biometric verification required.'),
+            'data' => attendance_desk_payload($attendance, $pdo, $userId, $historyMonth, $webauthn),
+            'biometricRequired' => true,
+        ]);
+        exit;
+    }
+
     $pendingAtClockOut = attendance_pending_tasks($pdo, $userId);
     $completedIds = [];
     if (!empty($payload['completed_task_ids']) && is_array($payload['completed_task_ids'])) {
@@ -194,7 +359,7 @@ if ($action === 'clock_out') {
         echo json_encode([
             'success' => false,
             'message' => (string) ($result['message'] ?? 'Clock out failed.'),
-            'data' => attendance_desk_payload($attendance, $pdo, $userId, $historyMonth),
+            'data' => attendance_desk_payload($attendance, $pdo, $userId, $historyMonth, $webauthn),
         ]);
         exit;
     }
@@ -235,7 +400,7 @@ if ($action === 'clock_out') {
         'success' => true,
         'message' => 'Clocked out successfully.',
         'clockOutSuccess' => $clockOutSuccess,
-        'data' => attendance_desk_payload($attendance, $pdo, $userId, $historyMonth),
+        'data' => attendance_desk_payload($attendance, $pdo, $userId, $historyMonth, $webauthn),
     ]);
     exit;
 }

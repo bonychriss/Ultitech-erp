@@ -99,7 +99,7 @@ $forgotPasswordUrl = function_exists('company_url') ? company_url('forgot-passwo
         <span class="ps-sec-icon"><i class="fas fa-shield-halved"></i></span>
         <div>
             <h2 class="section-title">Security &amp; Password</h2>
-            <p class="section-subtitle">Manage your password and authentication settings.</p>
+            <p class="section-subtitle">Manage your password and smartphone unlock for attendance.</p>
         </div>
     </div>
     <?php if (!empty($userHasPassword)): ?>
@@ -168,4 +168,11 @@ $forgotPasswordUrl = function_exists('company_url') ? company_url('forgot-passwo
         </div>
     </form>
     <?php endif; ?>
+
+    <div class="ps-bio-block" id="attendance-biometric">
+        <div class="ps-bio-divider" aria-hidden="true"></div>
+        <div id="psBioRoot" class="ps-bio-panel" aria-live="polite">
+            <p class="ps-bio-help">Loading biometric settings…</p>
+        </div>
+    </div>
 </section>

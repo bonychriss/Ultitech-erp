@@ -22,7 +22,8 @@ class ViewVoucherPageController extends Controller
         $clientCfg = is_array($erp['client_cfg'] ?? null) ? $erp['client_cfg'] : [];
         $hideSidebar = !empty($erp['hide_sidebar']);
         $fromPurchases = !empty($erp['from_purchases']);
-        $activeModule = (string) ($erp['active_module'] ?? ($fromPurchases ? 'accounting' : 'voucher'));
+        $fromExpenses = !empty($erp['from_expenses']);
+        $activeModule = (string) ($erp['active_module'] ?? (($fromPurchases || $fromExpenses) ? 'accounting' : 'voucher'));
         $viewData = (new ViewVoucherShell())->viewData([
             'pageTitle' => (string) ($erp['page_title'] ?? 'Payment Voucher'),
             'headerTitle' => (string) ($erp['header_title'] ?? 'Voucher Preview'),
@@ -30,7 +31,7 @@ class ViewVoucherPageController extends Controller
             'headerRightHtml' => (string) ($erp['header_right_html'] ?? ''),
             'clientCfg' => $clientCfg,
             'hideSidebar' => $hideSidebar,
-            'fromPurchases' => $fromPurchases,
+            'fromPurchases' => $fromPurchases || $fromExpenses,
             'activeModule' => $activeModule,
         ]);
 

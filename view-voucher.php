@@ -219,7 +219,9 @@ $vvConfig = [
 
 $vvFromPurchases = strtolower(trim((string) ($_GET['from'] ?? ''))) === 'purchases'
     || !empty($vvData['actions']['fromPurchases']);
-$vvFromExpenses = strtolower(trim((string) ($_GET['from'] ?? ''))) === 'expenses';
+$vvFromExpenses = strtolower(trim((string) ($_GET['from'] ?? ''))) === 'expenses'
+    || !empty($vvData['actions']['fromExpenses']);
+$vvFromAccountingDesk = $vvFromPurchases || $vvFromExpenses;
 $vvBreadcrumbHome = $vvData['breadcrumbs']['home'];
 $vvBreadcrumbAll = $vvData['breadcrumbs']['all'];
 $vvBackUrl = (string) ($vvData['actions']['backUrl'] ?? $vvBreadcrumbHome);
@@ -229,8 +231,8 @@ $vvCrumbLink = static function (string $url, string $label, bool $active = false
 };
 $vvCrumbSep = '<span class="vv-breadcrumb-sep">/</span>';
 $vvAccountingUrl = function_exists('company_url')
-    ? company_url('modules/accounting/index') . '?module=accounting'
-    : (function_exists('app_url') ? app_url('/modules/accounting/index.php') . '?module=accounting' : '../accounting/index.php?module=accounting');
+    ? company_url('accounting/ultitech-bridge') . '?module=accounting'
+    : (function_exists('app_url') ? app_url('/accounting/ultitech-bridge.php') . '?module=accounting' : '../accounting/ultitech-bridge.php?module=accounting');
 $vvCrumbMiddle = $vvCrumbLink($vvBreadcrumbAll, 'Vouchers', true);
 if ($vvFromPurchases) {
     $vvCrumbMiddle = $vvCrumbLink($vvAccountingUrl, 'Accounting') . $vvCrumbSep
@@ -252,10 +254,10 @@ $employeeHeaderRightHtml = '<div class="vv-header-status-actions no-print">'
     . '</div>';
 
 // Render via erp-laravel (ViewVoucherShell + React view-voucher-ui).
-if ($vvFromPurchases) {
-    // Same sidebar context as modules/purchases/index (path forces accounting nav).
-    $_GET['module'] = 'purchases';
-    $_SESSION['active_module'] = 'purchases';
+if ($vvFromAccountingDesk) {
+    // Keep New Accounting sidebar (Expenses / Purchases), not Payment Voucher.
+    $_GET['module'] = 'accounting';
+    $_SESSION['active_module'] = 'accounting';
     $active_module = 'accounting';
 } else {
     if (!isset($_GET['module']) || (string) $_GET['module'] === '') {
@@ -291,7 +293,7 @@ $GLOBALS['ERP_VOUCHER_CONTEXT'] = [
     'full_name' => (string) ($_SESSION['full_name'] ?? ''),
     'company_id' => (int) ($_SESSION['company_id'] ?? 0),
     'company_slug' => $slug,
-    'back_url' => ($vvFromPurchases || $vvFromExpenses) ? $vvBackUrl : $backUrl,
+    'back_url' => $vvFromAccountingDesk ? $vvBackUrl : $backUrl,
     'voucher_url' => $publicUrl,
     'app_root' => rtrim((string) (function_exists('app_url') ? app_url('/') : '/public_html'), '/'),
     'db_name' => $dbName !== '' ? $dbName : (defined('DB_NAME') ? (string) DB_NAME : ''),
@@ -299,12 +301,13 @@ $GLOBALS['ERP_VOUCHER_CONTEXT'] = [
     'is_finance' => function_exists('isFinance') && isFinance(),
     'module' => isset($_GET['module']) ? (string) $_GET['module'] : 'voucher',
     'page_title' => 'Payment Voucher - ' . (string) ($vvData['voucher']['voucher_no'] ?? ''),
-    'header_title' => $vvFromPurchases ? (string) ($vvData['voucher']['voucher_no'] ?? 'Voucher') : 'Voucher Preview',
+    'header_title' => $vvFromAccountingDesk ? (string) ($vvData['voucher']['voucher_no'] ?? 'Voucher') : 'Voucher Preview',
     'header_subtitle' => $employeeHeaderSubtitle,
     'header_right_html' => $employeeHeaderRightHtml,
     'hide_sidebar' => false,
     'from_purchases' => $vvFromPurchases,
-    'active_module' => $vvFromPurchases ? 'accounting' : 'voucher',
+    'from_expenses' => $vvFromExpenses,
+    'active_module' => $vvFromAccountingDesk ? 'accounting' : 'voucher',
     'client_cfg' => $vvConfig,
 ];
 

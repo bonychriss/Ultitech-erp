@@ -9,7 +9,6 @@ import {
   HiOutlineDocumentDuplicate,
   HiOutlineDocumentText,
   HiOutlineEllipsisVertical,
-  HiOutlineMagnifyingGlass,
   HiOutlinePencilSquare,
   HiOutlinePlus,
   HiOutlineTrash,
@@ -17,7 +16,6 @@ import {
   HiOutlineXCircle,
   HiOutlineXMark,
 } from 'react-icons/hi2';
-import './products-desk.css';
 import './purchases-desk.css';
 import PurchaseKpiTraceModal from './PurchaseKpiTraceModal';
 
@@ -160,22 +158,22 @@ function formatDate(d) {
   });
 }
 
-function StatusBadge({ status, label, className }) {
-  const tone = String(className || '')
-    .replace('po-desk-badge--', 'po-desk-status--')
-    .trim();
-  return (
-    <span className={`po-desk-status ${tone || 'po-desk-status--draft'}`} title={status || label || ''}>
-      {label || status || '—'}
-    </span>
-  );
+function statusTone(status, className) {
+  const raw = `${String(className || '')} ${String(status || '')}`.toLowerCase();
+  if (raw.includes('received')) return 'po-ua-status--received';
+  if (raw.includes('approved')) return 'po-ua-status--approved';
+  if (raw.includes('reject')) return 'po-ua-status--rejected';
+  if (raw.includes('pending') || raw.includes('awaiting') || raw.includes('negotiation') || raw.includes('supplier')) {
+    return 'po-ua-status--pending';
+  }
+  if (raw.includes('draft')) return 'po-ua-status--draft';
+  return 'po-ua-status--draft';
 }
 
-function TypeBadge({ type }) {
-  const isImport = type === 'import';
+function StatusBadge({ status, label, className }) {
   return (
-    <span className={`po-desk-badge ${isImport ? 'po-desk-badge--import' : 'po-desk-badge--domestic'}`}>
-      {isImport ? 'Abroad' : 'Internal'}
+    <span className={`po-ua-status ${statusTone(status, className)}`} title={status || label || ''}>
+      {label || status || '—'}
     </span>
   );
 }
@@ -466,6 +464,18 @@ export default function PurchasesList({ data }) {
 
   const filtersActive = typeFilter !== 'all' || statusFilter !== '';
 
+  const typeCounts = useMemo(() => {
+    const base = purchases.filter((po) => {
+      if (statusFilter && String(po.status || '') !== statusFilter) return false;
+      return poMatchesQuery(search, po);
+    });
+    return {
+      all: base.length,
+      domestic: base.filter((po) => po.purchase_type !== 'import').length,
+      import: base.filter((po) => po.purchase_type === 'import').length,
+    };
+  }, [purchases, search, statusFilter]);
+
   const applyFilters = () => {
     setTypeFilter(draftType);
     setStatusFilter(draftStatus);
@@ -524,429 +534,454 @@ export default function PurchasesList({ data }) {
 
   if (booting) {
     return (
-      <div className="prod-desk-page" aria-busy="true">
-        <div className="prod-desk-page-header">
-          <div className="prod-desk-page-header-search">
-            <div className="prod-desk-search-field">
-              <span className="prod-desk-bone prod-desk-bone--name" style={{ height: 36, borderRadius: 9999 }} />
-            </div>
-          </div>
-        </div>
+      <div className="po-ua" aria-busy="true">
+        <div className="po-ua-loading">Loading purchase orders…</div>
       </div>
     );
   }
 
+  const typeFilterOptions = [
+    ['all', 'All', typeCounts.all],
+    ['domestic', 'Internal', typeCounts.domestic],
+    ['import', 'Abroad', typeCounts.import],
+  ];
+
   return (
-    <div className="prod-desk-page po-desk">
-      <div className="prod-desk-page-header">
-        <div className="prod-desk-page-header-search">
-          <div className="prod-desk-search-field">
-            <HiOutlineMagnifyingGlass className="prod-desk-search-icon" aria-hidden="true" />
-            <input
-              type="search"
-              className="prod-desk-search-input"
-              placeholder="Search PO #, supplier, product..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              aria-label="Search purchase orders"
-            />
-            {search.trim() ? (
-              <button
-                type="button"
-                className="po-desk-search-clear"
-                onClick={() => setSearch('')}
-                aria-label="Clear search"
-              >
-                <HiOutlineXMark size={16} />
-              </button>
-            ) : null}
-          </div>
+    <div className="po-ua">
+      <div className="po-ua-header">
+        <div className="po-ua-search-wrap">
+          <input
+            type="search"
+            className="po-ua-search"
+            placeholder="Search number, supplier, product…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            aria-label="Search purchase orders"
+          />
         </div>
 
-        <div className="prod-desk-page-header-actions">
-          <div className="prod-desk-filter-wrap" ref={filterWrapRef}>
+        <div className="po-ua-header-actions">
+          <div className={`po-ua-filter-dropdown${filtersOpen ? ' is-open' : ''}`} ref={filterWrapRef}>
             <button
               type="button"
-              className={`prod-desk-filter-btn${filtersOpen || filtersActive ? ' is-active' : ''}`}
+              className={`po-ua-filter-btn${filtersOpen || filtersActive ? ' is-active' : ''}`}
               onClick={() => {
                 setDraftType(typeFilter);
                 setDraftStatus(statusFilter);
                 setFiltersOpen((v) => !v);
               }}
               aria-expanded={filtersOpen}
+              aria-haspopup="dialog"
               title="Filters"
+              aria-label="Filters"
             >
               <HiOutlineAdjustmentsHorizontal size={18} aria-hidden="true" />
-              {filtersActive ? <span className="prod-desk-filter-dot" aria-hidden="true" /> : null}
+              {filtersActive ? <span className="po-ua-filter-dot" aria-hidden="true" /> : null}
             </button>
             {filtersOpen ? (
-              <div className="prod-desk-filter-panel po-desk-filter-panel" role="dialog" aria-label="Purchase filters">
-                <div className="po-desk-filters-head">
-                  <div>
-                    <h2>Filters</h2>
-                    <p>Narrow by type and status.</p>
-                  </div>
-                  <button type="button" className="po-desk-filters-close" onClick={() => setFiltersOpen(false)} aria-label="Close">
-                    <HiOutlineXMark size={16} />
+              <div className="po-ua-filter-panel" role="dialog" aria-label="Filter purchase orders">
+                <div className="po-ua-filter-panel__head">
+                  <div className="po-ua-filter-panel__heading">Filters</div>
+                  <button
+                    type="button"
+                    className="po-ua-filter-clear"
+                    disabled={!filtersActive}
+                    onClick={clearAdvancedFilters}
+                  >
+                    Reset
                   </button>
                 </div>
-                <div className="prod-desk-filter-grid">
-                  <div>
-                    <label htmlFor="po-filter-type">Type</label>
-                    <select
-                      id="po-filter-type"
-                      value={draftType}
-                      onChange={(e) => setDraftType(e.target.value)}
+
+                <div className="po-ua-filter-panel__title">Type</div>
+                <div className="po-ua-filter-panel__options">
+                  {[
+                    ['all', 'All'],
+                    ['domestic', 'Internal'],
+                    ['import', 'Abroad'],
+                  ].map(([key, label]) => (
+                    <button
+                      key={key}
+                      type="button"
+                      className={`po-ua-filter-option${draftType === key ? ' is-active' : ''}`}
+                      onClick={() => setDraftType(key)}
                     >
-                      <option value="all">All</option>
-                      <option value="domestic">Internal</option>
-                      <option value="import">Abroad</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label htmlFor="po-filter-status">Status</label>
-                    <select
-                      id="po-filter-status"
-                      value={draftStatus}
-                      onChange={(e) => setDraftStatus(e.target.value)}
-                    >
-                      <option value="">All statuses</option>
-                      {statusOptions.map((o) => (
-                        <option key={o.value} value={o.value}>
-                          {o.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                      <span>{label}</span>
+                    </button>
+                  ))}
                 </div>
-                <div className="prod-desk-filter-actions">
-                  <button type="button" className="prod-desk-btn prod-desk-btn-secondary" onClick={clearAdvancedFilters}>
-                    Clear
+
+                <div className="po-ua-filter-panel__title">Status</div>
+                <div className="po-ua-filter-panel__options">
+                  <button
+                    type="button"
+                    className={`po-ua-filter-option${draftStatus === '' ? ' is-active' : ''}`}
+                    onClick={() => setDraftStatus('')}
+                  >
+                    <span>All statuses</span>
                   </button>
-                  <button type="button" className="prod-desk-btn prod-desk-btn-primary" onClick={applyFilters}>
-                    Apply
+                  {statusOptions.map((o) => (
+                    <button
+                      key={o.value}
+                      type="button"
+                      className={`po-ua-filter-option${draftStatus === o.value ? ' is-active' : ''}`}
+                      onClick={() => setDraftStatus(o.value)}
+                    >
+                      <span>{o.label}</span>
+                    </button>
+                  ))}
+                </div>
+
+                <div className="po-ua-filter-panel__footer">
+                  <button type="button" className="po-ua-btn po-ua-btn--primary po-ua-btn--block" onClick={applyFilters}>
+                    Done
                   </button>
                 </div>
               </div>
             ) : null}
           </div>
 
-          <a href={createDomesticUrl} className="prod-desk-btn prod-desk-btn-primary">
+          <a href={createDomesticUrl} className="po-ua-btn po-ua-btn--primary">
             <HiOutlinePlus size={16} aria-hidden="true" />
-            <span className="po-desk-btn-label-desktop">New PO</span>
-            <span className="po-desk-btn-label-mobile">New</span>
+            <span className="po-ua-btn-label-desktop">Create PO</span>
+            <span className="po-ua-btn-label-mobile">Create</span>
           </a>
         </div>
       </div>
 
-      {filtersActive ? (
-        <div className="po-desk-active-filters">
-          {typeFilter !== 'all' ? (
-            <button
-              type="button"
-              className="po-desk-filter-chip"
-              onClick={() => {
-                setTypeFilter('all');
-                setDraftType('all');
-              }}
-            >
-              Type: {typeFilter === 'import' ? 'Abroad' : 'Internal'}
-              <HiOutlineXMark size={12} />
-            </button>
-          ) : null}
-          {statusFilter ? (
-            <button
-              type="button"
-              className="po-desk-filter-chip"
-              onClick={() => {
-                setStatusFilter('');
-                setDraftStatus('');
-              }}
-            >
-              Status: {statusOptions.find((o) => o.value === statusFilter)?.label || statusFilter}
-              <HiOutlineXMark size={12} />
-            </button>
-          ) : null}
-          <button type="button" className="po-desk-filter-chip po-desk-filter-chip--clear" onClick={clearAdvancedFilters}>
-            Clear filters
-          </button>
-        </div>
-      ) : null}
-
-      <section className="prod-desk-kpi-grid" aria-label="Summary">
-        <button
-          type="button"
-          className="prod-desk-kpi-card po-desk-kpi-card--clickable"
-          onClick={() => openKpiTrace('total')}
-          aria-label="View how total POs is calculated"
-          title="Click to see contributing purchase orders"
-        >
-          <div className="prod-desk-kpi-icon prod-desk-kpi-icon--violet">
+      <section className="po-ua-kpis" aria-label="Purchases summary">
+        <button type="button" className="po-ua-kpi" onClick={() => openKpiTrace('total')} title="View contributing POs">
+          <div className="po-ua-kpi__text">
+            <span className="po-ua-kpi__label">Total POs</span>
+            <strong className="po-ua-kpi__value">{liveStats.total.toLocaleString('en-US')}</strong>
+          </div>
+          <span className="po-ua-kpi__badge po-ua-kpi__badge--violet" aria-hidden="true">
             <HiOutlineClipboardDocumentList size={18} />
-          </div>
-          <div>
-            <div className="prod-desk-kpi-label">total POs</div>
-            <div className="prod-desk-kpi-value">{liveStats.total}</div>
-          </div>
+          </span>
         </button>
-        <button
-          type="button"
-          className="prod-desk-kpi-card po-desk-kpi-card--clickable"
-          onClick={() => openKpiTrace('approved')}
-          aria-label="View how approved is calculated"
-          title="Click to see contributing purchase orders"
-        >
-          <div className="prod-desk-kpi-icon prod-desk-kpi-icon--teal">
+        <button type="button" className="po-ua-kpi" onClick={() => openKpiTrace('approved')} title="View contributing POs">
+          <div className="po-ua-kpi__text">
+            <span className="po-ua-kpi__label">Approved</span>
+            <strong className="po-ua-kpi__value">{liveStats.approved.toLocaleString('en-US')}</strong>
+          </div>
+          <span className="po-ua-kpi__badge po-ua-kpi__badge--teal" aria-hidden="true">
             <HiOutlineCheckCircle size={18} />
-          </div>
-          <div>
-            <div className="prod-desk-kpi-label">approved</div>
-            <div className="prod-desk-kpi-value">{liveStats.approved}</div>
-          </div>
+          </span>
         </button>
-        <button
-          type="button"
-          className="prod-desk-kpi-card po-desk-kpi-card--clickable"
-          onClick={() => openKpiTrace('pending')}
-          aria-label="View how pending is calculated"
-          title="Click to see contributing purchase orders"
-        >
-          <div className="prod-desk-kpi-icon prod-desk-kpi-icon--amber">
+        <button type="button" className="po-ua-kpi" onClick={() => openKpiTrace('pending')} title="View contributing POs">
+          <div className="po-ua-kpi__text">
+            <span className="po-ua-kpi__label">Pending</span>
+            <strong className="po-ua-kpi__value">{liveStats.pending.toLocaleString('en-US')}</strong>
+          </div>
+          <span className="po-ua-kpi__badge po-ua-kpi__badge--amber" aria-hidden="true">
             <HiOutlineClock size={18} />
-          </div>
-          <div>
-            <div className="prod-desk-kpi-label">pending</div>
-            <div className="prod-desk-kpi-value">{liveStats.pending}</div>
-          </div>
+          </span>
         </button>
-        <button
-          type="button"
-          className="prod-desk-kpi-card po-desk-kpi-card--clickable"
-          onClick={() => openKpiTrace('value')}
-          aria-label="View how listed value is calculated"
-          title="Click to see contributing purchase orders"
-        >
-          <div className="prod-desk-kpi-icon prod-desk-kpi-icon--indigo">
+        <button type="button" className="po-ua-kpi" onClick={() => openKpiTrace('value')} title="View contributing POs">
+          <div className="po-ua-kpi__text">
+            <span className="po-ua-kpi__label">Listed value</span>
+            <strong className="po-ua-kpi__value">{formatMoney(liveStats.value)}</strong>
+          </div>
+          <span className="po-ua-kpi__badge po-ua-kpi__badge--blue" aria-hidden="true">
             <HiOutlineCurrencyDollar size={18} />
-          </div>
-          <div>
-            <div className="prod-desk-kpi-label">listed value</div>
-            <div className="prod-desk-kpi-value po-desk-kpi-money">
-              {currencySymbol}
-              {liveStats.value.toLocaleString('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            </div>
-          </div>
+          </span>
         </button>
       </section>
 
-      <section className="prod-desk-results">
-        <div className="prod-desk-results-head">
-          <span className="prod-desk-results-count">
-            {filtered.length} {filtered.length === 1 ? 'result' : 'results'}
-          </span>
+      <section className="po-ua-desk" aria-label="Purchase orders">
+        <div className="po-ua-desk__toolbar">
+          <div className="po-ua-desk__heading">
+            <h2 className="po-ua-desk__title">Purchase orders</h2>
+            <p className="po-ua-desk__meta">
+              {filtered.length.toLocaleString('en-US')} shown
+              {typeFilter !== 'all' ? ` · ${typeFilter === 'import' ? 'Abroad' : 'Internal'}` : ''}
+              {statusFilter
+                ? ` · ${statusOptions.find((o) => o.value === statusFilter)?.label || statusFilter}`
+                : typeFilter === 'all' && !search.trim()
+                  ? ` · ${liveStats.domestic} internal · ${liveStats.abroad} abroad`
+                  : ''}
+            </p>
+          </div>
+          <div className="po-ua-filters" role="group" aria-label="Type filters">
+            {typeFilterOptions.map(([key, label, count]) => (
+              <button
+                key={key}
+                type="button"
+                className={`po-ua-filter${typeFilter === key ? ' is-active' : ''}`}
+                onClick={() => {
+                  setTypeFilter(key);
+                  setDraftType(key);
+                }}
+              >
+                <span>{label}</span>
+                <span className="po-ua-filter__count">{count}</span>
+              </button>
+            ))}
+          </div>
         </div>
 
         {filtered.length === 0 ? (
-          <div className="po-desk-empty" role="status">
-            <div className="po-desk-empty-icon" aria-hidden="true">
-              <span className="po-desk-empty-ring" />
-              <HiOutlineClipboardDocumentList size={34} />
+          <div className="po-ua-table-card">
+            <div className="po-ua-empty" role="status">
+              <p className="po-ua-empty__title">
+                {purchases.length === 0 ? 'No purchase orders' : 'No matching purchase orders'}
+              </p>
+              <p className="po-ua-empty__hint">
+                {purchases.length === 0
+                  ? 'Create a purchase order to get started.'
+                  : 'Try clearing filters or widening the search.'}
+              </p>
+              {purchases.length === 0 ? (
+                <div className="po-ua-empty__cta">
+                  <a href={createDomesticUrl} className="po-ua-btn po-ua-btn--primary">
+                    <HiOutlinePlus size={16} /> Create PO
+                  </a>
+                </div>
+              ) : null}
             </div>
-            <p className="po-desk-empty-title">
-              {purchases.length === 0 ? 'No purchase orders yet' : 'No matching purchase orders'}
-            </p>
-            <p className="po-desk-empty-hint">
-              {purchases.length === 0
-                ? 'Create an internal or abroad purchase order to get started.'
-                : 'Try another search or clear filters.'}
-            </p>
-            {purchases.length === 0 ? (
-              <div className="po-desk-empty-cta">
-                <a href={createDomesticUrl} className="prod-desk-btn prod-desk-btn-primary">
-                  <HiOutlinePlus size={16} /> New PO
-                </a>
-              </div>
-            ) : null}
           </div>
         ) : (
-          <div className="prod-desk-table-wrap po-desk-table-wrap">
-            <table className="prod-desk-table po-desk-table">
+          <div className="po-ua-table-card">
+            <table className="po-ua-table">
+              <colgroup>
+                <col className="po-ua-col-number" />
+                <col className="po-ua-col-supplier" />
+                <col className="po-ua-col-type" />
+                <col className="po-ua-col-money" />
+                <col className="po-ua-col-status" />
+                <col className="po-ua-col-actions" />
+              </colgroup>
               <thead>
                 <tr>
-                  <th>Reference</th>
-                  <th>Product</th>
-                  <th>Type</th>
-                  <th>Status</th>
-                  <th className="is-num">Amount</th>
-                  <th className="is-actions">Actions</th>
+                  <th scope="col">Number</th>
+                  <th scope="col">Supplier</th>
+                  <th scope="col">Type</th>
+                  <th scope="col" className="is-num">
+                    Total
+                  </th>
+                  <th scope="col">Status</th>
+                  <th scope="col">
+                    <span className="po-ua-sr-only">Actions</span>
+                  </th>
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((po) => (
-                  <tr
-                    key={rowKey(po)}
-                    data-po-id={po.id}
-                    className={Number(selectedId) === Number(po.id) ? 'is-selected' : ''}
-                    onClick={(e) => {
-                      if (e.target.closest('a, button')) return;
-                      rememberAndOpen(viewUrl, po);
-                    }}
-                  >
-                    <td>
-                      <a
-                        className="po-desk-ref"
-                        href={withSource(viewUrl, po)}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          rememberAndOpen(viewUrl, po);
-                        }}
-                      >
-                        {po.purchase_no || `PO #${po.id}`}
-                      </a>
-                      <div className="po-desk-sub">{formatDate(po.created_at)}</div>
-                    </td>
-                    <td>
-                      <div className="po-desk-cell-main" title={po.product_name || ''}>
-                        {po.product_name || '—'}
-                        {po.item_count > 1 ? ` (+${po.item_count - 1})` : ''}
-                      </div>
-                      <div className="po-desk-cell-sub" title={po.supplier_name || ''}>
-                        {po.supplier_name || '—'}
-                      </div>
-                    </td>
-                    <td>
-                      <TypeBadge type={po.purchase_type} />
-                    </td>
-                    <td>
-                      <StatusBadge
-                        status={po.status}
-                        label={po.status_label}
-                        className={po.status_class}
-                      />
-                    </td>
-                    <td className="is-num">
-                      <span className="po-desk-amt">{po.total_display || '—'}</span>
-                      {po.payment_status ? (
-                        <div className="po-desk-cell-sub">
-                          {String(po.payment_status).charAt(0).toUpperCase() + String(po.payment_status).slice(1)}
-                        </div>
-                      ) : null}
-                    </td>
-                    <td
-                      className="is-actions"
-                      onClick={(e) => e.stopPropagation()}
-                      ref={openId === rowKey(po) ? menuRef : null}
+                {filtered.map((po) => {
+                  const key = rowKey(po);
+                  const menuOpen = openId === key;
+                  const number = po.purchase_no || `PO-${po.id}`;
+                  const isImport = po.purchase_type === 'import';
+                  return (
+                    <tr
+                      key={key}
+                      data-po-id={po.id}
+                      className={`po-ua-row${Number(selectedId) === Number(po.id) ? ' is-selected' : ''}`}
+                      onClick={(e) => {
+                        if (e.target.closest('a, button')) return;
+                        rememberAndOpen(viewUrl, po);
+                      }}
                     >
-                      <div className="po-desk-actions">
-                        <button
-                          type="button"
-                          className="prod-desk-icon-btn"
-                          title="More actions"
-                          aria-expanded={openId === rowKey(po)}
-                          onClick={() => setOpenId(openId === rowKey(po) ? null : rowKey(po))}
-                        >
-                          <HiOutlineEllipsisVertical size={16} />
-                        </button>
-                        {openId === rowKey(po) ? (
-                          <div className="po-desk-menu" role="menu">
-                            <a
-                              href={withSource(viewUrl, po)}
-                              role="menuitem"
-                              onClick={(e) => {
-                                e.preventDefault();
-                                rememberAndOpen(viewUrl, po);
-                              }}
-                            >
-                              <HiOutlineDocumentText size={15} /> View PO
-                            </a>
-                            {po.can_edit ? (
-                              <a
-                                href={withSource(editUrl, po)}
-                                role="menuitem"
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  rememberAndOpen(editUrl, po);
-                                }}
-                              >
-                                <HiOutlinePencilSquare size={15} /> Edit
-                              </a>
-                            ) : null}
-                            {po.can_receive ? (
-                              <a
-                                href={withSource(receiveUrl, po)}
-                                role="menuitem"
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  rememberAndOpen(receiveUrl, po);
-                                }}
-                              >
-                                <HiOutlineCheckBadge size={15} /> Receive stock
-                              </a>
-                            ) : null}
-                            {po.purchase_type === 'import' && !po.has_shipment ? (
-                              <a href={`${shipmentCreateUrl}?purchase_id=${po.id}`} role="menuitem">
-                                <HiOutlineTruck size={15} /> Create shipment
-                              </a>
-                            ) : null}
-                            {po.purchase_type === 'import' && po.has_shipment && po.linked_shipment_id ? (
-                              <a href={`${shipmentViewUrl}?id=${po.linked_shipment_id}`} role="menuitem">
-                                <HiOutlineTruck size={15} /> View shipment
-                              </a>
-                            ) : null}
-                            {po.has_invoice_attachment ? (
-                              <a href={`${invoiceUrl}?id=${po.id}`} target="_blank" rel="noopener noreferrer" role="menuitem">
-                                <HiOutlineDocumentText size={15} /> View invoice
-                              </a>
-                            ) : null}
-                            <div className="po-desk-menu-div" />
-                            <a href={`${cloneUrl}?clone_from_id=${po.id}`} role="menuitem">
-                              <HiOutlineDocumentDuplicate size={15} /> Clone order
-                            </a>
-                            {po.can_cancel ? (
-                              <>
-                                <div className="po-desk-menu-div" />
-                                <button
-                                  type="button"
-                                  className="is-danger"
-                                  role="menuitem"
-                                  onClick={() =>
-                                    confirmGo(
-                                      'Cancel this order?',
-                                      'Cancel Order',
-                                      withSource(cancelUrl, po)
-                                    )
-                                  }
-                                >
-                                  <HiOutlineXCircle size={15} /> Cancel order
-                                </button>
-                              </>
-                            ) : null}
-                            {isAdmin ? (
-                              <>
-                                <div className="po-desk-menu-div" />
-                                <button
-                                  type="button"
-                                  className="is-danger"
-                                  role="menuitem"
-                                  onClick={() =>
-                                    confirmGo(
-                                      'Permanently delete this purchase order? This cannot be undone.',
-                                      'Delete Order',
-                                      withSource(deleteUrl, po)
-                                    )
-                                  }
-                                >
-                                  <HiOutlineTrash size={15} /> Delete order
-                                </button>
-                              </>
-                            ) : null}
+                      <td className="po-ua-cell po-ua-cell--doc">
+                        <div className="po-ua-docnum">{number}</div>
+                        <div className="po-ua-docdate">{formatDate(po.created_at)}</div>
+                      </td>
+                      <td className="po-ua-cell" title={po.supplier_name || ''}>
+                        <div className="po-ua-payee">{po.supplier_name || '—'}</div>
+                        <div className="po-ua-payee-sub" title={po.product_name || ''}>
+                          {po.product_name || '—'}
+                          {po.item_count > 1 ? ` (+${po.item_count - 1})` : ''}
+                        </div>
+                      </td>
+                      <td className="po-ua-cell po-ua-cell--type" data-label="Type">
+                        <span className={`po-ua-type ${isImport ? 'po-ua-type--import' : 'po-ua-type--domestic'}`}>
+                          {isImport ? 'External' : 'Internal'}
+                        </span>
+                      </td>
+                      <td className="po-ua-cell po-ua-cell--money" data-label="Total">
+                        <div>{po.total_display || formatMoney(po.total_amount)}</div>
+                        {po.payment_status ? (
+                          <div className="po-ua-amount-sub">
+                            {String(po.payment_status).charAt(0).toUpperCase() + String(po.payment_status).slice(1)}
                           </div>
                         ) : null}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      <td className="po-ua-cell" data-label="Status">
+                        <StatusBadge status={po.status} label={po.status_label} className={po.status_class} />
+                      </td>
+                      <td
+                        className="po-ua-cell po-ua-cell--actions"
+                        onClick={(e) => e.stopPropagation()}
+                        ref={menuOpen ? menuRef : null}
+                      >
+                        <div className="po-ua-menu">
+                          <button
+                            type="button"
+                            className="po-ua-menu__btn"
+                            aria-label={`Actions for ${number}`}
+                            aria-expanded={menuOpen}
+                            aria-haspopup="menu"
+                            onClick={() => setOpenId(menuOpen ? null : key)}
+                          >
+                            <HiOutlineEllipsisVertical size={16} />
+                          </button>
+                          {menuOpen ? (
+                            <div className="po-ua-menu__panel po-ua-menu__panel--rich" role="menu" aria-label={`${number} actions`}>
+                              <button
+                                type="button"
+                                role="menuitem"
+                                className="po-ua-menu__item po-ua-menu__item--rich"
+                                onClick={() => rememberAndOpen(viewUrl, po)}
+                              >
+                                <span className="po-ua-menu__icon">
+                                  <HiOutlineDocumentText size={15} />
+                                </span>
+                                <span className="po-ua-menu__copy">
+                                  <span className="po-ua-menu__label">Open</span>
+                                  <span className="po-ua-menu__hint">View purchase order</span>
+                                </span>
+                              </button>
+
+                              {po.can_edit ? (
+                                <button
+                                  type="button"
+                                  role="menuitem"
+                                  className="po-ua-menu__item po-ua-menu__item--rich"
+                                  onClick={() => rememberAndOpen(editUrl, po)}
+                                >
+                                  <span className="po-ua-menu__icon">
+                                    <HiOutlinePencilSquare size={15} />
+                                  </span>
+                                  <span className="po-ua-menu__copy">
+                                    <span className="po-ua-menu__label">Edit</span>
+                                    <span className="po-ua-menu__hint">Update this PO</span>
+                                  </span>
+                                </button>
+                              ) : null}
+
+                              {po.can_receive ? (
+                                <button
+                                  type="button"
+                                  role="menuitem"
+                                  className="po-ua-menu__item po-ua-menu__item--rich"
+                                  onClick={() => rememberAndOpen(receiveUrl, po)}
+                                >
+                                  <span className="po-ua-menu__icon">
+                                    <HiOutlineCheckBadge size={15} />
+                                  </span>
+                                  <span className="po-ua-menu__copy">
+                                    <span className="po-ua-menu__label">Receive</span>
+                                    <span className="po-ua-menu__hint">Receive stock</span>
+                                  </span>
+                                </button>
+                              ) : null}
+
+                              {isImport && !po.has_shipment ? (
+                                <a href={`${shipmentCreateUrl}?purchase_id=${po.id}`} role="menuitem" className="po-ua-menu__item po-ua-menu__item--rich">
+                                  <span className="po-ua-menu__icon">
+                                    <HiOutlineTruck size={15} />
+                                  </span>
+                                  <span className="po-ua-menu__copy">
+                                    <span className="po-ua-menu__label">Ship</span>
+                                    <span className="po-ua-menu__hint">Create shipment</span>
+                                  </span>
+                                </a>
+                              ) : null}
+
+                              {isImport && po.has_shipment && po.linked_shipment_id ? (
+                                <a href={`${shipmentViewUrl}?id=${po.linked_shipment_id}`} role="menuitem" className="po-ua-menu__item po-ua-menu__item--rich">
+                                  <span className="po-ua-menu__icon">
+                                    <HiOutlineTruck size={15} />
+                                  </span>
+                                  <span className="po-ua-menu__copy">
+                                    <span className="po-ua-menu__label">Shipment</span>
+                                    <span className="po-ua-menu__hint">View shipment</span>
+                                  </span>
+                                </a>
+                              ) : null}
+
+                              {po.has_invoice_attachment ? (
+                                <a
+                                  href={`${invoiceUrl}?id=${po.id}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  role="menuitem"
+                                  className="po-ua-menu__item po-ua-menu__item--rich"
+                                >
+                                  <span className="po-ua-menu__icon">
+                                    <HiOutlineDocumentText size={15} />
+                                  </span>
+                                  <span className="po-ua-menu__copy">
+                                    <span className="po-ua-menu__label">Invoice</span>
+                                    <span className="po-ua-menu__hint">Open attached invoice</span>
+                                  </span>
+                                </a>
+                              ) : null}
+
+                              <div className="po-ua-menu__sep" role="separator" />
+
+                              <a href={`${cloneUrl}?clone_from_id=${po.id}`} role="menuitem" className="po-ua-menu__item po-ua-menu__item--rich">
+                                <span className="po-ua-menu__icon">
+                                  <HiOutlineDocumentDuplicate size={15} />
+                                </span>
+                                <span className="po-ua-menu__copy">
+                                  <span className="po-ua-menu__label">Clone</span>
+                                  <span className="po-ua-menu__hint">Duplicate this order</span>
+                                </span>
+                              </a>
+
+                              {po.can_cancel ? (
+                                <>
+                                  <div className="po-ua-menu__sep" role="separator" />
+                                  <button
+                                    type="button"
+                                    role="menuitem"
+                                    className="po-ua-menu__item po-ua-menu__item--rich po-ua-menu__item--danger"
+                                    onClick={() =>
+                                      confirmGo('Cancel this order?', 'Cancel Order', withSource(cancelUrl, po))
+                                    }
+                                  >
+                                    <span className="po-ua-menu__icon">
+                                      <HiOutlineXCircle size={15} />
+                                    </span>
+                                    <span className="po-ua-menu__copy">
+                                      <span className="po-ua-menu__label">Cancel</span>
+                                      <span className="po-ua-menu__hint">Cancel this order</span>
+                                    </span>
+                                  </button>
+                                </>
+                              ) : null}
+
+                              {isAdmin ? (
+                                <>
+                                  <div className="po-ua-menu__sep" role="separator" />
+                                  <button
+                                    type="button"
+                                    role="menuitem"
+                                    className="po-ua-menu__item po-ua-menu__item--rich po-ua-menu__item--danger"
+                                    onClick={() =>
+                                      confirmGo(
+                                        'Permanently delete this purchase order? This cannot be undone.',
+                                        'Delete Order',
+                                        withSource(deleteUrl, po),
+                                      )
+                                    }
+                                  >
+                                    <span className="po-ua-menu__icon">
+                                      <HiOutlineTrash size={15} />
+                                    </span>
+                                    <span className="po-ua-menu__copy">
+                                      <span className="po-ua-menu__label">Delete</span>
+                                      <span className="po-ua-menu__hint">Remove permanently</span>
+                                    </span>
+                                  </button>
+                                </>
+                              ) : null}
+                            </div>
+                          ) : null}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

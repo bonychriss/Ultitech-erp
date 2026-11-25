@@ -807,6 +807,15 @@ body.dashboard.vv-view-voucher-page .voucher-container table:not(.vv-approvals-t
     padding: 5px 6px !important;
     font-size: 11.5px !important;
     line-height: 1.2 !important;
+    font-weight: 400 !important;
+}
+
+body.dashboard.vv-view-voucher-page .voucher-container table:not(.vv-approvals-table) th {
+    font-weight: 500 !important;
+}
+
+body.dashboard.vv-view-voucher-page .vv-approvals-table .vv-approval-label {
+    font-weight: 500 !important;
 }
 
 body.dashboard.vv-view-voucher-page .voucher-container table:not(.vv-approvals-table) td img {
@@ -2806,8 +2815,148 @@ body.dashboard.vv-mobile-view .voucher-container .approval-card.approval-progres
     }
 }
 
+/* Print sheet used by printVoucher() — screen-hidden */
+.vv-print-root {
+    display: none;
+}
+
 @media print {
+    /* Match download PDF sheet (landscape A4, 6mm margins) */
+    @page {
+        size: A4 landscape;
+        margin: 6mm;
+    }
+
+    html.vv-printing,
+    html.vv-printing body,
+    body.vv-printing,
+    body.vv-printing.dashboard,
+    body.vv-printing.vv-view-voucher-page {
+        height: auto !important;
+        max-height: none !important;
+        overflow: visible !important;
+        background: #fff !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    body.vv-printing > *:not(#vv-print-root) {
+        display: none !important;
+    }
+
+    body.vv-printing #vv-print-root,
+    .vv-print-root {
+        display: block !important;
+        position: static !important;
+        width: 100% !important;
+        max-width: none !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        background: #fff !important;
+        color: #000 !important;
+        overflow: visible !important;
+    }
+
+    /* Print sheet = same clone path as PDF download (header + 3 tables) */
+    body.vv-printing #vv-print-root .vv-voucher-sheet {
+        display: block !important;
+        width: 100% !important;
+        max-width: none !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        background: #fff !important;
+        color: #000 !important;
+        box-sizing: border-box !important;
+        font-family: "Courier New", Courier, monospace !important;
+    }
+
+    body.vv-printing #vv-print-root .vv-voucher-sheet > table {
+        display: table !important;
+        width: 100% !important;
+        max-width: none !important;
+        min-width: 0 !important;
+        table-layout: fixed !important;
+        border-collapse: collapse !important;
+        border: 1px solid #000 !important;
+        margin: 0 0 10px 0 !important;
+        box-sizing: border-box !important;
+    }
+
+    body.vv-printing #vv-print-root .vv-voucher-sheet > table:last-child {
+        margin-bottom: 0 !important;
+    }
+
+    body.vv-printing #vv-print-root .vv-voucher-sheet > table th,
+    body.vv-printing #vv-print-root .vv-voucher-sheet > table td {
+        border: 1px solid #000 !important;
+        padding: 6px 8px !important;
+        vertical-align: middle !important;
+        color: #000 !important;
+        background: #fff !important;
+        word-break: normal !important;
+        overflow-wrap: normal !important;
+        writing-mode: horizontal-tb !important;
+    }
+
+    body.vv-printing #vv-print-root .vv-approvals-table {
+        width: 100% !important;
+        max-width: none !important;
+        table-layout: fixed !important;
+        border-collapse: collapse !important;
+    }
+
+    body.vv-printing #vv-print-root .vv-approvals-table col:nth-child(1),
+    body.vv-printing #vv-print-root .vv-approvals-table col:nth-child(3) {
+        width: 16% !important;
+    }
+
+    body.vv-printing #vv-print-root .vv-approvals-table col:nth-child(2),
+    body.vv-printing #vv-print-root .vv-approvals-table col:nth-child(4) {
+        width: 34% !important;
+    }
+
+    body.vv-printing #vv-print-root .vv-approvals-table .vv-approval-label {
+        width: 16% !important;
+        text-align: center !important;
+        font-size: 12px !important;
+        font-weight: 500 !important;
+        padding: 10px 8px !important;
+        white-space: normal !important;
+    }
+
+    body.vv-printing #vv-print-root .vv-approvals-table .vv-approval-value {
+        width: 34% !important;
+        text-align: left !important;
+        padding: 10px 10px !important;
+        min-height: 44px !important;
+    }
+
+    body.vv-printing #vv-print-root .vv-approvals-table .vv-approval-name {
+        font-size: 12px !important;
+        text-transform: uppercase !important;
+        white-space: nowrap !important;
+    }
+
+    body.vv-printing #vv-print-root .vv-approvals-table .vv-approval-signatory,
+    body.vv-printing #vv-print-root .vv-approvals-table .vv-approval-name-wrap {
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+        align-items: center !important;
+        gap: 8px !important;
+        width: 100% !important;
+        min-width: 0 !important;
+    }
+
+    body.vv-printing #vv-print-root .vv-approvals-table .vv-approval-signature {
+        max-height: 40px !important;
+        width: auto !important;
+        max-width: 120px !important;
+    }
+
     body.dashboard.vv-view-voucher-page .sidebar,
+    body.dashboard.vv-view-voucher-page #native-sidebar,
+    body.dashboard.vv-view-voucher-page .sidebar-container,
     body.dashboard.vv-view-voucher-page .layout-main-wrapper > aside,
     body.dashboard.vv-view-voucher-page .employee-header,
     body.dashboard.vv-view-voucher-page .admin-header,
@@ -2816,12 +2965,30 @@ body.dashboard.vv-mobile-view .voucher-container .approval-card.approval-progres
     body.dashboard.vv-view-voucher-page .vv-mobile-toolbar,
     body.dashboard.vv-view-voucher-page .approval-card,
     body.dashboard.vv-view-voucher-page .vv-card-approval,
+    body.dashboard.vv-view-voucher-page .vv-card-comments,
     body.dashboard.vv-view-voucher-page .vv-card-docs,
     body.dashboard.vv-view-voucher-page .documents-card,
     body.dashboard.vv-view-voucher-page .vv-actions-btn,
     body.dashboard.vv-view-voucher-page .notification-icon,
     body.dashboard.vv-view-voucher-page .no-print {
         display: none !important;
+    }
+
+    body.dashboard.vv-view-voucher-page,
+    body.dashboard.vv-view-voucher-page .layout-main-wrapper,
+    body.dashboard.vv-view-voucher-page .layout-main-wrapper > .flex-grow-1,
+    body.dashboard.vv-view-voucher-page .main-content,
+    body.dashboard.vv-view-voucher-page #root,
+    body.dashboard.vv-view-voucher-page .vv-react-root,
+    body.dashboard.vv-view-voucher-page .page-shell,
+    body.dashboard.vv-view-voucher-page .vv-view-layout,
+    body.dashboard.vv-view-voucher-page .vv-preview-section,
+    body.dashboard.vv-view-voucher-page .vv-preview-body,
+    body.dashboard.vv-view-voucher-page .voucher-scroll {
+        height: auto !important;
+        max-height: none !important;
+        overflow: visible !important;
+        position: static !important;
     }
 
     body.dashboard.vv-view-voucher-page .main-content {

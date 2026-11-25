@@ -42,15 +42,17 @@ final class CompanyBootstrapService
         // Always ensure the standard template exists (headers + posting accounts).
         $this->ensureStandardChart($company, $book);
 
-        // Template CoA is the base. Pull ERP customers/suppliers + Balances wallets only
-        // (not the full financial_accounts chart dump).
+        // Template CoA is the base. Pull ERP master data + wallets + GL journals.
+        // Journals are required so Trial Balance / Accounting GL stay complete;
+        // syncJournals is idempotent (source_hash) and cursor-scans past imports.
         if (config('erp.enabled')) {
             try {
+                $journalLimit = (int) config('erp.journal_limit', 500);
                 app(ErpSyncService::class)->pull(
                     $book,
                     $user,
-                    ['customers', 'suppliers', 'invoices', 'wallets'],
-                    20
+                    ['customers', 'suppliers', 'invoices', 'wallets', 'journals'],
+                    max(50, $journalLimit)
                 );
             } catch (\Throwable $e) {
                 Log::warning('ERP auto-pull on bridge failed: '.$e->getMessage());

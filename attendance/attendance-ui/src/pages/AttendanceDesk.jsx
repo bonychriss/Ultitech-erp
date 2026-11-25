@@ -1,5 +1,13 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { getGeoPosition, postAttendanceAction } from '../api';
+import {
+  beginCreateCredential,
+  beginGetAssertion,
+  guessDeviceLabel,
+  isWebAuthnSupported,
+  serializeAssertion,
+  serializeAttestation,
+} from '../webauthn';
 import '../attendance-records.css';
 
 function formatTimeHm(value) {
@@ -116,6 +124,16 @@ export default function AttendanceDesk({ data }) {
       pendingTasks: data.pendingTasks || [],
       isIpAllowed: Boolean(data.isIpAllowed),
       currentIp: data.currentIp || '',
+      biometric: data.biometric || {
+        required: false,
+        enrolled: false,
+        count: 0,
+        max: 2,
+        devices: [],
+        library_ok: true,
+        secure_ok: true,
+        rp_id: '',
+      },
       message: data.message || '',
       msgType: data.msgType || '',
       clockInSuccess: data.clockInSuccess || null,
@@ -128,10 +146,40 @@ export default function AttendanceDesk({ data }) {
   const [newTasks, setNewTasks] = useState(['']);
   const [completedIds, setCompletedIds] = useState(() => new Set());
   const [busy, setBusy] = useState(false);
+  const [enrollBusy, setEnrollBusy] = useState(false);
+  const [enrollReady, setEnrollReady] = useState(false);
   const [historyBusy, setHistoryBusy] = useState(false);
   const [successDismissed, setSuccessDismissed] = useState(false);
+  const [isMobileClock, setIsMobileClock] = useState(() => {
+    try {
+      return window.matchMedia('(max-width: 768px)').matches;
+    } catch (_) {
+      return false;
+    }
+  });
+  const webAuthnOk = isWebAuthnSupported();
+  const assertPublicKeyRef = useRef(null);
+  const registerPublicKeyRef = useRef(null);
+
+  useEffect(() => {
+    let mq;
+    try {
+      mq = window.matchMedia('(max-width: 768px)');
+    } catch (_) {
+      return undefined;
+    }
+    const sync = () => setIsMobileClock(!!mq.matches);
+    sync();
+    if (typeof mq.addEventListener === 'function') mq.addEventListener('change', sync);
+    else if (typeof mq.addListener === 'function') mq.addListener(sync);
+    return () => {
+      if (typeof mq.removeEventListener === 'function') mq.removeEventListener('change', sync);
+      else if (typeof mq.removeListener === 'function') mq.removeListener(sync);
+    };
+  }, []);
 
   const links = data.links || {};
+  const profileSecurityUrl = links.profileSecurity || '';
   const user = data.user || {};
   const timeZone = data.timeZone || 'Africa/Dar_es_Salaam';
   const dateSummary = data.dateSummary || '';
@@ -228,12 +276,159 @@ export default function AttendanceDesk({ data }) {
       pendingTasks: payload.pendingTasks ?? cur.pendingTasks,
       isIpAllowed: payload.isIpAllowed ?? cur.isIpAllowed,
       currentIp: payload.currentIp ?? cur.currentIp,
+      biometric: payload.biometric ?? cur.biometric,
       message: extras.message ?? '',
       msgType: extras.msgType ?? '',
       clockInSuccess: extras.clockInSuccess ?? null,
       clockOutSuccess: extras.clockOutSuccess ?? null,
     }));
     setSuccessDismissed(false);
+  }
+
+  async function prefetchAssertOptions() {
+    const bio = state.biometric || {};
+    if (!bio.required || !bio.enrolled || !webAuthnOk || !isMobileClock) {
+      assertPublicKeyRef.current = null;
+      return;
+    }
+    try {
+      const options = await postAttendanceAction({ action: 'webauthn_assert_options' });
+      if (options.success && options.publicKey) {
+        assertPublicKeyRef.current = options.publicKey;
+      }
+    } catch (_) {
+      assertPublicKeyRef.current = null;
+    }
+  }
+
+  async function prefetchRegisterOptions() {
+    const bio = state.biometric || {};
+    if (!bio.required || bio.enrolled || !webAuthnOk || !isMobileClock) {
+      registerPublicKeyRef.current = null;
+      setEnrollReady(false);
+      return;
+    }
+    setEnrollReady(false);
+    try {
+      const options = await postAttendanceAction({ action: 'webauthn_register_options' });
+      if (options.success && options.publicKey) {
+        registerPublicKeyRef.current = options.publicKey;
+        setEnrollReady(true);
+      } else {
+        registerPublicKeyRef.current = null;
+        setEnrollReady(false);
+      }
+    } catch (_) {
+      registerPublicKeyRef.current = null;
+      setEnrollReady(false);
+    }
+  }
+
+  useEffect(() => {
+    prefetchAssertOptions();
+    prefetchRegisterOptions();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.biometric?.required, state.biometric?.enrolled, webAuthnOk, isMobileClock]);
+
+  function beginBiometricIfNeeded() {
+    const bio = state.biometric || {};
+    if (!bio.required) return null;
+    if (!bio.enrolled) {
+      throw new Error('Enroll phone unlock below, then clock in.');
+    }
+    if (!webAuthnOk) {
+      throw new Error('Open attendance on your enrolled smartphone to verify with Face ID, fingerprint, or passcode.');
+    }
+    const publicKey = assertPublicKeyRef.current;
+    if (!publicKey) {
+      throw new Error('Biometric challenge is not ready yet. Wait a second and try again.');
+    }
+    // Start Face ID in the same tap as the button — required on iPhone Safari.
+    const promise = beginGetAssertion(publicKey);
+    assertPublicKeyRef.current = null;
+    return promise;
+  }
+
+  function enrollPhoneUnlock(event) {
+    if (event && typeof event.preventDefault === 'function') event.preventDefault();
+    const bio = state.biometric || {};
+    if (!bio.required || bio.enrolled || enrollBusy) return;
+
+    if (!webAuthnOk) {
+      setState((cur) => ({
+        ...cur,
+        message: 'Open attendance on your smartphone to enroll Face ID, fingerprint, or passcode.',
+        msgType: 'danger',
+      }));
+      return;
+    }
+
+    const publicKey = registerPublicKeyRef.current;
+    if (!publicKey) {
+      setState((cur) => ({
+        ...cur,
+        message: 'Still preparing phone unlock. Wait a moment, then try again.',
+        msgType: 'danger',
+      }));
+      prefetchRegisterOptions();
+      return;
+    }
+
+    let createPromise;
+    try {
+      // Must start in the same tap as the button (iPhone Safari).
+      createPromise = beginCreateCredential(publicKey);
+    } catch (err) {
+      setState((cur) => ({
+        ...cur,
+        message: err instanceof Error ? err.message : 'Could not start phone unlock enrollment.',
+        msgType: 'danger',
+      }));
+      prefetchRegisterOptions();
+      return;
+    }
+
+    registerPublicKeyRef.current = null;
+    setEnrollReady(false);
+    setEnrollBusy(true);
+
+    createPromise
+      .then((credential) =>
+        postAttendanceAction({
+          action: 'webauthn_register',
+          device_label: guessDeviceLabel(),
+          credential: serializeAttestation(credential),
+        })
+      )
+      .then((result) => {
+        if (!result.success) {
+          throw new Error(result.message || 'Phone unlock enrollment failed.');
+        }
+        applyPayload(result.data || {});
+        setState((cur) => ({
+          ...cur,
+          message: result.message || 'Phone unlock enrolled. You can clock in now.',
+          msgType: 'success',
+        }));
+        // Continue into clock-in plan once enrollment succeeds.
+        if (!result.data?.todayRecord) {
+          setTimeout(() => {
+            setNewTasks(['']);
+            setPlanOpen(true);
+          }, 280);
+        }
+      })
+      .catch((err) => {
+        setState((cur) => ({
+          ...cur,
+          message: err instanceof Error ? err.message : 'Phone unlock enrollment failed.',
+          msgType: 'danger',
+        }));
+        prefetchRegisterOptions();
+      })
+      .finally(() => {
+        setEnrollBusy(false);
+      });
   }
 
   async function loadHistoryMonth(month) {
@@ -271,9 +466,24 @@ export default function AttendanceDesk({ data }) {
       window.alert('Please enter at least one task for today.');
       return;
     }
+    let assertionPromise = null;
+    try {
+      assertionPromise = beginBiometricIfNeeded();
+    } catch (err) {
+      setState((cur) => ({
+        ...cur,
+        message: err instanceof Error ? err.message : 'Clock in failed.',
+        msgType: 'danger',
+      }));
+      prefetchAssertOptions();
+      return;
+    }
     setPlanOpen(false);
     setBusy(true);
     try {
+      const webauthn = assertionPromise
+        ? serializeAssertion(await assertionPromise)
+        : null;
       const geo = await getGeoPosition();
       const result = await postAttendanceAction({
         action: 'clock_in',
@@ -281,27 +491,46 @@ export default function AttendanceDesk({ data }) {
         longitude: geo.longitude,
         new_tasks: tasks,
         history_month: state.historyMonth,
+        webauthn,
       });
       if (!result.success) {
         applyPayload(result.data, { message: result.message || 'Clock in failed.', msgType: 'danger' });
+        prefetchAssertOptions();
         return;
       }
       applyPayload(result.data, { clockInSuccess: result.clockInSuccess || null });
+      prefetchAssertOptions();
     } catch (err) {
       setState((cur) => ({
         ...cur,
         message: err instanceof Error ? err.message : 'Clock in failed.',
         msgType: 'danger',
       }));
+      prefetchAssertOptions();
     } finally {
       setBusy(false);
     }
   }
 
   async function submitClockOut() {
+    let assertionPromise = null;
+    try {
+      assertionPromise = beginBiometricIfNeeded();
+    } catch (err) {
+      setState((cur) => ({
+        ...cur,
+        message: err instanceof Error ? err.message : 'Clock out failed.',
+        msgType: 'danger',
+      }));
+      prefetchAssertOptions();
+      return;
+    }
     setReviewOpen(false);
     setBusy(true);
     try {
+      const webauthn = assertionPromise
+        ? serializeAssertion(await assertionPromise)
+        : null;
       const geo = await getGeoPosition();
       const result = await postAttendanceAction({
         action: 'clock_out',
@@ -309,18 +538,22 @@ export default function AttendanceDesk({ data }) {
         longitude: geo.longitude,
         completed_task_ids: Array.from(completedIds),
         history_month: state.historyMonth,
+        webauthn,
       });
       if (!result.success) {
         applyPayload(result.data, { message: result.message || 'Clock out failed.', msgType: 'danger' });
+        prefetchAssertOptions();
         return;
       }
       applyPayload(result.data, { clockOutSuccess: result.clockOutSuccess || null });
+      prefetchAssertOptions();
     } catch (err) {
       setState((cur) => ({
         ...cur,
         message: err instanceof Error ? err.message : 'Clock out failed.',
         msgType: 'danger',
       }));
+      prefetchAssertOptions();
     } finally {
       setBusy(false);
     }
@@ -329,6 +562,11 @@ export default function AttendanceDesk({ data }) {
   const showInSuccess = state.clockInSuccess && !successDismissed;
   const showOutSuccess = state.clockOutSuccess && !successDismissed;
   const stats = state.stats || {};
+  const biometric = state.biometric || {};
+  const bioRequired = !!biometric.required;
+  const bioEnrolled = !!biometric.enrolled;
+  const usePhoneForClock = bioRequired && !isMobileClock;
+  const showMobileEnroll = bioRequired && !bioEnrolled && isMobileClock;
 
   return (
     <div className="att-shell att-page-clock">
@@ -372,19 +610,92 @@ export default function AttendanceDesk({ data }) {
                 </div>
               ) : null}
 
-              <div className="att-mt-4">
-                {canClockIn ? (
-                  <button type="button" className="att-glass-btn" disabled={busy} onClick={openPlan}>
-                    {busy ? 'Processing...' : 'Clock in Now'}
+              {usePhoneForClock ? (
+                <div className="att-phone-nudge">
+                  <div className="att-phone-nudge-icon" aria-hidden="true">
+                    <i className="fas fa-mobile-screen-button" />
+                  </div>
+                  <p className="att-phone-nudge-title">Use your phone</p>
+                  <p className="att-phone-nudge-copy">
+                    Clock in and out on your mobile device. Phone unlock is required.
+                  </p>
+                </div>
+              ) : showMobileEnroll ? (
+                <div className="att-clock-actions">
+                  <button type="button" className="att-glass-btn att-glass-btn--muted" disabled>
+                    Unlock setup needed
                   </button>
-                ) : null}
-                {canClockOut ? (
-                  <button type="button" className="att-btn-clock-out" disabled={busy} onClick={openReview}>
-                    {busy ? 'Processing...' : 'Clock out'}
-                  </button>
-                ) : null}
-              </div>
+                </div>
+              ) : (
+                <div className="att-clock-actions">
+                  {canClockIn ? (
+                    <button
+                      type="button"
+                      className="att-glass-btn"
+                      disabled={busy}
+                      onClick={openPlan}
+                    >
+                      {busy ? 'Processing...' : bioRequired ? 'Clock in with phone unlock' : 'Clock in Now'}
+                    </button>
+                  ) : null}
+                  {canClockOut ? (
+                    <button
+                      type="button"
+                      className="att-btn-clock-out"
+                      disabled={busy}
+                      onClick={openReview}
+                    >
+                      {busy ? 'Processing...' : bioRequired ? 'Clock out with phone unlock' : 'Clock out'}
+                    </button>
+                  ) : null}
+                </div>
+              )}
             </div>
+
+            {showMobileEnroll ? (
+              <div className="att-bio-sheet is-open" role="dialog" aria-modal="true" aria-labelledby="attBioSheetTitle">
+                <div className="att-bio-sheet-panel">
+                  <div className="att-bio-sheet-handle" aria-hidden="true" />
+                  <div className="att-bio-gate">
+                    <div className="att-bio-gate-icon" aria-hidden="true">
+                      <i className="fas fa-fingerprint" />
+                    </div>
+                    <p className="att-bio-gate-title" id="attBioSheetTitle">Set up phone unlock</p>
+                    <p className="att-bio-gate-copy">
+                      {webAuthnOk
+                        ? 'Unlock with Face ID, fingerprint, or PIN to clock in.'
+                        : (
+                          <>
+                            Open this on your phone, or go to{' '}
+                            {profileSecurityUrl ? (
+                              <a href={profileSecurityUrl}>Profile → Security</a>
+                            ) : (
+                              'Profile → Security'
+                            )}
+                            .
+                          </>
+                        )}
+                    </p>
+                    {webAuthnOk ? (
+                      <button
+                        type="button"
+                        className="att-bio-enroll"
+                        disabled={enrollBusy || !enrollReady}
+                        onClick={enrollPhoneUnlock}
+                      >
+                        <span>
+                          {enrollBusy
+                            ? 'Waiting…'
+                            : enrollReady
+                              ? 'Continue'
+                              : 'Getting ready…'}
+                        </span>
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
+              </div>
+            ) : null}
 
             {showInSuccess ? (
               <div className="att-clockin-success" role="status" aria-live="polite">

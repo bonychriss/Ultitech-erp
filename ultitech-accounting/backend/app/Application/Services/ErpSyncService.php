@@ -31,6 +31,7 @@ class ErpSyncService
         private readonly DocumentNumberService $numbers,
         private readonly AuditTrailService $audit,
         private readonly AccountingPeriodService $periods,
+        private readonly TaxEngineService $taxEngine,
     ) {}
 
     public function ensureConnection(int $companyId): ErpConnection
@@ -60,6 +61,39 @@ class ErpSyncService
     }
 
     /**
+     * Refresh VAT register: Accounting invoice output tax + ERP purchase input tax.
+     *
+     * @return array{output:array{created:int,updated:int,removed:int,skipped:int},input_synced:int,erp_error:?string}
+     */
+    public function syncTaxRegister(AccountingBook $book, User $user): array
+    {
+        unset($user);
+        $output = $this->taxEngine->backfillFromCustomerInvoices($book);
+        $inputSynced = 0;
+        $erpError = null;
+
+        try {
+            if (config('erp.enabled')) {
+                $connection = $this->ensureConnection((int) $book->company_id);
+                $this->bindErpDatabaseForCompany((int) $book->company_id, $connection);
+                $test = $this->test($connection);
+                if (! ($test['ok'] ?? false)) {
+                    throw new \RuntimeException('ERP connection failed: '.($test['message'] ?? 'unknown'));
+                }
+                $inputSynced = $this->syncPurchaseTaxTransactions($book, $connection);
+            }
+        } catch (\Throwable $e) {
+            $erpError = $e->getMessage();
+        }
+
+        return [
+            'output' => $output,
+            'input_synced' => $inputSynced,
+            'erp_error' => $erpError,
+        ];
+    }
+
+    /**
      * Pull ERP data into UltiTech Accounting only. Never writes to ERP.
      *
      * @param  array<int, string>  $scopes  accounts|customers|suppliers|invoices|journals|wallets
@@ -79,7 +113,7 @@ class ErpSyncService
             throw ValidationException::withMessages(['erp' => 'ERP connection failed: '.($test['message'] ?? 'unknown')]);
         }
 
-        $limit = $journalLimit ?? (int) config('erp.journal_limit', 50);
+        $limit = $journalLimit ?? (int) config('erp.journal_limit', 500);
         $run = ErpSyncRun::withoutGlobalScopes()->create([
             'company_id' => $book->company_id,
             'book_id' => $book->id,
@@ -100,13 +134,18 @@ class ErpSyncService
             'customers_upserted' => 0,
             'suppliers_upserted' => 0,
             'invoices_upserted' => 0,
+            'tax_output_synced' => 0,
+            'tax_input_synced' => 0,
             'journals_imported' => 0,
             'journals_skipped' => 0,
+            'invoices_linked_to_journals' => 0,
             'errors' => [],
         ];
 
         try {
-            DB::connection()->transaction(function () use ($book, $user, $connection, $scopes, $limit, &$stats) {
+            // Master data in one transaction. Journals post via JournalPostingService
+            // (own transactions) outside so a large GL backfill cannot hold one lock.
+            DB::connection()->transaction(function () use ($book, $user, $connection, $scopes, &$stats) {
                 if (in_array('accounts', $scopes, true)) {
                     $stats['accounts_upserted'] = $this->syncAccounts($book, $connection);
                     $stats['balances_accounts_upserted'] = $this->syncFinancialAccounts($book, $connection);
@@ -131,14 +170,19 @@ class ErpSyncService
                         $stats['customers_upserted'] = $this->syncCustomers($book, $connection);
                     }
                     $stats['invoices_upserted'] = $this->syncInvoices($book, $user, $connection);
-                }
-                if (in_array('journals', $scopes, true)) {
-                    [$imported, $skipped, $errors] = $this->syncJournals($book, $user, $connection, $limit);
-                    $stats['journals_imported'] = $imported;
-                    $stats['journals_skipped'] = $skipped;
-                    $stats['errors'] = $errors;
+                    $taxOut = $this->taxEngine->backfillFromCustomerInvoices($book);
+                    $stats['tax_output_synced'] = (int) (($taxOut['created'] ?? 0) + ($taxOut['updated'] ?? 0));
+                    $stats['tax_input_synced'] = $this->syncPurchaseTaxTransactions($book, $connection);
                 }
             });
+
+            if (in_array('journals', $scopes, true)) {
+                [$imported, $skipped, $errors] = $this->syncJournals($book, $user, $connection, $limit);
+                $stats['journals_imported'] = $imported;
+                $stats['journals_skipped'] = $skipped;
+                $stats['errors'] = array_values(array_merge($stats['errors'], $errors));
+                $stats['invoices_linked_to_journals'] = $this->linkMirroredInvoicesToImportedJournals($book);
+            }
 
             $run->update([
                 'stats_json' => $stats,
@@ -185,8 +229,15 @@ class ErpSyncService
                 ->where('code', $code)
                 ->first();
             if ($existing && in_array((string) $existing->path, ['template', 'user', 'banking'], true)) {
-                $this->map($connection, (int) $book->company_id, 'account', (string) $row->id, (int) $existing->id, [
+                $target = $existing;
+                // Never map a postable ERP account onto a non-postable template header
+                // (e.g. ERP 2000 AP → template 2000 Liabilities). Prefer a postable child.
+                if ((bool) ($row->is_postable ?? true) && ! $existing->is_postable) {
+                    $target = $this->findPostableCounterpart($book, $existing, (string) ($row->name ?? '')) ?? $existing;
+                }
+                $this->map($connection, (int) $book->company_id, 'account', (string) $row->id, (int) $target->id, [
                     'code' => $code,
+                    'mapped_via' => $target->id === $existing->id ? 'code' : 'postable_counterpart',
                 ]);
                 $count++;
                 continue;
@@ -699,6 +750,69 @@ class ErpSyncService
     }
 
     /**
+     * Import input VAT from ERP stock purchases into the tax register.
+     */
+    private function syncPurchaseTaxTransactions(AccountingBook $book, ErpConnection $connection): int
+    {
+        unset($connection);
+        if (! $this->erp->tableExists('purchases')) {
+            return 0;
+        }
+
+        $code = $this->taxEngine->ensureDefaultVatCode($book);
+        if (! $code) {
+            return 0;
+        }
+
+        $hasPurchaseDate = $this->erp->columnExists('purchases', 'purchase_date');
+        $dateExpr = $hasPurchaseDate
+            ? 'COALESCE(purchase_date, DATE(created_at), CURDATE())'
+            : 'COALESCE(DATE(created_at), CURDATE())';
+
+        $rows = $this->erp->select(
+            "SELECT id, subtotal, tax_amount, total_amount, {$dateExpr} AS tax_date, status
+             FROM purchases
+             WHERE COALESCE(tax_amount, 0) > 0
+             ORDER BY id ASC"
+        );
+
+        $count = 0;
+        foreach ($rows as $row) {
+            $status = strtolower(trim((string) ($row->status ?? '')));
+            if (in_array($status, ['cancelled', 'canceled', 'rejected'], true)) {
+                continue;
+            }
+
+            $tax = Money::normalize($row->tax_amount ?? 0);
+            if (Money::isZero($tax)) {
+                continue;
+            }
+
+            $taxable = Money::normalize($row->subtotal ?? 0);
+            if (Money::isZero($taxable)) {
+                $taxable = Money::sub(Money::normalize($row->total_amount ?? 0), $tax);
+            }
+
+            $txn = $this->taxEngine->upsertExplicitTransaction(
+                $book,
+                $code,
+                'input',
+                $taxable,
+                $tax,
+                (string) ($row->tax_date ?? now()->toDateString()),
+                'erp_purchase',
+                (int) $row->id,
+                null
+            );
+            if ($txn) {
+                $count++;
+            }
+        }
+
+        return $count;
+    }
+
+    /**
      * @return array<int, array{description:string,quantity:string,unit_price:string,line_total:string}>
      */
     private function erpInvoiceLines(int $orderId, string $fallbackTotal, int $revenueAccountId): array
@@ -795,97 +909,273 @@ class ErpSyncService
     /**
      * @return array{0:int,1:int,2:array<int,string>}
      */
+    /**
+     * Import ERP gl_journal_entries into Accounting via JournalPostingService.
+     *
+     * Idempotent: source_hash = erp:gl_journal:{erp_id} (unique per company/book).
+     * Cursor-scans the full ERP GL so already-imported rows do not block later IDs
+     * (previous LIMIT-first-N behaviour permanently stalled after the first batch).
+     *
+     * @return array{0:int,1:int,2:list<string>}
+     */
     private function syncJournals(AccountingBook $book, User $user, ErpConnection $connection, int $limit): array
     {
-        $entries = $this->erp->select(
-            'SELECT id, entry_number, entry_date, description, source_type, source_key, currency, total_amount
-             FROM gl_journal_entries
-             ORDER BY id ASC
-             LIMIT '.(int) $limit
-        );
-
         $imported = 0;
         $skipped = 0;
         $errors = [];
+        $lastId = 0;
+        $scanBatch = 100;
+        $limit = max(1, $limit);
 
-        foreach ($entries as $entry) {
-            $sourceHash = 'erp:gl_journal:'.$entry->id;
-            $exists = \App\Models\JournalEntry::withoutGlobalScopes()
-                ->where('company_id', $book->company_id)
-                ->where('book_id', $book->id)
-                ->where('source_hash', $sourceHash)
-                ->exists();
-
-            if ($exists) {
-                $skipped++;
-                continue;
-            }
-
-            $lines = $this->erp->select(
-                'SELECT line_no, account_id, debit, credit, memo, currency
-                 FROM gl_journal_lines WHERE entry_id = ? ORDER BY line_no',
-                [$entry->id]
+        while ($imported < $limit) {
+            $entries = $this->erp->select(
+                'SELECT id, entry_number, entry_date, description, source_type, source_key, currency, total_amount
+                 FROM gl_journal_entries
+                 WHERE id > ?
+                 ORDER BY id ASC
+                 LIMIT '.(int) $scanBatch,
+                [$lastId]
             );
 
-            if (count($lines) < 2) {
-                $skipped++;
-                $errors[] = "Journal {$entry->entry_number}: fewer than 2 lines";
-                continue;
+            if ($entries === []) {
+                break;
             }
 
-            try {
-                $this->periods->resolveOpenPeriod((int) $book->company_id, (int) $book->id, $entry->entry_date);
-            } catch (\Throwable $e) {
-                $skipped++;
-                $errors[] = "Journal {$entry->entry_number}: period not open for {$entry->entry_date}";
-                continue;
-            }
+            foreach ($entries as $entry) {
+                $lastId = (int) $entry->id;
 
-            $payloadLines = [];
-            $ok = true;
-            foreach ($lines as $line) {
-                $localAccountId = $this->localId($connection, 'account', (string) $line->account_id);
-                if (! $localAccountId) {
-                    $ok = false;
-                    $errors[] = "Journal {$entry->entry_number}: missing mapped account erp#{$line->account_id}";
-                    break;
+                if ($imported >= $limit) {
+                    break 2;
                 }
-                $payloadLines[] = [
-                    'account_id' => $localAccountId,
-                    'debit' => Money::normalize($line->debit),
-                    'credit' => Money::normalize($line->credit),
-                    'description' => $line->memo ?: $entry->description,
-                ];
+
+                $sourceHash = 'erp:gl_journal:'.$entry->id;
+                $mappedLocalId = $this->localId($connection, 'gl_journal', (string) $entry->id);
+                $exists = $mappedLocalId !== null
+                    || \App\Models\JournalEntry::withoutGlobalScopes()
+                        ->where('company_id', $book->company_id)
+                        ->where('book_id', $book->id)
+                        ->where('source_hash', $sourceHash)
+                        ->exists();
+
+                if ($exists) {
+                    $skipped++;
+                    continue;
+                }
+
+                $lines = $this->erp->select(
+                    'SELECT line_no, account_id, debit, credit, memo, currency
+                     FROM gl_journal_lines WHERE entry_id = ? ORDER BY line_no',
+                    [$entry->id]
+                );
+
+                if (count($lines) < 2) {
+                    $skipped++;
+                    $errors[] = "Journal {$entry->entry_number}: fewer than 2 lines";
+                    continue;
+                }
+
+                try {
+                    $this->periods->resolveOpenPeriod((int) $book->company_id, (int) $book->id, $entry->entry_date);
+                } catch (\Throwable $e) {
+                    $skipped++;
+                    $errors[] = "Journal {$entry->entry_number}: period not open for {$entry->entry_date}";
+                    continue;
+                }
+
+                $payloadLines = [];
+                $ok = true;
+                foreach ($lines as $line) {
+                    $localAccountId = $this->resolvePostableMappedAccount(
+                        $book,
+                        $connection,
+                        (string) $line->account_id
+                    );
+                    if (! $localAccountId) {
+                        $ok = false;
+                        $errors[] = "Journal {$entry->entry_number}: missing mapped account erp#{$line->account_id}";
+                        break;
+                    }
+                    $payloadLines[] = [
+                        'account_id' => $localAccountId,
+                        'debit' => Money::normalize($line->debit),
+                        'credit' => Money::normalize($line->credit),
+                        'description' => $line->memo ?: $entry->description,
+                    ];
+                }
+
+                if (! $ok) {
+                    $skipped++;
+                    continue;
+                }
+
+                try {
+                    $journal = $this->posting->createAndPost($book, $user, [
+                        'journal_date' => $entry->entry_date,
+                        'description' => '[ERP] '.($entry->description ?: $entry->entry_number),
+                        'reference' => $entry->entry_number,
+                        'currency_code' => strtoupper((string) ($entry->currency ?: 'TZS')),
+                        'source_type' => 'erp_gl_journal',
+                        'source_id_ref' => (string) $entry->id,
+                        'source_hash' => $sourceHash,
+                        'lines' => $payloadLines,
+                    ], 'system');
+
+                    $this->map($connection, (int) $book->company_id, 'gl_journal', (string) $entry->id, (int) $journal->id, [
+                        'entry_number' => $entry->entry_number,
+                        'erp_source_type' => $entry->source_type ?? null,
+                        'erp_source_key' => $entry->source_key ?? null,
+                    ]);
+                    $imported++;
+                } catch (\Throwable $e) {
+                    $skipped++;
+                    $errors[] = "Journal {$entry->entry_number}: ".$e->getMessage();
+                }
             }
 
-            if (! $ok) {
-                $skipped++;
-                continue;
-            }
-
-            try {
-                $journal = $this->posting->createAndPost($book, $user, [
-                    'journal_date' => $entry->entry_date,
-                    'description' => '[ERP] '.($entry->description ?: $entry->entry_number),
-                    'reference' => $entry->entry_number,
-                    'currency_code' => strtoupper((string) ($entry->currency ?: 'TZS')),
-                    'source_type' => 'erp_gl_journal',
-                    'source_id_ref' => (string) $entry->id,
-                    'source_hash' => $sourceHash,
-                    'lines' => $payloadLines,
-                ], 'system');
-
-                $this->map($connection, (int) $book->company_id, 'gl_journal', (string) $entry->id, (int) $journal->id, [
-                    'entry_number' => $entry->entry_number,
-                ]);
-                $imported++;
-            } catch (\Throwable $e) {
-                $skipped++;
-                $errors[] = "Journal {$entry->entry_number}: ".$e->getMessage();
+            if (count($entries) < $scanBatch) {
+                break;
             }
         }
 
         return [$imported, $skipped, array_slice($errors, 0, 25)];
+    }
+
+    /**
+     * Soft-link ERP-mirrored customer invoices to imported GL journals when the
+     * invoice number appears uniquely in a journal description. Never posts a
+     * second journal for the invoice (ERP GL is canonical for mirrors).
+     */
+    private function linkMirroredInvoicesToImportedJournals(AccountingBook $book): int
+    {
+        $invoices = CustomerInvoice::withoutGlobalScopes()
+            ->where('company_id', $book->company_id)
+            ->where('book_id', $book->id)
+            ->whereNull('posted_journal_id')
+            ->orderBy('id')
+            ->get(['id', 'invoice_number']);
+
+        if ($invoices->isEmpty()) {
+            return 0;
+        }
+
+        $linked = 0;
+        foreach ($invoices as $invoice) {
+            $number = trim((string) $invoice->invoice_number);
+            if ($number === '' || strlen($number) < 4) {
+                continue;
+            }
+
+            // Escape LIKE wildcards in document numbers.
+            $like = '%'.addcslashes($number, '%_\\').'%';
+            $matches = \App\Models\JournalEntry::withoutGlobalScopes()
+                ->where('company_id', $book->company_id)
+                ->where('book_id', $book->id)
+                ->where('source_type', 'erp_gl_journal')
+                ->where('status', 'posted')
+                ->where('description', 'like', $like)
+                ->orderBy('journal_date')
+                ->orderBy('id')
+                ->limit(5)
+                ->get(['id', 'description']);
+
+            if ($matches->isEmpty()) {
+                continue;
+            }
+
+            // Prefer recognition wording; otherwise the earliest mention (sale before receipt).
+            $chosen = $matches->first(function ($row) {
+                $d = strtolower((string) $row->description);
+
+                return str_contains($d, 'revenue')
+                    || str_contains($d, 'recognised')
+                    || str_contains($d, 'recognized')
+                    || str_contains($d, 'sales invoice');
+            }) ?? $matches->first();
+
+            $invoice->posted_journal_id = (int) $chosen->id;
+            $invoice->save();
+            $linked++;
+        }
+
+        return $linked;
+    }
+
+    /**
+     * Resolve ERP account map to a postable local account. If the map points at a
+     * header, remaps to a postable counterpart and persists the corrected map.
+     */
+    private function resolvePostableMappedAccount(AccountingBook $book, ErpConnection $connection, string $erpAccountId): ?int
+    {
+        $localAccountId = $this->localId($connection, 'account', $erpAccountId);
+        if (! $localAccountId) {
+            return null;
+        }
+
+        $account = Account::withoutGlobalScopes()
+            ->where('company_id', $book->company_id)
+            ->where('book_id', $book->id)
+            ->whereKey($localAccountId)
+            ->first();
+
+        if (! $account) {
+            return null;
+        }
+
+        if ($account->is_postable) {
+            return (int) $account->id;
+        }
+
+        $counterpart = $this->findPostableCounterpart($book, $account, (string) $account->name);
+        if (! $counterpart) {
+            return (int) $account->id;
+        }
+
+        $this->map($connection, (int) $book->company_id, 'account', $erpAccountId, (int) $counterpart->id, [
+            'code' => $account->code,
+            'mapped_via' => 'postable_counterpart_repair',
+            'previous_local_id' => (int) $account->id,
+        ]);
+
+        return (int) $counterpart->id;
+    }
+
+    private function findPostableCounterpart(AccountingBook $book, Account $header, string $preferredName = ''): ?Account
+    {
+        $postable = function () use ($book) {
+            return Account::withoutGlobalScopes()
+                ->where('company_id', $book->company_id)
+                ->where('book_id', $book->id)
+                ->where('is_postable', true)
+                ->where('status', 'active');
+        };
+
+        $name = trim($preferredName);
+        if ($name !== '' && strcasecmp($name, 'Liabilities') !== 0) {
+            $byName = $postable()->where('name', $name)->orderBy('code')->first();
+            if ($byName) {
+                return $byName;
+            }
+        }
+
+        // Common template case: header 2000 Liabilities + child 2001 Accounts Payable.
+        if (strcasecmp((string) $header->name, 'Liabilities') === 0 || $header->code === '2000') {
+            $ap = $postable()->where('name', 'Accounts Payable')->orderBy('code')->first();
+            if ($ap) {
+                return $ap;
+            }
+        }
+
+        $prefix = (string) $header->code;
+        if ($prefix === '') {
+            return null;
+        }
+
+        return $postable()
+            ->where('code', 'like', $prefix.'%')
+            ->where('code', '!=', $prefix)
+            ->orderByRaw('LENGTH(code) asc')
+            ->orderBy('code')
+            ->first();
     }
 
     private function bindErpDatabaseForCompany(int $companyId, ErpConnection $connection): void

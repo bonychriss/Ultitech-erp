@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { 
   Download, 
   RotateCcw, 
@@ -26,8 +26,33 @@ export default function Header({
   onOpenExport,
   hasImage,
   theme,
-  setTheme
+  setTheme,
+  textScale,
+  setTextScale
 }) {
+  const [textSizeOpen, setTextSizeOpen] = useState(false);
+  const textSizeRef = useRef(null);
+
+  useEffect(() => {
+    if (!textSizeOpen) return undefined;
+
+    const handlePointerDown = (event) => {
+      if (!textSizeRef.current?.contains(event.target)) {
+        setTextSizeOpen(false);
+      }
+    };
+
+    document.addEventListener('pointerdown', handlePointerDown);
+    return () => document.removeEventListener('pointerdown', handlePointerDown);
+  }, [textSizeOpen]);
+
+  const textSizeOptions = [
+    { label: 'Default', value: 100 },
+    { label: 'Comfortable', value: 112 },
+    { label: 'Large', value: 125 },
+    { label: 'Extra large', value: 150 }
+  ];
+
   return (
     <header className="glass-panel" style={{ borderRadius: '0 0 16px 16px', padding: '12px 24px', margin: '0 0 16px 0', zIndex: 50 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
@@ -49,6 +74,68 @@ export default function Header({
 
         {/* Action Controls, Theme Toggle & Export */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+
+          {/* Text Size Picker */}
+          <div ref={textSizeRef} style={{ position: 'relative' }}>
+            <button
+              onClick={() => setTextSizeOpen((open) => !open)}
+              className="btn btn-outline btn-sm"
+              title="Text size"
+              aria-expanded={textSizeOpen}
+              aria-haspopup="dialog"
+              style={{ padding: '8px 10px', fontWeight: 600 }}
+            >
+              Aa
+            </button>
+
+            {textSizeOpen && (
+              <div
+                role="dialog"
+                aria-label="Text size"
+                className="glass-panel"
+                style={{
+                  position: 'absolute',
+                  top: 'calc(100% + 10px)',
+                  right: 0,
+                  width: '320px',
+                  padding: '16px',
+                  borderRadius: '8px',
+                  zIndex: 100
+                }}
+              >
+                <h3 style={{ fontSize: '1rem', marginBottom: '12px', textAlign: 'left' }}>Text size</h3>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '8px' }}>
+                  {textSizeOptions.map((option) => {
+                    const selected = textScale === option.value;
+                    return (
+                      <button
+                        key={option.value}
+                        type="button"
+                        onClick={() => setTextScale(option.value)}
+                        className="btn"
+                        aria-pressed={selected}
+                        style={{
+                          minHeight: '58px',
+                          padding: '8px',
+                          border: selected
+                            ? '2px solid #3b82f6'
+                            : '1px solid var(--bg-subtle-border)',
+                          borderRadius: '4px',
+                          background: selected ? 'rgba(59, 130, 246, 0.06)' : 'var(--bg-card)',
+                          color: selected ? '#2563eb' : 'var(--text-main)',
+                          flexDirection: 'column',
+                          gap: '2px'
+                        }}
+                      >
+                        <span style={{ fontWeight: 700, fontSize: '0.82rem' }}>{option.label}</span>
+                        <span style={{ fontSize: '0.72rem', fontWeight: 600 }}>{option.value}%</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
           
           {/* Light / Dark Theme Toggle */}
           <button

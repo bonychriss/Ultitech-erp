@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Application\Services\ErpPurchaseVoucherService;
 use App\Application\Services\PayableService;
 use App\Http\Controllers\Controller;
 use App\Models\Supplier;
@@ -12,7 +13,10 @@ use Illuminate\Http\Request;
 
 class SupplierController extends Controller
 {
-    public function __construct(private readonly PayableService $payables) {}
+    public function __construct(
+        private readonly PayableService $payables,
+        private readonly ErpPurchaseVoucherService $erpPurchaseVouchers,
+    ) {}
 
     public function index(Request $request): JsonResponse
     {
@@ -55,6 +59,32 @@ class SupplierController extends Controller
                 ->orderByDesc('bill_date')
                 ->limit(100)
                 ->get(),
+        ]);
+    }
+
+    /**
+     * Classic stock-purchase payment vouchers (Purchases desk).
+     */
+    public function purchaseVouchers(Request $request): JsonResponse
+    {
+        $book = $request->attributes->get('book');
+        $limit = (int) $request->query('limit', 500);
+
+        return response()->json([
+            'data' => $this->erpPurchaseVouchers->listStockPurchaseVouchers($book, $limit),
+        ]);
+    }
+
+    /**
+     * Classic general-payment vouchers (Expenses desk).
+     */
+    public function expenseVouchers(Request $request): JsonResponse
+    {
+        $book = $request->attributes->get('book');
+        $limit = (int) $request->query('limit', 500);
+
+        return response()->json([
+            'data' => $this->erpPurchaseVouchers->listGeneralExpenseVouchers($book, $limit),
         ]);
     }
 

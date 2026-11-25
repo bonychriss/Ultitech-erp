@@ -10,13 +10,23 @@ use App\Models\JournalLine;
 use App\Support\Money;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class FinancialReportingService
 {
     public function __construct(private readonly AccountBalanceService $balances) {}
 
-    public function profitAndLoss(int $companyId, int $bookId, string $fromDate, string $toDate, ?string $compareFrom = null, ?string $compareTo = null): array
-    {
+    public function profitAndLoss(
+        int $companyId,
+        int $bookId,
+        string $fromDate,
+        string $toDate,
+        ?string $compareFrom = null,
+        ?string $compareTo = null,
+        string $columns = 'total',
+    ): array {
+        $columns = in_array($columns, ['total', 'quarter', 'month'], true) ? $columns : 'total';
+
         $current = $this->periodByClassification($companyId, $bookId, $fromDate, $toDate, ['revenue', 'expense']);
         $comparative = ($compareFrom && $compareTo)
             ? $this->periodByClassification($companyId, $bookId, $compareFrom, $compareTo, ['revenue', 'expense'])
@@ -24,32 +34,68 @@ class FinancialReportingService
 
         $revenue = $current->get('revenue', collect());
         $expenses = $current->get('expense', collect());
+        [$cogs, $operating] = $this->splitExpenses($companyId, $bookId, $expenses);
+
         $totalRevenue = $this->sumNetCredit($revenue);
-        $totalExpenses = $this->sumNetDebit($expenses);
+        $totalCogs = $this->sumNetDebit($cogs);
+        $totalOperating = $this->sumNetDebit($operating);
+        $totalExpenses = Money::add($totalCogs, $totalOperating);
+        $grossProfit = Money::normalize(bcsub($totalRevenue, $totalCogs, 4));
         $netProfit = Money::normalize(bcsub($totalRevenue, $totalExpenses, 4));
 
         $result = [
             'period' => ['from' => $fromDate, 'to' => $toDate],
+            'columns_mode' => $columns,
+            'columns' => [['key' => 'total', 'label' => 'Total']],
+            // Backward-compatible flat lists
             'revenue' => $revenue->values(),
             'expenses' => $expenses->values(),
+            // Structured P&L sections (FreshBooks-style)
+            'income' => $revenue->values(),
+            'cogs' => $cogs->values(),
+            'operating_expenses' => $operating->values(),
             'totals' => [
                 'revenue' => $totalRevenue,
+                'income' => $totalRevenue,
+                'cogs' => $totalCogs,
+                'gross_profit' => $grossProfit,
+                'gross_profit_margin' => $this->marginPercent($grossProfit, $totalRevenue),
                 'expenses' => $totalExpenses,
+                'operating_expenses' => $totalOperating,
                 'net_profit' => $netProfit,
+                'net_profit_margin' => $this->marginPercent($netProfit, $totalRevenue),
             ],
         ];
+
+        if ($columns === 'quarter' || $columns === 'month') {
+            $periods = $columns === 'month'
+                ? $this->monthRanges($fromDate, $toDate)
+                : $this->quarterRanges($fromDate, $toDate);
+            $result = $this->attachPeriodColumns($result, $companyId, $bookId, $periods);
+        }
 
         if ($comparative) {
             $cRevenue = $comparative->get('revenue', collect());
             $cExpenses = $comparative->get('expense', collect());
+            [$cCogs, $cOperating] = $this->splitExpenses($companyId, $bookId, $cExpenses);
             $cTotalRevenue = $this->sumNetCredit($cRevenue);
-            $cTotalExpenses = $this->sumNetDebit($cExpenses);
+            $cTotalCogs = $this->sumNetDebit($cCogs);
+            $cTotalOperating = $this->sumNetDebit($cOperating);
+            $cTotalExpenses = Money::add($cTotalCogs, $cTotalOperating);
+            $cGross = Money::normalize(bcsub($cTotalRevenue, $cTotalCogs, 4));
+            $cNet = Money::normalize(bcsub($cTotalRevenue, $cTotalExpenses, 4));
             $result['comparative'] = [
                 'period' => ['from' => $compareFrom, 'to' => $compareTo],
                 'totals' => [
                     'revenue' => $cTotalRevenue,
+                    'income' => $cTotalRevenue,
+                    'cogs' => $cTotalCogs,
+                    'gross_profit' => $cGross,
+                    'gross_profit_margin' => $this->marginPercent($cGross, $cTotalRevenue),
                     'expenses' => $cTotalExpenses,
-                    'net_profit' => Money::normalize(bcsub($cTotalRevenue, $cTotalExpenses, 4)),
+                    'operating_expenses' => $cTotalOperating,
+                    'net_profit' => $cNet,
+                    'net_profit_margin' => $this->marginPercent($cNet, $cTotalRevenue),
                 ],
             ];
         }
@@ -358,6 +404,249 @@ class FinancialReportingService
     private function sumNetDebit(Collection $rows): string
     {
         return $rows->reduce(fn ($c, $r) => Money::add($c, $r['amount']), '0.0000');
+    }
+
+    /**
+     * Split expense lines into COGS vs operating expenses.
+     *
+     * @return array{0: Collection, 1: Collection}
+     */
+    private function splitExpenses(int $companyId, int $bookId, Collection $expenses): array
+    {
+        $cogsAccountIds = [];
+        if (Schema::hasTable('acc_inventory_items')) {
+            $cogsAccountIds = DB::table('acc_inventory_items')
+                ->where('company_id', $companyId)
+                ->where('book_id', $bookId)
+                ->whereNotNull('cogs_account_id')
+                ->pluck('cogs_account_id')
+                ->map(fn ($id) => (int) $id)
+                ->unique()
+                ->all();
+        }
+
+        $cogs = collect();
+        $operating = collect();
+
+        foreach ($expenses as $row) {
+            if ($this->isCogsAccount($row, $cogsAccountIds)) {
+                $cogs->push($row);
+            } else {
+                $operating->push($row);
+            }
+        }
+
+        return [$cogs, $operating];
+    }
+
+    private function isCogsAccount(array $row, array $cogsAccountIds): bool
+    {
+        $accountId = (int) ($row['account_id'] ?? 0);
+        if ($accountId && in_array($accountId, $cogsAccountIds, true)) {
+            return true;
+        }
+
+        $code = strtoupper(trim((string) ($row['account_code'] ?? '')));
+        if ($code !== '' && str_starts_with($code, '53')) {
+            return true;
+        }
+
+        $name = strtolower((string) ($row['account_name'] ?? ''));
+        if ($name !== '' && (str_contains($name, 'cost of goods') || str_contains($name, 'cogs'))) {
+            return true;
+        }
+
+        return false;
+    }
+
+    private function marginPercent(string $numerator, string $denominator): string
+    {
+        if (Money::isZero($denominator)) {
+            return '0.00';
+        }
+
+        return number_format((float) bcmul(bcdiv($numerator, $denominator, 8), '100', 4), 2, '.', '');
+    }
+
+    /**
+     * @param  list<array{key: string, label: string, from: string, to: string}>  $periods
+     */
+    private function attachPeriodColumns(array $result, int $companyId, int $bookId, array $periods): array
+    {
+        if ($periods === []) {
+            return $result;
+        }
+
+        $columnDefs = [];
+        foreach ($periods as $period) {
+            $columnDefs[] = [
+                'key' => $period['key'],
+                'label' => $period['label'],
+                'from' => $period['from'],
+                'to' => $period['to'],
+            ];
+        }
+        $columnDefs[] = ['key' => 'total', 'label' => 'TOTAL'];
+
+        $periodMaps = [];
+        foreach ($periods as $period) {
+            $periodMaps[$period['key']] = $this->periodByClassification(
+                $companyId,
+                $bookId,
+                $period['from'],
+                $period['to'],
+                ['revenue', 'expense']
+            );
+        }
+
+        $enrich = function (Collection $rows, string $classification) use ($periodMaps, $periods): Collection {
+            return $rows->map(function (array $row) use ($periodMaps, $periods, $classification) {
+                $amounts = [];
+                foreach ($periods as $period) {
+                    $bucket = $periodMaps[$period['key']]->get($classification, collect());
+                    $match = $bucket->firstWhere('account_id', $row['account_id']);
+                    $amounts[$period['key']] = $match['amount'] ?? '0.0000';
+                }
+                $amounts['total'] = $row['amount'];
+                $row['amounts'] = $amounts;
+
+                return $row;
+            })->values();
+        };
+
+        $income = $enrich(collect($result['income']), 'revenue');
+        $allExpenses = collect($result['expenses']);
+        [$cogsFlat, $operatingFlat] = $this->splitExpenses($companyId, $bookId, $allExpenses);
+        $cogs = $enrich($cogsFlat, 'expense');
+        $operating = $enrich($operatingFlat, 'expense');
+        $expenses = $enrich($allExpenses, 'expense');
+        $revenue = $enrich(collect($result['revenue']), 'revenue');
+
+        $sumSection = function (Collection $rows) use ($periods): array {
+            $sums = ['total' => '0.0000'];
+            foreach ($periods as $period) {
+                $sums[$period['key']] = '0.0000';
+            }
+            foreach ($rows as $row) {
+                foreach ($sums as $key => $_) {
+                    $sums[$key] = Money::add($sums[$key], $row['amounts'][$key] ?? '0.0000');
+                }
+            }
+
+            return $sums;
+        };
+
+        $incomeTotals = $sumSection($income);
+        $cogsTotals = $sumSection($cogs);
+        $operatingTotals = $sumSection($operating);
+        $expenseTotals = $sumSection($expenses);
+
+        $grossByCol = [];
+        $netByCol = [];
+        $grossMarginByCol = [];
+        $netMarginByCol = [];
+        foreach (array_merge(array_column($periods, 'key'), ['total']) as $key) {
+            $inc = $incomeTotals[$key] ?? '0.0000';
+            $cg = $cogsTotals[$key] ?? '0.0000';
+            $exp = $expenseTotals[$key] ?? '0.0000';
+            $gross = Money::normalize(bcsub($inc, $cg, 4));
+            $net = Money::normalize(bcsub($inc, $exp, 4));
+            $grossByCol[$key] = $gross;
+            $netByCol[$key] = $net;
+            $grossMarginByCol[$key] = $this->marginPercent($gross, $inc);
+            $netMarginByCol[$key] = $this->marginPercent($net, $inc);
+        }
+
+        $result['columns'] = $columnDefs;
+        $result['income'] = $income;
+        $result['cogs'] = $cogs;
+        $result['operating_expenses'] = $operating;
+        $result['revenue'] = $revenue;
+        $result['expenses'] = $expenses;
+        $result['totals']['income_by_column'] = $incomeTotals;
+        $result['totals']['cogs_by_column'] = $cogsTotals;
+        $result['totals']['operating_expenses_by_column'] = $operatingTotals;
+        $result['totals']['expenses_by_column'] = $expenseTotals;
+        $result['totals']['gross_profit_by_column'] = $grossByCol;
+        $result['totals']['net_profit_by_column'] = $netByCol;
+        $result['totals']['gross_profit_margin_by_column'] = $grossMarginByCol;
+        $result['totals']['net_profit_margin_by_column'] = $netMarginByCol;
+
+        return $result;
+    }
+
+    /**
+     * @return list<array{key: string, label: string, from: string, to: string}>
+     */
+    private function monthRanges(string $fromDate, string $toDate): array
+    {
+        $from = new \DateTimeImmutable($fromDate);
+        $to = new \DateTimeImmutable($toDate);
+        if ($from > $to) {
+            return [];
+        }
+
+        $cursor = $from->modify('first day of this month');
+        $end = $to->modify('first day of this month');
+        $months = [];
+
+        while ($cursor <= $end) {
+            $monthStart = $cursor;
+            $monthEnd = $cursor->modify('last day of this month');
+            $clippedFrom = $monthStart < $from ? $from : $monthStart;
+            $clippedTo = $monthEnd > $to ? $to : $monthEnd;
+            $months[] = [
+                'key' => 'm'.$cursor->format('Ym'),
+                'label' => strtoupper($cursor->format('M Y')),
+                'from' => $clippedFrom->format('Y-m-d'),
+                'to' => $clippedTo->format('Y-m-d'),
+            ];
+            $cursor = $cursor->modify('+1 month');
+        }
+
+        return $months;
+    }
+
+    /**
+     * @return list<array{key: string, label: string, from: string, to: string}>
+     */
+    private function quarterRanges(string $fromDate, string $toDate): array
+    {
+        $from = new \DateTimeImmutable($fromDate);
+        $to = new \DateTimeImmutable($toDate);
+        if ($from > $to) {
+            return [];
+        }
+
+        $year = (int) $from->format('Y');
+        $endYear = (int) $to->format('Y');
+        $quarters = [];
+
+        for ($y = $year; $y <= $endYear; $y++) {
+            $defs = [
+                ['Q1', sprintf('%04d-01-01', $y), sprintf('%04d-03-31', $y), 'JAN '.$y.'-MAR '.$y],
+                ['Q2', sprintf('%04d-04-01', $y), sprintf('%04d-06-30', $y), 'APR '.$y.'-JUN '.$y],
+                ['Q3', sprintf('%04d-07-01', $y), sprintf('%04d-09-30', $y), 'JUL '.$y.'-SEP '.$y],
+                ['Q4', sprintf('%04d-10-01', $y), sprintf('%04d-12-31', $y), 'OCT '.$y.'-DEC '.$y],
+            ];
+            foreach ($defs as [$key, $qFrom, $qTo, $label]) {
+                $qf = new \DateTimeImmutable($qFrom);
+                $qt = new \DateTimeImmutable($qTo);
+                if ($qt < $from || $qf > $to) {
+                    continue;
+                }
+                $clippedFrom = $qf < $from ? $from->format('Y-m-d') : $qFrom;
+                $clippedTo = $qt > $to ? $to->format('Y-m-d') : $qTo;
+                $quarters[] = [
+                    'key' => $y === $year && $endYear === $year ? strtolower($key) : strtolower($key).'_'.$y,
+                    'label' => $label,
+                    'from' => $clippedFrom,
+                    'to' => $clippedTo,
+                ];
+            }
+        }
+
+        return $quarters;
     }
 
     private function cashBalanceAsOf(int $companyId, int $bookId, Collection $cashIds, string $asOf): string

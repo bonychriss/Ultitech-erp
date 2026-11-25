@@ -549,17 +549,24 @@
   table-layout: fixed;
 }
 
-.ov-document-wrap .o-table th {
+.ov-document-wrap .o-table th,
+.ov-document-wrap .spare-table th,
+.ov-document-wrap .truck-table th {
   border-bottom: 2px solid #000;
   text-transform: uppercase;
   font-size: 9pt;
   font-weight: 400;
-  background-color: #ffd700 !important;
-  background: #ffd700 !important;
-  color: #000 !important;
   padding: 10px 5px;
   -webkit-print-color-adjust: exact !important;
   print-color-adjust: exact !important;
+  color-adjust: exact !important;
+}
+
+/* Standard sheet fallback only — branded spare/truck/library layouts set their own theme colors. */
+.ov-document-wrap .o-table th {
+  background-color: #ffd700;
+  background: #ffd700;
+  color: #000;
 }
 
 .ov-document-wrap .o-table td {
@@ -2118,12 +2125,18 @@ body.ov-inv-transform-lock {
     line-height: 1.35 !important;
   }
 
+  .ov-document-wrap .o-table th,
+  .ov-document-wrap .spare-table th,
+  .ov-document-wrap .truck-table th {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+
   .ov-document-wrap .o-table th {
     background-color: #ffd700 !important;
     background: #ffd700 !important;
     color: #000 !important;
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
   }
 
   .ov-document-wrap .doc-terms-sheet {

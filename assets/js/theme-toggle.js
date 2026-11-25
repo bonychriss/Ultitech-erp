@@ -2,28 +2,94 @@
  * System-wide liquid-glass theme toggle.
  * Syncs every [data-erp-theme-toggle] with html[data-theme],
  * and adds press-squish feedback like the Figma liquid-glass demos.
+ *
+ * Preference (localStorage "theme"): light | dark | system
+ * Applied (html data-theme): light | dark
+ * Preference mirror (html data-theme-pref): light | dark | system
  */
 (function (global) {
   'use strict';
 
   var STORAGE_KEY = 'theme';
   var booted = false;
+  var mediaQuery = null;
+  var mediaBound = false;
+
+  function normalizePref(value) {
+    if (value === 'dark' || value === 'system') return value;
+    return 'light';
+  }
+
+  function systemResolved() {
+    try {
+      if (global.matchMedia && global.matchMedia('(prefers-color-scheme: dark)').matches) {
+        return 'dark';
+      }
+    } catch (e) { /* ignore */ }
+    return 'light';
+  }
+
+  function resolveTheme(pref) {
+    pref = normalizePref(pref);
+    return pref === 'system' ? systemResolved() : pref;
+  }
+
+  function getPreference() {
+    try {
+      var stored = localStorage.getItem(STORAGE_KEY);
+      if (stored === 'dark' || stored === 'system' || stored === 'light') return stored;
+    } catch (e) { /* private mode */ }
+    var attr = document.documentElement.getAttribute('data-theme-pref');
+    if (attr === 'dark' || attr === 'system' || attr === 'light') return attr;
+    return document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+  }
 
   function currentTheme() {
     return document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
   }
 
+  function syncMediaListener(pref) {
+    if (!global.matchMedia) return;
+    if (!mediaQuery) {
+      try { mediaQuery = global.matchMedia('(prefers-color-scheme: dark)'); } catch (e) { return; }
+    }
+    if (!mediaQuery) return;
+
+    if (pref === 'system') {
+      if (!mediaBound) {
+        var onChange = function () {
+          if (getPreference() !== 'system') return;
+          setTheme('system', { toast: false, fromMedia: true });
+        };
+        if (typeof mediaQuery.addEventListener === 'function') {
+          mediaQuery.addEventListener('change', onChange);
+        } else if (typeof mediaQuery.addListener === 'function') {
+          mediaQuery.addListener(onChange);
+        }
+        mediaBound = true;
+        mediaQuery._erpOnChange = onChange;
+      }
+    }
+  }
+
   function setTheme(theme, opts) {
-    var next = theme === 'dark' ? 'dark' : 'light';
+    opts = opts || {};
+    var pref = normalizePref(theme);
+    var next = resolveTheme(pref);
+
+    document.documentElement.setAttribute('data-theme-pref', pref);
     document.documentElement.setAttribute('data-theme', next);
     try {
-      localStorage.setItem(STORAGE_KEY, next);
+      localStorage.setItem(STORAGE_KEY, pref);
     } catch (e) { /* private mode */ }
+
+    syncMediaListener(pref);
 
     document.querySelectorAll('[data-erp-theme-toggle]').forEach(function (btn) {
       var isDark = next === 'dark';
       btn.setAttribute('aria-pressed', isDark ? 'true' : 'false');
       btn.setAttribute('data-theme-state', next);
+      btn.setAttribute('data-theme-pref', pref);
       btn.setAttribute('aria-label', isDark ? 'Switch to light theme' : 'Switch to dark theme');
       btn.title = isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode';
       btn.classList.toggle('is-dark', isDark);
@@ -46,11 +112,17 @@
     });
 
     try {
-      global.dispatchEvent(new CustomEvent('themeChanged', { detail: { theme: next } }));
+      global.dispatchEvent(new CustomEvent('themeChanged', {
+        detail: { theme: next, preference: pref },
+      }));
     } catch (e2) { /* ignore */ }
 
-    if (opts && opts.toast === false) return;
-    showToast(next === 'dark' ? 'Dark theme activated' : 'Light theme activated');
+    if (opts.toast === false || opts.fromMedia) return;
+    if (pref === 'system') {
+      showToast('Matching device theme (' + (next === 'dark' ? 'Dark' : 'Light') + ')');
+    } else {
+      showToast(next === 'dark' ? 'Dark theme activated' : 'Light theme activated');
+    }
   }
 
   function showToast(message) {
@@ -92,6 +164,7 @@
     e.preventDefault();
     var btn = e.currentTarget;
     clearPress(btn);
+    // Header toggle always picks an explicit theme (exits System).
     setTheme(currentTheme() === 'dark' ? 'light' : 'dark');
   }
 
@@ -110,7 +183,7 @@
 
   function bindAll() {
     document.querySelectorAll('[data-erp-theme-toggle]').forEach(bindButton);
-    setTheme(currentTheme(), { toast: false });
+    setTheme(getPreference(), { toast: false });
   }
 
   function boot() {
@@ -129,6 +202,8 @@
   global.erpThemeToggle = {
     setTheme: setTheme,
     currentTheme: currentTheme,
+    getPreference: getPreference,
+    resolveTheme: resolveTheme,
     refresh: bindAll,
   };
 

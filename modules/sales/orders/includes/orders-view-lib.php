@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/orders-lib.php';
+require_once dirname(__DIR__, 2) . '/settings/includes/settings-lib.php';
 
 function ordersViewDeskBootstrap(): void
 {
@@ -44,10 +45,19 @@ function salesOrderViewLoadCompanySettings(PDO $salesDb): array
 
     try {
         $company_id = (int) (currentCompanyId() ?? 0);
-        if ($company_id > 0 && function_exists('columnExists') && columnExists('sales_settings', 'company_id', $salesDb)) {
+        $company_settings = false;
+
+        // Prefer the Sales Settings loader (schema sync + layout defaults per company).
+        if ($company_id > 0 && function_exists('sales_settings_fetch')) {
+            $company_settings = sales_settings_fetch($salesDb, $company_id);
+        } elseif ($company_id > 0 && function_exists('columnExists') && columnExists('sales_settings', 'company_id', $salesDb)) {
             $stmtSettings = $salesDb->prepare('SELECT * FROM sales_settings WHERE company_id = ? LIMIT 1');
             $stmtSettings->execute([$company_id]);
             $company_settings = $stmtSettings->fetch(PDO::FETCH_ASSOC);
+            // Legacy rows may omit company_id scoping.
+            if (!$company_settings) {
+                $company_settings = $salesDb->query('SELECT * FROM sales_settings LIMIT 1')->fetch(PDO::FETCH_ASSOC);
+            }
         } else {
             $company_settings = $salesDb->query('SELECT * FROM sales_settings LIMIT 1')->fetch(PDO::FETCH_ASSOC);
         }
@@ -56,19 +66,31 @@ function salesOrderViewLoadCompanySettings(PDO $salesDb): array
     }
 
     if (!$company_settings) {
-        $company_settings = [
-            'company_name' => defined('COMPANY_NAME') ? COMPANY_NAME : '',
-            'company_address' => defined('COMPANY_ADDRESS') ? COMPANY_ADDRESS : '',
-            'company_logo' => 'Untitled.jpg',
-            'default_currency' => 'TZS',
-            'company_phone' => defined('COMPANY_PHONE') ? COMPANY_PHONE : '',
-            'company_email' => defined('COMPANY_EMAIL') ? COMPANY_EMAIL : '',
-            'company_tin' => '',
-            'company_vat' => '',
-            'bank_details' => '',
-            'company_website' => '',
-            'include_product_catalogue' => 0,
-        ];
+        $company_settings = function_exists('sales_settings_default_row')
+            ? sales_settings_default_row()
+            : [
+                'company_name' => defined('COMPANY_NAME') ? COMPANY_NAME : '',
+                'company_address' => defined('COMPANY_ADDRESS') ? COMPANY_ADDRESS : '',
+                'company_logo' => 'Untitled.jpg',
+                'default_currency' => 'TZS',
+                'company_phone' => defined('COMPANY_PHONE') ? COMPANY_PHONE : '',
+                'company_email' => defined('COMPANY_EMAIL') ? COMPANY_EMAIL : '',
+                'company_tin' => '',
+                'company_vat' => '',
+                'bank_details' => '',
+                'company_website' => '',
+                'include_product_catalogue' => 0,
+                'spare_part_layout' => 1,
+                'truck_layout' => 1,
+            ];
+    }
+
+    // Always keep layout ids present so print/view can honor Sales Settings choices.
+    if (!isset($company_settings['spare_part_layout']) || $company_settings['spare_part_layout'] === '' || $company_settings['spare_part_layout'] === null) {
+        $company_settings['spare_part_layout'] = 1;
+    }
+    if (!isset($company_settings['truck_layout']) || $company_settings['truck_layout'] === '' || $company_settings['truck_layout'] === null) {
+        $company_settings['truck_layout'] = 1;
     }
 
     // Do not inject placeholder Document Footer Content — empty settings must omit page 2.
@@ -831,6 +853,11 @@ function salesOrderViewRenderDocumentHtml(
 ): string {
     $currency = $order['currency'] ?? ($company_settings['default_currency'] ?? 'TZS');
     $invoice = $order;
+    $logoUrl = trim((string) ($company_settings['company_logo_url'] ?? ''));
+    if ($logoUrl === '' && function_exists('getCompanyLogoUrl')) {
+        $logoUrl = (string) getCompanyLogoUrl();
+    }
+    $brandingLogoUrl = $logoUrl;
     $showPaidWatermark = $isPaid
         || strtolower(trim((string) ($order['status'] ?? ''))) === 'paid';
 

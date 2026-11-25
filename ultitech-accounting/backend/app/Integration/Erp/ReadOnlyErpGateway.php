@@ -108,6 +108,11 @@ class ReadOnlyErpGateway
         return Schema::connection($this->connectionName)->hasTable($table);
     }
 
+    public function columnExists(string $table, string $column): bool
+    {
+        return Schema::connection($this->connectionName)->hasColumn($table, $column);
+    }
+
     private function assertReadOnlySql(string $sql): void
     {
         $normalized = ltrim(strtolower($sql));

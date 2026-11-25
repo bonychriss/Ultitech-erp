@@ -228,8 +228,21 @@ class JournalPostingService
             $sequence = PostingSequence::withoutGlobalScopes()->whereKey($sequence->id)->lockForUpdate()->firstOrFail();
         }
 
-        $number = $sequence->prefix.str_pad((string) $sequence->next_number, $sequence->padding, '0', STR_PAD_LEFT);
-        $sequence->update(['next_number' => $sequence->next_number + 1]);
+        // Advance until the candidate is free. Sequence updates must survive a later
+        // draft insert failure (unique collision) so ERP bulk imports cannot stall on
+        // a rolled-back next_number that keeps reissuing an existing journal_number.
+        do {
+            $candidate = (int) $sequence->next_number;
+            $number = $sequence->prefix.str_pad((string) $candidate, $sequence->padding, '0', STR_PAD_LEFT);
+            $sequence->update(['next_number' => $candidate + 1]);
+            $sequence->next_number = $candidate + 1;
+
+            $taken = JournalEntry::withoutGlobalScopes()
+                ->where('company_id', $companyId)
+                ->where('book_id', $bookId)
+                ->where('journal_number', $number)
+                ->exists();
+        } while ($taken);
 
         return $number;
     }

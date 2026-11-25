@@ -1,26 +1,23 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { CalendarDays, Package, RefreshCw, Search, ShoppingCart, Truck } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { Package, RefreshCw, Search, ShoppingCart, Truck } from 'lucide-react';
 
 function formatNumber(value, maximumFractionDigits = 0) {
   return new Intl.NumberFormat(undefined, { maximumFractionDigits }).format(Number(value) || 0);
 }
 
-function formatDate(value) {
-  if (!value) return '';
-  const date = new Date(`${value}T00:00:00`);
-  return Number.isNaN(date.getTime())
-    ? value
-    : new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', year: 'numeric' }).format(date);
-}
-
-function SummaryCard({ icon: Icon, label, value, tone }) {
+function SummaryCard({ icon: Icon, label, shortLabel, value, tone, subtext }) {
   return (
-    <div className={`sales-stat-summary-card sales-stat-summary-card--${tone}`}>
-      <div className="sales-stat-summary-icon"><Icon size={19} aria-hidden="true" /></div>
-      <div>
-        <div className="sales-stat-summary-label">{label}</div>
-        <div className="sales-stat-summary-value">{value}</div>
+    <div className={`kpi-card kpi-card--tone-${tone}`}>
+      <div className="kpi-card-header">
+        <div className={`kpi-card-icon ${tone}`}><Icon size={14} aria-hidden="true" /></div>
+        <div className="kpi-card-title">
+          <span className="sales-stat-kpi-title-full">{label}</span>
+          <span className="sales-stat-kpi-title-short">{shortLabel || label}</span>
+        </div>
       </div>
+      <div className="kpi-card-value">{value}</div>
+      {subtext ? <div className="kpi-card-subtext">{subtext}</div> : null}
     </div>
   );
 }
@@ -52,6 +49,10 @@ export default function StatisticsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
+  const [headerToolsEl, setHeaderToolsEl] = useState(null);
+  const [isDesktopHeader, setIsDesktopHeader] = useState(() => (
+    typeof window !== 'undefined' && window.matchMedia('(min-width: 768px)').matches
+  ));
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -78,6 +79,15 @@ export default function StatisticsPage() {
     load();
   }, [load]);
 
+  useEffect(() => {
+    setHeaderToolsEl(document.getElementById('sales-stat-header-tools'));
+    const media = window.matchMedia('(min-width: 768px)');
+    const syncHeaderMode = () => setIsDesktopHeader(media.matches);
+    syncHeaderMode();
+    media.addEventListener('change', syncHeaderMode);
+    return () => media.removeEventListener('change', syncHeaderMode);
+  }, []);
+
   const products = useMemo(() => {
     const query = search.trim().toLowerCase();
     const items = data?.products || [];
@@ -88,60 +98,77 @@ export default function StatisticsPage() {
     ));
   }, [data, search]);
 
-  const period = data?.period || {};
   const summary = data?.summary || {};
+
+  const searchField = (
+    <label className="sales-stat-search">
+      <Search size={16} aria-hidden="true" />
+      <input
+        type="search"
+        value={search}
+        onChange={(event) => setSearch(event.target.value)}
+        placeholder="Search products"
+        aria-label="Search products"
+      />
+    </label>
+  );
+
+  const refreshButton = (
+    <button className="sales-stat-refresh" type="button" onClick={load} disabled={loading}>
+      <RefreshCw size={16} className={loading ? 'sales-stat-spinning' : ''} />
+      Refresh
+    </button>
+  );
+
+  const headerControls = (
+    <div className="sales-stat-header-tools">
+      {isDesktopHeader ? <div className="sales-stat-header-search">{searchField}</div> : null}
+      {refreshButton}
+    </div>
+  );
 
   return (
     <main className="sales-statistics-page">
-      <header className="sales-statistics-header">
-        <div>
-          <div className="sales-statistics-eyebrow"><CalendarDays size={14} /> YEAR-TO-DATE REPORT</div>
-          <h1>Sales Statistics</h1>
-          <p>Most outgoing products from {formatDate(period.date_from)} to {formatDate(period.date_to)}.</p>
+      {headerToolsEl ? createPortal(headerControls, headerToolsEl) : null}
+      {!isDesktopHeader ? (
+        <div className="sales-statistics-header sales-statistics-header--mobile">
+          {searchField}
         </div>
-        <button className="sales-stat-refresh" type="button" onClick={load} disabled={loading}>
-          <RefreshCw size={16} className={loading ? 'sales-stat-spinning' : ''} />
-          Refresh
-        </button>
-      </header>
+      ) : null}
 
-      <section className="sales-stat-summary" aria-label="Year-to-date product summary">
+      <section className="kpi-overview sales-stat-summary" aria-label="Year-to-date product summary">
         <SummaryCard
           icon={Package}
           label="Products listed"
+          shortLabel="Products"
           value={formatNumber(summary.product_count)}
           tone="blue"
+          subtext="Year to date"
         />
         <SummaryCard
           icon={Truck}
           label="Units across listed products"
+          shortLabel="Units"
           value={formatNumber(summary.total_units, 2)}
           tone="green"
+          subtext="Year to date"
         />
         <SummaryCard
           icon={ShoppingCart}
           label="Product-order occurrences"
+          shortLabel="Orders"
           value={formatNumber(summary.product_order_count)}
           tone="violet"
+          subtext="Year to date"
         />
       </section>
 
-      <section className="sales-statistics-card">
+      <section className="sales-stat-results">
         <div className="sales-statistics-card-head">
           <div>
             <h2>Most outgoing products</h2>
             <p>Ranked by number of sales orders; units sold are shown for each product.</p>
           </div>
-          <label className="sales-stat-search">
-            <Search size={16} aria-hidden="true" />
-            <input
-              type="search"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search products"
-              aria-label="Search products"
-            />
-          </label>
         </div>
 
         {error ? (

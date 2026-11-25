@@ -11,6 +11,9 @@ $employeeHeaderExtraClass = $employeeHeaderExtraClass ?? 'employee-header--inv-d
 $invoicesListLayout = in_array($invoicesPage, ['list', 'corrections'], true);
 $mainRootClass = $invoicesListLayout ? 'exp-desk-react-root' : 'inv-desk-react-root';
 $bodyPageClass = $invoicesListLayout ? 'page-exp-desk exp-dashboard-page page-invoices-desk invoices-dashboard-page' : 'page-inv-desk inv-dashboard-page';
+if ($invoicesPage === 'create' && ($documentType ?? '') === 'quote') {
+    $bodyPageClass .= ' page-quote-create';
+}
 $htmlLockClass = $invoicesListLayout ? 'page-invoices-desk-lock' : '';
 $GLOBALS['_erp_header_style_linked'] = true;?>
 <!DOCTYPE html>

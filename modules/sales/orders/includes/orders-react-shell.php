@@ -30,7 +30,7 @@ $GLOBALS['_erp_header_style_linked'] = true;
     <?= ordersDeskShellHeadExtras() ?>
     <?= $ordersHeadMarkup ?>
 </head>
-<body class="dashboard page-exp-desk exp-dashboard-page page-orders-desk orders-dashboard-page">
+<body class="dashboard page-exp-desk exp-dashboard-page page-orders-desk orders-dashboard-page<?= $ordersPage === 'list' ? ' page-quotations-desk' : ($ordersPage === 'quote_requests' ? ' page-quote-requests-desk' : ($ordersPage === 'sales_orders' ? ' page-sales-orders-desk' : '')) ?>">
 
 <?php include __DIR__ . '/../../../../includes/header_employee.php'; ?>
 

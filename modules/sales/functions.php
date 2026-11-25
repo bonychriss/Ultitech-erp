@@ -2492,6 +2492,101 @@ function getQuoteGrowthSeries(): array
     );
 }
 
+/**
+ * @return array<string, float>
+ */
+function salesGrowthCountsByDay(DateTimeInterface $start, DateTimeInterface $end, string $kind): array
+{
+    $pdo = sales_pdo();
+    $statusSql = $kind === 'orders'
+        ? "status IN ('confirmed', 'invoiced', 'shipped', 'paid', 'delivered')"
+        : "status IN ('draft', 'quotation')";
+    $sql = "
+        SELECT DATE(created_at) AS bucket_day, COUNT(*) AS total
+        FROM sales_orders
+        WHERE {$statusSql}
+          AND created_at >= ?
+          AND created_at < ?
+    ";
+    $params = [
+        $start->format('Y-m-d 00:00:00'),
+        $end->format('Y-m-d 00:00:00'),
+    ];
+    salesAppendCompanyScope($sql, $params, 'sales_orders');
+    $sql .= ' GROUP BY DATE(created_at)';
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+    $out = [];
+    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) ?: [] as $row) {
+        $day = (string) ($row['bucket_day'] ?? '');
+        if ($day !== '') {
+            $out[$day] = (float) ($row['total'] ?? 0);
+        }
+    }
+    return $out;
+}
+
+/**
+ * @return array<string, float>
+ */
+function salesGrowthCountsByMonth(DateTimeInterface $start, DateTimeInterface $end, string $kind): array
+{
+    $pdo = sales_pdo();
+    $statusSql = $kind === 'orders'
+        ? "status IN ('confirmed', 'invoiced', 'shipped', 'paid', 'delivered')"
+        : "status IN ('draft', 'quotation')";
+    $sql = "
+        SELECT DATE_FORMAT(created_at, '%Y-%m') AS bucket_month, COUNT(*) AS total
+        FROM sales_orders
+        WHERE {$statusSql}
+          AND created_at >= ?
+          AND created_at < ?
+    ";
+    $params = [
+        $start->format('Y-m-d 00:00:00'),
+        $end->format('Y-m-d 00:00:00'),
+    ];
+    salesAppendCompanyScope($sql, $params, 'sales_orders');
+    $sql .= ' GROUP BY DATE_FORMAT(created_at, \'%Y-%m\')';
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+    $out = [];
+    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) ?: [] as $row) {
+        $out[(string) ($row['bucket_month'] ?? '')] = (float) ($row['total'] ?? 0);
+    }
+    return $out;
+}
+
+function salesOrderCountsByDay(DateTimeInterface $start, DateTimeInterface $end): array
+{
+    return salesGrowthCountsByDay($start, $end, 'orders');
+}
+
+function salesOrderCountsByMonth(DateTimeInterface $start, DateTimeInterface $end): array
+{
+    return salesGrowthCountsByMonth($start, $end, 'orders');
+}
+
+function salesQuoteCountsByDay(DateTimeInterface $start, DateTimeInterface $end): array
+{
+    return salesGrowthCountsByDay($start, $end, 'quotes');
+}
+
+function salesQuoteCountsByMonth(DateTimeInterface $start, DateTimeInterface $end): array
+{
+    return salesGrowthCountsByMonth($start, $end, 'quotes');
+}
+
+function getOrderGrowthSeries(): array
+{
+    return salesBuildGrowthSeries('salesOrderCountsByDay', 'salesOrderCountsByMonth');
+}
+
+function getQuoteCountGrowthSeries(): array
+{
+    return salesBuildGrowthSeries('salesQuoteCountsByDay', 'salesQuoteCountsByMonth');
+}
+
 function getRecentActivities($limit = 10) {
     $pdo = sales_pdo();
     $scopeNamedSo = salesCompanyScopeNamed('sales_orders', 'so', 'cid_so');

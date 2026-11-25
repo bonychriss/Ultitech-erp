@@ -52,12 +52,18 @@ class SalesDashboardPageController extends Controller
         $GLOBALS['page_title'] = $viewData['pageTitle'];
         $page_title = $viewData['pageTitle'];
         $employeeHeaderTitle = $viewData['employeeHeaderTitle'];
+        $employeeHeaderSubtitle = $viewData['employeeHeaderSubtitle'] ?? '';
+        $employeeHeaderRightHtml = $viewData['employeeHeaderRightHtml'] ?? '';
+        $hideErpBreadcrumbs = !empty($viewData['hideErpBreadcrumbs']);
         $hideHeaderCompanyBranding = $viewData['hideHeaderCompanyBranding'];
         $employeeHeaderExtraClass = $viewData['employeeHeaderExtraClass'];
 
         return view('erp.react-shell', $viewData + [
             'page_title' => $page_title,
             'employeeHeaderTitle' => $employeeHeaderTitle,
+            'employeeHeaderSubtitle' => $employeeHeaderSubtitle,
+            'employeeHeaderRightHtml' => $employeeHeaderRightHtml,
+            'hideErpBreadcrumbs' => $hideErpBreadcrumbs,
             'hideHeaderCompanyBranding' => $hideHeaderCompanyBranding,
             'employeeHeaderExtraClass' => $employeeHeaderExtraClass,
         ]);

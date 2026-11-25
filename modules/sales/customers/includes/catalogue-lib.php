@@ -1324,6 +1324,11 @@ function customerCatalogueParseContext(array $query = []): array
         if ($base !== '' && $returnUrl !== '' && strpos($returnUrl, $base . '/') !== 0 && $returnUrl !== $base) {
             $returnUrl = $base . $returnUrl;
         }
+        $returnPath = parse_url($returnUrl, PHP_URL_PATH);
+        if ($docType === 'statement' && function_exists('company_url')
+            && in_array($returnPath, [$base . '/customer_statement/index.php', $base . '/customer_statement/index'], true)) {
+            $returnUrl = company_url(substr($returnPath, strlen($base) + 1)) . substr($returnUrl, strlen($returnPath));
+        }
     }
 
     $addSelectedLabel = match ($docType) {

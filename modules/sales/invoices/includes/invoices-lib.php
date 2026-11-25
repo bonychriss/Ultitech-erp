@@ -124,6 +124,18 @@ function invoicesDeskEmitHtmlAndExit(string $html): void
     exit;
 }
 
+function salesQuoteCreateHeaderSubtitle(string $pageTitle, string $module): string
+{
+    $homeUrl = function_exists('company_url') ? company_url('select-module') : '/select-module';
+    $salesUrl = sales_module_url('index.php', ['module' => $module]);
+    return '<span class="vv-breadcrumb quote-create-breadcrumb" role="navigation" aria-label="Breadcrumb">'
+        . '<a class="vv-breadcrumb-link erp-nav-back-ignore" href="' . htmlspecialchars($homeUrl, ENT_QUOTES, 'UTF-8') . '">Home</a>'
+        . '<span class="vv-breadcrumb-sep">/</span>'
+        . '<a class="vv-breadcrumb-link erp-nav-back-ignore" href="' . htmlspecialchars($salesUrl, ENT_QUOTES, 'UTF-8') . '">Sales</a>'
+        . '<span class="vv-breadcrumb-sep">/</span>'
+        . '<span class="vv-breadcrumb-current">' . htmlspecialchars($pageTitle, ENT_QUOTES, 'UTF-8') . '</span></span>';
+}
+
 /**
  * Render the shared React document-create shell, or return false when dist is missing.
  * require() stays in this function so $assets / $invoicesHeadMarkup remain in scope.
@@ -148,6 +160,11 @@ function salesDocumentCreateRenderReactShell(string $pageTitle, string $page = '
     $employeeHeaderExtraClass = 'employee-header--inv-desk';
     $bodyExtraClass = 'page-inv-desk';
     $invoicesPage = $page;
+    if ($page === 'create' && $documentType === 'quote') {
+        $module = isset($_GET['module']) ? (string) $_GET['module'] : 'sales';
+        $employeeHeaderSubtitle = salesQuoteCreateHeaderSubtitle($pageTitle, $module);
+        $employeeHeaderExtraClass .= ' employee-header--quote-create';
+    }
 
     $script = 'window.__INVOICES_API_BASE__ = ' . json_encode($assets['apiUrl'], JSON_UNESCAPED_SLASHES) . ';'
         . 'window.__INVOICES_PAGE__ = ' . json_encode($invoicesPage, JSON_UNESCAPED_SLASHES) . ';'

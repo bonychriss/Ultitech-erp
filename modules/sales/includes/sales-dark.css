@@ -1,0 +1,687 @@
+/* Sales desks � match Revenue Entries WhatsApp-like dark tokens.
+   Scoped to Sales body classes only. Load last so it beats shell inline rules. */
+
+html[data-theme="dark"] body:is(
+  .page-sales-dashboard-desk,
+  .page-invoices-desk,
+  .page-inv-desk,
+  .page-orders-desk,
+  .page-sales-quotations,
+  .page-sales-order-create,
+  .page-sales-invoices,
+  .page-pricelist-desk,
+  .page-my-sales-desk,
+  .page-sales-settings,
+  .page-order-view,
+  .page-invoice-view,
+  .page-customer-catalogue-desk,
+  .page-customer-index-desk,
+  .page-sales-catalogue,
+  .page-sales-invoice-create,
+  .page-customer-catalogue,
+  .page-customer-performance-desk,
+  .page-reassign-sales-desk
+) {
+  --sales-dark-page: #0b141a;
+  --sales-dark-card: #111b21;
+  --sales-dark-border: #2a3942;
+  --sales-dark-hover: #202c33;
+  --sales-dark-text: #e9edef;
+  --sales-dark-muted: #8696a0;
+  --sales-dark-accent: #00a884;
+  color: #e9edef;
+  background: #0b141a !important;
+  background-color: #0b141a !important;
+}
+
+html[data-theme="dark"] body:is(
+  .page-sales-dashboard-desk,
+  .page-invoices-desk,
+  .page-inv-desk,
+  .page-orders-desk,
+  .page-sales-quotations,
+  .page-sales-order-create,
+  .page-sales-invoices,
+  .page-pricelist-desk,
+  .page-my-sales-desk,
+  .page-sales-settings,
+  .page-order-view,
+  .page-invoice-view,
+  .page-customer-catalogue-desk,
+  .page-customer-index-desk,
+  .page-sales-catalogue,
+  .page-sales-invoice-create,
+  .page-customer-catalogue,
+  .page-customer-performance-desk,
+  .page-reassign-sales-desk
+) .layout-main-wrapper,
+html[data-theme="dark"] body:is(
+  .page-sales-dashboard-desk,
+  .page-invoices-desk,
+  .page-inv-desk,
+  .page-orders-desk,
+  .page-sales-quotations,
+  .page-sales-order-create,
+  .page-sales-invoices,
+  .page-pricelist-desk,
+  .page-my-sales-desk,
+  .page-sales-settings,
+  .page-order-view,
+  .page-invoice-view,
+  .page-customer-catalogue-desk,
+  .page-customer-index-desk,
+  .page-sales-catalogue,
+  .page-sales-invoice-create,
+  .page-customer-catalogue,
+  .page-customer-performance-desk,
+  .page-reassign-sales-desk
+) .layout-main-wrapper > .flex-grow-1,
+html[data-theme="dark"] body:is(
+  .page-sales-dashboard-desk,
+  .page-invoices-desk,
+  .page-inv-desk,
+  .page-orders-desk,
+  .page-sales-quotations,
+  .page-sales-order-create,
+  .page-sales-invoices,
+  .page-pricelist-desk,
+  .page-my-sales-desk,
+  .page-sales-settings,
+  .page-order-view,
+  .page-invoice-view,
+  .page-customer-catalogue-desk,
+  .page-customer-index-desk,
+  .page-sales-catalogue,
+  .page-sales-invoice-create,
+  .page-customer-catalogue,
+  .page-customer-performance-desk,
+  .page-reassign-sales-desk
+) .employee-header,
+html[data-theme="dark"] body:is(
+  .page-sales-dashboard-desk,
+  .page-invoices-desk,
+  .page-inv-desk,
+  .page-orders-desk,
+  .page-sales-quotations,
+  .page-sales-order-create,
+  .page-sales-invoices,
+  .page-pricelist-desk,
+  .page-my-sales-desk,
+  .page-sales-settings,
+  .page-order-view,
+  .page-invoice-view,
+  .page-customer-catalogue-desk,
+  .page-customer-index-desk,
+  .page-sales-catalogue,
+  .page-sales-invoice-create,
+  .page-customer-catalogue,
+  .page-customer-performance-desk,
+  .page-reassign-sales-desk
+) main.main-content,
+html[data-theme="dark"] body:is(
+  .page-sales-dashboard-desk,
+  .page-invoices-desk,
+  .page-inv-desk,
+  .page-orders-desk,
+  .page-sales-quotations,
+  .page-sales-order-create,
+  .page-sales-invoices,
+  .page-pricelist-desk,
+  .page-my-sales-desk,
+  .page-sales-settings,
+  .page-order-view,
+  .page-invoice-view,
+  .page-customer-catalogue-desk,
+  .page-customer-index-desk,
+  .page-sales-catalogue,
+  .page-sales-invoice-create,
+  .page-customer-catalogue,
+  .page-customer-performance-desk,
+  .page-reassign-sales-desk
+) #root,
+html[data-theme="dark"] body:is(
+  .page-sales-dashboard-desk,
+  .page-invoices-desk,
+  .page-inv-desk,
+  .page-orders-desk,
+  .page-pricelist-desk,
+  .page-my-sales-desk,
+  .page-sales-settings,
+  .page-customer-catalogue-desk,
+  .page-customer-index-desk,
+  .page-customer-performance-desk
+) .exp-desk-page {
+  background: #0b141a !important;
+  background-color: #0b141a !important;
+  color: #e9edef !important;
+}
+
+html[data-theme="dark"] body:is(
+  .page-sales-dashboard-desk,
+  .page-invoices-desk,
+  .page-inv-desk,
+  .page-orders-desk,
+  .page-pricelist-desk,
+  .page-my-sales-desk,
+  .page-sales-settings,
+  .page-customer-catalogue-desk,
+  .page-customer-index-desk
+) .employee-header--exp-desk .employee-header-page-title,
+html[data-theme="dark"] body:is(
+  .page-invoices-desk,
+  .page-inv-desk
+) .employee-header--inv-desk .employee-header-page-title {
+  color: #e9edef !important;
+}
+
+/* Sidebar */
+html[data-theme="dark"] body:is(
+  .page-sales-dashboard-desk,
+  .page-invoices-desk,
+  .page-inv-desk,
+  .page-orders-desk,
+  .page-sales-quotations,
+  .page-sales-order-create,
+  .page-sales-invoices,
+  .page-pricelist-desk,
+  .page-my-sales-desk,
+  .page-sales-settings,
+  .page-order-view,
+  .page-invoice-view,
+  .page-customer-catalogue-desk,
+  .page-customer-index-desk,
+  .page-sales-catalogue,
+  .page-sales-invoice-create,
+  .page-customer-catalogue,
+  .page-customer-performance-desk,
+  .page-reassign-sales-desk
+) #native-sidebar.theme-minimal,
+html[data-theme="dark"] body:is(
+  .page-sales-dashboard-desk,
+  .page-invoices-desk,
+  .page-inv-desk,
+  .page-orders-desk,
+  .page-sales-quotations,
+  .page-sales-order-create,
+  .page-sales-invoices,
+  .page-pricelist-desk,
+  .page-my-sales-desk,
+  .page-sales-settings,
+  .page-order-view,
+  .page-invoice-view,
+  .page-customer-catalogue-desk,
+  .page-customer-index-desk,
+  .page-sales-catalogue,
+  .page-sales-invoice-create,
+  .page-customer-catalogue,
+  .page-customer-performance-desk,
+  .page-reassign-sales-desk
+) #native-sidebar,
+html[data-theme="dark"] body:is(
+  .page-sales-dashboard-desk,
+  .page-invoices-desk,
+  .page-inv-desk,
+  .page-orders-desk,
+  .page-sales-quotations,
+  .page-sales-order-create,
+  .page-sales-invoices,
+  .page-pricelist-desk,
+  .page-my-sales-desk,
+  .page-sales-settings,
+  .page-order-view,
+  .page-invoice-view,
+  .page-customer-catalogue-desk,
+  .page-customer-index-desk,
+  .page-sales-catalogue,
+  .page-sales-invoice-create,
+  .page-customer-catalogue,
+  .page-customer-performance-desk,
+  .page-reassign-sales-desk
+) nav.theme-minimal {
+  --sidebar-bg: #0b141a !important;
+  --sidebar-text: #e9edef !important;
+  --sidebar-hover-bg: #202c33 !important;
+  --sidebar-hover-text: #e9edef !important;
+  --sidebar-active-bg: rgba(0, 168, 132, 0.16) !important;
+  --sidebar-active-text: #00a884 !important;
+  --sidebar-border: #2a3942 !important;
+  --sidebar-icon-color: #8696a0 !important;
+  --sidebar-hover-icon: #e9edef !important;
+  background: #0b141a !important;
+  background-color: #0b141a !important;
+  border-right: 1px solid #2a3942 !important;
+  color: #e9edef !important;
+}
+
+html[data-theme="dark"] body:is(
+  .page-sales-dashboard-desk,
+  .page-invoices-desk,
+  .page-inv-desk,
+  .page-orders-desk,
+  .page-sales-quotations,
+  .page-sales-order-create,
+  .page-sales-invoices,
+  .page-pricelist-desk,
+  .page-my-sales-desk,
+  .page-sales-settings,
+  .page-order-view,
+  .page-invoice-view,
+  .page-customer-catalogue-desk,
+  .page-customer-index-desk,
+  .page-sales-catalogue,
+  .page-sales-invoice-create,
+  .page-customer-catalogue,
+  .page-customer-performance-desk,
+  .page-reassign-sales-desk
+) #native-sidebar .nav-link.active,
+html[data-theme="dark"] body:is(
+  .page-sales-dashboard-desk,
+  .page-invoices-desk,
+  .page-inv-desk,
+  .page-orders-desk,
+  .page-sales-quotations,
+  .page-sales-order-create,
+  .page-sales-invoices,
+  .page-pricelist-desk,
+  .page-my-sales-desk,
+  .page-sales-settings,
+  .page-order-view,
+  .page-invoice-view,
+  .page-customer-catalogue-desk,
+  .page-customer-index-desk,
+  .page-sales-catalogue,
+  .page-sales-invoice-create,
+  .page-customer-catalogue,
+  .page-customer-performance-desk,
+  .page-reassign-sales-desk
+) #native-sidebar .nav-link.active:hover {
+  background: rgba(0, 168, 132, 0.16) !important;
+  color: #00a884 !important;
+}
+
+html[data-theme="dark"] body:is(
+  .page-sales-dashboard-desk,
+  .page-invoices-desk,
+  .page-inv-desk,
+  .page-orders-desk,
+  .page-sales-quotations,
+  .page-sales-order-create,
+  .page-sales-invoices,
+  .page-pricelist-desk,
+  .page-my-sales-desk,
+  .page-sales-settings,
+  .page-order-view,
+  .page-invoice-view,
+  .page-customer-catalogue-desk,
+  .page-customer-index-desk,
+  .page-sales-catalogue,
+  .page-sales-invoice-create,
+  .page-customer-catalogue,
+  .page-customer-performance-desk,
+  .page-reassign-sales-desk
+) #native-sidebar .nav-link:hover {
+  background: #202c33 !important;
+  color: #e9edef !important;
+}
+
+html[data-theme="dark"] body:is(
+  .page-sales-dashboard-desk,
+  .page-invoices-desk,
+  .page-inv-desk,
+  .page-orders-desk,
+  .page-sales-quotations,
+  .page-sales-order-create,
+  .page-sales-invoices,
+  .page-pricelist-desk,
+  .page-my-sales-desk,
+  .page-sales-settings,
+  .page-order-view,
+  .page-invoice-view,
+  .page-customer-catalogue-desk,
+  .page-customer-index-desk,
+  .page-sales-catalogue,
+  .page-sales-invoice-create,
+  .page-customer-catalogue,
+  .page-customer-performance-desk,
+  .page-reassign-sales-desk
+) #native-sidebar .nav-link.active i {
+  color: #00a884 !important;
+}
+
+/* Cards, panels, KPI tiles */
+html[data-theme="dark"] body:is(
+  .page-sales-dashboard-desk,
+  .page-invoices-desk,
+  .page-inv-desk,
+  .page-orders-desk,
+  .page-pricelist-desk,
+  .page-my-sales-desk,
+  .page-customer-performance-desk,
+  .page-reassign-sales-desk
+) .dash-card,
+html[data-theme="dark"] body.page-sales-dashboard-desk .sd-outgoing-panel,
+html[data-theme="dark"] body.page-sales-dashboard-desk .kpi-overview .kpi-card[class*="kpi-card--tone-"],
+html[data-theme="dark"] body.page-my-sales-desk .kpi-overview .kpi-card[class*="kpi-card--tone-"],
+html[data-theme="dark"] body.page-invoices-desk .inv-kpi-grid > .inv-kpi,
+html[data-theme="dark"] body.page-orders-desk .so-kpi,
+html[data-theme="dark"] body.page-pricelist-desk .pl-kpi-card,
+html[data-theme="dark"] body.page-customer-performance-desk .cp-kpi,
+html[data-theme="dark"] body.page-reassign-sales-desk .rs-kpi,
+html[data-theme="dark"] body.page-invoices-desk .exp-desk-kpi-card,
+html[data-theme="dark"] body.page-orders-desk .exp-desk-kpi-card {
+  background: #111b21 !important;
+  background-image: none !important;
+  border-color: #2a3942 !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2) !important;
+  color: #e9edef !important;
+}
+
+html[data-theme="dark"] body.page-sales-dashboard-desk .kpi-overview .kpi-card[class*="kpi-card--tone-"] .kpi-card-title,
+html[data-theme="dark"] body.page-my-sales-desk .kpi-overview .kpi-card[class*="kpi-card--tone-"] .kpi-card-title,
+html[data-theme="dark"] body.page-invoices-desk .inv-kpi-label,
+html[data-theme="dark"] body.page-orders-desk .so-kpi-label,
+html[data-theme="dark"] body.page-pricelist-desk .pl-kpi-label,
+html[data-theme="dark"] body.page-customer-performance-desk .cp-kpi-label {
+  color: #8696a0 !important;
+}
+
+html[data-theme="dark"] body.page-sales-dashboard-desk .kpi-overview .kpi-card[class*="kpi-card--tone-"] .kpi-card-value,
+html[data-theme="dark"] body.page-my-sales-desk .kpi-overview .kpi-card[class*="kpi-card--tone-"] .kpi-card-value,
+html[data-theme="dark"] body.page-invoices-desk .inv-kpi-value,
+html[data-theme="dark"] body.page-orders-desk .so-kpi-value,
+html[data-theme="dark"] body.page-pricelist-desk .pl-kpi-value,
+html[data-theme="dark"] body.page-customer-performance-desk .cp-kpi strong,
+html[data-theme="dark"] body.page-reassign-sales-desk .rs-kpi-value {
+  color: #e9edef !important;
+}
+
+html[data-theme="dark"] body.page-sales-dashboard-desk .kpi-overview .kpi-card[class*="kpi-card--tone-"] .kpi-card-subtext,
+html[data-theme="dark"] body.page-my-sales-desk .kpi-overview .kpi-card[class*="kpi-card--tone-"] .kpi-card-subtext,
+html[data-theme="dark"] body.page-invoices-desk .inv-kpi-foot,
+html[data-theme="dark"] body.page-orders-desk .so-kpi-foot,
+html[data-theme="dark"] body.page-customer-performance-desk .cp-kpi-foot,
+html[data-theme="dark"] body.page-reassign-sales-desk .rs-kpi-foot {
+  color: #8696a0 !important;
+}
+
+html[data-theme="dark"] body:is(.page-sales-dashboard-desk, .page-my-sales-desk) .kpi-card--tone-blue .kpi-card-icon,
+html[data-theme="dark"] body.page-invoices-desk .inv-kpi--invoices .inv-kpi-icon,
+html[data-theme="dark"] body.page-orders-desk .so-kpi--orders .so-kpi-icon,
+html[data-theme="dark"] body.page-pricelist-desk .pl-kpi-card--blue .pl-kpi-icon,
+html[data-theme="dark"] body.page-customer-performance-desk .cp-kpi--customers .cp-kpi-icon,
+html[data-theme="dark"] body.page-reassign-sales-desk .rs-kpi--blue .rs-kpi-icon {
+  background: rgba(37, 99, 235, 0.18) !important;
+  color: #93c5fd !important;
+  box-shadow: none !important;
+}
+
+html[data-theme="dark"] body:is(.page-sales-dashboard-desk, .page-my-sales-desk) .kpi-card--tone-green .kpi-card-icon,
+html[data-theme="dark"] body.page-invoices-desk .inv-kpi--listed .inv-kpi-icon,
+html[data-theme="dark"] body.page-orders-desk .so-kpi--listed .so-kpi-icon,
+html[data-theme="dark"] body.page-pricelist-desk .pl-kpi-card--green .pl-kpi-icon,
+html[data-theme="dark"] body.page-customer-performance-desk .cp-kpi--active .cp-kpi-icon,
+html[data-theme="dark"] body.page-reassign-sales-desk .rs-kpi--green .rs-kpi-icon {
+  background: rgba(5, 150, 105, 0.2) !important;
+  color: #6ee7b7 !important;
+  box-shadow: none !important;
+}
+
+html[data-theme="dark"] body:is(.page-sales-dashboard-desk, .page-my-sales-desk) .kpi-card--tone-orange .kpi-card-icon,
+html[data-theme="dark"] body.page-invoices-desk .inv-kpi--outstanding .inv-kpi-icon,
+html[data-theme="dark"] body.page-orders-desk .so-kpi--pipeline .so-kpi-icon,
+html[data-theme="dark"] body.page-pricelist-desk .pl-kpi-card--amber .pl-kpi-icon,
+html[data-theme="dark"] body.page-customer-performance-desk .cp-kpi--average .cp-kpi-icon,
+html[data-theme="dark"] body.page-reassign-sales-desk .rs-kpi--orange .rs-kpi-icon {
+  background: rgba(217, 119, 6, 0.2) !important;
+  color: #fbbf24 !important;
+  box-shadow: none !important;
+}
+
+html[data-theme="dark"] body:is(.page-sales-dashboard-desk, .page-my-sales-desk) .kpi-card--tone-red .kpi-card-icon {
+  background: rgba(225, 29, 72, 0.18) !important;
+  color: #fda4af !important;
+  box-shadow: none !important;
+}
+
+html[data-theme="dark"] body.page-invoices-desk .inv-kpi--value .inv-kpi-icon,
+html[data-theme="dark"] body.page-orders-desk .so-kpi--value .so-kpi-icon,
+html[data-theme="dark"] body.page-pricelist-desk .pl-kpi-card--violet .pl-kpi-icon,
+html[data-theme="dark"] body.page-customer-performance-desk .cp-kpi--sales .cp-kpi-icon {
+  background: rgba(124, 58, 237, 0.2) !important;
+  color: #c4b5fd !important;
+  box-shadow: none !important;
+}
+
+/* Tables */
+html[data-theme="dark"] body:is(
+  .page-invoices-desk,
+  .page-orders-desk,
+  .page-customer-index-desk,
+  .page-pricelist-desk,
+  .page-sales-quotations,
+  .page-customer-performance-desk,
+  .page-reassign-sales-desk
+) .exp-desk-table-wrap,
+html[data-theme="dark"] body.page-invoices-desk .inv-invoices-table .exp-desk-table-wrap,
+html[data-theme="dark"] body.page-orders-desk .so-orders-table .exp-desk-table-wrap,
+html[data-theme="dark"] body.page-orders-desk .qt-table-wrap,
+html[data-theme="dark"] body.page-pricelist-desk .pl-table-section,
+html[data-theme="dark"] body.page-customer-performance-desk .cp-panel,
+html[data-theme="dark"] body.page-customer-performance-desk .cp-rank-card,
+html[data-theme="dark"] body.page-customer-performance-desk .cp-filters {
+  background: #111b21 !important;
+  background-color: #111b21 !important;
+  border-color: #2a3942 !important;
+  box-shadow: none !important;
+  color: #e9edef !important;
+}
+
+html[data-theme="dark"] body:is(
+  .page-invoices-desk,
+  .page-orders-desk,
+  .page-customer-index-desk,
+  .page-pricelist-desk,
+  .page-customer-performance-desk,
+  .page-reassign-sales-desk
+) table thead th,
+html[data-theme="dark"] body.page-orders-desk .qt-table th {
+  background: #111b21 !important;
+  background-color: #111b21 !important;
+  border-color: #2a3942 !important;
+  color: #8696a0 !important;
+}
+
+html[data-theme="dark"] body:is(
+  .page-invoices-desk,
+  .page-orders-desk,
+  .page-customer-index-desk,
+  .page-pricelist-desk,
+  .page-customer-performance-desk,
+  .page-reassign-sales-desk
+) table tbody td,
+html[data-theme="dark"] body.page-orders-desk .qt-table td {
+  background: #111b21 !important;
+  background-color: #111b21 !important;
+  border-color: #2a3942 !important;
+  color: #e9edef !important;
+}
+
+html[data-theme="dark"] body:is(
+  .page-invoices-desk,
+  .page-orders-desk,
+  .page-customer-index-desk,
+  .page-pricelist-desk,
+  .page-customer-performance-desk,
+  .page-reassign-sales-desk
+) table tbody tr:hover td,
+html[data-theme="dark"] body.page-orders-desk .qt-table tbody tr:hover {
+  background: #202c33 !important;
+  background-color: #202c33 !important;
+}
+
+html[data-theme="dark"] body:is(.page-invoices-desk, .page-orders-desk) table tbody tr.qt-row-selected td,
+html[data-theme="dark"] body:is(.page-invoices-desk, .page-orders-desk, .page-customer-index-desk, .page-pricelist-desk) table tbody tr.is-selected td,
+html[data-theme="dark"] body.page-invoices-desk table tbody tr.is-opened td {
+  background: #202c33 !important;
+}
+
+html[data-theme="dark"] body:is(.page-invoices-desk, .page-orders-desk, .page-customer-index-desk) .exp-desk-cell-main,
+html[data-theme="dark"] body:is(.page-invoices-desk, .page-orders-desk) .exp-desk-amt,
+html[data-theme="dark"] body:is(.page-invoices-desk, .page-orders-desk) .exp-desk-ref {
+  color: #e9edef !important;
+}
+
+/* Search / filters / chips */
+html[data-theme="dark"] body:is(
+  .page-sales-dashboard-desk,
+  .page-invoices-desk,
+  .page-orders-desk,
+  .page-pricelist-desk,
+  .page-customer-index-desk,
+  .page-my-sales-desk,
+  .page-sales-settings,
+  .page-customer-performance-desk
+) .exp-desk-search-field,
+html[data-theme="dark"] body:is(
+  .page-invoices-desk,
+  .page-orders-desk,
+  .page-pricelist-desk,
+  .page-customer-index-desk
+) .exp-desk-filter-btn,
+html[data-theme="dark"] body.page-pricelist-desk .pl-select,
+html[data-theme="dark"] body.page-pricelist-desk .pl-filter-toggle,
+html[data-theme="dark"] body.page-pricelist-desk .pl-page-buttons button,
+html[data-theme="dark"] body.page-customer-performance-desk .cp-search input,
+html[data-theme="dark"] body.page-customer-performance-desk .cp-field select,
+html[data-theme="dark"] body.page-sales-dashboard-desk .growth-chart__period,
+html[data-theme="dark"] body.page-sales-dashboard-desk .growth-chart__type-menu {
+  background: #111b21 !important;
+  border-color: #2a3942 !important;
+  color: #e9edef !important;
+}
+
+html[data-theme="dark"] body:is(
+  .page-invoices-desk,
+  .page-orders-desk,
+  .page-customer-index-desk,
+  .page-pricelist-desk
+) .exp-desk-search-input,
+html[data-theme="dark"] body:is(
+  .page-invoices-desk,
+  .page-orders-desk,
+  .page-customer-index-desk,
+  .page-pricelist-desk
+) .exp-desk-search-input:focus {
+  background: transparent !important;
+  color: #e9edef !important;
+}
+
+html[data-theme="dark"] body:is(
+  .page-invoices-desk,
+  .page-orders-desk,
+  .page-customer-index-desk
+) .exp-desk-btn-create {
+  background: #00a884 !important;
+  border-color: #00a884 !important;
+  color: #fff !important;
+}
+
+html[data-theme="dark"] body.page-sales-dashboard-desk .sd-revenue-growth-card,
+html[data-theme="dark"] body.page-sales-dashboard-desk .sd-yearly-card,
+html[data-theme="dark"] body.page-sales-dashboard-desk .sd-recent-activity-card,
+html[data-theme="dark"] body.page-sales-dashboard-desk .sd-leaderboard-card,
+html[data-theme="dark"] body.page-sales-dashboard-desk .sd-activity-table,
+html[data-theme="dark"] body.page-sales-dashboard-desk .sd-activity-table td,
+html[data-theme="dark"] body.page-sales-dashboard-desk .sd-activity-table th {
+  background: #111b21 !important;
+  border-color: #2a3942 !important;
+  color: #e9edef !important;
+}
+
+html[data-theme="dark"] body.page-sales-dashboard-desk .sd-yearly-ring::before {
+  background: #111b21 !important;
+}
+
+html[data-theme="dark"] body.page-sales-dashboard-desk .sd-yearly-ring,
+html[data-theme="dark"] body.page-sales-dashboard-desk .sd-yearly-ring.is-complete {
+  background: conic-gradient(#22c55e var(--yearly-progress), #1f2c34 0) !important;
+}
+
+html[data-theme="dark"] body.page-sales-dashboard-desk .sd-yearly-badge {
+  background: rgba(34, 197, 94, 0.16) !important;
+  color: #86efac !important;
+}
+
+html[data-theme="dark"] body.page-sales-dashboard-desk .sd-yearly-meter,
+html[data-theme="dark"] body.page-sales-dashboard-desk .sd-yearly-month b,
+html[data-theme="dark"] body.page-sales-dashboard-desk .sd-yearly-months-legend i {
+  background: #1f2c34 !important;
+}
+
+html[data-theme="dark"] body.page-sales-dashboard-desk .sd-yearly-months-head,
+html[data-theme="dark"] body.page-sales-dashboard-desk .sd-yearly-months-legend,
+html[data-theme="dark"] body.page-sales-dashboard-desk .sd-yearly-value-row span,
+html[data-theme="dark"] body.page-sales-dashboard-desk .sd-yearly-month span,
+html[data-theme="dark"] body.page-sales-dashboard-desk .sd-yearly-month em {
+  color: #8696a0 !important;
+}
+
+html[data-theme="dark"] body.page-sales-dashboard-desk .sd-yearly-month {
+  background: #1f2c34 !important;
+  border-color: #2a3942 !important;
+}
+
+html[data-theme="dark"] body.page-sales-dashboard-desk .sd-yearly-month strong {
+  color: #e9edef !important;
+}
+
+html[data-theme="dark"] body.page-sales-dashboard-desk .leaderboard-subtitle {
+  background: #0b141a !important;
+  border-color: #2a3942 !important;
+  color: #e9edef !important;
+}
+
+html[data-theme="dark"] body.page-sales-dashboard-desk .leaderboard-item {
+  border-bottom-color: #2a3942 !important;
+}
+
+html[data-theme="dark"] body.page-sales-dashboard-desk .leaderboard-avatar {
+  background: #202c33 !important;
+  color: #e9edef !important;
+}
+
+html[data-theme="dark"] body.page-sales-dashboard-desk .leaderboard-progress-bar {
+  background: #2a3942 !important;
+}
+
+html[data-theme="dark"] body.page-orders-desk .qt-mobile-card,
+html[data-theme="dark"] body.page-customer-index-desk .ci-mobile-card {
+  background: #111b21 !important;
+  border-color: #2a3942 !important;
+}
+
+html[data-theme="dark"] body.page-orders-desk .qt-empty {
+  background: #111b21 !important;
+  border-color: #2a3942 !important;
+  color: #e9edef !important;
+}
+
+html[data-theme="dark"] body.page-sales-settings .ss-page,
+html[data-theme="dark"] body.page-sales-settings .ss-card,
+html[data-theme="dark"] body.page-sales-settings .ss-panel {
+  --ss-surface: #111b21;
+  --ss-ink: #e9edef;
+  background-color: #111b21;
+  color: #e9edef;
+  border-color: #2a3942;
+}
+
+html[data-theme="dark"] body.page-inv-desk .inv-create-card,
+html[data-theme="dark"] body.page-sales-invoice-create .inv-create-card,
+html[data-theme="dark"] body.page-sales-order-create .o-card,
+html[data-theme="dark"] body.page-order-view .ov-card,
+html[data-theme="dark"] body.page-invoice-view .ov-card {
+  background: #111b21;
+  border-color: #2a3942;
+  color: #e9edef;
+}

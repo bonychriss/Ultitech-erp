@@ -21,15 +21,40 @@ $GLOBALS['_erp_header_style_linked'] = true;
     <?= dashboardDeskShellHeadExtras() ?>
     <?= $dashboardHeadMarkup ?>
 </head>
-<body class="dashboard sales-dashboard page-exp-desk exp-dashboard-page page-sales-dashboard-desk">
+<body class="dashboard sales-dashboard page-exp-desk exp-dashboard-page page-sales-dashboard-desk<?= !empty($isStatisticsDesk) ? ' page-sales-statistics-desk' : '' ?>">
 
 <?php include __DIR__ . '/../../../includes/header_employee.php'; ?>
 
 <style>
 body.page-exp-desk.dashboard .layout-main-wrapper { align-items: stretch; }
-body.page-sales-dashboard-desk .employee-header-page-heading,
 body.page-sales-dashboard-desk #erp-auto-breadcrumb {
     display: none !important;
+}
+body.page-sales-dashboard-desk .employee-header--exp-desk .employee-header-page-heading {
+    display: flex !important;
+    margin-left: 0 !important;
+    min-width: 0;
+    flex: 1 1 auto;
+}
+body.page-sales-statistics-desk .employee-header.employee-header--exp-desk {
+    position: relative !important;
+}
+body.page-sales-statistics-desk .employee-header--exp-desk .header-content {
+    position: relative !important;
+}
+body.page-sales-statistics-desk .employee-header--exp-desk .employee-header-page-heading {
+    display: flex !important;
+    margin-left: 0 !important;
+    min-width: 0;
+    flex: 1 1 auto;
+}
+body.page-sales-statistics-desk .employee-header--exp-desk .header-right.header-actions-tray {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    margin-left: auto !important;
+    flex: 0 0 auto !important;
+    gap: 0.5rem !important;
 }
 body.page-exp-desk.dashboard .layout-main-wrapper > .flex-grow-1 {
     min-height: 0;
@@ -52,11 +77,18 @@ body.page-exp-desk .employee-header.employee-header--exp-desk {
     min-height: 0;
     position: static !important;
 }
+body.page-sales-statistics-desk .employee-header.employee-header--exp-desk {
+    position: relative !important;
+}
 html body.dashboard.page-exp-desk:not(.att-top-chrome-hidden) header.employee-header.employee-header--exp-desk,
 html body.dashboard.page-exp-desk.att-top-chrome-hidden header.employee-header.employee-header--exp-desk {
     position: static !important;
     top: auto !important;
     z-index: auto !important;
+}
+html body.dashboard.page-exp-desk.page-sales-statistics-desk:not(.att-top-chrome-hidden) header.employee-header.employee-header--exp-desk,
+html body.dashboard.page-exp-desk.page-sales-statistics-desk.att-top-chrome-hidden header.employee-header.employee-header--exp-desk {
+    position: relative !important;
 }
 body.page-exp-desk .employee-header--exp-desk::after { display: none !important; }
 body.page-exp-desk .employee-header--exp-desk .header-content {

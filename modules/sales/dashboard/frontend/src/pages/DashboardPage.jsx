@@ -6,11 +6,15 @@ import {
   DollarSign,
   Handshake,
   Loader2,
+  Target,
   Trophy,
 } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { fetchDashboardInit } from '../api/dashboardDesk.js';
 import {
+  formatCompactAxis,
+  formatCompactMoney,
   formatMoney,
   formatNumber,
   formatPercent,
@@ -19,6 +23,18 @@ import {
 import OutgoingProductsShowcase from '../components/OutgoingProductsShowcase.jsx';
 import KpiSummaryModal from '../components/KpiSummaryModal.jsx';
 import GrowthChart from '../components/GrowthChart.jsx';
+import SalesActionsMenu from '../components/SalesActionsMenu.jsx';
+
+function HeaderActions({ urls }) {
+  const [toolsEl, setToolsEl] = useState(null);
+
+  useEffect(() => {
+    setToolsEl(document.getElementById('sales-dash-header-tools'));
+  }, []);
+
+  if (!toolsEl) return null;
+  return createPortal(<SalesActionsMenu urls={urls} />, toolsEl);
+}
 
 function FlashAlerts({ flash }) {
   if (!flash?.success && !flash?.error) return null;
@@ -220,8 +236,10 @@ function YearlyTarget({ yearly }) {
   const target = Number(yearly?.target || 0);
   const sales = Number(yearly?.sales || 0);
   const percent = Number(yearly?.percent || 0);
+  const remaining = Math.max(0, target - sales);
   const hitTarget = target > 0 && sales >= target;
   const progress = Math.min(100, Math.max(0, percent));
+  const months = Array.isArray(yearly?.months) ? yearly.months : [];
 
   return (
     <div className={`dash-card flex-shrink-0 sd-yearly-card${hitTarget ? ' sd-yearly-card--target-hit' : ''}`}>
@@ -233,13 +251,18 @@ function YearlyTarget({ yearly }) {
         </>
       ) : null}
       <div className="sd-yearly-card-head">
-        <h3 className="dash-card-title mb-2">Yearly Sales Target</h3>
+        <h3 className="dash-card-title">
+          <Target size={16} strokeWidth={2.2} aria-hidden="true" />
+          Yearly Sales Target
+        </h3>
         {hitTarget ? (
           <span className="yearly-congrats-badge">
             <Trophy size={13} strokeWidth={2.5} aria-hidden="true" />
             Target reached!
           </span>
-        ) : null}
+        ) : (
+          <span className="sd-yearly-badge">{formatPercent(progress, 0)}% of target</span>
+        )}
       </div>
       <div className="sd-yearly-summary">
         <div
@@ -261,10 +284,35 @@ function YearlyTarget({ yearly }) {
           </div>
           <div className="sd-yearly-value-row sd-yearly-remaining">
             <span>Remaining</span>
-            <strong>{formatMoney(Math.max(0, target - sales))}</strong>
+            <strong>{formatMoney(remaining)}</strong>
           </div>
         </div>
       </div>
+      <div className="sd-yearly-meter" role="img" aria-label={`${formatPercent(progress, 0)} percent of yearly target filled`}>
+        <i style={{ width: `${progress}%` }} />
+      </div>
+      {months.length > 0 ? (
+        <div className="sd-yearly-months" aria-label="Target progress by month">
+          <div className="sd-yearly-months-head">
+            <span>Target Progress by Month</span>
+            <span className="sd-yearly-months-legend">
+              <i className="is-achieved" /> Achieved
+              <i className="is-remaining" /> Remaining
+            </span>
+          </div>
+          <div className="sd-yearly-months-grid">
+            {months.map((month) => (
+              <div key={month.month} className="sd-yearly-month">
+                <span>{month.label} <strong>{formatPercent(month.percent, 0)}%</strong></span>
+                <em>{formatCompactMoney(month.sales)} / {formatCompactAxis(month.target)}</em>
+                <b>
+                  <i style={{ width: `${Math.min(100, Math.max(0, Number(month.percent) || 0))}%` }} />
+                </b>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -295,22 +343,28 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="sd-loading">
-        <Loader2 size={20} className="spin" style={{ animation: 'spin 1s linear infinite' }} />
-        <span>Loading dashboard...</span>
-      </div>
+      <>
+        <HeaderActions />
+        <div className="sd-loading">
+          <Loader2 size={20} className="spin" style={{ animation: 'spin 1s linear infinite' }} />
+          <span>Loading dashboard...</span>
+        </div>
+      </>
     );
   }
 
   if (error) {
     return (
-      <div className="alert alert-danger" role="alert">
-        {error}
-      </div>
+      <>
+        <HeaderActions />
+        <div className="alert alert-danger" role="alert">
+          {error}
+        </div>
+      </>
     );
   }
 
-  if (!data) return null;
+  if (!data) return <HeaderActions />;
 
   const metrics = data.metrics || {};
   const summaries = data.kpi_summaries || {};
@@ -318,6 +372,7 @@ export default function DashboardPage() {
 
   return (
     <>
+      <HeaderActions urls={data.urls} />
       <FlashAlerts flash={data.flash} />
 
       <div className="kpi-overview">
@@ -370,53 +425,46 @@ export default function DashboardPage() {
 
       <KpiSummaryModal
         summary={activeSummary}
+        summaryKey={activeKpiKey}
         onClose={() => setActiveKpiKey(null)}
       />
 
-      <div className="row g-3 mb-3 sd-dashboard-main-row">
-        <div className="col-xl-8 col-lg-7">
-          <div className="dash-card sd-revenue-growth-card">
-            <GrowthChart
-              title="Sales Growth"
-              series={data.revenue_growth || {}}
-              comparisonSeries={data.quote_growth || {}}
-              seriesLabel="Sales Revenue"
-              comparisonLabel="Quotation Value"
-              theme="quote"
-              ariaLabel="Sales revenue compared with quotation value"
-            />
-          </div>
+      <div className="sd-dashboard-main-row">
+        <div className="dash-card sd-revenue-growth-card">
+          <GrowthChart
+            title="Sales Performance"
+            series={data.revenue_growth || {}}
+            comparisonSeries={data.quote_growth || {}}
+            orderSeries={data.order_growth || {}}
+            quoteCountSeries={data.quote_count_growth || {}}
+            theme="performance"
+            ariaLabel="Sales performance compared with quotations and orders"
+          />
         </div>
-        <div className="col-xl-4 col-lg-5">
-          <YearlyTarget yearly={data.yearly || {}} />
-        </div>
+        <YearlyTarget yearly={data.yearly || {}} />
       </div>
 
-      <div className="row g-3 sd-dashboard-bottom-row align-items-stretch">
-        <div className="col-xl-7 col-lg-7">
-          <div className="dash-card sd-recent-activity-card">
-            <div className="sd-section-card-head">
-              <h3 className="dash-card-title">
-                <i className="fas fa-clock-rotate-left me-2" aria-hidden="true" />
-                Recent Activity
-              </h3>
-              {data.urls?.orders ? (
-                <a className="sd-activity-view-all" href={data.urls.orders}>
-                  View all <ArrowRight size={14} />
-                </a>
-              ) : null}
-            </div>
-            <RecentActivity activities={data.recent_activities} />
+      <div className="sd-dashboard-bottom-row">
+        <div className="dash-card sd-recent-activity-card">
+          <div className="sd-section-card-head">
+            <h3 className="dash-card-title">
+              <i className="fas fa-clock-rotate-left me-2" aria-hidden="true" />
+              Recent Activity
+            </h3>
+            {data.urls?.orders ? (
+              <a className="sd-activity-view-all" href={data.urls.orders}>
+                View all <ArrowRight size={14} />
+              </a>
+            ) : null}
           </div>
+          <RecentActivity activities={data.recent_activities} />
         </div>
-        <div className="col-xl-5 col-lg-5">
-          <div className="dash-card sd-leaderboard-card sd-card-scroll">
-            <div className="leaderboard-header">
-              <h3 className="dash-card-title">Leaderboard</h3>
-              <span className="leaderboard-subtitle">Total Sales</span>
-            </div>
-            <Leaderboard rows={data.leaderboard} />
+        <div className="dash-card sd-leaderboard-card sd-card-scroll">
+          <div className="leaderboard-header">
+            <h3 className="dash-card-title">Leaderboard</h3>
+            <span className="leaderboard-subtitle">Total Sales</span>
           </div>
+          <Leaderboard rows={data.leaderboard} />
         </div>
       </div>
 

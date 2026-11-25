@@ -90,22 +90,6 @@ function cellOrDash(value) {
   return text || '-';
 }
 
-function statementInvoiceViewUrl(row, module) {
-  const invoiceId = Number(row.invoice_id);
-  if (!String(row.id || '').startsWith('invoice-') || !Number.isSafeInteger(invoiceId) || invoiceId <= 0) {
-    return '';
-  }
-  return `../modules/sales/invoices/view.php?id=${encodeURIComponent(invoiceId)}&module=${encodeURIComponent(module)}`;
-}
-
-function InvoiceReference({ row, module }) {
-  const reference = cellOrDash(row.reference);
-  const href = statementInvoiceViewUrl(row, module);
-  return href && reference !== '-'
-    ? <a className="stmt-invoice-reference-link" href={href}>{reference}</a>
-    : reference;
-}
-
 function ExcelExportIcon({ src, className = '', busy = false }) {
   if (!src && !busy) return null;
   return (
@@ -142,7 +126,6 @@ export default function CustomerStatementPage() {
   const [pickerPopStyle, setPickerPopStyle] = useState(null);
   const [excelDownload, setExcelDownload] = useState({ status: 'idle', message: '' });
   const [actionsOpen, setActionsOpen] = useState(false);
-  const [savedStatementsOpen, setSavedStatementsOpen] = useState(false);
   const [history, setHistory] = useState({ results: [], total: 0, page: 1, page_size: 10 });
   const [historyLoading, setHistoryLoading] = useState(true);
   const [historyError, setHistoryError] = useState('');
@@ -229,25 +212,6 @@ export default function CustomerStatementPage() {
       document.removeEventListener('keydown', handleKeyDown);
     };
   }, [actionsOpen]);
-
-  useEffect(() => {
-    if (!savedStatementsOpen) return undefined;
-    function handleOutsideClick(event) {
-      if (!actionsRef.current?.contains(event.target)) setSavedStatementsOpen(false);
-    }
-    function handleKeyDown(event) {
-      if (event.key === 'Escape') {
-        setSavedStatementsOpen(false);
-        actionsTriggerRef.current?.focus();
-      }
-    }
-    document.addEventListener('mousedown', handleOutsideClick);
-    document.addEventListener('keydown', handleKeyDown);
-    return () => {
-      document.removeEventListener('mousedown', handleOutsideClick);
-      document.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [savedStatementsOpen]);
 
   useEffect(() => {
     if (!pickerOpen) return undefined;
@@ -659,7 +623,7 @@ export default function CustomerStatementPage() {
                     type="button"
                     disabled={openingHistory}
                     onClick={() => {
-                      setSavedStatementsOpen(false);
+                      setActionsOpen(false);
                       openSavedStatement(entry.id);
                     }}
                   >
@@ -693,7 +657,7 @@ export default function CustomerStatementPage() {
                           onClick={() => {
                             setDeleteConfirm(`statement-${entry.id}`);
                             setRowMenuOpen(null);
-                            setSavedStatementsOpen(false);
+                            setActionsOpen(false);
                           }}
                         >
                           <Trash2 size={14} aria-hidden="true" />
@@ -727,18 +691,15 @@ export default function CustomerStatementPage() {
   );
 
   const actionsMenu = (
-    <div className={`stmt-actions${actionsOpen || savedStatementsOpen ? ' is-open' : ''}`} ref={actionsRef}>
+    <div className={`stmt-actions${actionsOpen ? ' is-open' : ''}`} ref={actionsRef}>
       <button
         type="button"
         ref={actionsTriggerRef}
         className="stmt-actions-trigger"
-        aria-haspopup="menu"
+        aria-haspopup="dialog"
         aria-expanded={actionsOpen}
         aria-controls="statement-actions-menu"
-        onClick={() => {
-          setSavedStatementsOpen(false);
-          setActionsOpen((open) => !open);
-        }}
+        onClick={() => setActionsOpen((open) => !open)}
         onKeyDown={(event) => {
           if (event.key !== 'ArrowDown') return;
           event.preventDefault();
@@ -754,21 +715,26 @@ export default function CustomerStatementPage() {
         <div
           className="stmt-actions-menu"
           id="statement-actions-menu"
-          role="menu"
-          aria-label="Statement actions"
-          onKeyDown={(event) => {
-            if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return;
-            const items = Array.from(event.currentTarget.querySelectorAll('[role="menuitem"]:not(:disabled)'));
-            if (!items.length) return;
-            event.preventDefault();
-            const current = items.indexOf(document.activeElement);
-            let next = 0;
-            if (event.key === 'End') next = items.length - 1;
-            else if (event.key === 'ArrowDown') next = (current + 1) % items.length;
-            else if (event.key === 'ArrowUp') next = current <= 0 ? items.length - 1 : current - 1;
-            items[next].focus();
-          }}
+          role="dialog"
+          aria-label="Statement actions and saved statements"
         >
+          <div
+            className="stmt-actions-menu-links"
+            role="menu"
+            aria-label="Statement actions"
+            onKeyDown={(event) => {
+              if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return;
+              const items = Array.from(event.currentTarget.querySelectorAll('[role="menuitem"]:not(:disabled)'));
+              if (!items.length) return;
+              event.preventDefault();
+              const current = items.indexOf(document.activeElement);
+              let next = 0;
+              if (event.key === 'End') next = items.length - 1;
+              else if (event.key === 'ArrowDown') next = (current + 1) % items.length;
+              else if (event.key === 'ArrowUp') next = current <= 0 ? items.length - 1 : current - 1;
+              items[next].focus();
+            }}
+          >
           {canExportExcel && (
             <button
               type="button"
@@ -807,29 +773,10 @@ export default function CustomerStatementPage() {
               Email
             </a>
           )}
-          <button
-            type="button"
-            className="stmt-actions-item"
-            role="menuitem"
-            aria-haspopup="dialog"
-            aria-controls="saved-statements-popover"
-            onClick={() => {
-              setActionsOpen(false);
-              setSavedStatementsOpen(true);
-            }}
-          >
-            <span className="stmt-actions-icon stmt-actions-icon--slate" aria-hidden="true"><ReceiptText size={15} /></span>
-            Saved Statements
-          </button>
-        </div>
-      )}
-      {savedStatementsOpen && (
-        <div
-          className="stmt-saved-statements-popover"
-          id="saved-statements-popover"
-          role="dialog"
-          aria-label="Saved statements"
-        >
+          {!canExportExcel && !exportPdfUrl && !urls.whatsapp && !urls.mailto && (
+            <div className="stmt-actions-empty">Select a customer to access actions.</div>
+          )}
+          </div>
           {savedStatementsPanel}
         </div>
       )}
@@ -1045,7 +992,7 @@ export default function CustomerStatementPage() {
                       <td>{index + 1}</td>
                       <td>{formatStatementDate(row.transaction_date)}</td>
                       <td>{row.description}</td>
-                      <td><InvoiceReference row={row} module={module} /></td>
+                      <td>{cellOrDash(row.reference)}</td>
                       <td className="is-right">{formatMoney(row.total_sales)}</td>
                       <td className="is-right">{formatMoney(row.total_payments)}</td>
                       <td className="is-right">
@@ -1089,91 +1036,6 @@ export default function CustomerStatementPage() {
                   )}
                 </tbody>
               </table>
-            </div>
-            <div className="stmt-mobile-transaction-list" role="list" aria-label="Statement entries">
-              {transactions.map((row) => {
-                const isPayment = Number(row.total_payments) > 0;
-                const amount = isPayment ? row.total_payments : row.total_sales;
-                return (
-                  <article className="stmt-mobile-transaction-card" role="listitem" key={`mobile-${row.id}`}>
-                    <div className="stmt-mobile-transaction-card-top">
-                      <div className="stmt-mobile-transaction-main">
-                        <span className="stmt-mobile-transaction-icon" aria-hidden="true">
-                          <ReceiptText size={17} />
-                        </span>
-                        <div className="stmt-mobile-transaction-copy">
-                          <span className="stmt-mobile-transaction-description" title={row.description}>
-                            {row.description || 'Statement entry'}
-                          </span>
-                          <span className="stmt-mobile-transaction-reference">
-                            <InvoiceReference row={row} module={module} />
-                          </span>
-                        </div>
-                      </div>
-                      <div className="stmt-mobile-transaction-aside">
-                        <span className="stmt-mobile-transaction-amount">{formatMoney(amount)}</span>
-                        <span className={`stmt-mobile-transaction-kind${isPayment ? ' is-payment' : ' is-sale'}`}>
-                          {isPayment ? 'Payment' : 'Sale'}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="stmt-mobile-transaction-card-foot">
-                      <div className="stmt-mobile-transaction-fact">
-                        <CalendarDays size={14} aria-hidden="true" />
-                        <span className="stmt-mobile-transaction-fact-body">
-                          <span className="stmt-mobile-transaction-fact-label">Date</span>
-                          <span className="stmt-mobile-transaction-fact-value">{formatStatementDate(row.transaction_date)}</span>
-                        </span>
-                      </div>
-                      <div className="stmt-mobile-transaction-fact">
-                        <CalendarDays size={14} aria-hidden="true" />
-                        <span className="stmt-mobile-transaction-fact-body">
-                          <span className="stmt-mobile-transaction-fact-label">Generated</span>
-                          <span className="stmt-mobile-transaction-fact-value">{formatHistoryDate(row.generated_on)}</span>
-                        </span>
-                      </div>
-                      <div className="stmt-mobile-transaction-fact">
-                        <Scale size={14} aria-hidden="true" />
-                        <span className="stmt-mobile-transaction-fact-body">
-                          <span className="stmt-mobile-transaction-fact-label">Balance</span>
-                          <span className="stmt-mobile-transaction-fact-value">{formatMoney(row.balance)}</span>
-                        </span>
-                      </div>
-                      <div className="stmt-mobile-transaction-menu">
-                        <div className="stmt-row-menu-wrap">
-                          <button
-                            type="button"
-                            className="stmt-row-menu-btn"
-                            aria-haspopup="menu"
-                            aria-label={`Actions for ${row.description}`}
-                            onClick={() => setRowMenuOpen(rowMenuOpen === `transaction-${row.id}` ? null : `transaction-${row.id}`)}
-                          >
-                            <MoreVertical size={16} aria-hidden="true" />
-                          </button>
-                          {rowMenuOpen === `transaction-${row.id}` && (
-                            <div className="stmt-row-menu" role="menu">
-                              <a
-                                href={`../modules/sales/invoices/view.php?id=${encodeURIComponent(row.invoice_id)}&module=${encodeURIComponent(module)}`}
-                                className="stmt-row-menu-item"
-                                role="menuitem"
-                                onClick={() => setRowMenuOpen(null)}
-                              >
-                                <FileText size={14} aria-hidden="true" />
-                                View invoice
-                              </a>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </article>
-                );
-              })}
-              {transactions.length === 0 && (
-                <div className="stmt-mobile-transaction-empty" role="status">
-                  No transactions found for this statement period.
-                </div>
-              )}
             </div>
           </section>
         </>

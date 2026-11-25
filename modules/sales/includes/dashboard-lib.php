@@ -30,6 +30,131 @@ function dashboardDeskModuleQuery(): string
     return $module !== '' ? $module : 'sales';
 }
 
+function dashboardDeskIsStatistics(): bool
+{
+    $desk = strtolower(trim((string) ($_GET['desk'] ?? '')));
+    if ($desk === 'statistics') {
+        return true;
+    }
+
+    $path = (string) (parse_url((string) ($_SERVER['REQUEST_URI'] ?? ''), PHP_URL_PATH) ?: '');
+
+    return (bool) preg_match('#/sales/statistics/?$#', $path);
+}
+
+function dashboardDeskSalesHomeUrl(): string
+{
+    if (function_exists('sales_module_url')) {
+        return sales_module_url('dashboard', ['module' => 'sales']);
+    }
+
+    $slug = trim((string) ($_SESSION['company_slug'] ?? ''));
+    if (function_exists('company_url') && $slug !== '') {
+        return company_url('sales', $slug) . '?module=sales';
+    }
+
+    return function_exists('app_url')
+        ? app_url('/sales.php') . '?module=sales'
+        : '/sales.php?module=sales';
+}
+
+function dashboardDeskSelectModuleUrl(): string
+{
+    $slug = trim((string) ($_SESSION['company_slug'] ?? ''));
+    if (function_exists('company_url') && $slug !== '') {
+        return company_url('select-module', $slug);
+    }
+
+    return function_exists('app_url') ? app_url('/select-module.php') : '/select-module.php';
+}
+
+/**
+ * @return array{pageTitle:string,employeeHeaderTitle:string,employeeHeaderSubtitle:string}
+ */
+function dashboardDeskHeaderChrome(bool $isStatistics): array
+{
+    $homeUrl = dashboardDeskSelectModuleUrl();
+    $salesUrl = dashboardDeskSalesHomeUrl();
+    $nav = '<nav class="vv-breadcrumb sales-desk-breadcrumb sales-stat-breadcrumb" aria-label="Breadcrumb">'
+        . '<a class="vv-breadcrumb-link erp-nav-back-ignore" href="' . htmlspecialchars($homeUrl, ENT_QUOTES, 'UTF-8') . '">Home</a>'
+        . '<span class="vv-breadcrumb-sep">/</span>';
+
+    if ($isStatistics) {
+        $nav .= '<a class="vv-breadcrumb-link erp-nav-back-ignore" href="' . htmlspecialchars($salesUrl, ENT_QUOTES, 'UTF-8') . '">Sales</a>'
+            . '<span class="vv-breadcrumb-sep">/</span>'
+            . '<span class="vv-breadcrumb-current">Statistics</span>';
+        $title = 'Sales Statistics';
+        $pageTitle = 'Sales Statistics';
+    } else {
+        $nav .= '<span class="vv-breadcrumb-current">Sales</span>';
+        $title = 'Sales';
+        $pageTitle = 'Sales Dashboard';
+    }
+
+    $nav .= '</nav>';
+
+    return [
+        'pageTitle' => $pageTitle,
+        'employeeHeaderTitle' => $title,
+        'employeeHeaderSubtitle' => $nav,
+    ];
+}
+
+function dashboardDeskCompanyPathUrl(string $path, array $query = []): string
+{
+    $path = ltrim(str_replace('\\', '/', $path), '/');
+    $slug = trim((string) ($_SESSION['company_slug'] ?? ''));
+    if ($slug === '' && function_exists('getRequestedCompanySlug')) {
+        $slug = strtolower(trim((string) getRequestedCompanySlug()));
+    }
+    if (function_exists('company_url') && $slug !== '') {
+        $url = company_url($path, $slug);
+    } elseif (function_exists('app_url')) {
+        $url = app_url('/' . $path);
+    } else {
+        $url = '/' . $path;
+    }
+    if ($query !== []) {
+        $url .= (str_contains($url, '?') ? '&' : '?') . http_build_query($query);
+    }
+
+    return $url;
+}
+
+/**
+ * @return array<string,string>
+ */
+function dashboardDeskActionUrls(?string $module = null): array
+{
+    $module = $module !== null && $module !== '' ? $module : dashboardDeskModuleQuery();
+
+    return [
+        'new_quote' => sales_module_url('orders/create.php', ['mode' => 'new', 'module' => $module]),
+        'new_order' => sales_module_url('orders/create.php', ['mode' => 'new', 'module' => $module]),
+        'new_invoice' => sales_module_url('invoices/create.php', ['module' => $module]),
+        'new_delivery_note' => dashboardDeskCompanyPathUrl('deliveries/create-delivery-note', ['module' => 'deliveries']),
+        'orders' => sales_module_url('orders/index.php', ['module' => $module]),
+        'customers' => sales_module_url('customers/index.php', ['module' => $module]),
+        'catalogue' => function_exists('sales_catalogue_url') ? sales_catalogue_url('quote') : '',
+        'pricelist' => sales_module_url('pricelist.php', ['module' => $module]),
+        'quote_requests' => sales_module_url('quote-requests/index.php', ['module' => $module]),
+        'payment_create' => sales_module_url('payments/create.php', ['module' => $module]),
+        'settings' => sales_module_url('settings/index.php', ['module' => $module]),
+        'statistics' => sales_module_url('statistics', ['module' => $module]),
+        'wrong_invoices' => sales_module_url('invoices/corrections.php', ['module' => $module]),
+        'product_view' => function_exists('dashboardDeskStockProductViewUrl') ? dashboardDeskStockProductViewUrl() : '',
+    ];
+}
+
+function dashboardDeskHeaderToolsHtml(bool $isStatistics): string
+{
+    if ($isStatistics) {
+        return '<div id="sales-stat-header-tools" class="sales-stat-header-tools"></div>';
+    }
+
+    return '<div id="sales-dash-header-tools" class="sales-stat-header-tools sales-dash-header-tools"></div>';
+}
+
 function dashboardDeskWebBase(): string
 {
     // Never derive from SCRIPT_NAME — physical /{slug}/sales.php aliases would
@@ -397,7 +522,7 @@ function dashboardDeskBuildKpiSummaries(
               AND i.status != 'cancelled'";
         $paramsInv = [$month];
         salesAppendCompanyScope($sqlInv, $paramsInv, 'invoices', 'i');
-        $sqlInv .= ' ORDER BY i.created_at DESC LIMIT 5';
+        $sqlInv .= ' ORDER BY i.created_at DESC LIMIT 50';
         $stmtInv = $pdo->prepare($sqlInv);
         $stmtInv->execute($paramsInv);
         foreach ($stmtInv->fetchAll(PDO::FETCH_ASSOC) ?: [] as $row) {
@@ -422,7 +547,7 @@ function dashboardDeskBuildKpiSummaries(
             WHERE so.status IN ('draft', 'quotation')";
         $paramsPending = [];
         salesAppendCompanyScope($sqlPending, $paramsPending, 'sales_orders', 'so');
-        $sqlPending .= ' ORDER BY so.created_at DESC LIMIT 5';
+        $sqlPending .= ' ORDER BY so.created_at DESC LIMIT 50';
         $stmtPending = $pdo->prepare($sqlPending);
         $stmtPending->execute($paramsPending);
         foreach ($stmtPending->fetchAll(PDO::FETCH_ASSOC) ?: [] as $row) {
@@ -455,7 +580,7 @@ function dashboardDeskBuildKpiSummaries(
             $nextMonthStart->format('Y-m-d H:i:s'),
         ];
         salesAppendCompanyScope($sqlQuotes, $paramsQuotes, 'sales_orders', 'so');
-        $sqlQuotes .= ' ORDER BY so.created_at DESC LIMIT 5';
+        $sqlQuotes .= ' ORDER BY so.created_at DESC LIMIT 50';
         $stmtQuotes = $pdo->prepare($sqlQuotes);
         $stmtQuotes->execute($paramsQuotes);
         foreach ($stmtQuotes->fetchAll(PDO::FETCH_ASSOC) ?: [] as $row) {
@@ -492,7 +617,7 @@ function dashboardDeskBuildKpiSummaries(
             WHERE i.status = 'overdue'";
         $paramsOverdue = [];
         salesAppendCompanyScope($sqlOverdue, $paramsOverdue, 'invoices', 'i');
-        $sqlOverdue .= ' ORDER BY i.due_date ASC LIMIT 5';
+        $sqlOverdue .= ' ORDER BY i.due_date ASC LIMIT 50';
         $stmtOverdue = $pdo->prepare($sqlOverdue);
         $stmtOverdue->execute($paramsOverdue);
         foreach ($stmtOverdue->fetchAll(PDO::FETCH_ASSOC) ?: [] as $row) {
@@ -595,6 +720,68 @@ function dashboardDeskBuildKpiSummaries(
     ];
 }
 
+/**
+ * @return list<array{label:string,month:string,sales:float,target:float,percent:float}>
+ */
+function dashboardDeskYearlyMonthProgress(string $year, float $yearlyTarget): array
+{
+    $labels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    $salesByMonth = [];
+    $targetsByMonth = [];
+    $evenTarget = $yearlyTarget > 0 ? $yearlyTarget / 12 : 0.0;
+
+    try {
+        $pdo = sales_pdo();
+        $sql = "
+            SELECT DATE_FORMAT(created_at, '%Y-%m') AS sale_month, SUM(total_amount) AS total
+            FROM invoices
+            WHERE status != 'cancelled'
+              AND YEAR(created_at) = ?
+        ";
+        $params = [$year];
+        salesAppendCompanyScope($sql, $params, 'invoices');
+        $sql .= " GROUP BY DATE_FORMAT(created_at, '%Y-%m')";
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) ?: [] as $row) {
+            $salesByMonth[(string) ($row['sale_month'] ?? '')] = (float) ($row['total'] ?? 0);
+        }
+
+        if (function_exists('ensureSalesTargetsSchema')) {
+            ensureSalesTargetsSchema();
+        }
+        $targetStmt = $pdo->prepare("
+            SELECT period, target_amount
+            FROM sales_targets
+            WHERE user_id = 0
+              AND period LIKE ?
+        ");
+        $targetStmt->execute([$year . '-%']);
+        foreach ($targetStmt->fetchAll(PDO::FETCH_ASSOC) ?: [] as $row) {
+            $targetsByMonth[(string) ($row['period'] ?? '')] = (float) ($row['target_amount'] ?? 0);
+        }
+    } catch (Throwable $e) {
+        error_log('sales dashboard yearly months: ' . $e->getMessage());
+    }
+
+    $out = [];
+    for ($i = 1; $i <= 12; $i++) {
+        $key = sprintf('%s-%02d', $year, $i);
+        $sales = (float) ($salesByMonth[$key] ?? 0);
+        $target = (float) ($targetsByMonth[$key] ?? $evenTarget);
+        $percent = $target > 0 ? min(100.0, ($sales / $target) * 100) : 0.0;
+        $out[] = [
+            'label' => $labels[$i - 1],
+            'month' => $key,
+            'sales' => $sales,
+            'target' => $target,
+            'percent' => $percent,
+        ];
+    }
+
+    return $out;
+}
+
 function dashboardDeskPendingNewToday(): int
 {
     try {
@@ -661,6 +848,8 @@ function dashboardInitData(): array
     $salesTrend = 0;
     $revenueGrowth = ['day' => [], 'weekly' => [], 'monthly' => []];
     $quoteGrowth = ['day' => [], 'weekly' => [], 'monthly' => []];
+    $orderGrowth = ['day' => [], 'weekly' => [], 'monthly' => []];
+    $quoteCountGrowth = ['day' => [], 'weekly' => [], 'monthly' => []];
 
     try {
         $salesTotal = (float) (getGlobalSalesTotal($month) ?: 0);
@@ -730,6 +919,8 @@ function dashboardInitData(): array
     try {
         $revenueGrowth = getRevenueGrowthSeries();
         $quoteGrowth = getQuoteGrowthSeries();
+        $orderGrowth = function_exists('getOrderGrowthSeries') ? getOrderGrowthSeries() : $orderGrowth;
+        $quoteCountGrowth = function_exists('getQuoteCountGrowthSeries') ? getQuoteCountGrowthSeries() : $quoteCountGrowth;
     } catch (Throwable $e) {
         error_log('sales dashboard revenue growth: ' . $e->getMessage());
     }
@@ -797,6 +988,8 @@ function dashboardInitData(): array
         ],
         'revenue_growth' => $revenueGrowth,
         'quote_growth' => $quoteGrowth,
+        'order_growth' => $orderGrowth,
+        'quote_count_growth' => $quoteCountGrowth,
         'recent_activities' => dashboardDeskNormalizeActivities(array_slice($recentActivities, 0, 8), $module),
         'leaderboard' => dashboardDeskNormalizeLeaderboard(array_slice($salesLeaderboard, 0, 8), $leaderboardTargets, $year, $month),
         'yearly' => [
@@ -805,6 +998,7 @@ function dashboardInitData(): array
             'remaining' => $companyRemaining,
             'percent' => $targetPct,
             'year' => $year,
+            'months' => dashboardDeskYearlyMonthProgress($year, $companyYearlyTarget),
         ],
         'is_roadmaster' => $isRoadmasterDashboard,
         'most_sold_lookback_days' => $mostSoldLookbackDays,
@@ -829,14 +1023,7 @@ function dashboardInitData(): array
             $monthlyQuotationValue,
             $funnelStats
         ),
-        'urls' => [
-            'new_quote' => sales_module_url('orders/create.php', ['module' => $module]),
-            'orders' => sales_module_url('orders/index.php', ['module' => $module]),
-            'statistics' => sales_module_url('statistics', ['module' => $module]),
-            'wrong_invoices' => sales_module_url('invoices/corrections.php', ['module' => $module]),
-            'catalogue' => function_exists('sales_catalogue_url') ? sales_catalogue_url('quote') : '',
-            'product_view' => dashboardDeskStockProductViewUrl(),
-        ],
+        'urls' => dashboardDeskActionUrls($module),
     ];
 }
 
@@ -852,8 +1039,12 @@ function dashboardRenderReactShell(): void
         exit;
     }
 
-    $page_title = 'Sales Dashboard';
-    $employeeHeaderTitle = '';
+    $isStatisticsDesk = dashboardDeskIsStatistics();
+    $headerChrome = dashboardDeskHeaderChrome($isStatisticsDesk);
+    $page_title = $headerChrome['pageTitle'];
+    $employeeHeaderTitle = $headerChrome['employeeHeaderTitle'];
+    $employeeHeaderSubtitle = $headerChrome['employeeHeaderSubtitle'];
+    $employeeHeaderRightHtml = dashboardDeskHeaderToolsHtml($isStatisticsDesk);
     $hideErpBreadcrumbs = true;
     $hideHeaderCompanyBranding = true;
     $employeeHeaderExtraClass = 'employee-header--exp-desk';
@@ -864,6 +1055,7 @@ function dashboardRenderReactShell(): void
     $cfg = [
         'module' => dashboardDeskModuleQuery(),
         'theme_color' => $themeColor,
+        'action_urls' => dashboardDeskActionUrls(),
     ];
 
     $dashboardHeadMarkup = '<link rel="stylesheet" crossorigin href="'

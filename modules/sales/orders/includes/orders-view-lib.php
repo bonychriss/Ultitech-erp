@@ -1224,7 +1224,8 @@ function salesOrderViewRenderReactShell(int $orderId): void
     $module = ordersViewModuleQuery();
     $displayNumber = (string) ($preview['display_order_number'] ?? 'Order');
     $page_title = (string) ($preview['document_label'] ?? 'Order') . ' ' . $displayNumber;
-    $employeeHeaderTitle = '';
+    $employeeHeaderTitle = (string) ($preview['document_label'] ?? 'Order');
+    $employeeHeaderSubtitle = '<span id="ov-header-breadcrumb"></span>';
     $hideHeaderCompanyBranding = true;
     $employeeHeaderExtraClass = 'employee-header--order-view';
 

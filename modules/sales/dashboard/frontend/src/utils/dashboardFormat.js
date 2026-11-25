@@ -39,6 +39,11 @@ export function formatPercent(value, digits = 1) {
   return n.toFixed(digits);
 }
 
+/** Compact money labels for KPI cards (e.g. TZS 401K). */
+export function formatCompactMoney(value, currency = 'TZS') {
+  return `${currency} ${formatCompactAxis(value)}`;
+}
+
 /** Compact axis labels for TZS-scale charts (e.g. 2.5M, 450K). */
 export function formatCompactAxis(value) {
   const n = Math.abs(Number(value) || 0);

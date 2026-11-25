@@ -47,6 +47,8 @@ final class DeskShell
      *   headMarkup:string,
      *   footerScripts:string,
      *   employeeHeaderTitle:string,
+     *   employeeHeaderSubtitle?:string,
+     *   employeeHeaderRightHtml?:string,
      *   hideHeaderCompanyBranding:bool,
      *   employeeHeaderExtraClass:string,
      *   mainRootClass:string
@@ -260,21 +262,25 @@ final class DeskShell
             return null;
         }
 
+        $module = isset($_GET['module']) ? (string) $_GET['module'] : 'sales';
         $cfg = [
-            'module' => isset($_GET['module']) ? (string) $_GET['module'] : 'sales',
+            'module' => $module,
             'engine' => 'erp-laravel Domains/Sales',
         ];
         $script = 'window.__SALES_ORDERS_API_BASE__ = ' . json_encode($assets['apiUrl'], JSON_UNESCAPED_SLASHES) . ';'
             . 'window.__SALES_ORDERS_CFG__ = ' . json_encode($cfg, JSON_UNESCAPED_SLASHES) . ';'
             . 'window.__ORDERS_DESK_PAGE__ = ' . json_encode('sales_orders', JSON_UNESCAPED_SLASHES) . ';';
 
-        return $this->pack(
+        $data = $this->pack(
             'Sales Orders',
-            $this->listBody('page-orders-desk'),
+            $this->listBody('page-orders-desk page-sales-orders-desk'),
             $assets,
             $script,
             ['sweetAlert' => true]
         );
+        $data['employeeHeaderSubtitle'] = salesOrdersDeskHeaderSubtitle($module, 'Sales Orders');
+        $data['employeeHeaderRightHtml'] = '<div id="so-header-tools"></div>';
+        return $data;
     }
 
     private function quotations(): ?array
@@ -309,13 +315,16 @@ final class DeskShell
             . 'window.__QUOTATIONS_CFG__ = ' . json_encode($cfg, JSON_UNESCAPED_SLASHES) . ';'
             . 'window.__ORDERS_DESK_PAGE__ = ' . json_encode('quotations', JSON_UNESCAPED_SLASHES) . ';';
 
-        return $this->pack(
+        $data = $this->pack(
             'Quotations',
-            $this->listBody('page-orders-desk'),
+            $this->listBody('page-orders-desk page-quotations-desk'),
             $assets,
             $script,
             ['sweetAlert' => true]
         );
+        $data['employeeHeaderSubtitle'] = salesOrdersDeskHeaderSubtitle($module, 'Quotations');
+        $data['employeeHeaderRightHtml'] = '<div id="qt-header-tools"></div>';
+        return $data;
     }
 
     private function quoteRequests(): ?array
@@ -349,12 +358,16 @@ final class DeskShell
             . 'window.__QUOTE_REQUESTS_CFG__ = ' . json_encode($cfg, JSON_UNESCAPED_SLASHES) . ';'
             . 'window.__ORDERS_DESK_PAGE__ = ' . json_encode('quote_requests', JSON_UNESCAPED_SLASHES) . ';';
 
-        return $this->pack(
+        $data = $this->pack(
             'Quote requests',
-            $this->listBody('page-orders-desk'),
+            $this->listBody('page-orders-desk page-quote-requests-desk'),
             $assets,
             $script
         );
+        $data['employeeHeaderSubtitle'] = '<span id="qr-header-breadcrumb">'
+            . salesOrdersDeskHeaderSubtitle($module, 'Quote requests') . '</span>';
+        $data['employeeHeaderRightHtml'] = '<div id="qr-header-tools"></div>';
+        return $data;
     }
 
     private function customers(): ?array
@@ -707,9 +720,9 @@ main.main-content.sales-catalogue-shell #root { width: 100%; min-height: 40vh; }
             . 'window.__INVOICES_DOCUMENT_TYPE__ = ' . json_encode($documentType, JSON_UNESCAPED_SLASHES) . ';'
             . 'window.__SALES_DESK_ENGINE__ = ' . json_encode('erp-laravel Domains/Sales', JSON_UNESCAPED_SLASHES) . ';';
 
-        return $this->pack(
+        $data = $this->pack(
             $title,
-            'page-inv-desk inv-dashboard-page',
+            'page-inv-desk inv-dashboard-page' . ($documentType === 'quote' ? ' page-quote-create' : ''),
             $assets,
             $script,
             [
@@ -718,6 +731,12 @@ main.main-content.sales-catalogue-shell #root { width: 100%; min-height: 40vh; }
                 'employeeHeaderExtraClass' => 'employee-header--inv-desk',
             ]
         );
+        if ($documentType === 'quote') {
+            $module = isset($_GET['module']) ? (string) $_GET['module'] : 'sales';
+            $data['employeeHeaderSubtitle'] = salesQuoteCreateHeaderSubtitle($title, $module);
+            $data['employeeHeaderExtraClass'] .= ' employee-header--quote-create';
+        }
+        return $data;
     }
 
     private function quoteEdit(): ?array
@@ -910,7 +929,7 @@ main.main-content.sales-catalogue-shell #root { width: 100%; min-height: 40vh; }
             $extraHead = ordersViewDeskShellHeadExtras(is_array($settings) ? $settings : []);
         }
 
-        return $this->pack(
+        $data = $this->pack(
             $title,
             'page-order-view ov-page',
             $assets,
@@ -921,9 +940,11 @@ main.main-content.sales-catalogue-shell #root { width: 100%; min-height: 40vh; }
                 'extraHead' => $extraHead,
                 'mainRootClass' => 'ov-react-root',
                 'employeeHeaderExtraClass' => 'employee-header--order-view',
-                'employeeHeaderTitle' => '',
+                'employeeHeaderTitle' => (string) ($preview['document_label'] ?? 'Order'),
             ]
         );
+        $data['employeeHeaderSubtitle'] = '<span id="ov-header-breadcrumb"></span>';
+        return $data;
     }
 
     private function invoiceView(): ?array

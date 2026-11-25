@@ -130,8 +130,11 @@ RewriteRule ^stock/index\.php$ stock.php [L,QSA,NC]
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteRule ^stock/(.+)$ ../stock/$1?company_slug=ultimate&module=stocks [L,QSA]
 
+# Hub: always hit accounting.php (never bare directory). Physical ultimate/accounting/
+# exists for subpage stubs; without this, DirectorySlash → /accounting/ can skip the hub.
+RewriteRule ^accounting/index\.php$ accounting.php [L,QSA,NC]
 RewriteRule ^accounting/?$ accounting.php [L,QSA,NC]
-# Accounting sub-pages live at app-root /accounting/*.php (no ultimate/accounting/ folder).
+# Accounting sub-pages: prefer local stubs under ultimate/accounting/, else app-root.
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteRule ^accounting/([^./]+)/?$ ../accounting/$1.php?company_slug=ultimate&module=accounting [L,QSA,NC]
 RewriteCond %{REQUEST_FILENAME} !-f
@@ -237,6 +240,8 @@ RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^modules/(.+)$ ../modules/$1?company_slug=ultimate [L,QSA]
 
 # Real files/dirs under ultimate/ (todo, deliveries, attendance, stock/..., balances, …)
+# Exclude accounting hub: physical ultimate/accounting/ must not win over accounting.php.
+RewriteCond %{REQUEST_URI} !/accounting/?$ [NC]
 RewriteCond %{REQUEST_FILENAME} -f [OR]
 RewriteCond %{REQUEST_FILENAME} -d
 RewriteRule ^ - [L]

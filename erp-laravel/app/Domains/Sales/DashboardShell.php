@@ -68,6 +68,9 @@ final class DashboardShell
                 'module' => $module,
                 'theme_color' => $themeColor,
                 'engine' => 'erp-laravel Domains/Sales',
+                'action_urls' => function_exists('dashboardDeskActionUrls')
+                    ? dashboardDeskActionUrls($module)
+                    : [],
             ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)
             . ';</script>';
 
@@ -76,13 +79,32 @@ final class DashboardShell
             . htmlspecialchars($jsUrl, ENT_QUOTES, 'UTF-8')
             . '"></script>';
 
+        $isStatistics = function_exists('dashboardDeskIsStatistics')
+            ? dashboardDeskIsStatistics()
+            : strtolower(trim((string) ($_GET['desk'] ?? ''))) === 'statistics';
+
+        $headerChrome = function_exists('dashboardDeskHeaderChrome')
+            ? dashboardDeskHeaderChrome($isStatistics)
+            : [
+                'pageTitle' => $isStatistics ? 'Sales Statistics' : 'Sales Dashboard',
+                'employeeHeaderTitle' => $isStatistics ? 'Sales Statistics' : 'Sales',
+                'employeeHeaderSubtitle' => '',
+            ];
+
         return [
-            'pageTitle' => 'Sales Dashboard',
-            'bodyClass' => 'page-exp-desk exp-dashboard-page sales-dashboard page-sales-dashboard-desk page-sales-laravel page-erp-laravel',
+            'pageTitle' => $headerChrome['pageTitle'],
+            'bodyClass' => 'page-exp-desk exp-dashboard-page sales-dashboard page-sales-dashboard-desk page-sales-laravel page-erp-laravel'
+                . ($isStatistics ? ' page-sales-statistics-desk' : ''),
             'headMarkup' => $headMarkup,
             'footerScripts' => $footerScripts,
-            'employeeHeaderTitle' => '',
-            'hideErpBreadcrumbs' => false,
+            'employeeHeaderTitle' => $headerChrome['employeeHeaderTitle'],
+            'employeeHeaderSubtitle' => $headerChrome['employeeHeaderSubtitle'],
+            'employeeHeaderRightHtml' => function_exists('dashboardDeskHeaderToolsHtml')
+                ? dashboardDeskHeaderToolsHtml($isStatistics)
+                : ($isStatistics
+                    ? '<div id="sales-stat-header-tools" class="sales-stat-header-tools"></div>'
+                    : '<div id="sales-dash-header-tools" class="sales-stat-header-tools sales-dash-header-tools"></div>'),
+            'hideErpBreadcrumbs' => true,
             'hideHeaderCompanyBranding' => true,
             'employeeHeaderExtraClass' => 'employee-header--exp-desk',
             'mainRootClass' => 'exp-desk-react-root',

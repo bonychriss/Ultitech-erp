@@ -356,9 +356,12 @@ function salesOrdersListRenderReactShell(): void
     $hideHeaderCompanyBranding = true;
     $employeeHeaderExtraClass = 'employee-header--exp-desk';
     $ordersPage = 'sales_orders';
+    $module = isset($_GET['module']) ? (string) $_GET['module'] : 'sales';
+    $employeeHeaderSubtitle = salesOrdersDeskHeaderSubtitle($module, 'Sales Orders');
+    $employeeHeaderRightHtml = ($employeeHeaderRightHtml ?? '') . '<div id="so-header-tools"></div>';
 
     $cfg = [
-        'module' => isset($_GET['module']) ? (string) $_GET['module'] : 'sales',
+        'module' => $module,
     ];
 
     $ordersHeadMarkup = '<link rel="stylesheet" crossorigin href="' . htmlspecialchars($assets['assetBase'] . $assets['cssFile'] . '?v=' . $assets['cssVersion'], ENT_QUOTES, 'UTF-8') . '">'
@@ -368,6 +371,18 @@ function salesOrdersListRenderReactShell(): void
 
     require dirname(__FILE__) . '/orders-react-shell.php';
     exit;
+}
+
+function salesOrdersDeskHeaderSubtitle(string $module, string $currentPage): string
+{
+    $homeUrl = function_exists('company_url') ? company_url('select-module') : '/select-module';
+    $salesUrl = sales_module_url('index.php', ['module' => $module]);
+    return '<span class="vv-breadcrumb" role="navigation" aria-label="Breadcrumb">'
+        . '<a class="vv-breadcrumb-link" href="' . htmlspecialchars($homeUrl, ENT_QUOTES, 'UTF-8') . '">Home</a>'
+        . '<span class="vv-breadcrumb-sep">/</span>'
+        . '<a class="vv-breadcrumb-link" href="' . htmlspecialchars($salesUrl, ENT_QUOTES, 'UTF-8') . '">Sales</a>'
+        . '<span class="vv-breadcrumb-sep">/</span><span class="vv-breadcrumb-current">'
+        . htmlspecialchars($currentPage, ENT_QUOTES, 'UTF-8') . '</span></span>';
 }
 
 /**
@@ -392,6 +407,8 @@ function salesQuotationsListRenderReactShell(): bool
     $employeeHeaderExtraClass = 'employee-header--exp-desk';
     $ordersPage = 'list';
     $module = isset($_GET['module']) ? (string) $_GET['module'] : 'sales';
+    $employeeHeaderSubtitle = salesOrdersDeskHeaderSubtitle($module, 'Quotations');
+    $employeeHeaderRightHtml = ($employeeHeaderRightHtml ?? '') . '<div id="qt-header-tools"></div>';
 
     $cfg = [
         'module' => $module,
@@ -433,6 +450,10 @@ function salesQuoteRequestsRenderReactShell(): void
     $hideHeaderCompanyBranding = true;
     $employeeHeaderExtraClass = 'employee-header--exp-desk';
     $module = isset($_GET['module']) ? (string) $_GET['module'] : 'sales';
+    $ordersPage = 'quote_requests';
+    $employeeHeaderSubtitle = '<span id="qr-header-breadcrumb">'
+        . salesOrdersDeskHeaderSubtitle($module, 'Quote requests') . '</span>';
+    $employeeHeaderRightHtml = ($employeeHeaderRightHtml ?? '') . '<div id="qr-header-tools"></div>';
 
     $cfg = [
         'module' => $module,

@@ -25,6 +25,8 @@ function emptyForm() {
   return {
     timezone: 'Africa/Dar_es_Salaam',
     timeFormat: '24',
+    overrideEnabled: false,
+    overrideTime: '',
     startTime: '09:00',
     endTime: '17:00',
     gracePeriodMinutes: 15,
@@ -128,6 +130,7 @@ export default function TimeSettingsPage() {
   function validateStep(s) {
     if (s === 1) {
       if (!form.timezone) return 'Select a system timezone.'
+      if (form.overrideEnabled && !form.overrideTime) return 'Enter a target system time for the manual override.'
       return null
     }
     if (s === 2) {
@@ -180,8 +183,6 @@ export default function TimeSettingsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...form,
-          overrideEnabled: false,
-          overrideTime: '',
           latitude: form.latitude === '' ? null : Number(form.latitude),
           longitude: form.longitude === '' ? null : Number(form.longitude),
         }),
@@ -210,7 +211,15 @@ export default function TimeSettingsPage() {
       })
       const data = await parseJson(res)
       if (!res.ok || data.success === false) throw new Error(data.error || 'Could not add IP')
-      applyPayload(data.data || {})
+      const currentIp = String(data.data?.meta?.currentIp || '').trim()
+      if (!currentIp || !data.data?.form?.officeIps?.includes(currentIp)) {
+        throw new Error('The server did not confirm the current office IP.')
+      }
+      setForm((prev) => ({
+        ...prev,
+        officeIps: [...new Set([...prev.officeIps, currentIp])],
+      }))
+      setMeta(data.data?.meta || {})
       setNotice(data.message || 'Current office IP added.')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not add IP')
@@ -368,6 +377,33 @@ export default function TimeSettingsPage() {
                       ))}
                     </select>
                   </div>
+                </div>
+              </div>
+              <div className="wizard-row">
+                <div className="wizard-aside">
+                  <h2>Manual override</h2>
+                  <p>Emergency fixed time for attendance records. Use only for emergencies or testing.</p>
+                </div>
+                <div className="wizard-auth-fields">
+                  <label className="ts-override-toggle">
+                    <input
+                      type="checkbox"
+                      checked={form.overrideEnabled}
+                      onChange={(e) => patch('overrideEnabled', e.target.checked)}
+                    />
+                    Activate manual time override
+                  </label>
+                  {form.overrideEnabled ? (
+                    <div className="field-line">
+                      <Clock3 size={18} aria-hidden />
+                      <input
+                        type="datetime-local"
+                        value={form.overrideTime}
+                        onChange={(e) => patch('overrideTime', e.target.value)}
+                        aria-label="Target system time"
+                      />
+                    </div>
+                  ) : null}
                 </div>
               </div>
             </>

@@ -57,9 +57,13 @@ async function parseJson(response) {
 export async function fetchVouchers(query = {}) {
   const params = new URLSearchParams()
   if (query.search) params.set('search', query.search)
+  if (query.payee) params.set('payee', query.payee)
   if (query.status) params.set('status', query.status)
   if (query.from_date) params.set('from_date', query.from_date)
   if (query.to_date) params.set('to_date', query.to_date)
+  if (query.purpose) params.set('purpose', query.purpose)
+  if (query.payment_type) params.set('payment_type', query.payment_type)
+  if (query.budget_type) params.set('budget_type', query.budget_type)
   if (query.sort) params.set('sort', query.sort)
   if (query.page) params.set('page', String(query.page))
   if (query.per_page) params.set('per_page', String(query.per_page))

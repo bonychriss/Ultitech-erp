@@ -5,20 +5,30 @@ import {
 } from 'react';
 import {
   ArrowLeft,
+  BarChart3,
   Building2,
   ChevronRight,
+  CreditCard,
   Loader2,
+  Mail,
+  MapPin,
   Pencil,
+  Phone,
   Plus,
+  Scale,
+  ShoppingCart,
+  UserRound,
+  WalletCards,
 } from 'lucide-react';
+import { createPortal } from 'react-dom';
 import { fetchViewInit } from '../api/catalogueDesk';
 
 const CURRENCY_SYMBOLS = {
   USD: '$',
   TZS: 'TSh ',
   KES: 'KSh ',
-  EUR: '�',
-  GBP: '�',
+  EUR: '\u20ac',
+  GBP: '\u00a3',
 };
 
 const STATUS_BADGE = {
@@ -54,8 +64,8 @@ function formatDate(dateStr) {
 
 function getStatusColor(status) {
   const s = String(status || '').toLowerCase();
-  if (['completed', 'delivered', 'paid', 'approved'].includes(s)) return 'green';
-  if (['pending', 'processing', 'draft'].includes(s)) return 'blue';
+  if (['completed', 'delivered', 'paid', 'approved', 'invoiced'].includes(s)) return 'green';
+  if (['pending', 'processing', 'draft', 'quotation'].includes(s)) return 'blue';
   if (['cancelled', 'rejected', 'failed'].includes(s)) return 'red';
   return 'gray';
 }
@@ -78,6 +88,17 @@ export default function CustomerViewPage() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [isDesktopHeader, setIsDesktopHeader] = useState(() => (
+    typeof window !== 'undefined' && window.matchMedia('(min-width: 768px)').matches
+  ));
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(min-width: 768px)');
+    const syncHeader = () => setIsDesktopHeader(mediaQuery.matches);
+    syncHeader();
+    mediaQuery.addEventListener('change', syncHeader);
+    return () => mediaQuery.removeEventListener('change', syncHeader);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -112,6 +133,7 @@ export default function CustomerViewPage() {
   const urls = data?.urls || {};
   const currencySymbol = getCurrencySymbol(customer?.currency);
   const balance = Number(customer?.current_balance || 0);
+  const summary = data?.invoice_summary;
 
   if (loading && !data) {
     return (
@@ -136,38 +158,48 @@ export default function CustomerViewPage() {
     );
   }
 
+  const headerToolsEl = document.getElementById('exp-desk-header-tools');
+  const pageActions = (
+    <div className="cv-page-actions">
+      {urls.new_quote && (
+        <a href={urls.new_quote} className="exp-desk-btn exp-desk-btn-primary cv-action-btn">
+          <Plus aria-hidden="true" />
+          New Quote
+        </a>
+      )}
+      {urls.edit && (
+        <a href={urls.edit} className="exp-desk-btn exp-desk-btn-secondary cv-action-btn">
+          <Pencil aria-hidden="true" />
+          Edit
+        </a>
+      )}
+      {urls.customers_index && (
+        <a href={urls.customers_index} className="exp-desk-btn exp-desk-btn-secondary cv-action-btn">
+          <ArrowLeft aria-hidden="true" />
+          Back
+        </a>
+      )}
+    </div>
+  );
+
   return (
     <div className="exp-desk-page cv-page">
       {error && (
         <div className="exp-desk-flash exp-desk-flash-error" role="alert">{error}</div>
       )}
 
-      <header className="cv-page-header">
-        <div className="cv-page-actions">
-          {urls.new_quote && (
-            <a href={urls.new_quote} className="exp-desk-btn exp-desk-btn-primary cv-action-btn">
-              <Plus aria-hidden="true" />
-              New Quote
-            </a>
-          )}
-          {urls.edit && (
-            <a href={urls.edit} className="exp-desk-btn exp-desk-btn-secondary cv-action-btn">
-              <Pencil aria-hidden="true" />
-              Edit
-            </a>
-          )}
-          {urls.customers_index && (
-            <a href={urls.customers_index} className="exp-desk-btn exp-desk-btn-secondary cv-action-btn">
-              <ArrowLeft aria-hidden="true" />
-              Back
-            </a>
-          )}
-        </div>
-      </header>
+      {isDesktopHeader && headerToolsEl
+        ? createPortal(pageActions, headerToolsEl)
+        : <div className="cv-page-header">{pageActions}</div>}
 
       <div className="cv-layout">
         <aside className="cv-sidebar">
           <section className="cv-card cv-profile-card">
+            {customer?.status && (
+              <span className={`cv-profile-status ${String(customer.status).trim().toLowerCase() === 'active' ? 'is-active' : ''}`}>
+                {customer.status}
+              </span>
+            )}
             <div className="cv-profile-icon" aria-hidden="true">
               <Building2 />
             </div>
@@ -186,26 +218,25 @@ export default function CustomerViewPage() {
 
             <dl className="cv-detail-list">
               <div className="cv-detail-item">
-                <dt>Contact Person</dt>
-                <dd>{cellOrDash(customer?.contact_person)}</dd>
+                <UserRound aria-hidden="true" />
+                <div><dt>Contact Person</dt><dd>{cellOrDash(customer?.contact_person)}</dd></div>
               </div>
               <div className="cv-detail-item">
-                <dt>Email</dt>
-                <dd>{cellOrDash(customer?.email)}</dd>
+                <Mail aria-hidden="true" />
+                <div><dt>Email</dt><dd>{cellOrDash(customer?.email)}</dd></div>
               </div>
               <div className="cv-detail-item">
-                <dt>Phone</dt>
-                <dd>{cellOrDash(customer?.phone)}</dd>
+                <Phone aria-hidden="true" />
+                <div><dt>Phone</dt><dd>{cellOrDash(customer?.phone)}</dd></div>
               </div>
               <div className="cv-detail-item">
-                <dt>Address</dt>
-                <dd>{cellOrDash(customer?.address_line || customer?.address)}</dd>
+                <MapPin aria-hidden="true" />
+                <div><dt>Address</dt><dd>{cellOrDash(customer?.address_line || customer?.address)}</dd></div>
               </div>
             </dl>
-          </section>
 
-          <section className="cv-card">
-            <div className="cv-card-head">
+            <div className="cv-card-head cv-finance-head">
+              <WalletCards aria-hidden="true" />
               <h3 className="cv-card-title">Financial Details</h3>
             </div>
             <dl className="cv-finance-list">
@@ -235,6 +266,7 @@ export default function CustomerViewPage() {
         <section className="cv-main">
           <div className="cv-card cv-orders-card">
             <div className="cv-card-head">
+              <ShoppingCart aria-hidden="true" />
               <h3 className="cv-card-title">Recent Sales Orders</h3>
             </div>
 
@@ -268,18 +300,18 @@ export default function CustomerViewPage() {
                           className="cv-order-row"
                           onClick={() => { window.location.href = orderUrl; }}
                         >
-                          <td className="cv-order-number">{cellOrDash(order.order_number)}</td>
-                          <td>{formatDate(order.created_at)}</td>
-                          <td>
+                          <td data-label="Order #" className="cv-order-number">{cellOrDash(order.order_number)}</td>
+                          <td data-label="Date">{formatDate(order.created_at)}</td>
+                          <td data-label="Status">
                             <span className={STATUS_BADGE[statusKey] || STATUS_BADGE.gray}>
                               {cellOrDash(order.status)}
                             </span>
                           </td>
-                          <td className="cv-order-total">
+                          <td data-label="Total" className="cv-order-total">
                             {currencySymbol}
                             {formatCurrency(order.total_amount)}
                           </td>
-                          <td className="cv-table-action-col">
+                          <td data-label="Action" className="cv-table-action-col">
                             <a
                               href={orderUrl}
                               className="cv-order-link"
@@ -297,6 +329,33 @@ export default function CustomerViewPage() {
               </div>
             )}
           </div>
+          <section className="cv-card cv-summary" aria-label="Sales and account summary">
+            <div className="cv-card-head">
+              <BarChart3 aria-hidden="true" />
+              <h3 className="cv-card-title">Sales &amp; Account Summary</h3>
+            </div>
+            {summary?.error ? (
+              <p className="cv-summary-note" role="status">{summary.error}</p>
+            ) : summary && (
+              <>
+                <div className="cv-summary-grid">
+                  {[
+                    { label: 'Total Sales', value: summary.total_sales, icon: ShoppingCart, tone: 'sales' },
+                    { label: 'Total Payments', value: summary.total_payments, icon: CreditCard, tone: 'payments' },
+                    { label: 'Outstanding Balance', value: summary.outstanding, icon: Scale, tone: 'balance' },
+                  ].map(({ label, value, icon: Icon, tone }) => (
+                    <div className={`cv-summary-item cv-summary-item--${tone}`} key={label}>
+                      <span className="cv-summary-icon"><Icon aria-hidden="true" /></span>
+                      <div><span className="cv-summary-label">{label}</span><strong>{getCurrencySymbol(summary.currency)}{formatCurrency(value)}</strong></div>
+                    </div>
+                  ))}
+                </div>
+                <p className="cv-summary-note">Issued invoices in {summary.currency}; other currencies are excluded.
+                  {summary.unknown_currency_count > 0 && ` ${summary.unknown_currency_count} invoice(s) without a known currency are excluded.`}
+                </p>
+              </>
+            )}
+          </section>
         </section>
       </div>
     </div>

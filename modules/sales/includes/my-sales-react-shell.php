@@ -36,10 +36,10 @@ body.page-exp-desk,
 body.page-exp-desk.dashboard,
 body.page-exp-desk .layout-main-wrapper,
 body.page-exp-desk .layout-main-wrapper > .flex-grow-1 {
-    background: #f1f5f9 !important;
+    background: #f8fafc !important;
 }
 body.page-exp-desk .employee-header.employee-header--exp-desk {
-    background: #f1f5f9 !important;
+    background: #f8fafc !important;
     border: none !important;
     box-shadow: none !important;
     padding: 0 1.25rem !important;
@@ -60,10 +60,51 @@ body.page-exp-desk .employee-header--exp-desk .header-content {
     background: transparent !important;
     gap: 0.5rem 1rem;
 }
+body.page-exp-desk .employee-header--exp-desk,
+body.page-exp-desk .employee-header--exp-desk .header-content,
+body.page-exp-desk .employee-header--exp-desk .header-right.header-actions-tray {
+    overflow: visible !important;
+}
+body.page-exp-desk .employee-header--exp-desk .employee-header-page-heading {
+    margin-left: 0 !important;
+    min-width: 0;
+    flex: 1 1 auto;
+}
 body.page-exp-desk .employee-header--exp-desk .employee-header-page-title {
     font-size: clamp(1.125rem, 2vw, 1.5rem) !important;
     font-weight: 700 !important;
     color: #0f172a !important;
+    letter-spacing: -0.02em;
+    white-space: nowrap;
+}
+body.page-exp-desk .employee-header--exp-desk .employee-header-page-subtitle {
+    color: inherit !important;
+}
+body.page-exp-desk .employee-header--exp-desk .vv-breadcrumb,
+body.page-exp-desk .employee-header--exp-desk .exp-desk-breadcrumb {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem;
+    margin: 0;
+    font-size: 0.82rem;
+    line-height: 1.3;
+}
+body.page-exp-desk .employee-header--exp-desk .vv-breadcrumb-link {
+    color: #2563eb !important;
+    font-weight: 600;
+    text-decoration: none !important;
+}
+body.page-exp-desk .employee-header--exp-desk .vv-breadcrumb-link:hover {
+    color: #1d4ed8 !important;
+    text-decoration: underline !important;
+}
+body.page-exp-desk .employee-header--exp-desk .vv-breadcrumb-sep {
+    color: #94a3b8;
+}
+body.page-exp-desk .employee-header--exp-desk .vv-breadcrumb-current {
+    color: #64748b;
+    font-weight: 600;
 }
 main.main-content.exp-desk-react-root {
     flex: 1 1 auto;
@@ -72,7 +113,7 @@ main.main-content.exp-desk-react-root {
     margin: 0 !important;
     padding: 0 1.25rem 2rem !important;
     overflow: auto !important;
-    background: #f1f5f9 !important;
+    background: #f8fafc !important;
 }
 main.main-content.exp-desk-react-root #root {
     width: 100%;
@@ -81,17 +122,74 @@ main.main-content.exp-desk-react-root #root {
     min-height: 320px;
 }
 @media (max-width: 767.98px) {
+    body.page-exp-desk .employee-header.employee-header--exp-desk {
+        padding: 0 0.75rem !important;
+    }
+    body.page-exp-desk .employee-header--exp-desk .header-content {
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+        align-items: center !important;
+        justify-content: flex-start !important;
+        gap: 0.5rem !important;
+        min-height: 3rem !important;
+        padding: 0.5rem 0 !important;
+    }
+    body.page-exp-desk .employee-header--exp-desk .header-left {
+        position: static !important;
+        flex: 0 0 auto;
+        order: 1;
+    }
+    body.page-exp-desk .employee-header--exp-desk .employee-header-page-heading {
+        order: 2;
+        flex: 1 1 auto;
+        min-width: 0;
+        margin-left: 0 !important;
+        padding-left: 0 !important;
+        padding-right: 0.25rem !important;
+    }
+    body.page-exp-desk .employee-header--exp-desk .employee-header-page-title {
+        font-size: 1.25rem !important;
+        line-height: 1.25 !important;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    body.page-exp-desk .employee-header--exp-desk .vv-breadcrumb,
+    body.page-exp-desk .employee-header--exp-desk .exp-desk-breadcrumb {
+        font-size: 0.875rem !important;
+        gap: 0.3rem;
+        line-height: 1.35;
+    }
+    body.page-exp-desk .employee-header--exp-desk .employee-header-page-subtitle {
+        font-size: 0.875rem !important;
+    }
+    body.page-exp-desk .employee-header--exp-desk .header-right.header-actions-tray {
+        order: 3;
+        flex: 0 0 auto;
+        gap: 0.35rem !important;
+        margin-left: auto !important;
+        align-self: center !important;
+    }
     main.main-content.exp-desk-react-root { padding: 0 0.75rem 1.5rem !important; }
 }
 html[data-theme="dark"] body.page-exp-desk,
 html[data-theme="dark"] body.page-exp-desk main.main-content.exp-desk-react-root {
-    background: #0f172a !important;
+    background: #0b141a !important;
 }
 html[data-theme="dark"] body.page-exp-desk .employee-header.employee-header--exp-desk {
-    background: #0f172a !important;
+    background: #0b141a !important;
 }
 html[data-theme="dark"] body.page-exp-desk .employee-header--exp-desk .employee-header-page-title {
-    color: #f8fafc !important;
+    color: #e9edef !important;
+}
+html[data-theme="dark"] body.page-exp-desk .employee-header--exp-desk .vv-breadcrumb,
+html[data-theme="dark"] body.page-exp-desk .employee-header--exp-desk .exp-desk-breadcrumb,
+html[data-theme="dark"] body.page-exp-desk .employee-header--exp-desk .vv-breadcrumb-link,
+html[data-theme="dark"] body.page-exp-desk .employee-header--exp-desk .vv-breadcrumb-sep,
+html[data-theme="dark"] body.page-exp-desk .employee-header--exp-desk .vv-breadcrumb-current {
+    color: #00a884 !important;
+}
+html[data-theme="dark"] body.page-exp-desk .employee-header--exp-desk .vv-breadcrumb-link:hover {
+    color: #06cf9c !important;
 }
 </style>
 

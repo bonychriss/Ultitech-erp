@@ -122,6 +122,21 @@
   cursor: default;
 }
 
+.ts-override-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.875rem;
+  cursor: pointer;
+  margin-bottom: 8px;
+}
+
+.ts-override-toggle input {
+  width: 16px;
+  height: 16px;
+  accent-color: #6366f1;
+}
+
 .wizard {
   background: transparent !important;
   border: none !important;
@@ -611,4 +626,3 @@
   }
   .wizard-title-row h1 { font-size: 1.1rem; }
 }
-

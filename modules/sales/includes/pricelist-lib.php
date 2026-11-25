@@ -223,6 +223,7 @@ function pricelistDeskFetchProducts(PDO $pdo): array
             if ($ts && ($latestTs === null || $ts > $latestTs)) {
                 $latestTs = $ts;
             }
+            $row['updated_at_iso'] = $ts ? gmdate('c', $ts) : null;
 
             $row['is_catalog_active'] = true;
             if (isset($row['row_is_published']) && $row['row_is_published'] !== null && $row['row_is_published'] !== '') {
@@ -432,6 +433,19 @@ function pricelistRenderReactShell(): void
     $employeeHeaderTitle = 'Price list';
     $hideHeaderCompanyBranding = true;
     $employeeHeaderExtraClass = 'employee-header--exp-desk';
+    $employeeHeaderRightHtml = '<div id="pl-header-tools" class="exp-desk-header-tools"></div>';
+    $pricelistHomeUrl = function_exists('company_url')
+        ? company_url('select-module')
+        : (function_exists('app_url') ? app_url('/select-module.php') : '../../select-module.php');
+    $salesDashboardUrl = sales_module_url('dashboard/index.php', ['module' => 'sales']);
+    $employeeHeaderSubtitle = '<nav class="vv-breadcrumb exp-desk-breadcrumb" aria-label="Breadcrumb">'
+        . '<a class="vv-breadcrumb-link erp-nav-back-ignore" href="' . htmlspecialchars($pricelistHomeUrl, ENT_QUOTES, 'UTF-8') . '">Home</a>'
+        . '<span class="vv-breadcrumb-sep">/</span>'
+        . '<a class="vv-breadcrumb-link vv-breadcrumb-link--active erp-nav-back-ignore" href="'
+        . htmlspecialchars($salesDashboardUrl, ENT_QUOTES, 'UTF-8') . '">Sales</a>'
+        . '<span class="vv-breadcrumb-sep">/</span>'
+        . '<span class="vv-breadcrumb-current">Price list</span>'
+        . '</nav>';
 
     $cfg = [
         'module' => pricelistDeskModuleQuery(),

@@ -36,6 +36,7 @@ export default function BookLedgerPage() {
   const [error, setError] = useState('')
   const [book, setBook] = useState(null)
   const [entries, setEntries] = useState([])
+  const [selectedEntryIds, setSelectedEntryIds] = useState(() => new Set())
   const [summary, setSummary] = useState(null)
   const [categories, setCategories] = useState([])
   const [depositAccounts, setDepositAccounts] = useState([])
@@ -50,6 +51,9 @@ export default function BookLedgerPage() {
 
   const filterActive = Boolean(filters.date_from || filters.date_to || filters.entry_type)
   const formVisible = createOpen || editingId > 0
+  const allVisibleEntriesSelected =
+    entries.length > 0 && entries.every((entry) => selectedEntryIds.has(Number(entry.id)))
+  const someVisibleEntriesSelected = entries.some((entry) => selectedEntryIds.has(Number(entry.id)))
 
   const load = useCallback(async () => {
     if (bookId <= 0) {
@@ -446,36 +450,97 @@ export default function BookLedgerPage() {
         {entries.length === 0 ? (
           <div className="cb-empty cb-empty-compact">No entries yet. Create one above.</div>
         ) : (
-          <div className="cb-table-wrap cb-table-wrap-flush">
-            <table className="cb-table">
+          <div className="cb-table-wrap cb-table-wrap-flush cb-ledger-table-wrap">
+            <table className="cb-table cb-ledger-table">
+              <colgroup>
+                <col style={{ width: '6%' }} />
+                <col style={{ width: '12%' }} />
+                <col style={{ width: '11%' }} />
+                <col style={{ width: '14%' }} />
+                <col style={{ width: '27%' }} />
+                <col style={{ width: '12%' }} />
+                <col style={{ width: '11%' }} />
+                <col style={{ width: '7%' }} />
+              </colgroup>
               <thead>
                 <tr>
-                  <th>Date</th>
-                  <th>Type</th>
-                  <th>Category</th>
-                  <th>Particulars</th>
-                  <th>Amount</th>
-                  <th>Balance</th>
-                  <th />
+                  <th scope="col" className="cb-ledger-serial">
+                    <label className="cb-ledger-mark-wrap">
+                      <input
+                        type="checkbox"
+                        aria-label="Select all visible entries"
+                        checked={allVisibleEntriesSelected}
+                        ref={(input) => {
+                          if (input) input.indeterminate = someVisibleEntriesSelected && !allVisibleEntriesSelected
+                        }}
+                        onChange={(event) => {
+                          const checked = event.target.checked
+                          setSelectedEntryIds((current) => {
+                            const next = new Set(current)
+                            entries.forEach((entry) => {
+                              if (checked) next.add(Number(entry.id))
+                              else next.delete(Number(entry.id))
+                            })
+                            return next
+                          })
+                        }}
+                      />
+                      <span>S/N</span>
+                    </label>
+                  </th>
+                  <th scope="col">Date</th>
+                  <th scope="col">Type</th>
+                  <th scope="col">Category</th>
+                  <th scope="col">Particulars</th>
+                  <th scope="col" className="cb-ledger-number">Amount</th>
+                  <th scope="col" className="cb-ledger-number">Balance</th>
+                  <th scope="col" className="cb-ledger-actions">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {entries.map((row) => (
-                  <tr key={row.id} className={editingId === row.id ? 'is-editing' : ''}>
-                    <td>{formatDate(row.entry_date)}</td>
+                {entries.map((row, index) => (
+                  <tr
+                    key={row.id}
+                    className={[
+                      editingId === row.id ? 'is-editing' : '',
+                      selectedEntryIds.has(Number(row.id)) ? 'is-selected' : '',
+                    ].filter(Boolean).join(' ')}
+                  >
+                    <td className="cb-ledger-serial">
+                      <label className="cb-ledger-mark-wrap">
+                        <input
+                          type="checkbox"
+                          aria-label={`Select entry ${index + 1}`}
+                          checked={selectedEntryIds.has(Number(row.id))}
+                          onChange={(event) => {
+                            const checked = event.target.checked
+                            setSelectedEntryIds((current) => {
+                              const next = new Set(current)
+                              if (checked) next.add(Number(row.id))
+                              else next.delete(Number(row.id))
+                              return next
+                            })
+                          }}
+                        />
+                        <span>{index + 1}</span>
+                      </label>
+                    </td>
+                    <td className="cb-ledger-date">{formatDate(row.entry_date)}</td>
                     <td>
                       <span className={`cb-entry-type ${row.entry_type}`}>
                         {row.entry_type === 'in' ? 'Cash in' : 'Expense'}
                       </span>
                     </td>
-                    <td>{row.category_name || '-'}</td>
-                    <td>{[row.party_name, row.remark].filter(Boolean).join(' - ') || '-'}</td>
+                    <td className="cb-ledger-category">{row.category_name || '-'}</td>
+                    <td className="cb-ledger-particulars">
+                      {[row.party_name, row.remark].filter(Boolean).join(' - ') || '-'}
+                    </td>
                     <td className={`cb-entry-amt ${row.entry_type}`}>
                       {row.entry_type === 'in' ? '+' : '-'}
                       {formatMoney(row.amount)}
                     </td>
-                    <td>{formatMoney(row.balance_after)}</td>
-                    <td>
+                    <td className="cb-ledger-number">{formatMoney(row.balance_after)}</td>
+                    <td className="cb-ledger-actions">
                       <div className="cb-entry-actions-inline">
                         <button type="button" className="cb-icon-btn" onClick={() => onEdit(row)} title="Edit" aria-label="Edit">
                           <Pencil size={16} />

@@ -70,13 +70,18 @@ function KpiCard({
         <div className={`kpi-card-icon ${iconClass}`}>{icon}</div>
         <div className="kpi-card-title">{title}</div>
       </div>
-      <div className="kpi-card-value">
-        {value}
-        {trend != null ? (
-          <span className={`kpi-trend-indicator ${trendClass || ''}`}>{trend}</span>
-        ) : null}
+      <div className="kpi-card-main">
+        <div className="kpi-card-value">{value}</div>
+        <svg className="kpi-card-sparkline" viewBox="0 0 64 28" aria-hidden="true">
+          <path d="M1 24 11 20 18 21 27 13 34 16 42 8 49 12 57 3 63 6" />
+        </svg>
       </div>
-      {subtext ? <div className="kpi-card-subtext">{subtext}</div> : null}
+      <div className="kpi-card-footer">
+        {trend != null ? (
+          <span className={`kpi-card-trend ${trendClass || ''}`}>{trend}</span>
+        ) : null}
+        {subtext ? <div className="kpi-card-subtext">{subtext}</div> : null}
+      </div>
     </div>
   );
 }
@@ -334,7 +339,7 @@ export default function DashboardPage() {
         />
         <KpiCard
           icon={<Clock size={14} />}
-          iconClass="orange"
+          iconClass="green"
           title="Pending Orders"
           value={formatNumber(metrics.pending_orders)}
           trend={<ArrowRight size={12} />}
@@ -353,7 +358,7 @@ export default function DashboardPage() {
         />
         <KpiCard
           icon={<AlertTriangle size={14} />}
-          iconClass="red"
+          iconClass="orange"
           title="Overdue Invoices"
           value={formatNumber(metrics.overdue_invoices)}
           trend={<ArrowUp size={12} />}

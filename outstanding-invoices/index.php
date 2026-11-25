@@ -88,6 +88,17 @@ $stmt = $pdo->prepare("SELECT * FROM erp_outstanding_invoices WHERE type = ? AND
 $stmt->execute([$typeFilter]);
 $invoices = $stmt->fetchAll();
 
+$summaryStmt = $pdo->query("SELECT type, COUNT(*) AS invoice_count, COALESCE(SUM(amount), 0) AS total_amount FROM erp_outstanding_invoices WHERE status = 'outstanding' GROUP BY type");
+$invoiceSummaries = [
+    'receivable' => ['invoice_count' => 0, 'total_amount' => 0],
+    'payable' => ['invoice_count' => 0, 'total_amount' => 0],
+];
+foreach ($summaryStmt->fetchAll() as $summary) {
+    if (isset($invoiceSummaries[$summary['type']])) {
+        $invoiceSummaries[$summary['type']] = $summary;
+    }
+}
+
 // Calculate Total Outstanding
 $totalOutstanding = 0;
 foreach ($invoices as $inv) {
@@ -101,12 +112,106 @@ foreach ($invoices as $inv) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Outstanding Invoices - <?= COMPANY_NAME ?></title>
-    <link rel="stylesheet" href="../../assets/css/style.css?v=<?= time() ?>">
+    <link rel="stylesheet" href="../assets/css/style.css?v=<?= time() ?>">
     <style>
         body { background: #f3f4f6; }
-        .main-content { max-width: 1200px; margin: 0 auto; padding: 20px; }
-        .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        .page-title { font-size: 1.5rem; font-weight: bold; color: #111; }
+        .main-content { max-width: 1200px; margin: 0 auto; padding: 12px 20px 20px; }
+        .outstanding-invoice-header-actions {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+        }
+        .new-invoice-btn {
+            background: #2563eb;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            padding: 10px 16px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.2);
+        }
+        .new-invoice-btn-mobile-label { display: none; }
+        .new-invoice-btn:hover { background: #1d4ed8; }
+        .oi-invoice-picker {
+            position: absolute;
+            top: calc(100% + 10px);
+            right: 0;
+            width: min(560px, 72vw);
+            margin: 0;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            box-shadow: 0 18px 36px rgba(15, 23, 42, 0.12);
+            padding: 18px;
+            z-index: 20;
+            animation: oi-panel-pop 0.18s ease-out;
+        }
+        .oi-invoice-picker[hidden] { display: none; }
+        .oi-invoice-picker-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 16px;
+        }
+        @keyframes oi-panel-pop {
+            from {
+                opacity: 0;
+                transform: translateY(-8px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .oi-invoice-picker-card {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 14px;
+            padding: 18px;
+            text-decoration: none;
+            color: #0f172a;
+            transition: 0.2s ease;
+        }
+        .oi-invoice-picker-card.active {
+            border-color: #93c5fd;
+            background: #eff6ff;
+            box-shadow: 0 8px 18px rgba(37, 99, 235, 0.08);
+        }
+        .oi-invoice-picker-card:hover {
+            transform: translateY(-1px);
+            border-color: #cbd5e1;
+        }
+        .oi-picker-icon {
+            width: 42px;
+            height: 42px;
+            border-radius: 12px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.15rem;
+            font-weight: 800;
+            flex-shrink: 0;
+        }
+        .oi-picker-icon--in { background: #dcfce7; color: #15803d; }
+        .oi-picker-icon--out { background: #fee2e2; color: #b91c1c; }
+        .oi-invoice-picker-card strong {
+            display: block;
+            font-size: 1rem;
+            margin-bottom: 4px;
+        }
+        .oi-invoice-picker-card small {
+            color: #475569;
+            line-height: 1.4;
+            display: block;
+        }
         
         .tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid #e5e7eb; }
         .tab-link { padding: 10px 20px; text-decoration: none; color: #6b7280; border-bottom: 2px solid transparent; font-weight: 500; }
@@ -136,21 +241,320 @@ foreach ($invoices as $inv) {
         
         .btn-pay { background: transparent; border: 1px solid #10b981; color: #10b981; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; }
         .btn-pay:hover { background: #10b981; color: #fff; }
+
+        .oi-mobile-invoice-list { display: none; }
+        .oi-mobile-invoice-card {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            padding: 14px;
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            background: #fff;
+        }
+        .oi-mobile-invoice-top,
+        .oi-mobile-invoice-party,
+        .oi-mobile-invoice-aside,
+        .oi-mobile-invoice-facts,
+        .oi-mobile-invoice-fact,
+        .oi-mobile-invoice-actions {
+            display: flex;
+            align-items: center;
+        }
+        .oi-mobile-invoice-top {
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 12px;
+        }
+        .oi-mobile-invoice-party { gap: 9px; min-width: 0; }
+        .oi-mobile-invoice-avatar {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex: 0 0 28px;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: #312e81;
+            color: #e0e7ff;
+            font-size: 0.65rem;
+            font-weight: 700;
+        }
+        .oi-mobile-invoice-identity { display: flex; flex-direction: column; min-width: 0; gap: 2px; }
+        .oi-mobile-invoice-number {
+            color: #0f172a;
+            font-size: 0.82rem;
+            font-weight: 800;
+            overflow-wrap: anywhere;
+        }
+        .oi-mobile-invoice-name {
+            color: #64748b;
+            font-size: 0.72rem;
+            font-weight: 600;
+            overflow-wrap: anywhere;
+        }
+        .oi-mobile-invoice-aside {
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 5px;
+            flex: 0 0 auto;
+        }
+        .oi-mobile-invoice-amount {
+            color: #059669;
+            font-size: 0.78rem;
+            font-weight: 800;
+            white-space: nowrap;
+        }
+        .oi-mobile-invoice-status {
+            padding: 2px 8px;
+            border: 1px solid #f59e0b;
+            border-radius: 999px;
+            color: #b45309;
+            font-size: 0.64rem;
+            font-weight: 700;
+        }
+        .oi-mobile-invoice-facts {
+            gap: 12px;
+            padding-top: 10px;
+            border-top: 1px solid #e2e8f0;
+        }
+        .oi-mobile-invoice-fact {
+            align-items: flex-start;
+            flex: 1 1 0;
+            min-width: 0;
+            gap: 7px;
+        }
+        .oi-mobile-invoice-fact-icon {
+            color: #64748b;
+            font-size: 0.85rem;
+            line-height: 1.2;
+        }
+        .oi-mobile-invoice-fact-body { display: flex; flex-direction: column; min-width: 0; gap: 2px; }
+        .oi-mobile-invoice-fact-label {
+            color: #94a3b8;
+            font-size: 0.58rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+        .oi-mobile-invoice-fact-value {
+            color: #0f172a;
+            font-size: 0.72rem;
+            font-weight: 700;
+            overflow-wrap: anywhere;
+        }
+        .oi-mobile-invoice-actions {
+            justify-content: flex-end;
+            flex-wrap: wrap;
+            gap: 8px;
+            padding-top: 10px;
+            border-top: 1px solid #e2e8f0;
+        }
+        .oi-mobile-invoice-actions form { margin: 0; }
+        .oi-mobile-invoice-delete {
+            padding: 4px 9px;
+            border: 1px solid #fecaca;
+            border-radius: 5px;
+            background: #fff;
+            color: #dc2626;
+            font-size: 0.75rem;
+            cursor: pointer;
+        }
+        .oi-mobile-invoice-empty {
+            padding: 18px 12px;
+            border: 1px dashed #cbd5e1;
+            border-radius: 14px;
+            color: #64748b;
+            text-align: center;
+            font-size: 0.85rem;
+        }
+        .oi-mobile-overview { display: none; }
+        .oi-mobile-search {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-height: 48px;
+            margin-bottom: 12px;
+            padding: 0 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 12px;
+            background: #fff;
+            color: #64748b;
+        }
+        .oi-mobile-search svg { flex: 0 0 auto; }
+        .oi-mobile-search input {
+            width: 100%;
+            min-width: 0;
+            padding: 10px 0;
+            border: 0;
+            outline: 0;
+            background: transparent;
+            color: #0f172a;
+            font: inherit;
+        }
+        .oi-mobile-search input::placeholder { color: #94a3b8; }
+        .oi-mobile-summary-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+        }
+        .oi-mobile-summary-card {
+            position: relative;
+            display: flex;
+            align-items: flex-start;
+            gap: 9px;
+            min-width: 0;
+            min-height: 120px;
+            padding: 12px 10px;
+            overflow: hidden;
+            border: 1px solid #bfdbfe;
+            border-radius: 14px;
+            background: #eff6ff;
+            color: #1e3a8a;
+            text-decoration: none;
+        }
+        .oi-mobile-summary-card.active { border-color: #2563eb; box-shadow: inset 0 0 0 1px #2563eb; }
+        .oi-mobile-summary-icon {
+            display: inline-flex;
+            flex: 0 0 34px;
+            align-items: center;
+            justify-content: center;
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            background: #dbeafe;
+            color: #1d4ed8;
+        }
+        .oi-mobile-summary-icon svg { width: 19px; height: 19px; }
+        .oi-mobile-summary-copy { display: flex; flex-direction: column; min-width: 0; gap: 3px; }
+        .oi-mobile-summary-title { font-size: 0.78rem; font-weight: 800; }
+        .oi-mobile-summary-subtitle { color: #64748b; font-size: 0.63rem; line-height: 1.25; }
+        .oi-mobile-summary-amount {
+            margin-top: 5px;
+            font-size: 0.75rem;
+            font-weight: 800;
+            overflow-wrap: anywhere;
+        }
+        .oi-mobile-summary-count { color: #64748b; font-size: 0.62rem; }
+        .oi-mobile-summary-arrow {
+            position: absolute;
+            right: 8px;
+            top: 8px;
+            color: #2563eb;
+            font-size: 1rem;
+            font-weight: 800;
+        }
+        .oi-search-empty { display: none; }
+
+        html[data-theme="dark"] .oi-mobile-invoice-card { background: #111c22; border-color: #26363d; }
+        html[data-theme="dark"] .oi-mobile-invoice-number,
+        html[data-theme="dark"] .oi-mobile-invoice-fact-value { color: #f8fafc !important; }
+        html[data-theme="dark"] .oi-mobile-invoice-name { color: #b6c4ca !important; }
+        html[data-theme="dark"] .oi-mobile-invoice-amount { color: #34d399 !important; }
+        html[data-theme="dark"] .oi-mobile-invoice-status {
+            color: #fbbf24 !important;
+            border-color: #92400e;
+        }
+        html[data-theme="dark"] .oi-mobile-invoice-fact-label,
+        html[data-theme="dark"] .oi-mobile-invoice-fact-icon { color: #94a3b8 !important; }
+        html[data-theme="dark"] .oi-mobile-invoice-facts,
+        html[data-theme="dark"] .oi-mobile-invoice-actions { border-color: #26363d; }
+        html[data-theme="dark"] .oi-mobile-invoice-delete { background: #111c22; }
+        html[data-theme="dark"] .oi-mobile-search { background: #111c22; border-color: #334155; color: #cbd5e1; }
+        html[data-theme="dark"] .oi-mobile-search input { color: #f8fafc; }
+        html[data-theme="dark"] .oi-mobile-summary-card { background: #172554; border-color: #1e40af; color: #eff6ff; }
+        html[data-theme="dark"] .oi-mobile-summary-card.active { border-color: #60a5fa; box-shadow: inset 0 0 0 1px #60a5fa; }
+        html[data-theme="dark"] .oi-mobile-summary-icon { background: #1e3a8a; color: #bfdbfe; }
+        html[data-theme="dark"] .oi-mobile-summary-subtitle,
+        html[data-theme="dark"] .oi-mobile-summary-count { color: #cbd5e1; }
+        html[data-theme="dark"] .oi-mobile-summary-arrow { color: #93c5fd; }
+
+        @media (max-width: 767.98px) {
+            .main-content { padding: 12px 12px 20px; }
+            .oi-mobile-overview { display: block; margin-bottom: 14px; }
+            .new-invoice-btn-full-label { display: none; }
+            .new-invoice-btn-mobile-label { display: inline; }
+            .tabs { display: none; }
+            .card { padding: 12px; }
+            .invoice-table { display: none; }
+            .oi-mobile-invoice-list { display: flex; flex-direction: column; gap: 10px; }
+            .total-box { font-size: 0.95rem; }
+        }
     </style>
 </head>
 <body>
-    <?php include '../../includes/header_employee.php'; // Using employee header for simplified nav, check role if needed ?>
-    
-    <div class="main-content">
-        <div class="page-header">
-            <div>
-                <a href="../../select-module.php" style="text-decoration:none; color:#6b7280; font-size:0.9rem;">&larr; Back</a>
-                <div class="page-title">Outstanding Invoices</div>
-            </div>
-            <div>
-                 <a href="../../select-module.php" class="btn" style="background:#fff; border:1px solid #ccc; color:#333; padding:8px 12px; border-radius:4px; text-decoration:none;">Home</a>
-            </div>
+    <?php
+    $employeeHeaderTitle = 'Outstanding Invoices';
+    $employeeHeaderRightHtml = '
+        <div class="outstanding-invoice-header-actions">
+            <button type="button" class="new-invoice-btn" data-toggle-target="new-outstanding-invoice-panel" aria-expanded="false">
+                <span class="new-invoice-btn-full-label">New Outstanding Invoice</span>
+                <span class="new-invoice-btn-mobile-label">+ New</span>
+            </button>
+            <section class="oi-invoice-picker" id="new-outstanding-invoice-panel" hidden>
+                <div class="oi-invoice-picker-grid">
+                    <a href="' . oi_h(oi_url(['tab' => 'receivables', 'q' => null, 'p' => null, 'sort' => null, 'dir' => null])) . '" class="oi-invoice-picker-card ' . ($activeTab === 'receivables' ? 'active' : '') . '">
+                        <span class="oi-picker-icon oi-picker-icon--in">↗</span>
+                        <div>
+                            <strong>Receivables</strong>
+                            <small>Track customer invoices still waiting to be collected.</small>
+                        </div>
+                    </a>
+                    <a href="' . oi_h(oi_url(['tab' => 'payables', 'q' => null, 'p' => null, 'sort' => null, 'dir' => null])) . '" class="oi-invoice-picker-card ' . ($activeTab === 'payables' ? 'active' : '') . '">
+                        <span class="oi-picker-icon oi-picker-icon--out">↘</span>
+                        <div>
+                            <strong>Payables</strong>
+                            <small>Track supplier invoices still waiting to be paid.</small>
+                        </div>
+                    </a>
+                </div>
+            </section>
         </div>
+    ';
+    include '../../includes/header_employee.php';
+    ?>
+
+        <section class="oi-mobile-overview" aria-label="Outstanding invoice overview">
+            <label class="oi-mobile-search">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <path d="m21 21-4.35-4.35"></path>
+                </svg>
+                <input type="search" id="oi-mobile-search-input" placeholder="Search supplier, invoice, description..." aria-label="Search outstanding invoices">
+            </label>
+            <div class="oi-mobile-summary-grid">
+                <a class="oi-mobile-summary-card <?= $activeTab === 'receivables' ? 'active' : '' ?>" href="<?= oi_h(oi_url(['tab' => 'receivables', 'q' => null, 'p' => null, 'sort' => null, 'dir' => null])) ?>">
+                    <span class="oi-mobile-summary-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M6 3.75h9l4 4v11.5a1 1 0 0 1-1 1H6a2 2 0 0 1-2-2v-13a1.5 1.5 0 0 1 2-1.5Z"></path>
+                            <path d="M14.5 4v4h4M8 12h7M8 15h5"></path>
+                        </svg>
+                    </span>
+                    <span class="oi-mobile-summary-copy">
+                        <span class="oi-mobile-summary-title">Receivables</span>
+                        <span class="oi-mobile-summary-subtitle">Customer invoices</span>
+                        <span class="oi-mobile-summary-amount">TZS <?= number_format((float) $invoiceSummaries['receivable']['total_amount'], 2) ?></span>
+                        <span class="oi-mobile-summary-count"><?= (int) $invoiceSummaries['receivable']['invoice_count'] ?> <?= (int) $invoiceSummaries['receivable']['invoice_count'] === 1 ? 'invoice' : 'invoices' ?></span>
+                    </span>
+                    <span class="oi-mobile-summary-arrow" aria-hidden="true">›</span>
+                </a>
+                <a class="oi-mobile-summary-card <?= $activeTab === 'payables' ? 'active' : '' ?>" href="<?= oi_h(oi_url(['tab' => 'payables', 'q' => null, 'p' => null, 'sort' => null, 'dir' => null])) ?>">
+                    <span class="oi-mobile-summary-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="7" width="18" height="13" rx="2"></rect>
+                            <path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 12h18M10 12v2h4v-2"></path>
+                        </svg>
+                    </span>
+                    <span class="oi-mobile-summary-copy">
+                        <span class="oi-mobile-summary-title">Payables</span>
+                        <span class="oi-mobile-summary-subtitle">Supplier bills</span>
+                        <span class="oi-mobile-summary-amount">TZS <?= number_format((float) $invoiceSummaries['payable']['total_amount'], 2) ?></span>
+                        <span class="oi-mobile-summary-count"><?= (int) $invoiceSummaries['payable']['invoice_count'] ?> <?= (int) $invoiceSummaries['payable']['invoice_count'] === 1 ? 'invoice' : 'invoices' ?></span>
+                    </span>
+                    <span class="oi-mobile-summary-arrow" aria-hidden="true">›</span>
+                </a>
+            </div>
+        </section>
 
         <?php if ($success): ?><div style="background:#dcfce7; color:#166534; padding:10px; border-radius:6px; margin-bottom:15px;"><?= htmlspecialchars($success) ?></div><?php endif; ?>
         <?php if ($error): ?><div style="background:#fee2e2; color:#991b1b; padding:10px; border-radius:6px; margin-bottom:15px;"><?= htmlspecialchars($error) ?></div><?php endif; ?>
@@ -161,7 +565,7 @@ foreach ($invoices as $inv) {
         </div>
 
         <!-- Add New Form -->
-        <div class="card">
+        <div class="card" id="new-outstanding-invoice-form">
             <h3 style="font-size:1rem; margin-bottom:15px; color:#374151;">Add <?= $activeTab === 'receivables' ? 'Receivable' : 'Payable' ?></h3>
             <form method="POST" enctype="multipart/form-data">
                 <input type="hidden" name="create_invoice" value="1">
@@ -200,6 +604,63 @@ foreach ($invoices as $inv) {
 
         <!-- List -->
         <div class="card">
+            <div class="oi-mobile-invoice-list" aria-label="<?= $activeTab === 'receivables' ? 'Receivables' : 'Payables' ?>">
+                <?php if (empty($invoices)): ?>
+                    <div class="oi-mobile-invoice-empty">No outstanding invoices found.</div>
+                <?php else: ?>
+                    <?php foreach ($invoices as $inv): ?>
+                        <?php
+                            $invoiceName = trim((string) $inv['entity_name']);
+                            $invoiceInitials = strtoupper(substr($invoiceName, 0, 2));
+                        ?>
+                        <article class="oi-mobile-invoice-card">
+                            <div class="oi-mobile-invoice-top">
+                                <div class="oi-mobile-invoice-party">
+                                    <span class="oi-mobile-invoice-avatar" aria-hidden="true"><?= htmlspecialchars($invoiceInitials) ?></span>
+                                    <div class="oi-mobile-invoice-identity">
+                                        <span class="oi-mobile-invoice-number"><?= htmlspecialchars($inv['invoice_number'] ?: 'Invoice') ?></span>
+                                        <span class="oi-mobile-invoice-name"><?= htmlspecialchars($invoiceName) ?></span>
+                                    </div>
+                                </div>
+                                <div class="oi-mobile-invoice-aside">
+                                    <span class="oi-mobile-invoice-amount">TZS <?= number_format((float) $inv['amount'], 2) ?></span>
+                                    <span class="oi-mobile-invoice-status">Outstanding</span>
+                                </div>
+                            </div>
+                            <div class="oi-mobile-invoice-facts">
+                                <div class="oi-mobile-invoice-fact">
+                                    <span class="oi-mobile-invoice-fact-icon" aria-hidden="true">▦</span>
+                                    <span class="oi-mobile-invoice-fact-body">
+                                        <span class="oi-mobile-invoice-fact-label">Date</span>
+                                        <span class="oi-mobile-invoice-fact-value"><?= date('d/m/Y', strtotime($inv['invoice_date'])) ?></span>
+                                    </span>
+                                </div>
+                                <div class="oi-mobile-invoice-fact">
+                                    <span class="oi-mobile-invoice-fact-icon" aria-hidden="true">≡</span>
+                                    <span class="oi-mobile-invoice-fact-body">
+                                        <span class="oi-mobile-invoice-fact-label">Description</span>
+                                        <span class="oi-mobile-invoice-fact-value"><?= htmlspecialchars($inv['narration'] ?: '-') ?></span>
+                                        <?php if (!empty($inv['attachment'])): ?>
+                                            <a href="../../<?= htmlspecialchars($inv['attachment']) ?>" target="_blank" rel="noopener noreferrer" class="badge badge-att">View File</a>
+                                        <?php endif; ?>
+                                    </span>
+                                </div>
+                            </div>
+                            <?php if (isFinance()): ?>
+                                <div class="oi-mobile-invoice-actions">
+                                    <form method="POST" onsubmit="return confirm('Mark this invoice as Paid?');">
+                                        <input type="hidden" name="mark_paid" value="1">
+                                        <input type="hidden" name="id" value="<?= (int) $inv['id'] ?>">
+                                        <button type="submit" class="btn-pay">Mark Paid</button>
+                                    </form>
+                                    <button type="button" onclick="confirmDelete(<?= (int) $inv['id'] ?>)" class="oi-mobile-invoice-delete">Delete</button>
+                                </div>
+                            <?php endif; ?>
+                        </article>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+                <div class="oi-mobile-invoice-empty oi-search-empty" id="oi-mobile-search-empty">No invoices match your search.</div>
+            </div>
             <table class="invoice-table">
                 <thead>
                     <tr>
@@ -214,7 +675,7 @@ foreach ($invoices as $inv) {
                 </thead>
                 <tbody>
                     <?php if (empty($invoices)): ?>
-                        <tr><td colspan="6" style="text-align:center; padding:20px; color:#6b7280;">No outstanding invoices found.</td></tr>
+                        <tr class="oi-no-invoices-row"><td colspan="7" style="text-align:center; padding:20px; color:#6b7280;">No outstanding invoices found.</td></tr>
                     <?php else: ?>
                         <?php foreach ($invoices as $inv): ?>
                         <tr>
@@ -251,6 +712,7 @@ foreach ($invoices as $inv) {
                         </tr>
                         <?php endforeach; ?>
                     <?php endif; ?>
+                    <tr class="oi-search-empty" id="oi-table-search-empty"><td colspan="7" style="text-align:center; padding:20px; color:#6b7280;">No invoices match your search.</td></tr>
                 </tbody>
             </table>
             
@@ -379,5 +841,59 @@ foreach ($invoices as $inv) {
             if (e.key === 'Escape') closeDeleteModal();
         });
     </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const trigger = document.querySelector('.new-invoice-btn');
+            const panel = document.getElementById('new-outstanding-invoice-panel');
+
+            if (!trigger || !panel) {
+                return;
+            }
+
+            trigger.addEventListener('click', function () {
+                const isHidden = panel.hidden;
+                panel.hidden = !isHidden;
+                trigger.setAttribute('aria-expanded', String(!isHidden));
+            });
+        });
+    </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const search = document.getElementById('oi-mobile-search-input');
+            if (!search) {
+                return;
+            }
+
+            const mobileCards = Array.from(document.querySelectorAll('.oi-mobile-invoice-card'));
+            const tableRows = Array.from(document.querySelectorAll('.invoice-table tbody tr:not(.oi-search-empty):not(.oi-no-invoices-row)'));
+            const mobileEmpty = document.getElementById('oi-mobile-search-empty');
+            const mobileNoInvoices = document.querySelector('.oi-mobile-invoice-list > .oi-mobile-invoice-empty:not(.oi-search-empty)');
+            const tableEmpty = document.getElementById('oi-table-search-empty');
+            const tableNoInvoices = document.querySelector('.invoice-table .oi-no-invoices-row');
+
+            search.addEventListener('input', function () {
+                const query = search.value.trim().toLocaleLowerCase();
+                let visibleCards = 0;
+                let visibleRows = 0;
+
+                mobileCards.forEach(function (card) {
+                    const matches = !query || card.textContent.toLocaleLowerCase().includes(query);
+                    card.hidden = !matches;
+                    if (matches) visibleCards += 1;
+                });
+                tableRows.forEach(function (row) {
+                    const matches = !query || row.textContent.toLocaleLowerCase().includes(query);
+                    row.hidden = !matches;
+                    if (matches) visibleRows += 1;
+                });
+
+                if (mobileEmpty) mobileEmpty.style.display = query && visibleCards === 0 ? 'block' : 'none';
+                if (mobileNoInvoices) mobileNoInvoices.style.display = query ? 'none' : '';
+                if (tableEmpty) tableEmpty.style.display = query && visibleRows === 0 ? 'table-row' : 'none';
+                if (tableNoInvoices) tableNoInvoices.hidden = Boolean(query);
+            });
+        });
+    </script>
+
 </body>
 </html>

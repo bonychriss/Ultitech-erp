@@ -667,9 +667,26 @@ if (isset($_POST['action']) && $_POST['action'] === 'ratify_entry') {
 // 7. DELETE ENTRY
 if (isset($_POST['action']) && $_POST['action'] === 'delete_entry') {
     $id = intval($_POST['entry_id']);
-    
-    // Check if entry exists and status
-    $stmt = $pdo->prepare("SELECT approval_status FROM revenue_entries WHERE id = ?");
+
+    // Prefer the shared delete helper (guards + monthly voucher renumber).
+    if (!function_exists('revenue_entries_delete')) {
+        $entriesLib = __DIR__ . '/modules/revenue/includes/revenue-entries-lib.php';
+        if (is_file($entriesLib)) {
+            require_once $entriesLib;
+        }
+    }
+    if (function_exists('revenue_entries_delete')) {
+        $result = revenue_entries_delete($pdo, $id);
+        if (!empty($result['ok'])) {
+            header('Location: revenue_entries.php?module=revenue&success=' . urlencode((string) ($result['message'] ?? 'Entry deleted successfully')));
+            exit;
+        }
+        header('Location: revenue_entries.php?module=revenue&error=' . urlencode((string) ($result['message'] ?? 'Entry could not be deleted')));
+        exit;
+    }
+
+    // Fallback if the helper is unavailable.
+    $stmt = $pdo->prepare("SELECT approval_status, entry_date FROM revenue_entries WHERE id = ?");
     $stmt->execute([$id]);
     $entry = $stmt->fetch();
     
@@ -678,9 +695,9 @@ if (isset($_POST['action']) && $_POST['action'] === 'delete_entry') {
         exit;
     }
     
-    // Only Admin can delete ratified entries. Finance can only delete Pending.
-    if ($entry['approval_status'] === 'Ratified' && !isAdmin()) {
-        header("Location: revenue_entries.php?module=revenue&error=Cannot delete ratified entry.");
+    // Finance and Admin may delete ratified entries; others cannot.
+    if (!isFinance() && !isAdmin()) {
+        header("Location: revenue_entries.php?module=revenue&error=You do not have permission to delete revenue entries.");
         exit;
     }
     
@@ -694,6 +711,11 @@ if (isset($_POST['action']) && $_POST['action'] === 'delete_entry') {
         // Delete entry
         $stmt = $pdo->prepare("DELETE FROM revenue_entries WHERE id = ?");
         $stmt->execute([$id]);
+
+        if (function_exists('renumberRevenueVouchersForYearMonth') && function_exists('revenueVoucherYearMonthFromDate')) {
+            [$y, $m] = revenueVoucherYearMonthFromDate(isset($entry['entry_date']) ? (string) $entry['entry_date'] : null);
+            renumberRevenueVouchersForYearMonth($pdo, $y, $m, false);
+        }
         
         $pdo->commit();
         header("Location: revenue_entries.php?module=revenue&success=Entry deleted successfully");

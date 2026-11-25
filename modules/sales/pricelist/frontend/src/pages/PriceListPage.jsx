@@ -1,9 +1,12 @@
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react';
+import { createPortal } from 'react-dom';
 import {
   CalendarDays,
   Coins,
@@ -12,11 +15,11 @@ import {
   MoreVertical,
   Package,
   Search,
+  SlidersHorizontal,
   Tag,
   X,
 } from 'lucide-react';
 import { fetchPricelistInit } from '../api/pricelistDesk.js';
-import filterIcon from '../assets/filter-icon.png';
 import {
   EMPTY_CELL,
   formatMoneyDashboard,
@@ -104,12 +107,80 @@ export default function PriceListPage() {
   const [brandFilter, setBrandFilter] = useState('');
   const [activeOnly, setActiveOnly] = useState(true);
   const [showFilterPanel, setShowFilterPanel] = useState(false);
+  const [filterPanelStyle, setFilterPanelStyle] = useState(null);
+  const filterButtonRef = useRef(null);
+  const filterPanelRef = useRef(null);
   const [minPrice, setMinPrice] = useState('');
   const [maxPrice, setMaxPrice] = useState('');
   const [menuRowId, setMenuRowId] = useState(null);
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState(() => new Set());
   const [pdfItemCount, setPdfItemCount] = useState(0);
+  const [headerToolsEl, setHeaderToolsEl] = useState(null);
+  const [isDesktopHeader, setIsDesktopHeader] = useState(() => (
+    typeof window !== 'undefined' && window.matchMedia('(min-width: 768px)').matches
+  ));
+  const revealRowMenu = useCallback((node) => {
+    if (node) node.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  }, []);
+
+  useEffect(() => {
+    if (!showFilterPanel) return undefined;
+    const handlePointerDown = (event) => {
+      if (filterButtonRef.current?.contains(event.target) || filterPanelRef.current?.contains(event.target)) return;
+      setShowFilterPanel(false);
+    };
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        setShowFilterPanel(false);
+        filterButtonRef.current?.focus();
+      }
+    };
+    document.addEventListener('mousedown', handlePointerDown);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [showFilterPanel]);
+
+  useLayoutEffect(() => {
+    if (!showFilterPanel) {
+      setFilterPanelStyle(null);
+      return undefined;
+    }
+    const syncPosition = () => {
+      if (!filterButtonRef.current) return;
+      const margin = 12;
+      const top = Math.round(filterButtonRef.current.getBoundingClientRect().bottom + 6);
+      const mobile = window.matchMedia('(max-width: 767.98px)').matches;
+      setFilterPanelStyle({
+        top: `${top}px`,
+        left: mobile ? `${margin}px` : 'auto',
+        right: `${margin}px`,
+        width: mobile ? 'auto' : `${Math.min(384, window.innerWidth - margin * 2)}px`,
+        maxHeight: `${Math.max(220, window.innerHeight - top - margin)}px`,
+      });
+    };
+    syncPosition();
+    window.addEventListener('resize', syncPosition);
+    window.addEventListener('scroll', syncPosition, true);
+    return () => {
+      window.removeEventListener('resize', syncPosition);
+      window.removeEventListener('scroll', syncPosition, true);
+    };
+  }, [showFilterPanel]);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(min-width: 768px)');
+    const syncHeaderTools = () => {
+      setIsDesktopHeader(mediaQuery.matches);
+      setHeaderToolsEl(document.getElementById('pl-header-tools'));
+    };
+    syncHeaderTools();
+    mediaQuery.addEventListener('change', syncHeaderTools);
+    return () => mediaQuery.removeEventListener('change', syncHeaderTools);
+  }, []);
 
   const loadInit = useCallback(async () => {
     setLoading(true);
@@ -181,29 +252,28 @@ export default function PriceListPage() {
   }, []);
 
   const dashboardStats = useMemo(() => {
-    const totalProducts = products.length;
-    const pricedItems = products.filter(
-      (product) => Number(product.selling_price) > 0 || Number(product.edited_price) > 0,
+    const totalProducts = filteredProducts.length;
+    const pricedItems = filteredProducts.filter(
+      (product) => Number(product.edited_price) > 0,
     ).length;
-    const totalValue = products.reduce(
+    const totalValue = filteredProducts.reduce(
       (acc, product) => acc + (Number(product.edited_price) || 0),
       0,
     );
+    const latestUpdated = filteredProducts.reduce((latest, product) => {
+      const timestamp = Date.parse(product.updated_at_iso);
+      return Number.isFinite(timestamp) && (latest === null || timestamp > latest) ? timestamp : latest;
+    }, null);
     let lastLabel = EMPTY_CELL;
-    const iso = init?.meta?.last_updated_iso;
-    if (iso) {
-      try {
-        lastLabel = new Date(iso).toLocaleDateString('en-US', {
-          month: 'short',
-          day: 'numeric',
-          year: 'numeric',
-        });
-      } catch {
-        lastLabel = EMPTY_CELL;
-      }
+    if (latestUpdated !== null) {
+      lastLabel = new Date(latestUpdated).toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      });
     }
     return { totalProducts, pricedItems, totalValue, lastLabel };
-  }, [products, init?.meta]);
+  }, [filteredProducts]);
 
   function resetRowPrice(id) {
     setProducts((prev) => prev.map(
@@ -247,6 +317,7 @@ export default function PriceListPage() {
 
   function enterSelectMode() {
     setSelectMode(true);
+    setShowFilterPanel(false);
     setSelectedIds(new Set());
     setMenuRowId(null);
     setIsModalOpen(false);
@@ -334,6 +405,25 @@ export default function PriceListPage() {
 
   const startIdx = filteredProducts.length === 0 ? 0 : 1;
   const endIdx = filteredProducts.length;
+  const showBodySearch = !isDesktopHeader || !headerToolsEl;
+  const showFilterChips = activeFilterCount > 0 && !showFilterPanel;
+  const searchField = (
+    <div className="exp-desk-search-field pl-search-field">
+      <Search className="exp-desk-search-icon" size={16} aria-hidden="true" />
+      <input
+        type="search"
+        className="exp-desk-search-input"
+        placeholder="Search name, code, description..."
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+      />
+      {search.trim() && (
+        <button type="button" className="exp-desk-search-clear" onClick={() => setSearch('')} aria-label="Clear search">
+          <X size={14} aria-hidden="true" />
+        </button>
+      )}
+    </div>
+  );
 
   if (loading && !init) {
     return (
@@ -374,17 +464,18 @@ export default function PriceListPage() {
           ) : (
             <>
               <button
+                ref={filterButtonRef}
                 type="button"
-                className={`pl-filter-btn${showFilterPanel ? ' is-active' : ''}${activeFilterCount > 0 ? ' has-filters' : ''}`}
+                className={`exp-desk-filter-btn${showFilterPanel ? ' is-active' : ''}`}
                 onClick={() => setShowFilterPanel((value) => !value)}
                 aria-expanded={showFilterPanel}
                 aria-controls="pl-filter-panel"
+                aria-haspopup="dialog"
+                aria-label="Filters"
+                title="Filters"
               >
-                <img src={filterIcon} alt="" className="pl-filter-btn-icon" width={18} height={18} />
-                Filters
-                {activeFilterCount > 0 && (
-                  <span className="pl-filter-btn-badge">{activeFilterCount}</span>
-                )}
+                <SlidersHorizontal size={18} strokeWidth={2.25} aria-hidden="true" />
+                {activeFilterCount > 0 && <span className="exp-desk-filter-dot" aria-hidden="true" />}
               </button>
               <button type="button" className="exp-desk-btn exp-desk-btn-primary pl-btn-rounded" onClick={enterSelectMode}>
                 <Download size={16} aria-hidden="true" />
@@ -394,6 +485,73 @@ export default function PriceListPage() {
           )}
         </div>
       </div>
+
+      {isDesktopHeader && headerToolsEl && createPortal(
+        <div className="exp-desk-page-header-tools">
+          <div className="exp-desk-page-header-search">{searchField}</div>
+        </div>,
+        headerToolsEl,
+      )}
+
+      {showFilterPanel && filterPanelStyle && createPortal(
+        <div
+          id="pl-filter-panel"
+          ref={filterPanelRef}
+          className="exp-desk-filters-panel exp-desk-filters-panel--fixed"
+          style={filterPanelStyle}
+          role="dialog"
+          aria-label="Filter options"
+        >
+          <div className="exp-desk-filters-head">
+            <h2 className="exp-desk-filters-title">Filters</h2>
+            <button type="button" className="exp-desk-filters-close" onClick={() => setShowFilterPanel(false)} aria-label="Close filters">
+              <X size={16} aria-hidden="true" />
+            </button>
+          </div>
+          <div className="exp-desk-filters-section">
+            <div className="exp-desk-filters-section-label"><Tag size={15} aria-hidden="true" /><span>Product</span></div>
+            <div className="exp-desk-filters-grid">
+              <div className="exp-desk-field">
+                <label htmlFor="pl-filter-category">Category</label>
+                <select id="pl-filter-category" value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}>
+                  <option value="">All Categories</option>
+                  {categoryOptions.map((option) => <option key={option} value={option}>{option}</option>)}
+                </select>
+              </div>
+              <div className="exp-desk-field">
+                <label htmlFor="pl-filter-brand">Brand</label>
+                <select id="pl-filter-brand" value={brandFilter} onChange={(e) => setBrandFilter(e.target.value)}>
+                  <option value="">All Brands</option>
+                  {brandOptions.map((option) => <option key={option} value={option}>{option}</option>)}
+                </select>
+              </div>
+            </div>
+          </div>
+          <div className="exp-desk-filters-section">
+            <div className="exp-desk-filters-section-label"><Coins size={15} aria-hidden="true" /><span>Price</span></div>
+            <div className="exp-desk-filters-grid">
+              <div className="exp-desk-field">
+                <label htmlFor="pl-filter-min">Min</label>
+                <input id="pl-filter-min" type="number" step="any" value={minPrice} onChange={(e) => setMinPrice(e.target.value)} placeholder="0" />
+              </div>
+              <div className="exp-desk-field">
+                <label htmlFor="pl-filter-max">Max</label>
+                <input id="pl-filter-max" type="number" step="any" value={maxPrice} onChange={(e) => setMaxPrice(e.target.value)} placeholder="Any" />
+              </div>
+            </div>
+            <label className={`exp-desk-unpaid-toggle${activeOnly ? ' is-on' : ''}`}>
+              <input type="checkbox" checked={activeOnly} onChange={(e) => setActiveOnly(e.target.checked)} />
+              <span className="exp-desk-unpaid-toggle-switch" aria-hidden="true" />
+              <span className="exp-desk-unpaid-toggle-copy"><span className="exp-desk-unpaid-toggle-title">Active items only</span></span>
+            </label>
+          </div>
+          <div className="exp-desk-filters-footer">
+            <button type="button" className="exp-desk-btn exp-desk-btn-secondary" onClick={clearAllFilters}>Reset</button>
+            <button type="button" className="exp-desk-btn exp-desk-btn-primary" onClick={() => setShowFilterPanel(false)}>Done</button>
+          </div>
+        </div>,
+        document.body,
+      )}
 
       {selectMode && (
         <div className="pl-select-banner pl-no-print" role="status">
@@ -412,72 +570,10 @@ export default function PriceListPage() {
         </div>
       )}
 
+      {(showBodySearch || showFilterChips) && (
       <div className="pl-filters pl-no-print">
-        <div className="pl-filter-row">
-          <div className="exp-desk-search-field pl-search-field">
-            <Search className="exp-desk-search-icon" size={16} aria-hidden="true" />
-            <input
-              type="search"
-              className="exp-desk-search-input"
-              placeholder="Search name, code, description..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-            {search.trim() && (
-              <button type="button" className="exp-desk-search-clear" onClick={() => setSearch('')} aria-label="Clear search">
-                <X size={14} aria-hidden="true" />
-              </button>
-            )}
-          </div>
-        </div>
-
-        {showFilterPanel && (
-          <div className="pl-filter-panel" id="pl-filter-panel">
-            <div className="pl-filter-panel-grid">
-              <label>
-                <span>Category</span>
-                <select className="pl-select" value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}>
-                  <option value="">All Categories</option>
-                  {categoryOptions.map((option) => (
-                    <option key={option} value={option}>{option}</option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                <span>Brand</span>
-                <select className="pl-select" value={brandFilter} onChange={(e) => setBrandFilter(e.target.value)}>
-                  <option value="">All Brands</option>
-                  {brandOptions.map((option) => (
-                    <option key={option} value={option}>{option}</option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                <span>Min price</span>
-                <input type="number" step="any" value={minPrice} onChange={(e) => setMinPrice(e.target.value)} placeholder="0" />
-              </label>
-              <label>
-                <span>Max price</span>
-                <input type="number" step="any" value={maxPrice} onChange={(e) => setMaxPrice(e.target.value)} placeholder="Any" />
-              </label>
-              <label className="pl-filter-check">
-                <input
-                  type="checkbox"
-                  checked={activeOnly}
-                  onChange={(e) => setActiveOnly(e.target.checked)}
-                />
-                <span>Active items only</span>
-              </label>
-            </div>
-            {(categoryFilter || brandFilter || minPrice || maxPrice || !activeOnly) && (
-              <div className="pl-filter-panel-foot">
-                <button type="button" className="pl-clear-link" onClick={clearAllFilters}>Clear all filters</button>
-              </div>
-            )}
-          </div>
-        )}
-
-        {(categoryFilter || brandFilter || minPrice || maxPrice || !activeOnly) && !showFilterPanel && (
+        {showBodySearch && <div className="pl-filter-row">{searchField}</div>}
+        {showFilterChips && (
           <div className="pl-filter-chips">
             {categoryFilter && (
               <span className="pl-chip">
@@ -519,6 +615,7 @@ export default function PriceListPage() {
           </div>
         )}
       </div>
+      )}
 
       {!selectMode && (
         <div className="pl-kpi-grid pl-no-print">
@@ -637,7 +734,7 @@ export default function PriceListPage() {
                               <MoreVertical size={16} />
                             </button>
                             {menuRowId === product.id && (
-                              <div className="pl-row-menu">
+                              <div className="pl-row-menu" ref={revealRowMenu}>
                                 <button type="button" onClick={() => resetRowPrice(product.id)}>
                                   Reset row price
                                 </button>

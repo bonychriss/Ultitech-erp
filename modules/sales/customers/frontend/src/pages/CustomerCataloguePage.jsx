@@ -5,16 +5,23 @@ import {
   useState,
 } from 'react';
 import {
-  ArrowLeft,
+  ArrowRight,
+  Building2,
   ChevronLeft,
   ChevronRight,
   Grid3x3,
   LayoutList,
   Loader2,
+  Mail,
+  MapPin,
+  Phone,
   Search,
   UserCheck,
+  UserRoundX,
   Users,
+  X,
 } from 'lucide-react';
+import { createPortal } from 'react-dom';
 import { fetchCatalogueInit } from '../api/catalogueDesk';
 
 const PAGE_SIZE_OPTIONS = [12, 24, 48, 100, 200];
@@ -84,7 +91,7 @@ function CustomerCard({
       className={`cc-card${selected ? ' is-selected' : ''}`}
       onClick={() => onToggle(customer.id)}
       onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
+        if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) {
           e.preventDefault();
           onToggle(customer.id);
         }
@@ -92,36 +99,33 @@ function CustomerCard({
       role="button"
       tabIndex={0}
     >
-      <div className="cc-card-media">
-        <label className="cc-card-check" onClick={(e) => e.stopPropagation()}>
-          <input
-            type="checkbox"
-            className="cc-checkbox"
-            checked={selected}
-            onChange={() => onToggle(customer.id)}
-            aria-label={`Select ${customer.company_name}`}
-          />
-        </label>
+      <label className="cc-card-check" onClick={(e) => e.stopPropagation()}>
+        <input
+          type="checkbox"
+          className="cc-checkbox"
+          checked={selected}
+          onChange={() => onToggle(customer.id)}
+          aria-label={`Select ${customer.company_name}`}
+        />
+      </label>
+      <div className="cc-card-body">
         <div className="cc-card-avatar" style={style}>{getInitials(customer.company_name)}</div>
-      </div>
-      <div className="cc-card-meta">
-        <div className="cc-card-code">{customer.customer_code || 'N/A'}</div>
-        <h3 className="cc-card-title">{customer.company_name}</h3>
-        {customer.contact_person ? (
-          <p className="cc-card-contact">{customer.contact_person}</p>
-        ) : null}
-        {customer.invoice_count > 0 ? (
-          <span className="cc-card-badge">{customer.invoice_count} invoices (6 mo)</span>
-        ) : null}
-        <div className="cc-card-foot">
-          <a
-            href={viewUrl}
-            className="cc-link"
-            onClick={(e) => e.stopPropagation()}
-          >
-            View details
-          </a>
+        <div className="cc-card-meta">
+          <h3 className="cc-card-title">{customer.company_name}</h3>
+          <div className="cc-card-code">{customer.customer_code || 'N/A'}</div>
+          {customer.contact_person && <p className="cc-card-contact">{customer.contact_person}</p>}
+          {customer.phone && <p className="cc-card-contact"><Phone size={14} aria-hidden="true" /><span>{customer.phone}</span></p>}
+          {customer.email && <p className="cc-card-contact"><Mail size={14} aria-hidden="true" /><span>{customer.email}</span></p>}
+          {customer.address && <p className="cc-card-contact"><MapPin size={14} aria-hidden="true" /><span>{customer.address}</span></p>}
+          {customer.invoice_count > 0 && (
+            <span className="cc-card-badge">{customer.invoice_count} invoices (6 mo)</span>
+          )}
         </div>
+      </div>
+      <div className="cc-card-foot">
+        <a href={viewUrl} className="cc-link cc-card-details" onClick={(e) => e.stopPropagation()}>
+          View details <ArrowRight size={14} aria-hidden="true" />
+        </a>
       </div>
     </article>
   );
@@ -166,10 +170,17 @@ export default function CustomerCataloguePage() {
   const [data, setData] = useState(null);
 
   const [searchTerm, setSearchTerm] = useState('');
+  const [searchOpen, setSearchOpen] = useState(true);
   const [viewMode, setViewMode] = useState('grid');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(200);
   const [selectedIds, setSelectedIds] = useState({});
+  const [headerToolsEl, setHeaderToolsEl] = useState(() => (
+    typeof document === 'undefined' ? null : document.getElementById('exp-desk-header-tools')
+  ));
+  const [isDesktopHeader, setIsDesktopHeader] = useState(() => (
+    typeof window !== 'undefined' && window.matchMedia('(min-width: 768px)').matches
+  ));
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -188,6 +199,26 @@ export default function CustomerCataloguePage() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(min-width: 768px)');
+    const syncHeader = () => {
+      setIsDesktopHeader(mediaQuery.matches);
+      setHeaderToolsEl(document.getElementById('exp-desk-header-tools'));
+    };
+    syncHeader();
+    mediaQuery.addEventListener('change', syncHeader);
+    return () => mediaQuery.removeEventListener('change', syncHeader);
+  }, []);
+
+  useEffect(() => {
+    if (isDesktopHeader || !searchOpen) return undefined;
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') setSearchOpen(false);
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isDesktopHeader, searchOpen]);
 
   const customers = data?.customers || [];
   const context = data?.context || {};
@@ -314,8 +345,36 @@ export default function CustomerCataloguePage() {
     );
   }
 
-  const docLabel = context.doc_label || 'Quotation';
-  const addSelectedLabel = context.add_selected_label || 'quotation';
+  const renderSearch = (disabled = false) => (
+    <div className="cc-search-wrap">
+      <Search className="cc-search-icon" size={16} aria-hidden="true" />
+      <input
+        type="search"
+        aria-label="Search customers"
+        placeholder="Search customers..."
+        value={searchTerm}
+        onChange={(e) => setSearchTerm(e.target.value)}
+        disabled={disabled}
+      />
+      {searchTerm && (
+        <button type="button" className="cc-search-clear" onClick={() => setSearchTerm('')} aria-label="Clear search" disabled={disabled}>
+          <X size={14} aria-hidden="true" />
+        </button>
+      )}
+    </div>
+  );
+  const addSelectedButton = (
+    <button type="button" className="cc-add-btn" onClick={handleSendToDoc}>
+      <UserCheck size={16} aria-hidden="true" />
+      Add selected ({totalSelected})
+    </button>
+  );
+  const desktopHeaderControls = (
+    <div className="cc-header-tools">
+      {renderSearch()}
+      {addSelectedButton}
+    </div>
+  );
 
   return (
     <div className="cc-page">
@@ -323,42 +382,46 @@ export default function CustomerCataloguePage() {
         <div className="exp-desk-flash exp-desk-flash-error" role="alert">{error}</div>
       )}
 
-      <div className="cc-toolbar">
-        <div className="cc-toolbar-left">
-          <a href={urls.return || '#'} className="cc-back-btn" title="Back">
-            <ArrowLeft size={18} aria-hidden="true" />
-          </a>
-          <div>
-            <div className="cc-title-row">
-              <h1 className="cc-title">Customer catalogue</h1>
-              <span className="cc-doc-badge">{docLabel}</span>
+      {isDesktopHeader && headerToolsEl
+        ? createPortal(desktopHeaderControls, headerToolsEl)
+        : (
+          <div className="cc-header-tools cc-header-tools--mobile">
+            <div className="cc-search-expand">
+              <button
+                type="button"
+                className={`cc-search-toggle${searchOpen ? ' is-active' : ''}${searchTerm.trim() ? ' has-value' : ''}`}
+                onClick={() => setSearchOpen((open) => !open)}
+                aria-label="Search customers"
+                aria-expanded={searchOpen}
+                aria-controls="cc-search-mobile-panel"
+              >
+                <Search size={18} aria-hidden="true" />
+              </button>
+              <div id="cc-search-mobile-panel" className={`cc-search-panel${searchOpen ? ' is-open' : ''}`} aria-hidden={!searchOpen}>
+                {renderSearch(!searchOpen)}
+              </div>
             </div>
-            <p className="cc-subtitle">
-              Select a customer then click <strong>Add selected</strong> for your {addSelectedLabel}.
-            </p>
+            {addSelectedButton}
           </div>
-        </div>
-        <button type="button" className="cc-add-btn" onClick={handleSendToDoc}>
-          <UserCheck size={16} aria-hidden="true" />
-          Add selected ({totalSelected})
-        </button>
-      </div>
+        )}
 
-      <div className="cc-filters">
-        <div>
-          <label className="cc-filter-label" htmlFor="cc-search">Search</label>
-          <div className="cc-search-wrap">
-            <Search className="cc-search-icon" size={16} aria-hidden="true" />
-            <input
-              id="cc-search"
-              type="search"
-              placeholder="Search by company, contact, code, phone or email..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-        </div>
-      </div>
+      {data && (
+        <section className="cc-summary" aria-label="Customer summary">
+          {[
+            { label: 'Total Customers', value: data.summary.total, icon: Users, tone: 'total' },
+            { label: 'Active Customers', value: data.summary.active, icon: Building2, tone: 'active' },
+            { label: 'Inactive Customers', value: data.summary.inactive, icon: UserRoundX, tone: 'inactive' },
+          ].map(({ label, value, icon: Icon, tone }) => (
+            <div className={`cc-summary-card cc-summary-card--${tone}`} key={label}>
+              <span className="cc-summary-icon"><Icon size={22} aria-hidden="true" /></span>
+              <div>
+                <div className="cc-summary-label">{label}</div>
+                <div className="cc-summary-value">{value.toLocaleString()}</div>
+              </div>
+            </div>
+          ))}
+        </section>
+      )}
 
       <div className="cc-view-bar">
         <p className="cc-count">

@@ -2,7 +2,7 @@ import './payables-notification.css'
 
 let activeNotification
 
-export function showPayablesNotification(message) {
+export function showPayablesNotification(message, notificationTitle = 'Payables updated') {
   if (activeNotification) activeNotification.dismiss()
 
   const notification = document.createElement('div')
@@ -22,7 +22,7 @@ export function showPayablesNotification(message) {
   label.textContent = 'Success'
   const title = document.createElement('strong')
   title.className = 'payables-notification__title'
-  title.textContent = 'Payables updated'
+  title.textContent = notificationTitle
   const detail = document.createElement('div')
   detail.className = 'payables-notification__detail'
   detail.textContent = message

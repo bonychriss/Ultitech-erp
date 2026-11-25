@@ -13,6 +13,7 @@ import {
   Users,
   X,
 } from 'lucide-react';
+import { createPortal } from 'react-dom';
 import { deleteCustomer, fetchIndexInit } from '../api/catalogueDesk';
 import CustomerAddModal from '../components/CustomerAddModal.jsx';
 
@@ -114,6 +115,12 @@ export default function CustomerIndexPage() {
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [deletingId, setDeletingId] = useState(0);
   const [openedId, setOpenedId] = useState(() => readOpenedCustomer());
+  const [headerToolsEl, setHeaderToolsEl] = useState(() => (
+    typeof document === 'undefined' ? null : document.getElementById('exp-desk-header-tools')
+  ));
+  const [isDesktopHeader, setIsDesktopHeader] = useState(() => (
+    typeof window !== 'undefined' && window.matchMedia('(min-width: 768px)').matches
+  ));
 
   const loadData = useCallback(async (module) => {
     setLoading(true);
@@ -148,6 +155,17 @@ export default function CustomerIndexPage() {
     }
     loadData(module);
   }, [deskCfg.module, loadData]);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(min-width: 768px)');
+    const syncHeader = () => {
+      setIsDesktopHeader(mediaQuery.matches);
+      setHeaderToolsEl(document.getElementById('exp-desk-header-tools'));
+    };
+    syncHeader();
+    mediaQuery.addEventListener('change', syncHeader);
+    return () => mediaQuery.removeEventListener('change', syncHeader);
+  }, []);
 
   useEffect(() => {
     if (!data) return;
@@ -252,11 +270,70 @@ export default function CustomerIndexPage() {
   }
 
   const trimmedSearch = searchTerm.trim();
-  const resultsLabel = trimmedSearch
-    ? `${filteredCustomers.length} ${filteredCustomers.length === 1 ? 'result' : 'results'} for "${trimmedSearch}"`
-    : allCustomers.length > 0
-      ? `Showing 1–${allCustomers.length} of ${allCustomers.length}`
-      : '0 results';
+
+  const searchForm = (
+    <form
+      className="exp-desk-page-header-search"
+      onSubmit={(e) => e.preventDefault()}
+    >
+      <div className="exp-desk-search-field">
+        <Search className="exp-desk-search-icon" size={16} aria-hidden="true" />
+        <input
+          type="search"
+          className="exp-desk-search-input"
+          placeholder="Search by name, code or contact person..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+        />
+        {trimmedSearch && (
+          <button
+            type="button"
+            className="exp-desk-search-clear"
+            onClick={handleClearSearch}
+            aria-label="Clear search"
+          >
+            <X size={14} aria-hidden="true" />
+          </button>
+        )}
+      </div>
+    </form>
+  );
+
+  const headerActions = (
+    <div className="exp-desk-page-header-actions">
+      {urls.crm && (
+        <a href={urls.crm} className="exp-desk-btn exp-desk-btn-secondary">
+          CRM
+        </a>
+      )}
+      {urls.add && (
+        <button
+          type="button"
+          className="exp-desk-btn exp-desk-btn-primary exp-desk-btn-create"
+          onClick={() => setAddModalOpen(true)}
+        >
+          <Plus size={16} aria-hidden="true" />
+          <span className="exp-desk-btn-label-desktop">Add client</span>
+          <span className="exp-desk-btn-label-mobile">Add</span>
+        </button>
+      )}
+    </div>
+  );
+
+  const headerControls = isDesktopHeader && headerToolsEl
+    ? createPortal(
+      <div className="exp-desk-page-header-tools">
+        {searchForm}
+        {headerActions}
+      </div>,
+      headerToolsEl,
+    )
+    : (
+      <div className="exp-desk-page-header exp-desk-page-header--mobile">
+        {searchForm}
+        {headerActions}
+      </div>
+    );
 
   return (
     <div className="exp-desk-page">
@@ -267,52 +344,7 @@ export default function CustomerIndexPage() {
         <div className="exp-desk-flash exp-desk-flash-error" role="alert">{error}</div>
       )}
 
-      <div className="exp-desk-page-header">
-        <form
-          className="exp-desk-page-header-search exp-desk-page-header-search--desktop"
-          onSubmit={(e) => e.preventDefault()}
-        >
-          <div className="exp-desk-search-field">
-            <Search className="exp-desk-search-icon" size={16} aria-hidden="true" />
-            <input
-              type="search"
-              className="exp-desk-search-input"
-              placeholder="Search by name, code or contact person..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-            {trimmedSearch && (
-              <button
-                type="button"
-                className="exp-desk-search-clear"
-                onClick={handleClearSearch}
-                aria-label="Clear search"
-              >
-                <X size={14} aria-hidden="true" />
-              </button>
-            )}
-          </div>
-        </form>
-
-        <div className="exp-desk-page-header-actions">
-          {urls.crm && (
-            <a href={urls.crm} className="exp-desk-btn exp-desk-btn-secondary">
-              CRM
-            </a>
-          )}
-          {urls.add && (
-            <button
-              type="button"
-              className="exp-desk-btn exp-desk-btn-primary exp-desk-btn-create"
-              onClick={() => setAddModalOpen(true)}
-            >
-              <Plus size={16} aria-hidden="true" />
-              <span className="exp-desk-btn-label-desktop">Add client</span>
-              <span className="exp-desk-btn-label-mobile">Add</span>
-            </button>
-          )}
-        </div>
-      </div>
+      {headerControls}
 
       {urls.add && (
         <button
@@ -328,7 +360,6 @@ export default function CustomerIndexPage() {
       <section className="exp-desk-results ci-customers-table">
         <div className="exp-desk-results-head">
           <h2 className="ci-results-title">All Customers</h2>
-          <span className="exp-desk-results-count">{resultsLabel}</span>
         </div>
 
         {filteredCustomers.length === 0 ? (

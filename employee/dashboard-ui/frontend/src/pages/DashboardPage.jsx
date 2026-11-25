@@ -69,6 +69,7 @@ const allVouchersHref = MODULE
 // Share column is opt-in (admin dashboard table has star + ⋮ only).
 const SHARE_ENABLED = CFG.share === true
 const DELETE_MODE = CFG.deleteMode || 'simple' // 'simple' | 'action'
+const PAYMENT_TYPE_OPTIONS = ['Bank Transfer', 'Cash Payment', 'Cheque', 'Mobile Payment', 'Credit']
 
 function num(v) {
   return Number(v || 0)
@@ -124,7 +125,7 @@ function rememberListAndView(id, listState) {
 
 function readListStateFromUrl() {
   if (typeof window === 'undefined') {
-    return { search: '', selectedId: 0, filters: { status: '', from_date: '', to_date: '', payee: '' } }
+    return { search: '', selectedId: 0, filters: emptyListFilters() }
   }
   const p = new URLSearchParams(window.location.search)
   return {
@@ -135,6 +136,9 @@ function readListStateFromUrl() {
       from_date: p.get('from_date') || '',
       to_date: p.get('to_date') || '',
       payee: p.get('payee') || '',
+      purpose: p.get('purpose') || '',
+      payment_type: p.get('payment_type') || '',
+      budget_type: p.get('budget_type') || '',
     },
   }
 }
@@ -152,6 +156,9 @@ function writeListStateToUrl(search, filters, selectedId) {
   setOrDel('from_date', filters && filters.from_date)
   setOrDel('to_date', filters && filters.to_date)
   setOrDel('payee', filters && filters.payee)
+  setOrDel('purpose', filters && filters.purpose)
+  setOrDel('payment_type', filters && filters.payment_type)
+  setOrDel('budget_type', filters && filters.budget_type)
   setOrDel('sel', selectedId ? String(selectedId) : '')
   const next = url.pathname + url.search + url.hash
   const cur = window.location.pathname + window.location.search + window.location.hash
@@ -560,8 +567,22 @@ function matchesPayee(v, payee) {
   return q.split(/\s+/).every((term) => name.includes(term))
 }
 
+function matchesVoucherItemValue(values, selectedValue) {
+  if (!selectedValue) return true
+  const expected = String(selectedValue).trim().toLowerCase()
+  return Array.isArray(values) && values.some((value) => String(value).trim().toLowerCase() === expected)
+}
+
 function emptyListFilters() {
-  return { status: '', from_date: '', to_date: '', payee: '' }
+  return {
+    status: '',
+    from_date: '',
+    to_date: '',
+    payee: '',
+    purpose: '',
+    payment_type: '',
+    budget_type: '',
+  }
 }
 
 function normalizeListFilters(filters) {
@@ -570,6 +591,9 @@ function normalizeListFilters(filters) {
     from_date: (filters && filters.from_date) || '',
     to_date: (filters && filters.to_date) || '',
     payee: (filters && filters.payee) || '',
+    purpose: (filters && filters.purpose) || '',
+    payment_type: (filters && filters.payment_type) || '',
+    budget_type: (filters && filters.budget_type) || '',
   }
 }
 
@@ -650,12 +674,17 @@ export default function DashboardPage() {
       const width = Math.min(360, Math.max(280, window.innerWidth - 24))
       let left = rect.right - width
       left = Math.max(12, Math.min(left, window.innerWidth - width - 12))
-      const top = Math.min(rect.bottom + 8, window.innerHeight - 24)
+      const panelHeight = Math.max(240, Math.min(680, window.innerHeight - 24))
+      const belowTop = rect.bottom + 8
+      const top = belowTop + panelHeight <= window.innerHeight - 12
+        ? belowTop
+        : Math.max(12, rect.top - panelHeight - 8)
       setFilterPanelStyle({
         position: 'fixed',
         top,
         left,
         width,
+        maxHeight: panelHeight,
         zIndex: 1050,
       })
     }
@@ -688,7 +717,8 @@ export default function DashboardPage() {
   }
 
   const hasActiveFilters = Boolean(
-    aiFilters.status || aiFilters.from_date || aiFilters.to_date || String(aiFilters.payee || '').trim(),
+    aiFilters.status || aiFilters.from_date || aiFilters.to_date || String(aiFilters.payee || '').trim()
+      || aiFilters.purpose || aiFilters.payment_type || aiFilters.budget_type,
   )
 
   useEffect(() => {
@@ -858,12 +888,30 @@ export default function DashboardPage() {
       return String(v.status || '').toLowerCase() === 'approved'
     })
   }, [data])
+  const paymentTypeOptions = useMemo(() => {
+    const options = new Map(PAYMENT_TYPE_OPTIONS.map((option) => [option.toLowerCase(), option]))
+    allVouchers.forEach((voucher) => {
+      const paymentTypes = Array.isArray(voucher.payment_types) ? voucher.payment_types : []
+      paymentTypes.forEach((rawType) => {
+        const option = String(rawType || '').trim()
+        const key = option.toLowerCase()
+        if (key && !options.has(key)) options.set(key, option)
+      })
+    })
+    return Array.from(options.values()).sort((a, b) => a.localeCompare(b))
+  }, [allVouchers])
+  const budgetTypeOptions = useMemo(() => Array.from(new Set(
+    allVouchers.flatMap((voucher) => Array.isArray(voucher.budget_types) ? voucher.budget_types : []),
+  )).sort((a, b) => a.localeCompare(b)), [allVouchers])
   const filteredVouchers = useMemo(
     () => allVouchers.filter(
       (v) => matchesSearch(v, searchInput)
         && matchesStatus(v, aiFilters.status)
         && matchesDate(v, aiFilters.from_date, aiFilters.to_date)
-        && matchesPayee(v, aiFilters.payee),
+        && matchesPayee(v, aiFilters.payee)
+        && (!aiFilters.purpose || v.purpose === aiFilters.purpose)
+        && matchesVoucherItemValue(v.payment_types, aiFilters.payment_type)
+        && matchesVoucherItemValue(v.budget_types, aiFilters.budget_type),
       ),
     [allVouchers, searchInput, aiFilters],
   )
@@ -1106,7 +1154,7 @@ export default function DashboardPage() {
         <div className="pv-filters-head">
           <div>
             <h2 className="pv-filters-title">Filters</h2>
-            <p className="pv-filters-sub">Narrow the list by payee, status, and date.</p>
+            <p className="pv-filters-sub">Narrow the list by payee, status, date, and payment details.</p>
           </div>
           <button type="button" className="pv-filters-close" onClick={() => setFiltersOpen(false)} aria-label="Close filters">
             <X size={16} aria-hidden="true" />
@@ -1119,12 +1167,56 @@ export default function DashboardPage() {
               <label htmlFor="edFilterPayee">Payee name</label>
               <input
                 id="edFilterPayee"
+                className="pv-filter-payee-input"
                 type="text"
                 value={draftFilters.payee || ''}
                 placeholder="Search by payee name"
                 autoComplete="off"
                 onChange={(e) => setDraftFilters((prev) => ({ ...prev, payee: e.target.value }))}
               />
+            </div>
+          </div>
+          <div className="pv-filters-section">
+            <div className="pv-filters-section-label">Payment purpose</div>
+            <div className="pv-field">
+              <label htmlFor="edFilterPurpose">Payment purpose</label>
+              <select
+                id="edFilterPurpose"
+                value={draftFilters.purpose || ''}
+                onChange={(e) => setDraftFilters((prev) => ({ ...prev, purpose: e.target.value }))}
+              >
+                <option value="">All purposes</option>
+                <option value="general">General</option>
+                <option value="stock_purchase">Stock purchase</option>
+              </select>
+            </div>
+          </div>
+          <div className="pv-filters-section">
+            <div className="pv-filters-section-label">Payment type</div>
+            <div className="pv-field">
+              <label htmlFor="edFilterPaymentType">Payment type</label>
+              <select
+                id="edFilterPaymentType"
+                value={draftFilters.payment_type || ''}
+                onChange={(e) => setDraftFilters((prev) => ({ ...prev, payment_type: e.target.value }))}
+              >
+                <option value="">All payment types</option>
+                {paymentTypeOptions.map((option) => <option key={option} value={option}>{option}</option>)}
+              </select>
+            </div>
+          </div>
+          <div className="pv-filters-section">
+            <div className="pv-filters-section-label">Budget type</div>
+            <div className="pv-field">
+              <label htmlFor="edFilterBudgetType">Budget type</label>
+              <select
+                id="edFilterBudgetType"
+                value={draftFilters.budget_type || ''}
+                onChange={(e) => setDraftFilters((prev) => ({ ...prev, budget_type: e.target.value }))}
+              >
+                <option value="">All budget types</option>
+                {budgetTypeOptions.map((option) => <option key={option} value={option}>{option}</option>)}
+              </select>
             </div>
           </div>
           <div className="pv-filters-section">

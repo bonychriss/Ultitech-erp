@@ -412,6 +412,13 @@ $entityLabel = $activeTab === 'receivables' ? 'Customer' : 'Supplier';
             border-radius: 10px !important;
             font-size: 0.78rem;
         }
+        body.page-outstanding-invoices .employee-header--outstanding .new-invoice-btn {
+            height: 32px;
+            min-height: 32px;
+            padding: 0 10px;
+            border-radius: 10px !important;
+            font-size: 0.78rem;
+        }
         .new-invoice-btn:hover { background: #1d4ed8; }
         .oi-new-type-picker { position: absolute; top: calc(100% + 8px); right: 0; z-index: 12002; display: grid; width: min(250px, calc(100vw - 24px)); gap: 6px; padding: 8px; border: 1px solid #e2e8f0; border-radius: 10px; background: #fff; box-shadow: 0 10px 24px rgba(15, 23, 42, 0.16); }
         .oi-new-type-picker[hidden] { display: none; }
@@ -966,7 +973,7 @@ $entityLabel = $activeTab === 'receivables' ? 'Customer' : 'Supplier';
     ';
     include '../../includes/header_employee.php';
     ?>
-    
+
     <div class="main-content oi-page">
         <?php if ($success): ?><div class="oi-success-notice" style="background:#dcfce7; color:#166534; padding:10px; border-radius:6px; margin-bottom:15px;"><?= htmlspecialchars($success) ?></div><?php endif; ?>
         <?php if ($error): ?><div class="oi-error-notice" style="background:#fee2e2; color:#991b1b; padding:10px; border-radius:6px; margin-bottom:15px;"><?= htmlspecialchars($error) ?></div><?php endif; ?>

@@ -257,6 +257,70 @@ function customerDeleteById(int $customerId): array
 /**
  * @return array<string, mixed>
  */
+function customerViewInvoiceSummary(PDO $db, int $customerId, string $currency): array
+{
+    $currency = strtoupper(trim($currency));
+    if ($currency === '') {
+        return ['error' => 'The customer has no currency set, so invoice totals are unavailable.'];
+    }
+
+    try {
+        $invoiceColumns = $db->query('SHOW COLUMNS FROM invoices')->fetchAll(PDO::FETCH_COLUMN);
+        foreach (['customer_id', 'total_amount', 'amount_paid', 'status'] as $column) {
+            if (!in_array($column, $invoiceColumns, true)) {
+                throw new RuntimeException('Missing invoice column: ' . $column);
+            }
+        }
+
+        $currencies = [];
+        $join = '';
+        if (in_array('order_id', $invoiceColumns, true)) {
+            $orderColumns = $db->query('SHOW COLUMNS FROM sales_orders')->fetchAll(PDO::FETCH_COLUMN);
+            if (in_array('currency', $orderColumns, true)) {
+                $join = ' LEFT JOIN sales_orders so ON so.id = i.order_id';
+                $currencies[] = "NULLIF(TRIM(so.currency), '')";
+            }
+        }
+        if (in_array('currency', $invoiceColumns, true)) {
+            $currencies[] = "NULLIF(TRIM(i.currency), '')";
+        }
+        if ($currencies === []) {
+            throw new RuntimeException('Invoice currency is unavailable.');
+        }
+        $currencyExpr = 'UPPER(COALESCE(' . implode(', ', $currencies) . ", ''))";
+        $sql = "SELECT
+                    COALESCE(SUM(CASE WHEN $currencyExpr = ? THEN i.total_amount ELSE 0 END), 0) AS total_sales,
+                    COALESCE(SUM(CASE WHEN $currencyExpr = ? THEN COALESCE(i.amount_paid, 0) ELSE 0 END), 0) AS total_payments,
+                    SUM(CASE WHEN $currencyExpr = '' THEN 1 ELSE 0 END) AS unknown_currency_count
+                FROM invoices i $join
+                WHERE i.customer_id = ?
+                  AND LOWER(TRIM(COALESCE(i.status, ''))) NOT IN ('cancelled', 'canceled', 'draft', 'void', 'voided', 'deleted')";
+        $params = [$currency, $currency, $customerId];
+        if (function_exists('salesAppendCompanyScope')) {
+            salesAppendCompanyScope($sql, $params, 'invoices', 'i');
+        }
+        $stmt = $db->prepare($sql);
+        $stmt->execute($params);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        $sales = (float) $row['total_sales'];
+        $payments = (float) $row['total_payments'];
+
+        return [
+            'currency' => $currency,
+            'total_sales' => $sales,
+            'total_payments' => $payments,
+            'outstanding' => $sales - $payments,
+            'unknown_currency_count' => (int) $row['unknown_currency_count'],
+        ];
+    } catch (Throwable $e) {
+        error_log('customerViewInvoiceSummary: ' . $e->getMessage());
+        return ['error' => 'Invoice totals are unavailable.'];
+    }
+}
+
+/**
+ * @return array<string, mixed>
+ */
 function customerViewInitData(): array
 {
     global $pdo;
@@ -325,6 +389,7 @@ function customerViewInitData(): array
                 'created_at' => (string) ($order['created_at'] ?? ''),
             ];
         }, $recentOrders),
+        'invoice_summary' => customerViewInvoiceSummary($pdo, $customerId, (string) ($customer['currency'] ?? '')),
         'urls' => [
             'customers_index' => sales_module_url('customers/index.php', ['module' => $module]),
             'edit' => sales_module_url('customers/edit.php', ['id' => $customerId, 'module' => $module]),
@@ -436,6 +501,23 @@ function customersDeskRenderReactShell(string $deskPage, string $pageTitle, stri
 
     $page_title = $pageTitle;
     $employeeHeaderTitle = $pageTitle;
+    if ($deskPage === 'index' || $deskPage === 'catalogue' || $deskPage === 'view') {
+        $customersHomeUrl = function_exists('company_url')
+            ? company_url('select-module')
+            : (function_exists('app_url') ? app_url('/select-module.php') : '../../select-module.php');
+        $salesUrl = sales_module_url('index.php', ['module' => 'sales']);
+        $employeeHeaderSubtitle = '<nav class="vv-breadcrumb exp-desk-breadcrumb" aria-label="Breadcrumb">'
+            . '<a class="vv-breadcrumb-link erp-nav-back-ignore" href="' . htmlspecialchars($customersHomeUrl, ENT_QUOTES, 'UTF-8') . '">Home</a>'
+            . '<span class="vv-breadcrumb-sep">/</span>'
+            . '<a class="vv-breadcrumb-link vv-breadcrumb-link--active erp-nav-back-ignore" href="'
+            . htmlspecialchars($salesUrl, ENT_QUOTES, 'UTF-8') . '">Sales</a>'
+            . '<span class="vv-breadcrumb-sep">/</span>'
+            . ($deskPage === 'catalogue' || $deskPage === 'view'
+                ? '<a class="vv-breadcrumb-link erp-nav-back-ignore" href="' . htmlspecialchars(sales_module_url('customers/index.php', ['module' => 'sales']), ENT_QUOTES, 'UTF-8') . '">Customers</a>'
+                    . '<span class="vv-breadcrumb-sep">/</span><span class="vv-breadcrumb-current">' . ($deskPage === 'view' ? 'Customer profile' : 'Customer catalogue') . '</span>'
+                : '<span class="vv-breadcrumb-current">Customers</span>')
+            . '</nav>';
+    }
     $hideHeaderCompanyBranding = true;
     $employeeHeaderExtraClass = 'employee-header--exp-desk';
     $customersDeskPage = $deskPage;
@@ -1307,9 +1389,20 @@ function customerCatalogueInitData(): array
     $module = customerCatalogueModuleQuery();
     $context = customerCatalogueParseContext($_GET);
     $customers = customerCatalogueFetchCustomers($pdo);
+    $summary = $pdo->query("
+        SELECT COUNT(*) AS total,
+               COALESCE(SUM(LOWER(TRIM(COALESCE(status, 'active'))) = 'active'), 0) AS active,
+               COALESCE(SUM(LOWER(TRIM(COALESCE(status, 'active'))) = 'inactive'), 0) AS inactive
+        FROM customers
+    ")->fetch(PDO::FETCH_ASSOC);
 
     return [
         'module' => $module,
+        'summary' => [
+            'total' => (int) $summary['total'],
+            'active' => (int) $summary['active'],
+            'inactive' => (int) $summary['inactive'],
+        ],
         'customers' => array_map(static function ($c) {
             return [
                 'id' => (int) ($c['id'] ?? 0),

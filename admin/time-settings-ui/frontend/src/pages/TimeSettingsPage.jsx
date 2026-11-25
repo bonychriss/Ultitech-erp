@@ -6,9 +6,11 @@ import {
   Clock3,
   Globe2,
   Loader2,
+  Fingerprint,
   MapPin,
   Network,
   Plus,
+  ShieldCheck,
 } from 'lucide-react'
 
 const STEP_LABELS = {
@@ -35,6 +37,7 @@ function emptyForm() {
     latitude: '',
     longitude: '',
     radiusMeters: 100,
+    biometricRequired: true,
   }
 }
 
@@ -48,6 +51,9 @@ function normalizeForm(raw) {
   next.longitude = raw?.longitude != null && raw.longitude !== '' ? String(raw.longitude) : ''
   next.gracePeriodMinutes = Number(raw?.gracePeriodMinutes ?? 15)
   next.radiusMeters = Number(raw?.radiusMeters ?? 100) || 100
+  next.biometricRequired = raw?.biometricRequired == null
+    ? true
+    : !!raw.biometricRequired
   return next
 }
 
@@ -565,12 +571,48 @@ export default function TimeSettingsPage() {
                   ) : null}
                 </div>
               </div>
+              <div className="wizard-row">
+                <div className="wizard-aside">
+                  <h2>Biometric clock-in</h2>
+                  <p>
+                    Require Face ID, fingerprint, or device PIN before clock in/out.
+                    Turning this off keeps enrolled devices and lets staff clock out without unlock.
+                  </p>
+                </div>
+                <div className="wizard-auth-fields">
+                  <label className="same-pass ts-bio-toggle">
+                    <input
+                      type="checkbox"
+                      checked={Boolean(form.biometricRequired)}
+                      onChange={(e) => patch('biometricRequired', e.target.checked)}
+                    />
+                    <span className="ts-bio-toggle-copy">
+                      <span className="ts-bio-toggle-title">
+                        <Fingerprint size={16} aria-hidden />
+                        Require phone unlock verification
+                      </span>
+                      <span className="ts-bio-toggle-hint">
+                        {form.biometricRequired
+                          ? 'On — staff must unlock their phone to clock in or out.'
+                          : 'Off — enrollments are kept; clock-out works without biometric.'}
+                      </span>
+                    </span>
+                  </label>
+                  {!form.biometricRequired ? (
+                    <div className="ts-bio-note" role="note">
+                      <ShieldCheck size={15} aria-hidden />
+                      Existing biometric enrollments are preserved. Staff already clocked in can clock out normally.
+                    </div>
+                  ) : null}
+                </div>
+              </div>
               <div className="setup-summary">
                 <strong>Ready to save</strong>
                 <ul>
                   <li>Timezone: {form.timezone}</li>
                   <li>Hours: {form.startTime} - {form.endTime} (grace {form.gracePeriodMinutes}m)</li>
                   <li>Geofence: {form.geofenceEnabled ? 'on' : 'off'}</li>
+                  <li>Biometric clock-in: {form.biometricRequired ? 'on' : 'off'}</li>
                 </ul>
               </div>
             </>

@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { BriefcaseBusiness, Clock3, UsersRound } from 'lucide-react';
 import { getGeoPosition, postAttendanceAction } from '../api';
 import {
   beginCreateCredential,
@@ -21,13 +22,6 @@ function formatTimeHm(value) {
   return str;
 }
 
-function formatHistoryDate(value) {
-  if (!value) return '-';
-  const d = new Date(`${value}T12:00:00`);
-  if (Number.isNaN(d.getTime())) return value;
-  return d.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
-}
-
 function formatDisplayTime(raw) {
   if (!raw) return '';
   const normalized = String(raw).includes('T') ? raw : `1970-01-01T${raw}`;
@@ -36,9 +30,90 @@ function formatDisplayTime(raw) {
   return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 }
 
+const DEFAULT_WEATHER_COORDS = { latitude: -6.7924, longitude: 39.2083 }; // Dar es Salaam
+
+function weatherFromCode(code) {
+  const c = Number(code);
+  if (c === 0) return { label: 'Clear', icon: 'fa-sun' };
+  if (c === 1 || c === 2) return { label: 'Partly cloudy', icon: 'fa-cloud-sun' };
+  if (c === 3) return { label: 'Overcast', icon: 'fa-cloud' };
+  if (c === 45 || c === 48) return { label: 'Fog', icon: 'fa-smog' };
+  if (c >= 51 && c <= 67) return { label: 'Rain', icon: 'fa-cloud-rain' };
+  if (c >= 71 && c <= 77) return { label: 'Snow', icon: 'fa-snowflake' };
+  if (c >= 80 && c <= 82) return { label: 'Showers', icon: 'fa-cloud-showers-heavy' };
+  if (c >= 95) return { label: 'Storm', icon: 'fa-bolt' };
+  return { label: 'Weather', icon: 'fa-cloud' };
+}
+
+function useLocalWeather() {
+  const [weather, setWeather] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const controller = new AbortController();
+
+    async function load(lat, lon) {
+      const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code&timezone=auto`;
+      const res = await fetch(url, { signal: controller.signal });
+      if (!res.ok) throw new Error('weather fetch failed');
+      const json = await res.json();
+      const temp = json?.current?.temperature_2m;
+      const code = json?.current?.weather_code;
+      if (temp == null || cancelled) return;
+      const meta = weatherFromCode(code);
+      setWeather({
+        tempC: Math.round(Number(temp)),
+        label: meta.label,
+        icon: meta.icon,
+      });
+    }
+
+    async function start() {
+      let lat = DEFAULT_WEATHER_COORDS.latitude;
+      let lon = DEFAULT_WEATHER_COORDS.longitude;
+      try {
+        if (typeof navigator !== 'undefined' && navigator.geolocation) {
+          const pos = await new Promise((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject, {
+              enableHighAccuracy: false,
+              timeout: 4000,
+              maximumAge: 30 * 60 * 1000,
+            });
+          });
+          lat = pos.coords.latitude;
+          lon = pos.coords.longitude;
+        }
+      } catch (_) {
+        // Fall back to Dar es Salaam.
+      }
+      try {
+        await load(lat, lon);
+      } catch (_) {
+        if (!cancelled) setWeather(null);
+      }
+    }
+
+    start();
+    const refreshId = window.setInterval(start, 30 * 60 * 1000);
+    return () => {
+      cancelled = true;
+      controller.abort();
+      window.clearInterval(refreshId);
+    };
+  }, []);
+
+  return weather;
+}
+
 function useLiveClock(timeZone) {
-  const [nowLabel, setNowLabel] = useState('');
-  const [dateLabel, setDateLabel] = useState('');
+  const [clock, setClock] = useState(() => ({
+    hour: 12,
+    minute: 0,
+    second: 0,
+    nowLabel: '',
+    dateLabel: '',
+    nowMs: Date.now(),
+  }));
 
   useEffect(() => {
     const tick = () => {
@@ -58,30 +133,131 @@ function useLiveClock(timeZone) {
         year: 'numeric',
       });
       const parts = timeFmt.formatToParts(now);
-      let H = '00';
-      let M = '00';
-      let S = '00';
+      let H = 0;
+      let M = 0;
+      let S = 0;
       parts.forEach((p) => {
-        if (p.type === 'hour') H = String(parseInt(p.value, 10)).padStart(2, '0');
-        if (p.type === 'minute') M = String(parseInt(p.value, 10)).padStart(2, '0');
-        if (p.type === 'second') S = String(parseInt(p.value, 10)).padStart(2, '0');
+        if (p.type === 'hour') H = parseInt(p.value, 10) || 0;
+        if (p.type === 'minute') M = parseInt(p.value, 10) || 0;
+        if (p.type === 'second') S = parseInt(p.value, 10) || 0;
       });
-      setNowLabel(`${H}:${M}:${S}`);
-      setDateLabel(dateFmt.format(now));
+      setClock({
+        hour: H,
+        minute: M,
+        second: S,
+        nowLabel: `${String(H).padStart(2, '0')}:${String(M).padStart(2, '0')}:${String(S).padStart(2, '0')}`,
+        dateLabel: dateFmt.format(now),
+        nowMs: now.getTime(),
+      });
     };
     tick();
     const id = window.setInterval(tick, 1000);
     return () => window.clearInterval(id);
   }, [timeZone]);
 
-  return { nowLabel, dateLabel };
+  return clock;
 }
 
-function statusClass(status) {
-  const s = String(status || '').toLowerCase();
-  if (s.includes('late')) return 'att-desk-status--late';
-  if (s.includes('early')) return 'att-desk-status--early';
-  return 'att-desk-status--on-time';
+function formatClockParts(hour, minute, second, use24Hour) {
+  const minutes = String(minute).padStart(2, '0');
+  const seconds = String(second).padStart(2, '0');
+  if (use24Hour) {
+    return {
+      hours: String(hour).padStart(2, '0'),
+      minutes,
+      seconds,
+      period: null,
+    };
+  }
+  const period = hour >= 12 ? 'PM' : 'AM';
+  const displayHour = hour % 12 === 0 ? 12 : hour % 12;
+  return {
+    hours: String(displayHour).padStart(2, '0'),
+    minutes,
+    seconds,
+    period,
+  };
+}
+
+function parseTimeToSeconds(value) {
+  const str = String(value || '').trim();
+  if (!str) return null;
+  const timePart = str.includes(' ') ? str.split(' ').pop() : str.includes('T') ? str.split('T').pop() : str;
+  const bits = String(timePart).split(':');
+  if (bits.length < 2) return null;
+  const h = parseInt(bits[0], 10);
+  const m = parseInt(bits[1], 10);
+  const s = parseInt(bits[2] || '0', 10);
+  if ([h, m, s].some((n) => Number.isNaN(n))) return null;
+  return ((h * 60) + m) * 60 + s;
+}
+
+function elapsedSeconds(timeIn, timeOut, hour, minute, second) {
+  const inSec = parseTimeToSeconds(timeIn);
+  if (inSec === null) return 0;
+  let outSec;
+  if (timeOut) {
+    outSec = parseTimeToSeconds(timeOut);
+    if (outSec === null) return 0;
+  } else {
+    outSec = ((hour * 60) + minute) * 60 + second;
+  }
+  let diff = outSec - inSec;
+  if (diff < 0) diff += 24 * 3600;
+  return diff;
+}
+
+function formatElapsedCompact(timeIn, timeOut, hour, minute, second) {
+  if (!timeIn) return '0h 00m';
+  const diff = elapsedSeconds(timeIn, timeOut, hour, minute, second);
+  const totalMinutes = Math.floor(diff / 60);
+  const hrs = Math.floor(totalMinutes / 60);
+  const mins = String(totalMinutes % 60).padStart(2, '0');
+  return `${hrs}h ${mins}m`;
+}
+
+function nameInitials(name) {
+  const parts = String(name || '').trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) return '?';
+  if (parts.length === 1) return parts[0].slice(0, 1).toUpperCase();
+  return `${parts[0][0] || ''}${parts[parts.length - 1][0] || ''}`.toUpperCase();
+}
+
+function buildTeamHoursLeaderboard(rows, dailyTargetHours, hour, minute, second, currentUserId) {
+  const target = Math.max(Number(dailyTargetHours) || 8, 0.1);
+  return (Array.isArray(rows) ? rows : [])
+    .map((row) => {
+      const clockedIn = Boolean(row?.time_in) || row?.clocked_in === true;
+      const stillIn = clockedIn && !row?.time_out;
+      const liveHours = clockedIn
+        ? elapsedSeconds(row.time_in, row.time_out, hour, minute, second) / 3600
+        : 0;
+      const hours = clockedIn
+        ? (!stillIn && row?.total_hours != null ? Number(row.total_hours) || 0 : liveHours)
+        : 0;
+      const progress = Math.max(0, Math.min(100, Math.round((hours / target) * 100)));
+      const name = row.full_name || row.username || 'Teammate';
+      return {
+        key: `${row.user_id || 0}-${row.id || row.time_in || name}`,
+        userId: Number(row.user_id || 0),
+        name,
+        initial: nameInitials(name),
+        department: row.department || '',
+        hours,
+        progress,
+        hitTarget: clockedIn && hours >= target,
+        stillIn,
+        clockedIn,
+        timeIn: row.time_in || null,
+        timeOut: row.time_out || null,
+        isMe: Number(row.user_id || 0) === Number(currentUserId || 0),
+      };
+    })
+    .sort((a, b) => {
+      if (Number(b.clockedIn) !== Number(a.clockedIn)) return Number(b.clockedIn) - Number(a.clockedIn);
+      if (b.hours !== a.hours) return b.hours - a.hours;
+      return String(a.name).localeCompare(String(b.name));
+    });
 }
 
 function buildMonthOptions(monthsBack = 12) {
@@ -116,6 +292,10 @@ export default function AttendanceDesk({ data }) {
       '';
     return {
       todayRecord: data.todayRecord || null,
+      todayPresent: Array.isArray(data.todayPresent) ? data.todayPresent : [],
+      teamBoard: Array.isArray(data.teamBoard) && data.teamBoard.length
+        ? data.teamBoard
+        : (Array.isArray(data.todayPresent) ? data.todayPresent : []),
       history: data.history || [],
       historyMonth: month,
       historyMonthLabel: label,
@@ -148,8 +328,9 @@ export default function AttendanceDesk({ data }) {
   const [busy, setBusy] = useState(false);
   const [enrollBusy, setEnrollBusy] = useState(false);
   const [enrollReady, setEnrollReady] = useState(false);
-  const [historyBusy, setHistoryBusy] = useState(false);
   const [successDismissed, setSuccessDismissed] = useState(false);
+  const [phoneToast, setPhoneToast] = useState(null);
+  const [enrollToastDismissed, setEnrollToastDismissed] = useState(false);
   const [isMobileClock, setIsMobileClock] = useState(() => {
     try {
       return window.matchMedia('(max-width: 768px)').matches;
@@ -160,6 +341,7 @@ export default function AttendanceDesk({ data }) {
   const webAuthnOk = isWebAuthnSupported();
   const assertPublicKeyRef = useRef(null);
   const registerPublicKeyRef = useRef(null);
+  const phoneToastShownRef = useRef(false);
 
   useEffect(() => {
     let mq;
@@ -181,43 +363,86 @@ export default function AttendanceDesk({ data }) {
   const links = data.links || {};
   const profileSecurityUrl = links.profileSecurity || '';
   const user = data.user || {};
+  const shift = data.shift || {};
   const timeZone = data.timeZone || 'Africa/Dar_es_Salaam';
   const dateSummary = data.dateSummary || '';
-  const { nowLabel, dateLabel } = useLiveClock(timeZone);
+  const clock = useLiveClock(timeZone);
+  const { dateLabel, hour, minute, second, nowMs } = clock;
+  const weather = useLocalWeather();
   const wallpapers = data.wallpapers || {};
-  const clockCardStyle = useMemo(() => {
-    const sunrise = wallpapers.sunrise || '';
-    const sunset = wallpapers.sunset || '';
-    if (!sunrise && !sunset) return undefined;
-    let hour = 12;
-    try {
-      const parts = new Intl.DateTimeFormat('en-GB', {
-        timeZone,
-        hour: '2-digit',
-        hour12: false,
-      }).formatToParts(new Date());
-      const h = parts.find((p) => p.type === 'hour');
-      hour = h ? parseInt(h.value, 10) : 12;
-    } catch (_) {
-      hour = new Date().getHours();
+  // One lock-screen image per calendar day (stable for the whole day).
+  const dailyWallpaper = useMemo(() => {
+    const fromBoot = Array.isArray(wallpapers.slides) ? wallpapers.slides : [];
+    const named = [
+      wallpapers.morning || wallpapers.sunrise || '',
+      wallpapers.noon || '',
+      wallpapers.dusk || wallpapers.sunset || '',
+    ];
+    const seen = new Set();
+    const list = [];
+    [...fromBoot, ...named].forEach((raw) => {
+      const url = String(raw || '').trim();
+      if (!url || seen.has(url)) return;
+      seen.add(url);
+      list.push(url);
+    });
+    if (list.length === 0) return '';
+    const dayKeySource = dateLabel || String(Date.now());
+    let hash = 0;
+    for (let i = 0; i < dayKeySource.length; i += 1) {
+      hash = ((hash << 5) - hash + dayKeySource.charCodeAt(i)) | 0;
     }
-    // After noon (12:00+) use sunset; morning uses sunrise.
-    const url = hour >= 12 ? sunset || sunrise : sunrise || sunset;
-    if (!url) return undefined;
-    return {
-      backgroundImage: `linear-gradient(160deg, rgba(15, 23, 42, 0.55) 0%, rgba(15, 23, 42, 0.28) 45%, rgba(28, 25, 23, 0.45) 100%), url('${url}')`,
-      backgroundPosition: 'center center',
-      backgroundSize: 'cover',
-      backgroundRepeat: 'no-repeat',
-      backgroundColor: '#1c1917',
-    };
-  }, [wallpapers.sunrise, wallpapers.sunset, timeZone, nowLabel]);
+    return list[Math.abs(hash) % list.length];
+  }, [wallpapers, dateLabel]);
+
+  const clockCardStyle = dailyWallpaper
+    ? {
+        '--att-clock-photo': `url('${dailyWallpaper}')`,
+        backgroundColor: '#0f172a',
+      }
+    : undefined;
 
   const todayRecord = state.todayRecord;
   const isOut = todayRecord && todayRecord.time_out;
   const isIn = todayRecord && todayRecord.time_in && !todayRecord.time_out;
   const canClockIn = !todayRecord;
   const canClockOut = Boolean(isIn);
+  const dailyTargetHours = Number(shift.dailyTargetHours || 8) || 8;
+  const timeParts = formatClockParts(hour, minute, second, true);
+  const elapsedLabel = formatElapsedCompact(
+    todayRecord?.time_in,
+    todayRecord?.time_out,
+    hour,
+    minute,
+    second
+  );
+  const todayHoursLive = todayRecord?.time_in
+    ? elapsedSeconds(todayRecord.time_in, todayRecord.time_out, hour, minute, second) / 3600
+    : 0;
+  const todayHours = isOut && todayRecord?.total_hours != null
+    ? Number(todayRecord.total_hours) || 0
+    : todayHoursLive;
+  const todayOt = Number(todayRecord?.overtime_hours ?? 0) || 0;
+  const progressPercent = Math.max(
+    0,
+    Math.min(100, Math.round((todayHours / Math.max(dailyTargetHours, 0.1)) * 100))
+  );
+  const teamToday = Array.isArray(state.todayPresent) ? state.todayPresent : [];
+  const teamBoard = Array.isArray(state.teamBoard) && state.teamBoard.length
+    ? state.teamBoard
+    : teamToday;
+  const teamActiveNow = teamToday.filter((row) => row && row.time_in && !row.time_out).length;
+  const teamLeaderboard = useMemo(
+    () => buildTeamHoursLeaderboard(
+      teamBoard,
+      dailyTargetHours,
+      hour,
+      minute,
+      second,
+      user.id
+    ),
+    [teamBoard, dailyTargetHours, hour, minute, second, user.id]
+  );
 
   useEffect(() => {
     if (!state.clockInSuccess && !state.clockOutSuccess) return undefined;
@@ -226,26 +451,23 @@ export default function AttendanceDesk({ data }) {
     return () => document.body.classList.remove('att-success-sheet-open');
   }, [state.clockInSuccess, state.clockOutSuccess]);
 
-  const statusPill = useMemo(() => {
+  const statusMeta = useMemo(() => {
     if (isOut) {
-      return (
-        <div className="v2-status-pill">
-          <i className="fas fa-flag-checkered" /> OUT AT {formatTimeHm(todayRecord.time_out)}
-        </div>
-      );
+      return {
+        tone: 'out',
+        label: `Out at ${formatTimeHm(todayRecord.time_out)}`,
+      };
     }
     if (isIn) {
-      return (
-        <div className="v2-status-pill">
-          <i className="fas fa-check-circle" /> IN AT {formatTimeHm(todayRecord.time_in)}
-        </div>
-      );
+      return {
+        tone: 'online',
+        label: 'Online Now',
+      };
     }
-    return (
-      <div className="v2-status-pill">
-        <i className="fas fa-clock" /> STANDBY
-      </div>
-    );
+    return {
+      tone: 'standby',
+      label: 'Standby',
+    };
   }, [isIn, isOut, todayRecord]);
 
   function openPlan() {
@@ -268,6 +490,10 @@ export default function AttendanceDesk({ data }) {
     setState((cur) => ({
       ...cur,
       todayRecord: payload.todayRecord ?? cur.todayRecord,
+      todayPresent: Array.isArray(payload.todayPresent) ? payload.todayPresent : (cur.todayPresent || []),
+      teamBoard: Array.isArray(payload.teamBoard)
+        ? payload.teamBoard
+        : (Array.isArray(payload.todayPresent) ? payload.todayPresent : (cur.teamBoard || [])),
       history: payload.history ?? cur.history,
       historyMonth: payload.historyMonth ?? cur.historyMonth,
       historyMonthLabel: payload.historyMonthLabel ?? cur.historyMonthLabel,
@@ -431,35 +657,6 @@ export default function AttendanceDesk({ data }) {
       });
   }
 
-  async function loadHistoryMonth(month) {
-    const nextMonth = String(month || '').trim();
-    if (!nextMonth || nextMonth === state.historyMonth) return;
-    setHistoryBusy(true);
-    try {
-      const result = await postAttendanceAction({
-        action: 'history',
-        history_month: nextMonth,
-      });
-      if (!result.success) {
-        setState((cur) => ({
-          ...cur,
-          message: result.message || 'Failed to load history.',
-          msgType: 'danger',
-        }));
-        return;
-      }
-      applyPayload(result.data);
-    } catch (err) {
-      setState((cur) => ({
-        ...cur,
-        message: err instanceof Error ? err.message : 'Failed to load history.',
-        msgType: 'danger',
-      }));
-    } finally {
-      setHistoryBusy(false);
-    }
-  }
-
   async function submitClockIn() {
     const tasks = newTasks.map((t) => t.trim()).filter(Boolean);
     if (tasks.length === 0 && state.pendingTasks.length === 0) {
@@ -567,6 +764,26 @@ export default function AttendanceDesk({ data }) {
   const bioEnrolled = !!biometric.enrolled;
   const usePhoneForClock = bioRequired && !isMobileClock;
   const showMobileEnroll = bioRequired && !bioEnrolled && isMobileClock;
+  const showEnrollToast = showMobileEnroll && !enrollToastDismissed;
+  const showHeroClockActions = !usePhoneForClock;
+  const alreadyClockedToday = Boolean(todayRecord?.time_in);
+
+  useEffect(() => {
+    if (!showMobileEnroll) setEnrollToastDismissed(false);
+  }, [showMobileEnroll]);
+
+  useEffect(() => {
+    // Phone nudge only before first clock-in; hide once clocked in or dismissed.
+    if (!usePhoneForClock || alreadyClockedToday) {
+      setPhoneToast(null);
+      return undefined;
+    }
+    if (phoneToastShownRef.current) return undefined;
+    setPhoneToast({
+      body: 'Clock in and out easily from your phone, just unlock it to get started.',
+    });
+    return undefined;
+  }, [usePhoneForClock, alreadyClockedToday]);
 
   return (
     <div className="att-shell att-page-clock">
@@ -578,7 +795,7 @@ export default function AttendanceDesk({ data }) {
               <i className="fas fa-calendar-alt att-me-2 att-text-slate" />
               <strong>{dateSummary}</strong>
               <span className="att-sub-sep">-</span>
-              Clock in/out and review recent history
+              Clock in/out and see who&apos;s in today
             </p>
           </div>
         </div>
@@ -592,108 +809,178 @@ export default function AttendanceDesk({ data }) {
 
         <div className="att-grid">
           <div className="att-col-left">
-            <div className="clock-card-v2" style={clockCardStyle}>
-              <div className="v2-date">{dateLabel}</div>
-              <div className="v2-time">{nowLabel || '--:--:--'}</div>
-              {statusPill}
-
-              {!state.isIpAllowed ? (
-                <div className="att-alert">
-                  <div className="att-alert-title">
-                    <i className="fas fa-exclamation-triangle" /> Out of office network
-                  </div>
-                  <p className="att-m-0" style={{ opacity: 0.7 }}>
-                    Your IP: <strong>{state.currentIp}</strong>
-                    <br />
-                    Connect to the office network or enable GPS location to clock in or out.
-                  </p>
-                </div>
-              ) : null}
-
-              {usePhoneForClock ? (
-                <div className="att-phone-nudge">
-                  <div className="att-phone-nudge-icon" aria-hidden="true">
-                    <i className="fas fa-mobile-screen-button" />
-                  </div>
-                  <p className="att-phone-nudge-title">Use your phone</p>
-                  <p className="att-phone-nudge-copy">
-                    Clock in and out on your mobile device. Phone unlock is required.
-                  </p>
-                </div>
-              ) : showMobileEnroll ? (
-                <div className="att-clock-actions">
-                  <button type="button" className="att-glass-btn att-glass-btn--muted" disabled>
-                    Unlock setup needed
-                  </button>
-                </div>
-              ) : (
-                <div className="att-clock-actions">
-                  {canClockIn ? (
-                    <button
-                      type="button"
-                      className="att-glass-btn"
-                      disabled={busy}
-                      onClick={openPlan}
-                    >
-                      {busy ? 'Processing...' : bioRequired ? 'Clock in with phone unlock' : 'Clock in Now'}
-                    </button>
-                  ) : null}
-                  {canClockOut ? (
-                    <button
-                      type="button"
-                      className="att-btn-clock-out"
-                      disabled={busy}
-                      onClick={openReview}
-                    >
-                      {busy ? 'Processing...' : bioRequired ? 'Clock out with phone unlock' : 'Clock out'}
-                    </button>
-                  ) : null}
-                </div>
-              )}
-            </div>
-
-            {showMobileEnroll ? (
-              <div className="att-bio-sheet is-open" role="dialog" aria-modal="true" aria-labelledby="attBioSheetTitle">
-                <div className="att-bio-sheet-panel">
-                  <div className="att-bio-sheet-handle" aria-hidden="true" />
-                  <div className="att-bio-gate">
-                    <div className="att-bio-gate-icon" aria-hidden="true">
-                      <i className="fas fa-fingerprint" />
+            <div
+              className={`clock-card-v2 clock-card-v2--time-only${showMobileEnroll ? ' clock-card-v2--photo-hero' : ''}`}
+              style={clockCardStyle}
+              aria-label="Time card"
+            >
+              <div className="clock-card-v2-photo" aria-hidden="true" />
+              <div className="clock-card-v2-fade" aria-hidden="true" />
+              <div className="clock-card-v2-inner">
+                <div className="clock-card-v2-identity">
+                  <div className="clock-card-v2-copy">
+                    <div className="clock-card-v2-time-row" aria-live="polite">
+                      <time className="clock-card-v2-time" dateTime={new Date(nowMs).toISOString()}>
+                        {timeParts.hours}:{timeParts.minutes}
+                        <span className="clock-card-v2-seconds">:{timeParts.seconds}</span>
+                      </time>
+                      {timeParts.period ? (
+                        <span className="clock-card-v2-period">{timeParts.period}</span>
+                      ) : null}
                     </div>
-                    <p className="att-bio-gate-title" id="attBioSheetTitle">Set up phone unlock</p>
-                    <p className="att-bio-gate-copy">
-                      {webAuthnOk
-                        ? 'Unlock with Face ID, fingerprint, or PIN to clock in.'
-                        : (
-                          <>
-                            Open this on your phone, or go to{' '}
-                            {profileSecurityUrl ? (
-                              <a href={profileSecurityUrl}>Profile → Security</a>
-                            ) : (
-                              'Profile → Security'
-                            )}
-                            .
-                          </>
-                        )}
-                    </p>
-                    {webAuthnOk ? (
-                      <button
-                        type="button"
-                        className="att-bio-enroll"
-                        disabled={enrollBusy || !enrollReady}
-                        onClick={enrollPhoneUnlock}
-                      >
-                        <span>
-                          {enrollBusy
-                            ? 'Waiting…'
-                            : enrollReady
-                              ? 'Continue'
-                              : 'Getting ready…'}
-                        </span>
-                      </button>
+                    <div className="clock-card-v2-meta">
+                      <span className="clock-card-v2-date">
+                        <i className="fas fa-calendar-day" aria-hidden="true" />
+                        {dateLabel || dateSummary || 'Today'}
+                      </span>
+                      {weather ? (
+                        <>
+                          <span className="clock-card-v2-meta-sep" aria-hidden="true" />
+                          <span className="clock-card-v2-weather" title={weather.label}>
+                            <i className={`fas ${weather.icon}`} aria-hidden="true" />
+                            <span className="clock-card-v2-temp">{weather.tempC}°C</span>
+                            <span className="clock-card-v2-weather-label">{weather.label}</span>
+                          </span>
+                        </>
+                      ) : null}
+                      {statusMeta.tone !== 'standby' ? (
+                        <>
+                          <span className="clock-card-v2-meta-sep" aria-hidden="true" />
+                          <span className={`clock-card-v2-status is-${statusMeta.tone}`}>
+                            <i className="clock-card-v2-status-dot" aria-hidden="true" />
+                            {statusMeta.label}
+                            {todayRecord?.time_in ? (
+                              <span className="clock-card-v2-elapsed-inline"> · {elapsedLabel}</span>
+                            ) : null}
+                          </span>
+                        </>
+                      ) : null}
+                    </div>
+                    {!state.isIpAllowed ? (
+                      <div className="att-alert">
+                        <div className="att-alert-title">
+                          <i className="fas fa-exclamation-triangle" /> Out of office network
+                        </div>
+                        <p className="att-m-0" style={{ opacity: 0.9 }}>
+                          Your IP: <strong>{state.currentIp}</strong>
+                          <br />
+                          Connect to the office network or enable GPS location to clock in or out.
+                        </p>
+                      </div>
                     ) : null}
                   </div>
                 </div>
+              </div>
+            </div>
+
+            {showHeroClockActions && !showMobileEnroll ? (
+              <div className="att-clock-actions att-clock-actions--below-card">
+                {canClockIn ? (
+                  <button
+                    type="button"
+                    className="att-glass-btn"
+                    disabled={busy}
+                    onClick={openPlan}
+                  >
+                    {busy
+                      ? 'Processing...'
+                      : bioRequired
+                        ? 'Clock in with phone unlock'
+                        : 'Clock in'}
+                  </button>
+                ) : null}
+                {canClockOut ? (
+                  <button
+                    type="button"
+                    className="att-btn-clock-out"
+                    disabled={busy}
+                    onClick={openReview}
+                  >
+                    {busy
+                      ? 'Processing...'
+                      : bioRequired
+                        ? 'Clock out with phone unlock'
+                        : 'Clock out'}
+                  </button>
+                ) : null}
+                {!canClockIn && !canClockOut ? (
+                  <button type="button" className="att-glass-btn att-glass-btn--muted" disabled>
+                    Shift complete
+                  </button>
+                ) : null}
+              </div>
+            ) : null}
+
+            {phoneToast && usePhoneForClock && !alreadyClockedToday ? (
+              <div className="att-desk-toast att-desk-toast--below att-desk-toast--compact is-show" role="status" aria-live="polite">
+                <div className="att-desk-toast-icon" aria-hidden="true">
+                  <i className="fas fa-mobile-screen-button" />
+                </div>
+                <div className="att-desk-toast-copy">
+                  <span>{phoneToast.body}</span>
+                </div>
+                <button
+                  type="button"
+                  className="att-desk-toast-close"
+                  aria-label="Dismiss"
+                  onClick={() => {
+                    phoneToastShownRef.current = true;
+                    setPhoneToast(null);
+                  }}
+                >
+                  <i className="fas fa-times" aria-hidden="true" />
+                </button>
+              </div>
+            ) : null}
+
+            {showEnrollToast ? (
+              <div
+                className="att-desk-toast att-desk-toast--below att-desk-toast--compact att-desk-toast--enroll-line is-show"
+                role="status"
+                aria-live="polite"
+              >
+                <div className="att-desk-toast-icon att-desk-toast-icon--fp" aria-hidden="true">
+                  <i className="fas fa-fingerprint" />
+                </div>
+                <div className="att-desk-toast-copy">
+                  <span>
+                    <strong>Set up security</strong>
+                    {webAuthnOk ? (
+                      <>
+                        {' — '}
+                        <button
+                          type="button"
+                          className="att-desk-toast-link"
+                          disabled={enrollBusy || !enrollReady}
+                          onClick={enrollPhoneUnlock}
+                        >
+                          {enrollBusy
+                            ? 'Waiting…'
+                            : enrollReady
+                              ? 'Setup'
+                              : 'Getting ready…'}
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        {' — '}
+                        {profileSecurityUrl ? (
+                          <a className="att-desk-toast-link" href={profileSecurityUrl}>Setup</a>
+                        ) : (
+                          'Open on your phone'
+                        )}
+                      </>
+                    )}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  className="att-desk-toast-close"
+                  aria-label="Dismiss"
+                  onClick={() => setEnrollToastDismissed(true)}
+                >
+                  <i className="fas fa-times" aria-hidden="true" />
+                </button>
               </div>
             ) : null}
 
@@ -747,18 +1034,6 @@ export default function AttendanceDesk({ data }) {
               </div>
             ) : null}
 
-            <div className="sig-card">
-              <div className="sig-label">Digital signature</div>
-              <div className="sig-box">
-                {user.signatureUrl ? (
-                  <img src={user.signatureUrl} className="att-sig-img" alt="Signature" />
-                ) : (
-                  <span className="att-text-slate" style={{ fontSize: 12 }}>
-                    No signature on file
-                  </span>
-                )}
-              </div>
-            </div>
           </div>
 
           <div className="att-col-right">
@@ -766,121 +1041,205 @@ export default function AttendanceDesk({ data }) {
               <div className={`att-alert-banner is-${state.msgType || 'danger'}`}>{state.message}</div>
             ) : null}
 
-            <div className="att-kpi-grid att-kpi-grid--two" aria-label="Attendance summary">
-              <div className="att-kpi-tile">
-                <div className="att-kpi-icon att-kpi-icon--hours" aria-hidden="true">
-                  <i className="fas fa-clock" />
+            <div className="att-kpi-grid att-kpi-grid--three" aria-label="Today's shift metrics">
+              <div className="att-kpi-tile att-kpi-tile--progress">
+                <div className="att-kpi-tile-top">
+                  <div className="att-kpi-icon att-kpi-icon--hours" aria-hidden="true">
+                    <Clock3 size={16} strokeWidth={2} />
+                  </div>
+                  <div className="att-kpi-body">
+                    <div className="att-kpi-label">Hours worked</div>
+                    <div className="att-kpi-value is-hours">{todayHours.toFixed(1)}h</div>
+                  </div>
+                  <span className="att-kpi-aside">
+                    {progressPercent}% of {dailyTargetHours.toFixed(1)}h
+                  </span>
                 </div>
-                <div className="att-kpi-body">
-                  <div className="att-kpi-label">Hours worked</div>
-                  <div className="att-kpi-value is-hours">{Number(stats.total_hours || 0).toFixed(1)}h</div>
+                <div className="att-kpi-progress" aria-hidden="true">
+                  <span style={{ width: `${progressPercent}%` }} />
                 </div>
               </div>
               <div className="att-kpi-tile">
-                <div className="att-kpi-icon att-kpi-icon--ot" aria-hidden="true">
-                  <i className="fas fa-business-time" />
+                <div className="att-kpi-tile-top">
+                  <div className="att-kpi-icon att-kpi-icon--ot" aria-hidden="true">
+                    <BriefcaseBusiness size={16} strokeWidth={2} />
+                  </div>
+                  <div className="att-kpi-body">
+                    <div className="att-kpi-label">Overtime</div>
+                    <div className="att-kpi-value is-ot">
+                      {(todayOt > 0 ? todayOt : Number(stats.total_ot || 0)).toFixed(1)}h
+                    </div>
+                  </div>
+                  <span className="att-kpi-aside">
+                    {todayOt > 0 || Number(stats.total_ot || 0) > 0
+                      ? 'Extra shift time'
+                      : 'Within regular shift'}
+                  </span>
                 </div>
-                <div className="att-kpi-body">
-                  <div className="att-kpi-label">Overtime</div>
-                  <div className="att-kpi-value is-ot">{Number(stats.total_ot || 0).toFixed(1)}h</div>
+                <p className="att-kpi-foot">
+                  Accrues after {dailyTargetHours.toFixed(1)} net hours
+                </p>
+              </div>
+              <div className="att-kpi-tile">
+                <div className="att-kpi-tile-top">
+                  <div className="att-kpi-icon att-kpi-icon--team" aria-hidden="true">
+                    <UsersRound size={16} strokeWidth={2} />
+                  </div>
+                  <div className="att-kpi-body">
+                    <div className="att-kpi-label">Team logged today</div>
+                    <div className="att-kpi-value is-team">{teamToday.length}</div>
+                  </div>
+                  <span className="att-kpi-aside is-active">
+                    {teamActiveNow} active now
+                  </span>
                 </div>
+                <p className="att-kpi-foot">Live check-ins across the desk</p>
               </div>
             </div>
 
-            <section className="att-desk-results att-activity-results" aria-label="Recent activity">
-              <div className="att-desk-results-head">
-                <div className="att-activity-head-left">
-                  <h3 className="att-activity-title">Recent activity</h3>
-                  <label className="att-history-month">
-                    <span className="att-history-month-label">Month</span>
-                    <select
-                      className="att-history-month-select"
-                      value={state.historyMonth || ''}
-                      disabled={historyBusy || busy}
-                      onChange={(e) => loadHistoryMonth(e.target.value)}
-                      aria-label="Select attendance month"
-                    >
-                      {(state.historyMonths || []).map((opt) => (
-                        <option key={opt.value} value={opt.value}>
-                          {opt.label}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                </div>
-                <span className="att-desk-results-count">
-                  {historyBusy
-                    ? 'Loading...'
-                    : `${state.historyMonthLabel || 'This month'}${
-                        state.history.length
-                          ? ` · ${state.history.length} record${state.history.length === 1 ? '' : 's'}`
-                          : ' · no records'
-                      }`}
+            <div className="att-desk-bottom-row">
+            <section className="att-present-card" aria-label="Logged in today">
+              <div className="att-present-header">
+                <h3 className="att-present-title">Logged in today</h3>
+                <span className="att-present-subtitle">
+                  {teamToday.length
+                    ? `${teamToday.length} person${teamToday.length === 1 ? '' : 's'}`
+                    : 'No one yet'}
                 </span>
               </div>
-              <div className="att-desk-table-wrap">
-                <table className="att-desk-table att-desk-table--activity">
-                  <thead>
-                    <tr>
-                      <th>Date</th>
-                      <th>Status</th>
-                      <th>In</th>
-                      <th>Out</th>
-                      <th>Hours</th>
-                      <th>OT</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {state.history.length === 0 ? (
-                      <tr>
-                        <td colSpan={6}>
-                          <div className="att-desk-empty">
-                            <div className="att-desk-empty-icon" aria-hidden="true">
-                              <i className="fas fa-calendar-times" />
-                            </div>
-                            <p className="att-desk-empty-title">
-                              No records for {state.historyMonthLabel || 'this month'}
-                            </p>
-                            <p className="att-desk-empty-sub">
-                              Choose another month above to view previous attendance.
-                            </p>
+              {teamToday.length === 0 ? (
+                <div className="att-desk-empty att-present-empty">
+                  <div className="att-desk-empty-icon" aria-hidden="true">
+                    <i className="fas fa-user-clock" />
+                  </div>
+                  <p className="att-desk-empty-title">No one has clocked in yet today</p>
+                  <p className="att-desk-empty-sub">
+                    People who clock in will appear here for today.
+                  </p>
+                </div>
+              ) : (
+                <div className="att-present-list">
+                  {teamToday.map((row) => {
+                    const stillIn = Boolean(row.time_in) && !row.time_out;
+                    const isMe = Number(row.user_id) === Number(user.id || 0);
+                    const name = row.full_name || row.username || '—';
+                    return (
+                      <div
+                        key={`${row.user_id}-${row.id || row.time_in || ''}`}
+                        className={`att-present-item${isMe ? ' is-me' : ''}${stillIn ? ' is-active' : ''}`}
+                      >
+                        <div className="att-present-avatar" aria-hidden="true">
+                          {nameInitials(name)}
+                        </div>
+                        <div className="att-present-info">
+                          <div className="att-present-name">
+                            {name}
+                            {isMe ? <span className="att-present-you">You</span> : null}
                           </div>
-                        </td>
-                      </tr>
-                    ) : (
-                      state.history.map((row) => (
-                        <tr key={`${row.date}-${row.time_in || ''}`}>
-                          <td>
-                            <strong className="att-activity-date">{formatHistoryDate(row.date)}</strong>
-                          </td>
-                          <td>
-                            <span className={`att-desk-status ${statusClass(row.status)}`}>
-                              {row.status || '-'}
+                          <div className="att-present-meta">
+                            {row.department ? <span>{row.department}</span> : null}
+                            <span>
+                              In {formatTimeHm(row.time_in)}
+                              {row.time_out ? ` · Out ${formatTimeHm(row.time_out)}` : ' · Still in'}
                             </span>
-                          </td>
-                          <td>{formatTimeHm(row.time_in)}</td>
-                          <td>
-                            {row.time_out ? formatTimeHm(row.time_out) : (
-                              <span className="att-desk-muted">--:--</span>
-                            )}
-                          </td>
-                          <td>
-                            <strong>{row.total_hours ?? '0'}</strong>h
-                          </td>
-                          <td>
-                            {row.overtime_hours ? (
-                              `+${row.overtime_hours}`
-                            ) : (
-                              <span className="att-desk-muted">--</span>
-                            )}
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
+                          </div>
+                        </div>
+                        <div className="att-present-side">
+                          <span className={`att-present-status ${stillIn ? 'is-in' : 'is-out'}`}>
+                            {stillIn ? 'In' : (row.status || 'Out')}
+                          </span>
+                          <span className="att-present-hours">
+                            {row.total_hours != null
+                              ? `${Number(row.total_hours).toFixed(1)}h`
+                              : stillIn
+                                ? formatElapsedCompact(row.time_in, null, hour, minute, second)
+                                : '—'}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </section>
+
+            <section className="att-leaderboard-card" aria-label="Team hours leaderboard">
+              <div className="att-leaderboard-header">
+                <h3 className="att-leaderboard-title">Leaderboard</h3>
+                <span className="att-leaderboard-subtitle">Hours today</span>
+              </div>
+              {teamLeaderboard.length === 0 ? (
+                <div className="att-desk-empty att-leaderboard-empty">
+                  <div className="att-desk-empty-icon" aria-hidden="true">
+                    <i className="fas fa-user-clock" />
+                  </div>
+                  <p className="att-desk-empty-title">No teammates found</p>
+                  <p className="att-desk-empty-sub">
+                    Company users will rank here against the {dailyTargetHours.toFixed(1)}h shift target.
+                  </p>
+                </div>
+              ) : (
+                <div className="att-leaderboard-list">
+                  {teamLeaderboard.map((row, index) => (
+                    <div
+                      key={row.key}
+                      className={[
+                        'att-leaderboard-item',
+                        row.hitTarget ? 'is-target-hit' : '',
+                        row.isMe ? 'is-me' : '',
+                        !row.clockedIn ? 'is-standby' : '',
+                      ].filter(Boolean).join(' ')}
+                    >
+                      {row.hitTarget ? (
+                        <>
+                          <span className="att-leaderboard-spark att-leaderboard-spark--1" aria-hidden="true" />
+                          <span className="att-leaderboard-spark att-leaderboard-spark--2" aria-hidden="true" />
+                          <span className="att-leaderboard-spark att-leaderboard-spark--3" aria-hidden="true" />
+                        </>
+                      ) : null}
+                      <span className="att-leaderboard-rank">{index + 1}</span>
+                      <div className={`att-leaderboard-avatar${row.hitTarget ? ' is-target-hit' : ''}`}>
+                        {row.initial}
+                      </div>
+                      <div className="att-leaderboard-info">
+                        <div className="att-leaderboard-name-row">
+                          <div className="att-leaderboard-name">
+                            {row.name}
+                            {row.isMe ? <span className="att-leaderboard-you">You</span> : null}
+                          </div>
+                          {row.hitTarget ? (
+                            <span className="att-leaderboard-congrats">
+                              <i className="fas fa-trophy" aria-hidden="true" />
+                              Target reached!
+                            </span>
+                          ) : null}
+                        </div>
+                        <div className="att-leaderboard-progress-wrap">
+                          <div className="att-leaderboard-progress-bar" aria-hidden="true">
+                            <span
+                              className={`att-leaderboard-progress-fill${row.hitTarget ? ' is-complete' : ''}`}
+                              style={{ width: `${row.progress}%` }}
+                            />
+                          </div>
+                          <div className="att-leaderboard-progress-text">
+                            <span>{row.progress}% of {dailyTargetHours.toFixed(1)}h</span>
+                            <span className="att-leaderboard-meta">
+                              {!row.clockedIn
+                                ? '· Standby'
+                                : row.stillIn
+                                  ? `· In ${formatTimeHm(row.timeIn)}`
+                                  : `· Out ${formatTimeHm(row.timeOut || row.timeIn)}`}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="att-leaderboard-hours">{row.hours.toFixed(1)}h</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+            </div>
           </div>
         </div>
       </div>

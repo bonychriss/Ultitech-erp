@@ -47,6 +47,8 @@ final class ClockBoot
                     'timeZone' => 'Africa/Dar_es_Salaam',
                     'dateSummary' => '',
                     'todayRecord' => null,
+                    'todayPresent' => [],
+                    'teamBoard' => [],
                     'history' => [],
                     'stats' => [],
                     'pendingTasks' => [],
@@ -56,7 +58,13 @@ final class ClockBoot
                     'msgType' => 'error',
                     'clockInSuccess' => null,
                     'clockOutSuccess' => null,
-                    'user' => ['id' => 0, 'name' => '', 'signatureUrl' => ''],
+                    'user' => ['id' => 0, 'name' => '', 'department' => '', 'role' => '', 'signatureUrl' => ''],
+                    'shift' => [
+                        'start' => '09:00',
+                        'end' => '17:00',
+                        'windowLabel' => '09:00–17:00',
+                        'dailyTargetHours' => 8.0,
+                    ],
                     'apiUrl' => $this->apiUrl((string) ($erp['company_slug'] ?? '')),
                     'links' => $this->links(),
                     'wallpapers' => $this->wallpapers(),
@@ -133,6 +141,8 @@ final class ClockBoot
                 'timeZone' => 'Africa/Dar_es_Salaam',
                 'dateSummary' => $attClockNow->format('l, d M Y'),
                 'todayRecord' => $attendance->getTodayRecord($userId) ?: null,
+                'todayPresent' => $attendance->getTodayPresentList(),
+                'teamBoard' => $attendance->getTeamHoursBoard($userId),
                 'history' => $attendance->getHistory($userId, $historyMonth) ?: [],
                 'historyMonth' => $historyMonth,
                 'historyMonthLabel' => $attendance->formatHistoryMonthLabel($historyMonth),
@@ -149,8 +159,11 @@ final class ClockBoot
                 'user' => [
                     'id' => $userId,
                     'name' => (string) ($user['full_name'] ?? $user['username'] ?? ''),
+                    'department' => (string) ($user['department'] ?? ''),
+                    'role' => (string) ($user['role'] ?? ''),
                     'signatureUrl' => $signatureUrl,
                 ],
+                'shift' => $this->shiftPayload($attendance),
                 'apiUrl' => $this->apiUrl((string) ($erp['company_slug'] ?? '')),
                 'links' => $this->links(),
                 'wallpapers' => $this->wallpapers(),
@@ -159,16 +172,61 @@ final class ClockBoot
         ];
     }
 
+    /**
+     * @return array{start:string,end:string,windowLabel:string,dailyTargetHours:float}
+     */
+    private function shiftPayload(\Attendance $attendance): array
+    {
+        $settings = $attendance->getSettings() ?: [];
+        $startRaw = (string) ($settings['start_time'] ?? '09:00:00');
+        $endRaw = (string) ($settings['end_time'] ?? '17:00:00');
+        $start = substr($startRaw, 0, 5);
+        $end = substr($endRaw, 0, 5);
+        if (!preg_match('/^\d{2}:\d{2}$/', $start)) {
+            $start = '09:00';
+        }
+        if (!preg_match('/^\d{2}:\d{2}$/', $end)) {
+            $end = '17:00';
+        }
+        $startParts = array_map('intval', explode(':', $start));
+        $endParts = array_map('intval', explode(':', $end));
+        $startMinutes = ($startParts[0] * 60) + ($startParts[1] ?? 0);
+        $endMinutes = ($endParts[0] * 60) + ($endParts[1] ?? 0);
+        $diff = $endMinutes - $startMinutes;
+        if ($diff <= 0) {
+            $diff += 24 * 60;
+        }
+        $dailyTargetHours = round($diff / 60, 1);
+        if ($dailyTargetHours <= 0) {
+            $dailyTargetHours = 8.0;
+        }
+
+        return [
+            'start' => $start,
+            'end' => $end,
+            'windowLabel' => $start . '–' . $end,
+            'dailyTargetHours' => $dailyTargetHours,
+        ];
+    }
+
     public function wallpaperUrl(): string
     {
         $attClockTz = new \DateTimeZone('Africa/Dar_es_Salaam');
         $attClockNow = new \DateTime('now', $attClockTz);
-        $wallpaperFile = ((int) $attClockNow->format('G')) >= 12 ? 'sunset.jpg' : 'sunrise2.jpg';
+        $hour = (int) $attClockNow->format('G');
+        if ($hour >= 17) {
+            $wallpaperFile = 'att-hero-dusk.jpg';
+        } elseif ($hour >= 11) {
+            $wallpaperFile = 'att-hero-noon.jpg';
+        } else {
+            $wallpaperFile = 'att-hero-morning.jpg';
+        }
+        $path = '/wallpapers/' . $wallpaperFile . '?v=20261125hd2';
         if (function_exists('app_url')) {
-            return (string) app_url('/wallpapers/' . $wallpaperFile);
+            return (string) app_url($path);
         }
 
-        return '/wallpapers/' . $wallpaperFile;
+        return $path;
     }
 
     private function apiUrl(string $companySlug = ''): string
@@ -245,13 +303,73 @@ final class ClockBoot
     }
 
     /**
-     * @return array{sunrise:string,sunset:string}
+     * @return array{
+     *   morning:string,
+     *   noon:string,
+     *   dusk:string,
+     *   sunrise:string,
+     *   sunset:string,
+     *   slides:list<string>
+     * }
      */
     private function wallpapers(): array
     {
+        // Bust browser cache when HD assets are replaced.
+        $assetVer = '20261125hd2';
+        $url = static function (string $file) use ($assetVer): string {
+            $path = '/wallpapers/' . $file . '?v=' . $assetVer;
+            return function_exists('app_url')
+                ? (string) app_url($path)
+                : $path;
+        };
+
+        $morning = $url('att-hero-morning.jpg');
+        $noon = $url('att-hero-noon.jpg');
+        $dusk = $url('att-hero-dusk.jpg');
+
+        // Daily lock-screen pool — HD 16:9 landscapes only (no soft phone crops).
+        $slideFiles = [
+            'att-hero-morning.jpg',
+            'att-hero-noon.jpg',
+            'att-hero-dusk.jpg',
+            'att-hero-sunburst.jpg',
+            'sunset.jpg',
+            'att-hero-forest.jpg',
+            'att-hero-lake.jpg',
+            'att-hero-desert.jpg',
+            'att-hero-aurora.jpg',
+            'att-hero-city.jpg',
+            'att-hero-ocean.jpg',
+            'att-hero-snow.jpg',
+            'att-hero-fields.jpg',
+            'att-hero-canyon.jpg',
+            'att-hero-fog.jpg',
+            'att-hero-waterfall.jpg',
+            'att-hero-valley.jpg',
+        ];
+        $root = rtrim((string) (function_exists('config') ? (string) config('erp.app_root') : ''), '\\/');
+        if ($root === '') {
+            $root = rtrim((string) ($GLOBALS['ERP_ATTENDANCE_CONTEXT']['app_root'] ?? dirname(__DIR__, 4)), '\\/');
+        }
+        $slides = [];
+        foreach ($slideFiles as $file) {
+            $abs = $root . '/wallpapers/' . $file;
+            if (is_file($abs)) {
+                $slides[] = $url($file);
+            }
+        }
+        if ($slides === []) {
+            $slides = array_values(array_filter([$morning, $noon, $dusk]));
+        }
+
         return [
-            'sunrise' => function_exists('app_url') ? (string) app_url('/wallpapers/sunrise2.jpg') : '/wallpapers/sunrise2.jpg',
-            'sunset' => function_exists('app_url') ? (string) app_url('/wallpapers/sunset.jpg') : '/wallpapers/sunset.jpg',
+            'morning' => $morning,
+            'noon' => $noon,
+            'dusk' => $dusk,
+            // Legacy aliases kept for older clients.
+            'sunrise' => $morning,
+            'sunset' => $dusk,
+            'slides' => $slides,
         ];
     }
 }

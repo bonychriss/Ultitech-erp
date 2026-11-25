@@ -280,6 +280,203 @@ class Attendance {
         }
     }
 
+    /**
+     * Everyone who clocked in today (company-scoped when company_id is available).
+     *
+     * @return list<array{
+     *   id:int,user_id:int,full_name:string,username:string,department:string,
+     *   time_in:?string,time_out:?string,status:string,total_hours:?float,overtime_hours:?float
+     * }>
+     */
+    public function getTodayPresentList(): array
+    {
+        $date = $this->getTodayDateString();
+        try {
+            $t = self::RECORDS_TABLE;
+            $hasCompanyId = function_exists('columnExists') && columnExists('users', 'company_id', $this->pdo);
+            $companyId = function_exists('currentCompanyId') ? (int) currentCompanyId() : 0;
+
+            $where = ['a.`date` = ?'];
+            $params = [$date];
+            if ($hasCompanyId && $companyId > 0) {
+                $where[] = 'u.company_id = ?';
+                $params[] = $companyId;
+            }
+            $whereSql = implode(' AND ', $where);
+
+            $stmt = $this->pdo->prepare("
+                SELECT
+                    a.id,
+                    a.user_id,
+                    a.time_in,
+                    a.time_out,
+                    a.status,
+                    a.total_hours,
+                    a.overtime_hours,
+                    u.full_name,
+                    u.username,
+                    u.department
+                FROM `{$t}` a
+                INNER JOIN users u ON u.id = a.user_id
+                WHERE {$whereSql}
+                ORDER BY
+                    CASE WHEN a.time_out IS NULL OR a.time_out = '' THEN 0 ELSE 1 END ASC,
+                    a.time_in ASC,
+                    COALESCE(NULLIF(TRIM(u.full_name), ''), u.username) ASC
+            ");
+            $stmt->execute($params);
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+            $out = [];
+            foreach ($rows as $row) {
+                $name = trim((string) ($row['full_name'] ?? ''));
+                $username = trim((string) ($row['username'] ?? ''));
+                if ($name === '') {
+                    $name = $username !== '' ? $username : ('User #' . (int) ($row['user_id'] ?? 0));
+                }
+                $out[] = [
+                    'id' => (int) ($row['id'] ?? 0),
+                    'user_id' => (int) ($row['user_id'] ?? 0),
+                    'full_name' => $name,
+                    'username' => $username,
+                    'department' => trim((string) ($row['department'] ?? '')),
+                    'time_in' => $row['time_in'] ?? null,
+                    'time_out' => $row['time_out'] ?? null,
+                    'status' => (string) ($row['status'] ?? ''),
+                    'total_hours' => $row['total_hours'] !== null && $row['total_hours'] !== ''
+                        ? (float) $row['total_hours']
+                        : null,
+                    'overtime_hours' => $row['overtime_hours'] !== null && $row['overtime_hours'] !== ''
+                        ? (float) $row['overtime_hours']
+                        : null,
+                ];
+            }
+            return $out;
+        } catch (Throwable $e) {
+            error_log('Attendance::getTodayPresentList: ' . $e->getMessage());
+            return [];
+        }
+    }
+
+    /**
+     * Company teammates for today's hours leaderboard (includes 0h / not clocked in).
+     *
+     * @return list<array{
+     *   id:int,user_id:int,full_name:string,username:string,department:string,
+     *   time_in:?string,time_out:?string,status:string,total_hours:?float,overtime_hours:?float,
+     *   clocked_in:bool
+     * }>
+     */
+    public function getTeamHoursBoard(?int $viewerUserId = null): array
+    {
+        $date = $this->getTodayDateString();
+        try {
+            $t = self::RECORDS_TABLE;
+            $hasCompanyId = function_exists('columnExists') && columnExists('users', 'company_id', $this->pdo);
+            $hasDepartment = function_exists('columnExists') && columnExists('users', 'department', $this->pdo);
+            $hasActive = function_exists('columnExists') && columnExists('users', 'is_active', $this->pdo);
+            $companyId = function_exists('currentCompanyId') ? (int) currentCompanyId() : 0;
+
+            if ($hasCompanyId && $companyId <= 0 && $viewerUserId) {
+                try {
+                    $stmtCo = $this->pdo->prepare('SELECT company_id FROM users WHERE id = ? LIMIT 1');
+                    $stmtCo->execute([(int) $viewerUserId]);
+                    $companyId = (int) ($stmtCo->fetchColumn() ?: 0);
+                } catch (Throwable $e) {
+                    $companyId = 0;
+                }
+            }
+
+            $hasRole = function_exists('columnExists') && columnExists('users', 'role', $this->pdo);
+            $hasStatus = function_exists('columnExists') && columnExists('users', 'status', $this->pdo);
+            $deptSelect = $hasDepartment ? 'u.department' : "'' AS department";
+            $where = ['1=1'];
+            $bind = [];
+            if ($hasCompanyId && $companyId > 0) {
+                $where[] = 'u.company_id = ?';
+                $bind[] = $companyId;
+            }
+            // Active employees only (drop deactivated / blocked accounts).
+            if ($hasActive) {
+                $where[] = 'COALESCE(u.is_active, 1) = 1';
+            }
+            if ($hasStatus) {
+                $where[] = "LOWER(TRIM(COALESCE(u.status, 'active'))) IN ('active', '')";
+            }
+            // Exclude admin / owner roles from the comparison board.
+            $adminRoles = [
+                'admin', 'administrator', 'superadmin', 'super_admin',
+                'company_admin', 'company admin', 'owner', 'system_admin', 'platform_admin',
+            ];
+            if ($hasRole) {
+                $adminPlaceholders = implode(',', array_fill(0, count($adminRoles), '?'));
+                $where[] = "LOWER(TRIM(COALESCE(u.role, 'employee'))) NOT IN ({$adminPlaceholders})";
+                foreach ($adminRoles as $role) {
+                    $bind[] = $role;
+                }
+            }
+            $whereSql = implode(' AND ', $where);
+
+            $stmt = $this->pdo->prepare("
+                SELECT
+                    u.id AS user_id,
+                    u.full_name,
+                    u.username,
+                    {$deptSelect},
+                    a.id AS record_id,
+                    a.time_in,
+                    a.time_out,
+                    a.status,
+                    a.total_hours,
+                    a.overtime_hours
+                FROM users u
+                LEFT JOIN `{$t}` a
+                    ON a.user_id = u.id
+                    AND a.`date` = ?
+                WHERE {$whereSql}
+                ORDER BY
+                    CASE WHEN a.time_in IS NULL OR a.time_in = '' THEN 1 ELSE 0 END ASC,
+                    COALESCE(a.total_hours, 0) DESC,
+                    a.time_in ASC,
+                    COALESCE(NULLIF(TRIM(u.full_name), ''), u.username) ASC
+            ");
+            $stmt->execute(array_merge([$date], $bind));
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+            $out = [];
+            foreach ($rows as $row) {
+                $name = trim((string) ($row['full_name'] ?? ''));
+                $username = trim((string) ($row['username'] ?? ''));
+                if ($name === '') {
+                    $name = $username !== '' ? $username : ('User #' . (int) ($row['user_id'] ?? 0));
+                }
+                $timeIn = $row['time_in'] ?? null;
+                $clockedIn = $timeIn !== null && trim((string) $timeIn) !== '';
+                $out[] = [
+                    'id' => (int) ($row['record_id'] ?? 0),
+                    'user_id' => (int) ($row['user_id'] ?? 0),
+                    'full_name' => $name,
+                    'username' => $username,
+                    'department' => trim((string) ($row['department'] ?? '')),
+                    'time_in' => $clockedIn ? $timeIn : null,
+                    'time_out' => $row['time_out'] ?? null,
+                    'status' => (string) ($row['status'] ?? ''),
+                    'total_hours' => $row['total_hours'] !== null && $row['total_hours'] !== ''
+                        ? (float) $row['total_hours']
+                        : null,
+                    'overtime_hours' => $row['overtime_hours'] !== null && $row['overtime_hours'] !== ''
+                        ? (float) $row['overtime_hours']
+                        : null,
+                    'clocked_in' => $clockedIn,
+                ];
+            }
+            return $out;
+        } catch (Throwable $e) {
+            error_log('Attendance::getTeamHoursBoard: ' . $e->getMessage());
+            return $this->getTodayPresentList();
+        }
+    }
+
     public function clockIn($userId, $latitude = null, $longitude = null) {
         // 1. IP & Location Check
         $currentIp = $this->getCurrentUserIp();

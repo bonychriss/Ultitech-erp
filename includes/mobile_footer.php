@@ -358,10 +358,10 @@ switch ($active_module) {
         if ($isAdmin) {
             $links = [
                 ['slug' => 'home', 'url' => $modUrl('admin/view-attendance.php?module=attendance'), 'label' => 'Records', 'bi' => 'calendar-check'],
-                ['slug' => 'cart', 'url' => $modUrl('attendance/index.php?module=attendance'), 'label' => 'Clock', 'bi' => 'clock'],
+                ['slug' => 'cart', 'url' => $modUrl('employee/attendance-analytics.php?module=attendance'), 'label' => 'Stats', 'bi' => 'graph-up-arrow'],
                 ['slug' => 'modules', 'url' => $modUrl('select-module.php'), 'label' => 'Modules', 'bi' => 'grid'],
                 ['slug' => 'account', 'url' => $modUrl($accountPath . '?module=attendance'), 'label' => 'Account', 'bi' => $mfBiAccount],
-                ['slug' => 'settings', 'url' => $modUrl('attendance/settings.php?module=attendance'), 'label' => 'Config', 'bi' => 'gear'],
+                ['slug' => 'settings', 'url' => $modUrl('attendance/index.php?module=attendance'), 'label' => 'Clock', 'bi' => 'clock'],
             ];
         } else {
             $links = [
@@ -379,13 +379,13 @@ switch ($active_module) {
         } elseif (strpos($script, 'view-attendance') !== false) {
             $mf_active_slug = 'home';
         } elseif (strpos($script, 'notifications.php') !== false) {
-            $mf_active_slug = $isAdmin ? 'cart' : 'home';
+            $mf_active_slug = 'home';
         } elseif (strpos($script, '/attendance/') !== false) {
-            if (strpos($script, 'settings') !== false) {
+            if (strpos($script, 'settings') !== false && $isAdmin) {
                 $mf_active_slug = 'settings';
             } elseif ($baseName === 'index.php') {
-                // Admin: Clock tab = cart; employee: Clock tab = home
-                $mf_active_slug = $isAdmin ? 'cart' : 'home';
+                // Admin Clock is settings tab; employee Clock is home.
+                $mf_active_slug = $isAdmin ? 'settings' : 'home';
             } else {
                 $mf_active_slug = 'home';
             }

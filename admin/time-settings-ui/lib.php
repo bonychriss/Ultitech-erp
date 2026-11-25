@@ -171,6 +171,7 @@ function timeSettingsUiGetPayload(PDO $pdo): array
         'latitude' => null,
         'longitude' => null,
         'radius_meters' => 100,
+        'biometric_required' => true,
     ];
     $currentIp = (string) ($_SERVER['REMOTE_ADDR'] ?? '');
     if (is_file($attendanceLib)) {
@@ -213,6 +214,10 @@ function timeSettingsUiGetPayload(PDO $pdo): array
             'latitude' => $att['latitude'] ?? null,
             'longitude' => $att['longitude'] ?? null,
             'radiusMeters' => (int) ($att['radius_meters'] ?? 100),
+            // Toggle only — enrolled credentials are kept when this is off.
+            'biometricRequired' => array_key_exists('biometric_required', $att)
+                ? !empty($att['biometric_required'])
+                : true,
         ],
         'links' => [
             'backUrl' => $backUrl,
@@ -272,6 +277,22 @@ function timeSettingsUiSavePayload(PDO $pdo, array $input): array
             if (!is_array($officeIps)) {
                 $officeIps = [trim((string) $officeIps)];
             }
+            $biometricRequired = true;
+            if (array_key_exists('biometricRequired', $input) || array_key_exists('biometric_required', $input)) {
+                $biometricRequired = !empty($input['biometricRequired'] ?? $input['biometric_required']);
+            } else {
+                // Preserve existing flag if this form did not send it.
+                try {
+                    $existing = attendanceSettingsFetchPayload($pdo);
+                    if (is_array($existing['settings'] ?? null)
+                        && array_key_exists('biometric_required', $existing['settings'])
+                    ) {
+                        $biometricRequired = !empty($existing['settings']['biometric_required']);
+                    }
+                } catch (Throwable $e) {
+                    $biometricRequired = true;
+                }
+            }
             attendanceSettingsSave($pdo, [
                 'start_time' => (string) ($input['startTime'] ?? $input['start_time'] ?? '09:00'),
                 'end_time' => (string) ($input['endTime'] ?? $input['end_time'] ?? '17:00'),
@@ -281,6 +302,7 @@ function timeSettingsUiSavePayload(PDO $pdo, array $input): array
                 'latitude' => $input['latitude'] ?? null,
                 'longitude' => $input['longitude'] ?? null,
                 'radius_meters' => (int) ($input['radiusMeters'] ?? $input['radius_meters'] ?? 100),
+                'biometric_required' => $biometricRequired ? 1 : 0,
             ]);
         }
     }

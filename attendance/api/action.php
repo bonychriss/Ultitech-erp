@@ -124,6 +124,8 @@ function attendance_desk_payload(Attendance $attendance, PDO $pdo, int $userId, 
     }
     return [
         'todayRecord' => $attendance->getTodayRecord($userId) ?: null,
+        'todayPresent' => $attendance->getTodayPresentList(),
+        'teamBoard' => $attendance->getTeamHoursBoard($userId),
         'history' => $attendance->getHistory($userId, $month) ?: [],
         'historyMonth' => $month,
         'historyMonthLabel' => $attendance->formatHistoryMonthLabel($month),
@@ -278,7 +280,7 @@ if ($action === 'clock_in') {
             'success' => false,
             'message' => (string) ($bioCheck['message'] ?? 'Biometric verification required.'),
             'data' => attendance_desk_payload($attendance, $pdo, $userId, $historyMonth, $webauthn),
-            'biometricRequired' => true,
+            'biometricRequired' => $webauthn->isBiometricRequired(),
         ]);
         exit;
     }
@@ -343,7 +345,7 @@ if ($action === 'clock_out') {
             'success' => false,
             'message' => (string) ($bioCheck['message'] ?? 'Biometric verification required.'),
             'data' => attendance_desk_payload($attendance, $pdo, $userId, $historyMonth, $webauthn),
-            'biometricRequired' => true,
+            'biometricRequired' => $webauthn->isBiometricRequired(),
         ]);
         exit;
     }

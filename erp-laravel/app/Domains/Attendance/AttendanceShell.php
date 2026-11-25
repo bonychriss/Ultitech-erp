@@ -71,7 +71,7 @@ final class AttendanceShell
         }
 
         $headMarkup = $this->commonHeadExtras()
-            . '<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">' . "\n"
+            . '<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">' . "\n"
             . '<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">' . "\n"
             . '<link rel="stylesheet" crossorigin href="' . htmlspecialchars($cssUrl, ENT_QUOTES, 'UTF-8') . '">' . "\n"
             . $this->deskChromeCss($wallpaperUrl) . "\n"
@@ -88,6 +88,7 @@ final class AttendanceShell
             'footerScripts' => $footerScripts,
             'employeeHeaderTitle' => $headerTitle,
             'hideHeaderCompanyBranding' => true,
+            'hideErpBreadcrumbs' => $page === 'clock',
             'employeeHeaderExtraClass' => 'employee-header--products-desk',
             'mainRootClass' => 'att-react-root',
         ];
@@ -315,15 +316,36 @@ html[data-theme="dark"] body.page-attendance-analytics .att-shell {
 html[data-theme="dark"] body.page-attendance-analytics .att-shell.att-page-analytics {
     background: transparent !important;
 }
+/* Pro hero cover: photo on .clock-card-v2-photo, dark overlay in attendance-ui.css */
 body.page-attendance-desk .clock-card-v2 {
-    background-color: #1c1917 !important;
-    background-image:
-        linear-gradient(160deg, rgba(15, 23, 42, 0.55) 0%, rgba(15, 23, 42, 0.28) 45%, rgba(28, 25, 23, 0.45) 100%),
-        url('{$wp}') !important;
+    --att-clock-photo: url('{$wp}');
+    background-color: #0f172a !important;
+    background-image: none !important;
+    box-shadow: 0 14px 36px rgba(15, 23, 42, 0.22) !important;
+}
+body.page-attendance-desk .clock-card-v2-photo {
+    background-image: var(--att-clock-photo) !important;
     background-position: center center !important;
     background-size: cover !important;
     background-repeat: no-repeat !important;
-    box-shadow: 0 14px 36px rgba(15, 23, 42, 0.28) !important;
+}
+@media (min-width: 768px) {
+    /* Lead with the cover banner — drop duplicate page title block */
+    body.page-attendance-desk:not(.page-attendance-analytics) .employee-header--products-desk .employee-header-page-title,
+    body.page-attendance-desk:not(.page-attendance-analytics) .employee-header--products-desk .employee-header-page-heading,
+    body.page-attendance-desk:not(.page-attendance-analytics) .erp-auto-breadcrumb,
+    body.page-attendance-desk:not(.page-attendance-analytics) .att-page-clock .att-top-bar {
+        display: none !important;
+    }
+    body.page-attendance-desk:not(.page-attendance-analytics) .employee-header.employee-header--products-desk .header-content {
+        padding: 0.35rem 0 !important;
+    }
+    body.page-attendance-desk:not(.page-attendance-analytics) main.main-content.att-react-root {
+        padding-top: 0.35rem !important;
+    }
+    body.page-attendance-desk:not(.page-attendance-analytics) .att-shell.att-page-clock {
+        padding-top: 0 !important;
+    }
 }
 </style>
 CSS;

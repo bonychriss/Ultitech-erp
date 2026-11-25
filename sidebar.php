@@ -89,6 +89,8 @@ if (strpos($script_name, '/dispatch/') !== false) {
 }
 if (strpos(str_replace('\\', '/', $script_name), '/attendance/') !== false
     || stripos($script_name . ($_SERVER['REQUEST_URI'] ?? ''), 'view-attendance') !== false
+    || stripos($script_name . ($_SERVER['REQUEST_URI'] ?? ''), 'attendance-analytics') !== false
+    || stripos($script_name . ($_SERVER['REQUEST_URI'] ?? ''), 'attendance-overtime') !== false
 ) {
     $attPath = str_replace('\\', '/', $script_name . ($_SERVER['REQUEST_URI'] ?? ''));
     if (strpos($attPath, '/attendance/settings.php') !== false && (($_GET['module'] ?? '') === 'settings')) {
@@ -784,6 +786,8 @@ switch ($active_module) {
         if ($is_admin) {
             addItem($menuItems, 'ai_assistant', 'AI Assistant', 'stars', $prefix . 'admin/ai_assistant.php?module=attendance');
             addItem($menuItems, 'view', 'View Records', 'calendar-check', $prefix . 'admin/view-attendance.php?module=attendance');
+            addItem($menuItems, 'stats', 'Stats', 'graph-up-arrow', $prefix . 'employee/attendance-analytics.php?module=attendance');
+            addItem($menuItems, 'overtime', 'Overtime', 'stopwatch', $prefix . 'employee/attendance-overtime.php?module=attendance');
             $attSettingsHref = function_exists('company_url')
                 ? company_url('admin/time-settings.php', $currentSlug !== '' ? $currentSlug : null)
                 : ($prefix . 'admin/time-settings.php');

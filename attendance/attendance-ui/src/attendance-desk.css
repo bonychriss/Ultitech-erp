@@ -34,6 +34,17 @@
         justify-content: space-between;
         margin-bottom: 32px;
     }
+    @media (min-width: 768px) {
+        .att-page-clock .att-top-bar {
+            display: none;
+        }
+        .att-page-clock .att-main {
+            padding-top: 0;
+        }
+        .att-shell.att-page-clock {
+            padding-top: 0;
+        }
+    }
     .att-title-wrap h1 {
         font-size: 24px;
         font-weight: 400;
@@ -69,7 +80,7 @@
         margin-bottom: 32px;
     }
 
-    /* Cards Layout — single column by default; desktop clock page gets side panel */
+    /* Cards Layout — profile-style single column (hero full width, content below) */
     .att-grid {
         display: grid;
         grid-template-columns: minmax(0, 1fr);
@@ -85,81 +96,358 @@
         width: 100%;
         box-sizing: border-box;
     }
-    @media (min-width: 1201px) {
-        .att-page-clock .att-grid {
-            grid-template-columns: minmax(280px, 350px) minmax(0, 1fr);
+    .att-page-clock .att-col-left {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+    .att-page-clock .att-col-left .clock-card-v2 {
+        margin-bottom: 0;
+    }
+
+    /* Pro hero banner: large time + name + tagline + date/status meta */
+    .clock-card-v2 {
+        --att-clock-photo: none;
+        position: relative;
+        isolation: isolate;
+        overflow: hidden;
+        border-radius: 1.1rem;
+        min-height: 168px;
+        margin-bottom: 24px;
+        padding: 0;
+        color: #fff;
+        text-align: left;
+        background: #0f172a;
+        box-shadow: 0 14px 36px rgba(15, 23, 42, 0.22);
+        border: 0;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+    }
+    .clock-card-v2--time-only,
+    .clock-card-v2--photo-hero {
+        min-height: 210px;
+        aspect-ratio: 16 / 9;
+        max-height: 280px;
+        justify-content: flex-end;
+    }
+    .clock-card-v2-photo {
+        position: absolute;
+        inset: 0;
+        z-index: 0;
+        width: 100%;
+        height: 100%;
+        background-image: var(--att-clock-photo);
+        background-position: center 42%;
+        background-size: cover;
+        background-repeat: no-repeat;
+        background-color: #1e293b;
+        transform: scale(1.01);
+        transform-origin: center center;
+        image-rendering: auto;
+        border-radius: inherit;
+    }
+    .clock-card-v2-fade {
+        position: absolute;
+        inset: 0;
+        z-index: 1;
+        pointer-events: none;
+        border-radius: inherit;
+        background:
+            linear-gradient(
+                180deg,
+                rgba(15, 23, 42, 0.18) 0%,
+                rgba(15, 23, 42, 0.28) 42%,
+                rgba(15, 23, 42, 0.62) 100%
+            ),
+            linear-gradient(
+                90deg,
+                rgba(15, 23, 42, 0.42) 0%,
+                rgba(15, 23, 42, 0.12) 55%,
+                rgba(15, 23, 42, 0.05) 100%
+            );
+    }
+    .clock-card-v2-inner {
+        position: relative;
+        z-index: 2;
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 1rem;
+        width: 100%;
+        margin-top: auto;
+        padding: 1.15rem 1.15rem;
+        box-sizing: border-box;
+    }
+    .clock-card-v2-identity {
+        display: flex;
+        align-items: center;
+        gap: 0.95rem;
+        min-width: 0;
+        flex: 1 1 auto;
+    }
+    .clock-card-v2-copy {
+        min-width: 0;
+        width: 100%;
+    }
+    .clock-card-v2-time-row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: 0.45rem 0.65rem;
+        margin: 0 0 0.35rem;
+    }
+    .clock-card-v2-time {
+        margin: 0;
+        font-family: 'Space Grotesk', 'Outfit', ui-sans-serif, sans-serif;
+        font-size: clamp(2.45rem, 5.8vw, 3.5rem);
+        font-weight: 500;
+        letter-spacing: -0.045em;
+        line-height: 1;
+        color: #fff;
+        font-variant-numeric: tabular-nums;
+        text-shadow: 0 2px 16px rgba(0, 0, 0, 0.35);
+    }
+    .clock-card-v2-seconds {
+        font-family: inherit;
+        font-weight: 400;
+        opacity: 0.88;
+    }
+    .clock-card-v2-date {
+        font-family: 'Manrope', 'Outfit', ui-sans-serif, sans-serif;
+        font-weight: 500;
+        letter-spacing: 0.01em;
+    }
+    .clock-card-v2-weather {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        font-family: 'Manrope', 'Outfit', ui-sans-serif, sans-serif;
+        font-weight: 500;
+        color: rgba(255, 255, 255, 0.88);
+    }
+    .clock-card-v2-temp {
+        font-variant-numeric: tabular-nums;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+    }
+    .clock-card-v2-weather-label {
+        opacity: 0.9;
+    }
+    @media (max-width: 575.98px) {
+        .clock-card-v2-weather-label {
+            display: none;
+        }
+    }
+    .clock-card-v2-period {
+        font-size: 0.78rem;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        color: #7dd3fc;
+        align-self: flex-start;
+        margin-top: 0.35rem;
+    }
+    .clock-card-v2-fmt {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.12rem;
+        margin-left: 0.15rem;
+        padding: 0.12rem;
+        border-radius: 0.45rem;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        background: rgba(255, 255, 255, 0.08);
+        align-self: center;
+    }
+    .clock-card-v2-fmt button {
+        appearance: none;
+        border: 0;
+        background: transparent;
+        color: rgba(226, 232, 240, 0.88);
+        font-size: 0.62rem;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+        padding: 0.18rem 0.4rem;
+        border-radius: 0.3rem;
+        cursor: pointer;
+        line-height: 1.2;
+    }
+    .clock-card-v2-fmt button.is-active {
+        background: #fff;
+        color: #0f172a;
+    }
+    .clock-card-v2-name {
+        margin: 0;
+        font-size: 1.05rem;
+        font-weight: 650;
+        letter-spacing: -0.015em;
+        color: #fff;
+        line-height: 1.25;
+        text-shadow: 0 1px 8px rgba(0, 0, 0, 0.25);
+    }
+    .clock-card-v2-tagline {
+        margin: 0.2rem 0 0;
+        font-size: 0.86rem;
+        font-weight: 450;
+        color: rgba(255, 255, 255, 0.84);
+        letter-spacing: -0.01em;
+        line-height: 1.35;
+    }
+    .clock-card-v2-meta {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.45rem 0.7rem;
+        margin-top: 0.55rem;
+        font-size: 0.78rem;
+        color: rgba(255, 255, 255, 0.78);
+    }
+    .clock-card-v2-meta > span {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+    }
+    .clock-card-v2-meta i {
+        width: 0.9rem;
+        text-align: center;
+        opacity: 0.95;
+    }
+    .clock-card-v2-meta-sep {
+        width: 1px;
+        height: 0.85rem;
+        background: rgba(255, 255, 255, 0.28);
+        flex-shrink: 0;
+    }
+    .clock-card-v2-status {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+    }
+    .clock-card-v2-status-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: #94a3b8;
+        display: inline-block;
+        flex-shrink: 0;
+    }
+    .clock-card-v2-status.is-online .clock-card-v2-status-dot {
+        background: #22c55e;
+        box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.22);
+    }
+    .clock-card-v2-status.is-out .clock-card-v2-status-dot { background: #fb923c; }
+    .clock-card-v2-status.is-standby .clock-card-v2-status-dot { background: #94a3b8; }
+    .clock-card-v2-elapsed-inline {
+        opacity: 0.9;
+        font-variant-numeric: tabular-nums;
+    }
+    .clock-card-v2-side {
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: stretch;
+        gap: 0.65rem;
+    }
+    .att-page-clock .att-clock-actions--below-card {
+        margin-top: 0.45rem;
+        margin-bottom: 0.25rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.55rem;
+        width: 100%;
+    }
+    .att-page-clock .att-clock-actions--below-card .att-glass-btn,
+    .att-page-clock .att-clock-actions--below-card .att-btn-clock-out {
+        width: auto;
+        min-width: 11.5rem;
+        max-width: 100%;
+        min-height: 2.75rem;
+        padding: 0.7rem 1.85rem !important;
+        white-space: nowrap;
+        font-weight: 650;
+        font-size: 0.95rem;
+        letter-spacing: -0.01em;
+        border-radius: 999px !important;
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+    }
+    .att-page-clock .att-clock-actions--below-card .att-glass-btn {
+        color: #0f172a;
+        background: #fff;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
+    }
+    .att-page-clock .att-clock-actions--below-card .att-glass-btn:hover {
+        background: #f8fafc;
+        color: #0f172a;
+        border-color: #cbd5e1;
+    }
+    .att-page-clock .att-clock-actions--below-card .att-btn-clock-out {
+        color: #fff;
+        background: #0f172a;
+        border: 1px solid #0f172a;
+        box-shadow: 0 6px 16px rgba(15, 23, 42, 0.16);
+    }
+    .att-page-clock .att-clock-actions--below-card .att-glass-btn--muted {
+        color: #64748b;
+        background: #f1f5f9;
+        border-color: #e2e8f0;
+        font-weight: 550;
+        box-shadow: none;
+    }
+    html[data-theme="dark"] .att-page-clock .att-clock-actions--below-card .att-glass-btn {
+        color: #e2e8f0;
+        background: #1e293b;
+        border-color: #334155;
+    }
+    html[data-theme="dark"] .att-page-clock .att-clock-actions--below-card .att-btn-clock-out {
+        background: #e2e8f0;
+        border-color: #e2e8f0;
+        color: #0f172a;
+    }
+    html[data-theme="dark"] .att-page-clock .att-clock-actions--below-card .att-glass-btn--muted {
+        color: #94a3b8;
+        background: #0f172a;
+        border-color: #1e293b;
+    }
+    .att-page-clock .clock-card-v2 .att-alert {
+        margin-top: 0.75rem;
+        text-align: left;
+        color: #fff7ed;
+        background: rgba(154, 52, 18, 0.42);
+        border: 1px solid rgba(253, 186, 116, 0.4);
+        backdrop-filter: blur(8px);
+    }
+    @media (min-width: 900px) {
+        .att-page-clock .clock-card-v2 { min-height: 156px; }
+        .att-page-clock .clock-card-v2-inner {
+            flex-direction: row;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem 1.75rem;
+            padding: 1.25rem 1.45rem;
+        }
+        .att-page-clock .clock-card-v2-time {
+            font-size: clamp(2.75rem, 4.2vw, 3.6rem);
+        }
+        .att-page-clock .clock-card-v2-name { font-size: 1.12rem; }
+        .att-page-clock .clock-card-v2-tagline { font-size: 0.9rem; }
+        .att-page-clock .clock-card-v2-side {
+            flex: 0 1 auto;
+            align-items: flex-end;
+            max-width: 320px;
         }
     }
 
-    .clock-card-v2 {
-        background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-        border-radius: 20px;
-        padding: 32px;
-        color: #fff;
-        text-align: center;
-        box-shadow: 0 10px 30px rgba(99, 102, 241, 0.2);
-        margin-bottom: 24px;
-        overflow: hidden;
-        position: relative;
-        isolation: isolate;
-    }
-    .v2-date {
-        font-size: 11px;
-        font-weight: 400;
-        font-family: var(--erp-font-family, inherit);
-        text-transform: uppercase;
-        letter-spacing: 0.1em;
-        opacity: 0.9;
-        margin-bottom: 20px;
-        text-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
-    }
-    .v2-time {
-        font-size: 48px;
-        font-weight: 400;
-        font-family: var(--erp-font-family, inherit);
-        letter-spacing: -1px;
-        margin-bottom: 20px;
-        text-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
-    }
+    .v2-date,
     .v2-status-pill {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        padding: 6px 14px;
-        background: rgba(15, 23, 42, 0.35);
-        border: 1px solid rgba(255, 255, 255, 0.28);
-        border-radius: 20px;
-        font-size: 11px;
-        font-weight: 400;
-        font-family: var(--erp-font-family, inherit);
-        backdrop-filter: blur(6px);
-        -webkit-backdrop-filter: blur(6px);
+        display: none;
     }
 
-    .sig-card {
-        background: #fff;
-        border-radius: 20px;
-        padding: 24px;
-        text-align: center;
-        box-shadow: var(--dash-card-shadow);
-        border: 1px solid #f1f5f9;
-        font-family: var(--erp-font-family, inherit);
-    }
-    .sig-label {
-        font-size: 12px;
-        font-weight: 400;
-        font-family: var(--erp-font-family, inherit);
-        color: #1e293b;
-        margin-bottom: 16px;
-    }
-    .sig-box {
-        border: 1px dashed #e2e8f0;
-        border-radius: 12px;
-        height: 120px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
+    .sig-card { display: none; }
+    .sig-label,
+    .sig-box { display: none; }
 
     .att-bio-card {
         margin-top: 16px;
@@ -786,9 +1074,6 @@
         .att-page-clock .att-sub-info {
             display: none !important;
         }
-        .att-page-clock .att-col-right {
-            display: none;
-        }
         .att-grid {
             display: flex !important;
             flex-direction: column;
@@ -797,7 +1082,8 @@
             max-width: 100% !important;
             grid-template-columns: none !important;
         }
-        .att-col-left {
+        .att-col-left,
+        .att-page-clock .att-col-right {
             display: flex;
             flex-direction: column;
             gap: 12px;
@@ -807,31 +1093,50 @@
             flex: 1 1 auto;
         }
         .clock-card-v2 {
-            padding: 22px 16px 18px;
-            border-radius: 20px;
+            min-height: 180px;
             margin-bottom: 0;
-            box-shadow: 0 12px 32px rgba(99, 102, 241, 0.28);
+            border-radius: 18px;
+            text-align: left;
+            box-shadow: 0 12px 28px rgba(15, 23, 42, 0.22);
             width: 100% !important;
             max-width: 100% !important;
             box-sizing: border-box;
             overflow: hidden;
         }
-        .v2-date {
-            font-size: 10px;
-            margin-bottom: 10px;
+        .clock-card-v2--time-only,
+        .clock-card-v2--photo-hero {
+            min-height: 200px;
+            aspect-ratio: 16 / 10;
+            max-height: 260px;
         }
-        .v2-time {
-            font-size: 2.45rem;
-            margin-bottom: 12px;
-            letter-spacing: -0.5px;
+        .clock-card-v2-inner {
+            padding: 1.05rem 1rem 1.1rem;
+            gap: 0.85rem;
         }
-        .v2-status-pill {
-            font-size: 10px;
-            padding: 5px 12px;
-            margin-bottom: 0;
+        .clock-card-v2-photo {
+            background-position: center 40%;
+        }
+        .clock-card-v2-identity {
+            align-items: center;
+        }
+        .clock-card-v2-time {
+            font-size: 2.35rem;
+        }
+        .clock-card-v2-name {
+            font-size: 1.15rem;
+        }
+        .clock-card-v2-tagline {
+            font-size: 0.95rem;
+        }
+        .clock-card-v2-meta {
+            font-size: 0.74rem;
+            gap: 0.35rem 0.75rem;
+        }
+        .clock-card-v2-side {
+            width: 100%;
         }
         .att-alert {
-            margin-top: 16px;
+            margin-top: 12px;
             padding: 12px;
             font-size: 11px;
             text-align: left;
@@ -860,6 +1165,18 @@
             border-radius: 12px;
             margin-top: 1.4rem;
         }
+        .att-clock-actions--below-card {
+            margin-top: 0.45rem;
+            margin-bottom: 0.35rem;
+        }
+        .att-page-clock .att-clock-actions--below-card .att-glass-btn,
+        .att-page-clock .att-clock-actions--below-card .att-btn-clock-out {
+            width: auto;
+            min-width: 12rem;
+            min-height: 2.85rem;
+            padding: 0.75rem 2rem !important;
+            border-radius: 999px !important;
+        }
         .att-clock-actions {
             margin-top: 1.15rem;
         }
@@ -868,31 +1185,9 @@
             width: 100%;
             min-height: 48px;
         }
-        .sig-card {
-            display: flex;
-            align-items: center;
-            gap: 14px;
-            width: 100%;
-            margin: 0;
-            padding: 14px 16px;
-            border-radius: 16px;
-            text-align: left;
-            box-sizing: border-box;
-        }
-        .sig-label {
-            margin-bottom: 0;
-            flex: 0 0 auto;
-            font-size: 12px;
-            max-width: 5.75rem;
-            line-height: 1.3;
-            color: #334155;
-            font-weight: 600;
-        }
-        .sig-box {
-            flex: 1;
-            height: 68px;
-            min-width: 0;
-            background: #fafafa;
+        .att-page-clock .att-clock-actions--below-card .att-glass-btn,
+        .att-page-clock .att-clock-actions--below-card .att-btn-clock-out {
+            width: auto;
         }
         .att-kpi-row {
             --bs-gutter-x: 10px;
@@ -950,6 +1245,11 @@
             padding: 14px 16px;
             font-size: 0.875rem;
             border-radius: 12px;
+        }
+        .att-page-clock .att-clock-actions--below-card .att-glass-btn,
+        .att-page-clock .att-clock-actions--below-card .att-btn-clock-out {
+            padding: 0.75rem 2rem !important;
+            border-radius: 999px !important;
         }
     }
 

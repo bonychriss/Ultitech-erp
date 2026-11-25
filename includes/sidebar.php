@@ -27,6 +27,8 @@ if (stripos($path_to_check, '/attendance/') !== false
     || stripos($path_to_check, 'view-attendance') !== false
     || stripos($path_to_check, 'attendance/settings') !== false
     || stripos($path_to_check, 'export-attendance') !== false
+    || stripos($path_to_check, 'attendance-analytics') !== false
+    || stripos($path_to_check, 'attendance-overtime') !== false
 ) {
     $active_module = 'attendance';
 }
@@ -393,6 +395,8 @@ switch ($active_module) {
 
     case 'attendance':
         addItem($menuItems, 'clock', 'Clock In/Out', 'clipboard', $attClockHref);
+        addItem($menuItems, 'stats', 'Stats', 'chart-bar', $prefix . 'employee/attendance-analytics.php?module=attendance');
+        addItem($menuItems, 'overtime', 'Overtime', 'clock', $prefix . 'employee/attendance-overtime.php?module=attendance');
         if ($is_admin) {
             $attSettingsHref = function_exists('company_url')
                 ? company_url('attendance/settings.php')

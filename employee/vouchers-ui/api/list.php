@@ -92,7 +92,7 @@ try {
         } elseif ($status_filter === 'draft') {
             $where_conditions[] = "(LOWER(COALESCE(pv.status,'')) = 'draft' OR IFNULL(pv.is_draft,0) = 1 OR (pv.status IN ('pending', 'confirming') AND (COALESCE(pv.payee_name,'') = '' OR COALESCE(pv.payee_name,'') = '(Draft)' OR COALESCE(pv.total_amount,0) <= 0 OR NOT EXISTS(SELECT 1 FROM voucher_items vi WHERE vi.voucher_id = pv.id))))";
         } elseif ($status_filter === 'pending') {
-            $where_conditions[] = "pv.status IN ('pending', 'confirming') AND IFNULL(pv.is_draft,0) = 0 AND NOT (COALESCE(pv.payee_name,'') = '' OR COALESCE(pv.payee_name,'') = '(Draft)' OR COALESCE(pv.total_amount,0) <= 0 OR NOT EXISTS(SELECT 1 FROM voucher_items vi WHERE vi.voucher_id = pv.id))";
+            $where_conditions[] = "pv.status IN ('pending', 'confirming') AND IFNULL(pv.is_draft,0) = 0 AND IFNULL(pv.is_paid, 0) = 0 AND IFNULL(pv.is_posted, 0) = 0 AND NOT (COALESCE(pv.payee_name,'') = '' OR COALESCE(pv.payee_name,'') = '(Draft)' OR COALESCE(pv.total_amount,0) <= 0 OR NOT EXISTS(SELECT 1 FROM voucher_items vi WHERE vi.voucher_id = pv.id))";
         } elseif ($status_filter === 'approved') {
             $where_conditions[] = "pv.status = 'approved' AND IFNULL(pv.is_paid, 0) = 0 AND IFNULL(pv.is_posted, 0) = 0";
         } else {

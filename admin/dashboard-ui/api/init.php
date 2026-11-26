@@ -70,11 +70,11 @@ try {
 
     $stmt = $pdo->prepare("SELECT
             COUNT(*) AS total,
-            SUM(CASE WHEN pv.status='pending' AND NOT (
+            SUM(CASE WHEN pv.status='pending' AND IFNULL(pv.is_paid,0) = 0 AND IFNULL(pv.is_posted,0) = 0 AND NOT (
                 COALESCE(pv.payee_name,'') = '' OR COALESCE(pv.total_amount,0) <= 0 OR
                 NOT EXISTS(SELECT 1 FROM voucher_items vi WHERE vi.voucher_id = pv.id)
             ) THEN 1 ELSE 0 END) AS pending,
-            SUM(CASE WHEN pv.status='confirming' AND NOT (
+            SUM(CASE WHEN pv.status='confirming' AND IFNULL(pv.is_paid,0) = 0 AND IFNULL(pv.is_posted,0) = 0 AND NOT (
                 COALESCE(pv.payee_name,'') = '' OR COALESCE(pv.total_amount,0) <= 0 OR
                 NOT EXISTS(SELECT 1 FROM voucher_items vi WHERE vi.voucher_id = pv.id)
             ) THEN 1 ELSE 0 END) AS confirming,
@@ -93,9 +93,8 @@ try {
     $stmt->execute(array_merge($companyParams, $privateDraftParams));
     $statsRow = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
 
-    // Credit / payables work queue:
-    // - lines marked Credit/payable, OR
-    // - approved vouchers not yet paid (supplier credit / pay later in practice).
+    // Credit work queue: unpaid, unposted PVs with a credit/payable line item.
+    // Paid credit vouchers are excluded here so they count as normal paid PVs.
     $creditCount = 0;
     $creditUnpaid = 0;
     $creditAmountTzs = 0.0;
@@ -104,55 +103,37 @@ try {
     $creditUnpaidAmountUsd = 0.0;
     try {
         $creditWhere = ($companySql !== '' ? $companySql : ' WHERE 1=1') . $privateDraftSql
-            . " AND (
-                (
-                    LOWER(TRIM(pv.status)) = 'approved'
-                    AND IFNULL(pv.is_paid, 0) = 0
-                    AND IFNULL(pv.is_posted, 0) = 0
-                )
-                OR EXISTS (
+            . " AND IFNULL(pv.is_paid, 0) = 0
+                AND IFNULL(pv.is_posted, 0) = 0
+                AND EXISTS (
                     SELECT 1 FROM voucher_items vi
                     WHERE vi.voucher_id = pv.id
                       AND (
                         LOWER(vi.payment_type) LIKE '%credit%'
                         OR LOWER(vi.payment_type) LIKE '%payable%'
                       )
-                )
-            )";
+                )";
         $creditStmt = $pdo->prepare(
             'SELECT
-                COUNT(DISTINCT pv.id) AS credit_total,
-                COUNT(DISTINCT CASE
-                    WHEN IFNULL(pv.is_paid, 0) = 0 AND IFNULL(pv.is_posted, 0) = 0 THEN pv.id
-                END) AS credit_unpaid,
+                COUNT(DISTINCT pv.id) AS credit_unpaid,
                 COALESCE(SUM(CASE
                     WHEN UPPER(TRIM(IFNULL(pv.currency, \'TZS\'))) = \'USD\' THEN 0
                     ELSE pv.total_amount
-                END), 0) AS credit_amount_tzs,
+                END), 0) AS credit_unpaid_amount_tzs,
                 COALESCE(SUM(CASE
                     WHEN UPPER(TRIM(IFNULL(pv.currency, \'TZS\'))) = \'USD\' THEN pv.total_amount
                     ELSE 0
-                END), 0) AS credit_amount_usd,
-                COALESCE(SUM(CASE
-                    WHEN IFNULL(pv.is_paid, 0) = 0 AND IFNULL(pv.is_posted, 0) = 0
-                         AND UPPER(TRIM(IFNULL(pv.currency, \'TZS\'))) <> \'USD\'
-                    THEN pv.total_amount ELSE 0
-                END), 0) AS credit_unpaid_amount_tzs,
-                COALESCE(SUM(CASE
-                    WHEN IFNULL(pv.is_paid, 0) = 0 AND IFNULL(pv.is_posted, 0) = 0
-                         AND UPPER(TRIM(IFNULL(pv.currency, \'TZS\'))) = \'USD\'
-                    THEN pv.total_amount ELSE 0
                 END), 0) AS credit_unpaid_amount_usd
              FROM payment_vouchers pv' . $creditWhere
         );
         $creditStmt->execute(array_merge($companyParams, $privateDraftParams));
         $creditRow = $creditStmt->fetch(PDO::FETCH_ASSOC) ?: [];
-        $creditCount = (int) ($creditRow['credit_total'] ?? 0);
         $creditUnpaid = (int) ($creditRow['credit_unpaid'] ?? 0);
-        $creditAmountTzs = (float) ($creditRow['credit_amount_tzs'] ?? 0);
-        $creditAmountUsd = (float) ($creditRow['credit_amount_usd'] ?? 0);
-        $creditUnpaidAmountTzs = (float) ($creditRow['credit_unpaid_amount_tzs'] ?? 0);
-        $creditUnpaidAmountUsd = (float) ($creditRow['credit_unpaid_amount_usd'] ?? 0);
+        $creditCount = $creditUnpaid;
+        $creditAmountTzs = (float) ($creditRow['credit_unpaid_amount_tzs'] ?? 0);
+        $creditAmountUsd = (float) ($creditRow['credit_unpaid_amount_usd'] ?? 0);
+        $creditUnpaidAmountTzs = $creditAmountTzs;
+        $creditUnpaidAmountUsd = $creditAmountUsd;
     } catch (Throwable $e) {
         $creditCount = 0;
         $creditUnpaid = 0;
@@ -212,7 +193,7 @@ try {
         : 'ORDER BY pv.id DESC';
 
     $sql = "SELECT pv.id, pv.voucher_no, pv.payee_name, pv.total_amount, pv.status,
-                pv.date_created, pv.currency, pv.created_at, pv.prepared_by, pv.description,
+                pv.date_created, pv.due_date, pv.currency, pv.created_at, pv.prepared_by, pv.description,
                 pv.created_by,
                 IFNULL(pv.is_paid,0) AS is_paid,
                 IFNULL(pv.is_posted,0) AS is_posted,
@@ -226,18 +207,15 @@ try {
                     ORDER BY vi.id ASC LIMIT 1
                 ) AS item_payment_type,
                 (
-                    EXISTS (
+                    IFNULL(pv.is_paid, 0) = 0
+                    AND IFNULL(pv.is_posted, 0) = 0
+                    AND EXISTS (
                         SELECT 1 FROM voucher_items vi
                         WHERE vi.voucher_id = pv.id
                           AND (
                             LOWER(vi.payment_type) LIKE '%credit%'
                             OR LOWER(vi.payment_type) LIKE '%payable%'
                           )
-                    )
-                    OR (
-                        LOWER(TRIM(pv.status)) = 'approved'
-                        AND IFNULL(pv.is_paid, 0) = 0
-                        AND IFNULL(pv.is_posted, 0) = 0
                     )
                 ) AS is_credit,
                 $attachmentCountSql
@@ -350,6 +328,7 @@ try {
             'total_amount' => (float) ($v['total_amount'] ?? 0),
             'currency' => (string) ($v['currency'] ?? ''),
             'date_created' => (string) ($v['date_created'] ?? ''),
+            'due_date' => (string) ($v['due_date'] ?? ''),
             'created_at' => (string) ($v['created_at'] ?? ''),
             'can_view' => true,
             'can_edit' => true,

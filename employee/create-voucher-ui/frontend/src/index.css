@@ -153,12 +153,12 @@
   align-items: center;
 }
 .cv-row--top { align-items: start; }
-.cv-row--split {
+.cv-row.cv-row--split {
   grid-template-columns: 1fr 1fr;
   gap: 16px 24px;
   align-items: start;
 }
-.cv-row--split-3 {
+.cv-row.cv-row--split-3 {
   grid-template-columns: 1fr 1fr 1fr;
 }
 .cv-split-col {
@@ -169,11 +169,11 @@
 }
 .cv-split-col .cv-label { padding: 0; }
 @media (max-width: 900px) {
-  .cv-row--split-3 { grid-template-columns: 1fr 1fr; }
+  .cv-row.cv-row--split-3 { grid-template-columns: 1fr 1fr; }
 }
 @media (max-width: 640px) {
-  .cv-row--split,
-  .cv-row--split-3 { grid-template-columns: 1fr; }
+  .cv-row.cv-row--split,
+  .cv-row.cv-row--split-3 { grid-template-columns: 1fr; }
 }
 .cv-label { font-size: 14px; font-weight: 500; color: var(--cv-text-2); }
 .cv-row--top .cv-label { padding-top: 12px; }
@@ -355,6 +355,7 @@
   max-width: 160px;
 }
 .cv-item-cell label { font-size: 12px; font-weight: 500; color: var(--cv-muted); }
+.cv-due-date-field { max-width: 320px; margin-bottom: 16px; }
 .cv-item-tax {
   display: flex;
   flex-direction: column;

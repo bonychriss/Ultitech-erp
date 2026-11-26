@@ -547,11 +547,7 @@ export default function CreateVoucherPage() {
       return ''
     }
     if (!payeeId) return 'Please select a payee.'
-    if (!dateCreated) return isStockPurchase ? 'Please choose the From date.' : 'Please choose a date.'
-    if (isStockPurchase && !dueDate) return 'Please choose the To date (due date).'
-    if (isStockPurchase && dateCreated && dueDate && dueDate < dateCreated) {
-      return 'To date must be on or after the From date.'
-    }
+    if (!dateCreated) return 'Please choose a date.'
     if (!description.trim()) return 'Please enter a description.'
     const validItems = items.filter(
       (it) => it.payment_type && it.budget_type && (parseFloat(it.amount) || 0) > 0,
@@ -560,7 +556,7 @@ export default function CreateVoucherPage() {
       return 'Please add at least one payment item with a payment type, budget type and amount.'
     if (validItems.some((it) => isTaxBudget(it.budget_type) && !it.tax_type))
       return 'Please choose the Tax type for each Tax & Compliance item.'
-    if (!isStockPurchase && validItems.some((it) => it.payment_type.toLowerCase() === 'credit') && !dueDate)
+    if (validItems.some((it) => it.payment_type.toLowerCase() === 'credit') && !dueDate)
       return 'Please enter a due date for the credit payment.'
     if (!applicant || !departmentManager || !checkedBy)
       return 'Please select Applicant, Department Manager, and Checked By.'
@@ -641,7 +637,7 @@ export default function CreateVoucherPage() {
     date: !!dateCreated,
     description: !!description.trim(),
     items: validItemCount > 0,
-    ...(isStockPurchase || hasCredit ? { dueDate: !!dueDate } : {}),
+    ...(hasCredit ? { dueDate: !!dueDate } : {}),
     applicant: !!applicant,
     departmentManager: !!departmentManager,
     checkedBy: !!checkedBy,
@@ -753,7 +749,7 @@ export default function CreateVoucherPage() {
                 </div>
               </div>
 
-              <div className={`cv-row ${isStockPurchase ? 'cv-row--split-3' : 'cv-row--split'}`}>
+              <div className="cv-row cv-row--split">
                 <div className="cv-split-col">
                   <label className="cv-label">Currency</label>
                   <div className="cv-field">
@@ -793,55 +789,13 @@ export default function CreateVoucherPage() {
                     </div>
                   </div>
                 </div>
-                {isStockPurchase ? (
-                  <>
-                    <div className="cv-split-col">
-                      <label className="cv-label">From date {mark(filled.date)}</label>
-                      <div className="cv-field">
-                        <input
-                          type="date"
-                          name="date_created"
-                          className={`cv-input${invCls(filled.date)}`}
-                          value={dateCreated}
-                          max={dueDate || undefined}
-                          onChange={(e) => {
-                            const next = e.target.value
-                            setDateCreated(next)
-                            if (dueDate && next && dueDate < next) setDueDate(next)
-                          }}
-                          required
-                          disabled={fieldsLocked}
-                        />
-                        {fieldErr(filled.date, 'Please choose the From date.')}
-                      </div>
-                    </div>
-                    <div className="cv-split-col">
-                      <label className="cv-label">To date (due) {mark(!!dueDate)}</label>
-                      <div className="cv-field">
-                        <input
-                          type="date"
-                          name="due_date"
-                          className={`cv-input${invCls(!!dueDate)}`}
-                          value={dueDate}
-                          min={dateCreated || undefined}
-                          onChange={(e) => setDueDate(e.target.value)}
-                          required
-                          disabled={fieldsLocked}
-                        />
-                        {fieldErr(!!dueDate, 'Please choose the To date (due date).')}
-                        <p className="cv-attach-hint">To date is saved as the payment due date.</p>
-                      </div>
-                    </div>
-                  </>
-                ) : (
-                  <div className="cv-split-col">
-                    <label className="cv-label">Date {mark(filled.date)}</label>
-                    <div className="cv-field">
-                      <input type="date" name="date_created" className={`cv-input${invCls(filled.date)}`} value={dateCreated} onChange={(e) => setDateCreated(e.target.value)} required disabled={fieldsLocked} />
-                      {fieldErr(filled.date, 'Please choose a date.')}
-                    </div>
+                <div className="cv-split-col">
+                  <label className="cv-label">Date {mark(filled.date)}</label>
+                  <div className="cv-field">
+                    <input type="date" name="date_created" className={`cv-input${invCls(filled.date)}`} value={dateCreated} onChange={(e) => setDateCreated(e.target.value)} required disabled={fieldsLocked} />
+                    {fieldErr(filled.date, 'Please choose a date.')}
                   </div>
-                )}
+                </div>
               </div>
 
               <div className="cv-row cv-row--split">
@@ -880,104 +834,7 @@ export default function CreateVoucherPage() {
                   <div className="cv-split-col" aria-hidden="true" />
                 )}
               </div>
-              {isStockPurchase && (
-                <div className="cv-row cv-row--top">
-                  <label className="cv-label">Purchase Order {mark(hasLinkedPo)}</label>
-                  <div className="cv-field">
-                    <p className="cv-attach-hint">Required. Link one or more purchase orders from the system (Stock → Purchases).</p>
-                    <div className={`cv-po-trigger-wrap${showErrors && !hasLinkedPo ? ' is-invalid' : ''}${hasLinkedPo ? ' is-valid' : ''}`}>
-                      <button
-                        type="button"
-                        className={`cv-so-toggle cv-po-trigger${invCls(hasLinkedPo)}`}
-                        onClick={() => {
-                          if (fieldsLocked) return
-                          setPoSearch('')
-                          setPoViewDetail(null)
-                          setPoViewError('')
-                          setPoViewLoading(false)
-                          setPoOpen(true)
-                        }}
-                        disabled={fieldsLocked}
-                      >
-                        <Link2 size={15} />
-                        <span className="cv-so-toggle-label">
-                          {selectedPoRows.length === 0
-                            ? 'Select purchase order(s)'
-                            : selectedPoRows.length === 1
-                              ? `${selectedPoRows[0].po_number}${selectedPoRows[0].supplier_name ? ` — ${selectedPoRows[0].supplier_name}` : ''}`
-                              : `${selectedPoRows.length} purchase orders linked`}
-                        </span>
-                        <ChevronDown size={16} className="cv-so-chevron" />
-                      </button>
-                      {hasLinkedPo && !fieldsLocked && (
-                        <>
-                          {selectedPoRows.length === 1 && (
-                            <button
-                              type="button"
-                              className="cv-po-clear-btn"
-                              onClick={() => {
-                                setPoSearch('')
-                                setPoOpen(true)
-                                openPoView(selectedPoRows[0].id)
-                              }}
-                              title={`View ${selectedPoRows[0].po_number}`}
-                              aria-label={`View ${selectedPoRows[0].po_number}`}
-                            >
-                              <Eye size={14} />
-                            </button>
-                          )}
-                          <button
-                            type="button"
-                            className="cv-po-clear-btn"
-                            onClick={() => setSelectedPO(new Set())}
-                            title="Clear Purchase Orders"
-                            aria-label="Clear Purchase Orders"
-                          >
-                            <X size={14} />
-                          </button>
-                        </>
-                      )}
-                    </div>
-                    {selectedPoRows.length > 1 && (
-                      <ul className="cv-po-chips">
-                        {selectedPoRows.map((po) => (
-                          <li key={po.id} className="cv-po-chip">
-                            <span className="cv-po-chip-no">{po.po_number}</span>
-                            <button
-                              type="button"
-                              className="cv-po-chip-view"
-                              title={`View ${po.po_number}`}
-                              onClick={() => {
-                                setPoSearch('')
-                                setPoOpen(true)
-                                openPoView(po.id)
-                              }}
-                            >
-                              <Eye size={12} />
-                            </button>
-                            {!fieldsLocked && (
-                              <button
-                                type="button"
-                                className="cv-po-chip-rm"
-                                onClick={() => togglePO(po.id)}
-                                title="Remove"
-                                aria-label={`Remove ${po.po_number}`}
-                              >
-                                <X size={12} />
-                              </button>
-                            )}
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                    {fieldErr(hasLinkedPo, 'Please select at least one Purchase Order for Stock Purchase.')}
-                    {purchaseOrders.length === 0 ? (
-                      <p className="cv-attach-hint">No purchase orders found in the system yet. Create a PO in Stock → Purchases first.</p>
-                    ) : null}
-                  </div>
-                </div>
-              )}
-              {salesOrders.length > 0 && !isStockPurchase && (
+              {salesOrders.length > 0 && (
                 <div className="cv-row cv-row--top">
                   <label className="cv-label">Link Sales Orders</label>
                   <div className="cv-field">
@@ -1081,11 +938,20 @@ export default function CreateVoucherPage() {
 
             {fieldErr(filled.items, 'Add at least one item with a payment type, budget type and amount greater than 0.')}
 
-            {hasCredit && !isStockPurchase && (
-              <div className="cv-item-cell">
+            {hasCredit && (
+              <div className="cv-item-cell cv-due-date-field">
                 <label htmlFor="voucher-due-date">Payment due date {mark(!!dueDate)}</label>
-                <input id="voucher-due-date" type="date" name="due_date" className={`cv-input${invCls(!!dueDate)}`}
-                  value={dueDate} onChange={(e) => setDueDate(e.target.value)} disabled={fieldsLocked} />
+                <input
+                  id="voucher-due-date"
+                  type="date"
+                  name="due_date"
+                  className={`cv-input${invCls(!!dueDate)}`}
+                  value={dueDate}
+                  min={dateCreated || undefined}
+                  onChange={(e) => setDueDate(e.target.value)}
+                  required
+                  disabled={fieldsLocked}
+                />
                 {fieldErr(!!dueDate, 'Enter the due date for this credit payment.')}
               </div>
             )}
@@ -1292,10 +1158,126 @@ export default function CreateVoucherPage() {
               <p>
                 {isGeneralPurpose
                   ? 'Supporting files are required for General Payment vouchers (PDF, images, Office files).'
-                  : 'Upload supporting documents (PDF, images, Office files).'}
+                  : 'Link a purchase order from the system, and optionally upload other files.'}
               </p>
             </header>
             <div className="cv-card">
+              {isStockPurchase && (
+                <div className="cv-row cv-row--top">
+                  <label className="cv-label">Link Purchase Order {mark(hasLinkedPo)}</label>
+                  <div className="cv-field">
+                    <p className="cv-attach-hint">Required. Link one or more purchase orders from the system (Stock → Purchases).</p>
+                    <div className={`cv-po-trigger-wrap${showErrors && !hasLinkedPo ? ' is-invalid' : ''}${hasLinkedPo ? ' is-valid' : ''}`}>
+                      <button
+                        type="button"
+                        className={`cv-so-toggle cv-po-trigger${invCls(hasLinkedPo)}`}
+                        onClick={() => {
+                          if (fieldsLocked) return
+                          setPoSearch('')
+                          setPoViewDetail(null)
+                          setPoViewError('')
+                          setPoViewLoading(false)
+                          setPoOpen(true)
+                        }}
+                        disabled={fieldsLocked}
+                      >
+                        <Link2 size={15} />
+                        <span className="cv-so-toggle-label">
+                          {selectedPoRows.length === 0
+                            ? 'Select purchase order(s)'
+                            : selectedPoRows.length === 1
+                              ? `${selectedPoRows[0].po_number}${selectedPoRows[0].supplier_name ? ` — ${selectedPoRows[0].supplier_name}` : ''}`
+                              : `${selectedPoRows.length} purchase orders linked`}
+                        </span>
+                        <ChevronDown size={16} className="cv-so-chevron" />
+                      </button>
+                      {hasLinkedPo && !fieldsLocked && (
+                        <>
+                          {selectedPoRows.length === 1 && (
+                            <button
+                              type="button"
+                              className="cv-po-clear-btn"
+                              onClick={() => {
+                                setPoSearch('')
+                                setPoOpen(true)
+                                openPoView(selectedPoRows[0].id)
+                              }}
+                              title={`View ${selectedPoRows[0].po_number}`}
+                              aria-label={`View ${selectedPoRows[0].po_number}`}
+                            >
+                              <Eye size={14} />
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            className="cv-po-clear-btn"
+                            onClick={() => setSelectedPO(new Set())}
+                            title="Clear Purchase Orders"
+                            aria-label="Clear Purchase Orders"
+                          >
+                            <X size={14} />
+                          </button>
+                        </>
+                      )}
+                    </div>
+                    {selectedPoRows.length > 1 && (
+                      <ul className="cv-po-chips">
+                        {selectedPoRows.map((po) => (
+                          <li key={po.id} className="cv-po-chip">
+                            <span className="cv-po-chip-no">{po.po_number}</span>
+                            <button
+                              type="button"
+                              className="cv-po-chip-view"
+                              title={`View ${po.po_number}`}
+                              onClick={() => {
+                                setPoSearch('')
+                                setPoOpen(true)
+                                openPoView(po.id)
+                              }}
+                            >
+                              <Eye size={12} />
+                            </button>
+                            {!fieldsLocked && (
+                              <button
+                                type="button"
+                                className="cv-po-chip-rm"
+                                onClick={() => togglePO(po.id)}
+                                title="Remove"
+                                aria-label={`Remove ${po.po_number}`}
+                              >
+                                <X size={12} />
+                              </button>
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    {fieldErr(hasLinkedPo, 'Please select at least one Purchase Order for Stock Purchase.')}
+                    {purchaseOrders.length === 0 ? (
+                      <p className="cv-attach-hint">No purchase orders found in the system yet. Create a PO in Stock → Purchases first.</p>
+                    ) : null}
+                    {selectedPoRows.length > 0 && (
+                      <ul className="cv-file-list cv-file-list--existing">
+                        {selectedPoRows.map((po) => (
+                          <li key={`po-att-${po.id}`}>
+                            <FileText size={13} className="cv-file-ic" />
+                            <a
+                              className="cv-file-nm"
+                              href={`${CFG.poDocumentUrl || 'create-voucher-ui/po-document.php'}?id=${po.id}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              title={po.supplier_name ? `${po.po_number} — ${po.supplier_name}` : po.po_number}
+                            >
+                              {po.po_number}.pdf
+                            </a>
+                            <span className="cv-file-sz">Purchase Order</span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                </div>
+              )}
               <div className="cv-row cv-row--top">
                 <label className="cv-label">
                   Supporting Files{isGeneralPurpose ? <> {mark(hasSupportingFiles)}</> : null}
@@ -1303,25 +1285,6 @@ export default function CreateVoucherPage() {
                 <div className={`cv-field${isGeneralPurpose && showErrors && !hasSupportingFiles ? ' is-invalid' : ''}${isGeneralPurpose && hasSupportingFiles ? ' is-valid' : ''}`}>
                   {isGeneralPurpose && (
                     <p className="cv-attach-hint">Required for General Payment vouchers. Attach invoices, receipts, or other proof.</p>
-                  )}
-                  {selectedPoRows.length > 0 && (
-                    <ul className="cv-file-list cv-file-list--existing">
-                      {selectedPoRows.map((po) => (
-                        <li key={`po-att-${po.id}`}>
-                          <FileText size={13} className="cv-file-ic" />
-                          <a
-                            className="cv-file-nm"
-                            href={`${CFG.poDocumentUrl || 'create-voucher-ui/po-document.php'}?id=${po.id}`}
-                            target="_blank"
-                            rel="noreferrer"
-                            title={po.supplier_name ? `${po.po_number} — ${po.supplier_name}` : po.po_number}
-                          >
-                            {po.po_number}.pdf
-                          </a>
-                          <span className="cv-file-sz">Purchase Order</span>
-                        </li>
-                      ))}
-                    </ul>
                   )}
                   {existingAttachments.length > 0 && (
                     <ul className="cv-file-list cv-file-list--existing">

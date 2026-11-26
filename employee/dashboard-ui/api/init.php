@@ -55,8 +55,8 @@ try {
     $stmt = $pdo->prepare("SELECT
             COUNT(*) AS total,
             SUM(total_amount) AS total_value,
-            SUM(CASE WHEN status='confirming' THEN 1 ELSE 0 END) AS confirming,
-            SUM(CASE WHEN status='pending' THEN 1 ELSE 0 END) AS pending,
+            SUM(CASE WHEN status='confirming' AND IFNULL(is_paid,0) = 0 AND IFNULL(is_posted,0) = 0 THEN 1 ELSE 0 END) AS confirming,
+            SUM(CASE WHEN status='pending' AND IFNULL(is_paid,0) = 0 AND IFNULL(is_posted,0) = 0 THEN 1 ELSE 0 END) AS pending,
             SUM(CASE WHEN status='approved' AND IFNULL(is_paid,0) = 0 AND IFNULL(is_posted,0) = 0 THEN 1 ELSE 0 END) AS approved,
             SUM(CASE WHEN status='rejected' THEN 1 ELSE 0 END) AS rejected,
             SUM(CASE WHEN IFNULL(is_paid,0) = 1 AND IFNULL(is_posted,0) = 0 THEN 1 ELSE 0 END) AS paid,

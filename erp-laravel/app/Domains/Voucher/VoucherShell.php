@@ -28,7 +28,8 @@ final class VoucherShell
         }
 
         $pageTitle = (string) ($cfg['pageTitle'] ?? 'Create Voucher');
-        $headerTitle = (string) ($cfg['headerTitle'] ?? '');
+        $headerTitle = (string) ($cfg['headerTitle'] ?? $pageTitle);
+        $headerSubtitle = (string) ($cfg['headerSubtitle'] ?? '');
         $clientCfg = is_array($cfg['clientCfg'] ?? null) ? $cfg['clientCfg'] : [];
         $activeModule = strtolower(trim((string) ($cfg['activeModule'] ?? 'voucher')));
         if ($activeModule === '') {
@@ -57,8 +58,9 @@ final class VoucherShell
             'headMarkup' => $headMarkup,
             'footerScripts' => $footerScripts,
             'employeeHeaderTitle' => $headerTitle,
+            'employeeHeaderSubtitle' => $headerSubtitle,
             'hideHeaderCompanyBranding' => true,
-            'employeeHeaderExtraClass' => 'employee-header--create-voucher',
+            'employeeHeaderExtraClass' => 'employee-header--exp-desk employee-header--create-voucher',
             'mainRootClass' => 'create-voucher-react-root',
             // Prefer desk module (accounting) when creating from Expenses / Purchases.
             'active_module' => $activeModule,
@@ -141,18 +143,107 @@ body.page-create-voucher .layout-main-wrapper > .flex-grow-1 {
 }
 body.page-create-voucher .header,
 body.page-create-voucher .employee-header,
-body.page-create-voucher .employee-header.employee-header--create-voucher {
+body.page-create-voucher .employee-header.employee-header--create-voucher,
+body.page-create-voucher .employee-header.employee-header--exp-desk {
     background: #f1f5f9 !important;
     border: none !important;
     box-shadow: none !important;
     padding: 0 1.25rem !important;
-    margin-bottom: 0;
+    margin-bottom: 0 !important;
     height: auto !important;
-    min-height: 0;
+    min-height: 0 !important;
+    flex: 0 0 auto !important;
+    position: relative !important;
+    z-index: 1020 !important;
+    align-items: stretch !important;
 }
-body.page-create-voucher .employee-header--create-voucher .header-content {
+body.page-create-voucher .employee-header--create-voucher::after,
+body.page-create-voucher .employee-header--exp-desk::after {
+    display: none !important;
+}
+body.page-create-voucher .employee-header--create-voucher .header-content,
+body.page-create-voucher .employee-header--exp-desk .header-content {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
     background: transparent !important;
-    padding: 0.5rem 0 !important;
+    padding: 0.75rem 0 0.5rem !important;
+    min-height: 0;
+    width: 100%;
+    gap: 0.5rem 1rem;
+}
+body.page-create-voucher .employee-header--exp-desk .employee-header-page-heading {
+    margin-left: 0 !important;
+    min-width: 0;
+    flex: 1 1 auto;
+    gap: 4px !important;
+}
+body.page-create-voucher .employee-header--exp-desk .employee-header-page-title {
+    font-family: var(--erp-font-family, Inter, ui-sans-serif, system-ui, sans-serif) !important;
+    font-size: clamp(1.125rem, 2vw, 1.5rem) !important;
+    font-weight: 700 !important;
+    color: #0f172a !important;
+    letter-spacing: -0.02em !important;
+    line-height: 1.2 !important;
+    white-space: nowrap;
+}
+body.page-create-voucher .employee-header--exp-desk .employee-header-page-subtitle {
+    font-size: 0.82rem !important;
+    color: inherit !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 0.35rem !important;
+    line-height: 1.3 !important;
+    margin: 0 !important;
+}
+body.page-create-voucher .employee-header--exp-desk .vv-breadcrumb,
+body.page-create-voucher .employee-header--exp-desk .exp-desk-breadcrumb {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem;
+    margin: 0;
+    font-size: 0.82rem;
+    line-height: 1.3;
+}
+body.page-create-voucher .employee-header--exp-desk .vv-breadcrumb-link {
+    color: #2563eb !important;
+    font-weight: 600;
+    text-decoration: none !important;
+}
+body.page-create-voucher .employee-header--exp-desk .vv-breadcrumb-link:hover {
+    color: #1d4ed8 !important;
+    text-decoration: underline !important;
+}
+body.page-create-voucher .employee-header--exp-desk .vv-breadcrumb-sep {
+    color: #94a3b8;
+}
+body.page-create-voucher .employee-header--exp-desk .vv-breadcrumb-current {
+    color: #64748b;
+    font-weight: 600;
+}
+body.page-create-voucher .employee-header--exp-desk .header-right.header-actions-tray {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    margin-left: auto !important;
+    flex: 0 0 auto !important;
+    align-self: center;
+    gap: 0.55rem !important;
+    overflow: visible;
+}
+html[data-theme="dark"] body.page-create-voucher .employee-header--exp-desk .employee-header-page-title {
+    color: #e9edef !important;
+}
+html[data-theme="dark"] body.page-create-voucher .employee-header--exp-desk .vv-breadcrumb-link {
+    color: #00a884 !important;
+}
+html[data-theme="dark"] body.page-create-voucher .employee-header--exp-desk .vv-breadcrumb-link:hover {
+    color: #06cf9c !important;
+}
+html[data-theme="dark"] body.page-create-voucher .employee-header--exp-desk .vv-breadcrumb-sep,
+html[data-theme="dark"] body.page-create-voucher .employee-header--exp-desk .vv-breadcrumb-current {
+    color: #8696a0 !important;
 }
 main.main-content.create-voucher-react-root {
     flex: 1 1 auto;

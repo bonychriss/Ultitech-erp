@@ -151,18 +151,34 @@ body.dashboard #ai-agent-alert,
 body.dashboard .partial-ai-agent-alert {
     display: none !important;
 }
-html, body.dashboard {
+html,
+html[data-settings-embed='1'],
+body.dashboard {
     background: #fff !important;
     min-height: 0 !important;
-    height: auto !important;
+    height: 100% !important;
+    max-height: 100% !important;
+    overflow: hidden !important;
+    scrollbar-width: none !important;
+}
+html::-webkit-scrollbar,
+body.dashboard::-webkit-scrollbar {
+    width: 0 !important;
+    height: 0 !important;
+    display: none !important;
 }
 body.dashboard .layout-main-wrapper {
     min-height: 0 !important;
-    height: auto !important;
+    height: 100% !important;
+    max-height: 100% !important;
+    overflow: hidden !important;
 }
 body.dashboard .layout-main-wrapper > .flex-grow-1 {
     padding-top: 0 !important;
     min-height: 0 !important;
+    height: 100% !important;
+    max-height: 100% !important;
+    overflow: hidden !important;
 }
 body.dashboard main.main-content,
 body.dashboard main.main-content.exp-desk-react-root,
@@ -171,9 +187,20 @@ body.dashboard main.main-content.exp-desk-react-root #root {
     padding: 0 !important;
     margin: 0 !important;
     min-height: 0 !important;
+    height: 100% !important;
+    max-height: 100% !important;
+    overflow: hidden !important;
     width: 100% !important;
     max-width: 100% !important;
     box-sizing: border-box !important;
+    scrollbar-width: none !important;
+}
+body.dashboard main.main-content::-webkit-scrollbar,
+body.dashboard main.main-content.exp-desk-react-root::-webkit-scrollbar,
+body.dashboard main.main-content.exp-desk-react-root #root::-webkit-scrollbar {
+    width: 0 !important;
+    height: 0 !important;
+    display: none !important;
 }
 body.dashboard .ts-page,
 body.dashboard .wizard,

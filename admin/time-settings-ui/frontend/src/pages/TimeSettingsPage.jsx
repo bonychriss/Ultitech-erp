@@ -490,6 +490,7 @@ export default function TimeSettingsPage() {
                       onChange={(e) => patch('gracePeriodMinutes', Number(e.target.value))}
                       aria-label="Grace period minutes"
                     />
+                    <span className="field-unit">minutes</span>
                   </div>
                 </div>
               </div>

@@ -96,8 +96,10 @@
 }
 
 .ts-page--embed .wizard-footer {
-  margin-top: 0.35rem;
+  margin-top: 0.2rem;
+  margin-bottom: 0;
   padding-top: 0;
+  padding-bottom: 0;
   border-top: none;
 }
 
@@ -469,6 +471,23 @@
 .field-line textarea:focus,
 .field-line select:focus {
   outline: none;
+}
+.field-unit {
+  flex: 0 0 auto;
+  color: #64748b;
+  font-size: 0.8rem;
+  font-weight: 500;
+  white-space: nowrap;
+  padding-left: 0.15rem;
+}
+.field-line:has(.field-unit) input {
+  flex: 1 1 auto;
+  width: auto;
+  min-width: 0;
+  padding-right: 0.35rem;
+}
+.ts-page--embed .field-unit {
+  font-size: 0.75rem;
 }
 .field-line.is-disabled {
   opacity: 0.55;

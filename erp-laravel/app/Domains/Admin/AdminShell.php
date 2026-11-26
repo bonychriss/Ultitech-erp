@@ -279,6 +279,26 @@ body.page-time-settings button.wizard-btn-next {
 body.page-time-settings .employee-header--exp-desk .employee-header-page-title {
     font-weight: 600 !important;
 }
+body.page-settings-embed,
+body.page-settings-embed .layout-main-wrapper,
+body.page-settings-embed .layout-main-wrapper > .flex-grow-1,
+body.page-settings-embed main.main-content,
+body.page-settings-embed main.main-content.exp-desk-react-root,
+body.page-settings-embed main.main-content.exp-desk-react-root #root {
+    min-height: 0 !important;
+    height: 100% !important;
+    max-height: 100% !important;
+    overflow: hidden !important;
+    scrollbar-width: none !important;
+}
+body.page-settings-embed::-webkit-scrollbar,
+body.page-settings-embed main.main-content::-webkit-scrollbar,
+body.page-settings-embed main.main-content.exp-desk-react-root::-webkit-scrollbar,
+body.page-settings-embed main.main-content.exp-desk-react-root #root::-webkit-scrollbar {
+    width: 0 !important;
+    height: 0 !important;
+    display: none !important;
+}
 body.page-settings-embed .ts-topbar,
 body.page-settings-embed .ts-back {
     display: none !important;
@@ -291,6 +311,7 @@ body.page-settings-embed .wizard-body {
     margin: 0 !important;
     padding: 0 !important;
     box-sizing: border-box !important;
+    overflow: visible !important;
 }
 body.page-settings-embed .wizard-row {
     display: flex !important;
@@ -310,8 +331,10 @@ body.page-settings-embed .field-line {
     box-sizing: border-box !important;
 }
 body.page-settings-embed .wizard-footer {
-    margin-top: 0.35rem !important;
+    margin-top: 0.2rem !important;
+    margin-bottom: 0 !important;
     padding-top: 0 !important;
+    padding-bottom: 0 !important;
     border-top: none !important;
 }
 body.page-settings-embed button.wizard-btn-next,

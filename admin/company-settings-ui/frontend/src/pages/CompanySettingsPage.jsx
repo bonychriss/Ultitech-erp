@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   Accessibility,
   AlertTriangle,
@@ -315,10 +315,27 @@ function Field({ label, children, help }) {
 
 function EmbedPanel({ title, subtitle, icon: Icon, accent, src, frameClassName = '' }) {
   const [frameReady, setFrameReady] = useState(false)
+  const [frameHeight, setFrameHeight] = useState(null)
+  const iframeRef = useRef(null)
+  const isSection = String(frameClassName || '').includes('cs-embed-frame--section')
 
   useEffect(() => {
     setFrameReady(false)
+    setFrameHeight(null)
   }, [src])
+
+  useEffect(() => {
+    function onMessage(event) {
+      const data = event?.data
+      if (!data || data.type !== 'erp-embed-resize') return
+      if (iframeRef.current && event.source && event.source !== iframeRef.current.contentWindow) return
+      const next = Math.ceil(Number(data.height) || 0)
+      if (next < 120) return
+      setFrameHeight(next)
+    }
+    window.addEventListener('message', onMessage)
+    return () => window.removeEventListener('message', onMessage)
+  }, [])
 
   if (!src) {
     return (
@@ -327,11 +344,19 @@ function EmbedPanel({ title, subtitle, icon: Icon, accent, src, frameClassName =
       </Card>
     )
   }
+
+  const sizedStyle = frameHeight
+    ? { height: `${frameHeight}px`, minHeight: `${frameHeight}px` }
+    : undefined
+
   return (
     <Card className="cs-card--compact cs-card--profile cs-card--embed" icon={Icon} accent={accent} title={title} subtitle={subtitle}>
-      <div className={`cs-embed-wrap${frameReady ? ' is-ready' : ''}`}>
+      <div
+        className={`cs-embed-wrap${frameReady ? ' is-ready' : ''}${frameHeight ? ' is-sized' : ''}`}
+        style={isSection ? sizedStyle : undefined}
+      >
         {!frameReady ? (
-          <div className="cs-embed-skeleton" aria-busy="true" aria-live="polite">
+          <div className="cs-embed-skeleton" aria-busy="true" aria-live="polite" style={isSection ? sizedStyle : undefined}>
             <span className="sr-only">Loading {title}...</span>
             <span className="cs-skel-bar cs-skel-bar--label" />
             <span className="cs-skel-field" />
@@ -345,11 +370,13 @@ function EmbedPanel({ title, subtitle, icon: Icon, accent, src, frameClassName =
           </div>
         ) : null}
         <iframe
-          className={`cs-embed-frame${frameClassName ? ` ${frameClassName}` : ''}${frameReady ? '' : ' is-loading'}`}
+          ref={iframeRef}
+          className={`cs-embed-frame${frameClassName ? ` ${frameClassName}` : ''}${frameReady ? '' : ' is-loading'}${frameHeight ? ' is-sized' : ''}`}
           title={title}
           src={src}
           loading="lazy"
           referrerPolicy="same-origin"
+          style={isSection ? sizedStyle : undefined}
           onLoad={() => setFrameReady(true)}
         />
       </div>

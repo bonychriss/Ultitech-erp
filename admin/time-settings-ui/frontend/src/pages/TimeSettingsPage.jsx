@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   ArrowLeft,
   ArrowRight,
@@ -11,6 +11,7 @@ import {
   Network,
   Plus,
   ShieldCheck,
+  Trash2,
 } from 'lucide-react'
 
 const STEP_LABELS = {
@@ -121,6 +122,47 @@ export default function TimeSettingsPage() {
       cancelled = true
     }
   }, [apiBase, cfg.initial])
+
+  const pageRef = useRef(null)
+
+  useEffect(() => {
+    if (!embedded || typeof window === 'undefined' || window.parent === window) return undefined
+
+    const publishHeight = () => {
+      const node = pageRef.current
+      if (!node) return
+      const height = Math.ceil(Math.max(node.scrollHeight, node.getBoundingClientRect().height, 0))
+      if (height < 1) return
+      window.parent.postMessage(
+        { type: 'erp-embed-resize', source: 'time-settings', height: height + 4 },
+        '*',
+      )
+    }
+
+    publishHeight()
+    const frame = window.requestAnimationFrame(publishHeight)
+    const timer = window.setTimeout(publishHeight, 80)
+    let observer
+    if (typeof ResizeObserver !== 'undefined' && pageRef.current) {
+      observer = new ResizeObserver(() => publishHeight())
+      observer.observe(pageRef.current)
+    }
+
+    return () => {
+      window.cancelAnimationFrame(frame)
+      window.clearTimeout(timer)
+      observer?.disconnect()
+    }
+  }, [
+    embedded,
+    loading,
+    step,
+    form.geofenceEnabled,
+    form.officeIps.length,
+    form.overrideEnabled,
+    error,
+    notice,
+  ])
 
   function patch(key, value) {
     setForm((prev) => ({ ...prev, [key]: value }))
@@ -266,7 +308,12 @@ export default function TimeSettingsPage() {
   if (loading) {
     const skeletonRows = singleStep ? 3 : 4
     return (
-      <div className={`ts-page${embedded ? ' ts-page--embed' : ''} ts-page--skeleton`} aria-busy="true" aria-live="polite">
+      <div
+        ref={pageRef}
+        className={`ts-page${embedded ? ' ts-page--embed' : ''} ts-page--skeleton`}
+        aria-busy="true"
+        aria-live="polite"
+      >
         <span className="sr-only">Loading time & attendance settings...</span>
         {!embedded && !singleStep ? (
           <div className="ts-skel-topbar">
@@ -305,7 +352,7 @@ export default function TimeSettingsPage() {
       ]
 
   return (
-    <div className={`ts-page${embedded ? ' ts-page--embed' : ''}`}>
+    <div ref={pageRef} className={`ts-page${embedded ? ' ts-page--embed' : ''}`}>
       {!embedded ? (
         <div className="ts-topbar">
           <a className="ts-back" href={links.backUrl || '#'}>
@@ -527,7 +574,7 @@ export default function TimeSettingsPage() {
                 </div>
                 <div className="wizard-auth-fields">
                   {form.officeIps.map((ip, index) => (
-                    <div className="field-line" key={`ip-${index}`}>
+                    <div className="field-line field-line--ip" key={`ip-${index}`}>
                       <Network size={18} aria-hidden />
                       <input
                         type="text"
@@ -535,14 +582,15 @@ export default function TimeSettingsPage() {
                         onChange={(e) => updateIp(index, e.target.value)}
                         placeholder="e.g. 102.205.250.0/24"
                         aria-label={`Office IP ${index + 1}`}
+                        size={18}
                       />
                       <button
                         type="button"
-                        className="field-eye"
+                        className="field-eye field-eye--danger"
                         onClick={() => removeIpRow(index)}
                         aria-label="Remove IP"
                       >
-                        -
+                        <Trash2 size={15} aria-hidden />
                       </button>
                     </div>
                   ))}
@@ -562,49 +610,76 @@ export default function TimeSettingsPage() {
                   <h2>Geofencing</h2>
                 </div>
                 <div className="wizard-auth-fields">
-                  <label className="same-pass">
+                  <label className="ts-switch-row">
+                    <span
+                      className={`ts-switch${form.geofenceEnabled ? ' is-on' : ''}`}
+                      aria-hidden="true"
+                    >
+                      <span className="ts-switch-knob" />
+                    </span>
+                    <span className="ts-switch-label">Enable geofencing fallback</span>
                     <input
                       type="checkbox"
+                      className="ts-switch-input"
                       checked={Boolean(form.geofenceEnabled)}
                       onChange={(e) => patch('geofenceEnabled', e.target.checked)}
+                      aria-label="Enable geofencing fallback"
                     />
-                    Enable geofencing fallback
                   </label>
                   {form.geofenceEnabled ? (
                     <>
-                      <div className="field-line">
-                        <MapPin size={18} aria-hidden />
-                        <input
-                          type="number"
-                          step="any"
-                          value={form.latitude}
-                          onChange={(e) => patch('latitude', e.target.value)}
-                          placeholder="Latitude"
-                          aria-label="Office latitude"
-                        />
+                      <p className="ts-geo-hint">
+                        Set the office map point and how far staff can be from it when clocking in.
+                        Use <strong>Use my location</strong> if you are at the office now.
+                      </p>
+                      <div className="ts-geo-coords">
+                        <label className="ts-field-block">
+                          <span className="ts-field-label">Latitude</span>
+                          <span className="ts-field-help">North/South (e.g. -6.7685)</span>
+                          <div className="field-line">
+                            <MapPin size={18} aria-hidden />
+                            <input
+                              type="number"
+                              step="any"
+                              value={form.latitude}
+                              onChange={(e) => patch('latitude', e.target.value)}
+                              placeholder="-6.76849251"
+                              aria-label="Office latitude"
+                            />
+                          </div>
+                        </label>
+                        <label className="ts-field-block">
+                          <span className="ts-field-label">Longitude</span>
+                          <span className="ts-field-help">East/West (e.g. 39.1933)</span>
+                          <div className="field-line">
+                            <MapPin size={18} aria-hidden />
+                            <input
+                              type="number"
+                              step="any"
+                              value={form.longitude}
+                              onChange={(e) => patch('longitude', e.target.value)}
+                              placeholder="39.19332033"
+                              aria-label="Office longitude"
+                            />
+                          </div>
+                        </label>
                       </div>
-                      <div className="field-line">
-                        <MapPin size={18} aria-hidden />
-                        <input
-                          type="number"
-                          step="any"
-                          value={form.longitude}
-                          onChange={(e) => patch('longitude', e.target.value)}
-                          placeholder="Longitude"
-                          aria-label="Office longitude"
-                        />
-                      </div>
-                      <div className="field-line">
-                        <MapPin size={18} aria-hidden />
-                        <input
-                          type="number"
-                          min={1}
-                          value={form.radiusMeters}
-                          onChange={(e) => patch('radiusMeters', Number(e.target.value))}
-                          placeholder="Radius meters"
-                          aria-label="Radius meters"
-                        />
-                      </div>
+                      <label className="ts-field-block">
+                        <span className="ts-field-label">Allowed radius</span>
+                        <span className="ts-field-help">How far from the office pin staff may clock in</span>
+                        <div className="field-line">
+                          <MapPin size={18} aria-hidden />
+                          <input
+                            type="number"
+                            min={1}
+                            value={form.radiusMeters}
+                            onChange={(e) => patch('radiusMeters', Number(e.target.value))}
+                            placeholder="100"
+                            aria-label="Allowed radius in meters"
+                          />
+                          <span className="field-unit">meters</span>
+                        </div>
+                      </label>
                       <button type="button" className="ts-chip" onClick={useMyLocation}>
                         <MapPin size={14} /> Use my location
                       </button>
@@ -617,18 +692,24 @@ export default function TimeSettingsPage() {
                   <h2>Biometric clock-in</h2>
                 </div>
                 <div className="wizard-auth-fields">
-                  <label className="same-pass ts-bio-toggle">
+                  <label className="ts-switch-row">
+                    <span
+                      className={`ts-switch${form.biometricRequired ? ' is-on' : ''}`}
+                      aria-hidden="true"
+                    >
+                      <span className="ts-switch-knob" />
+                    </span>
+                    <span className="ts-switch-label">
+                      <Fingerprint size={15} aria-hidden />
+                      Require phone unlock verification
+                    </span>
                     <input
                       type="checkbox"
+                      className="ts-switch-input"
                       checked={Boolean(form.biometricRequired)}
                       onChange={(e) => patch('biometricRequired', e.target.checked)}
+                      aria-label="Require phone unlock verification"
                     />
-                    <span className="ts-bio-toggle-copy">
-                      <span className="ts-bio-toggle-title">
-                        <Fingerprint size={16} aria-hidden />
-                        Require phone unlock verification
-                      </span>
-                    </span>
                   </label>
                 </div>
               </div>

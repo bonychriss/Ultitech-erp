@@ -1040,8 +1040,15 @@ button.cs-btn-ghost {
 .cs-section-stack .cs-card--embed:nth-child(3) .cs-embed-wrap,
 .cs-section-stack .cs-card--embed:nth-child(3) .cs-embed-frame--section,
 .cs-section-stack .cs-card--embed:nth-child(3) .cs-embed-skeleton {
-  min-height: 360px;
-  height: 360px;
+  min-height: 420px;
+  height: 420px;
+}
+
+.cs-section-stack .cs-embed-wrap.is-sized,
+.cs-section-stack .cs-embed-frame.is-sized,
+.cs-section-stack .cs-embed-wrap.is-sized .cs-embed-skeleton {
+  height: auto;
+  min-height: 0;
 }
 
 .cs-section-stack .cs-embed-wrap {

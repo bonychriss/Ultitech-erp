@@ -616,6 +616,31 @@
   padding: 0;
 }
 .field-eye:hover { color: #475569; }
+.field-eye--danger:hover {
+  color: #dc2626;
+}
+
+.field-line--ip {
+  width: fit-content;
+  max-width: 100%;
+  min-width: 13.5rem;
+}
+
+.field-line--ip input {
+  width: 11.5rem;
+  max-width: 11.5rem;
+  flex: 0 1 auto;
+  padding-right: 0.35rem;
+}
+
+.ts-page--embed .field-line--ip {
+  min-width: 12.75rem;
+}
+
+.ts-page--embed .field-line--ip input {
+  width: 10.75rem;
+  max-width: 10.75rem;
+}
 
 .field-line--phone {
   align-items: stretch;
@@ -809,6 +834,176 @@
   margin: 0;
   background: #fff;
 }
+.ts-geo-hint {
+  margin: 0.1rem 0 0.15rem;
+  color: #64748b;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  max-width: 34rem;
+}
+
+.ts-geo-hint strong {
+  color: #475569;
+  font-weight: 600;
+}
+
+.ts-geo-coords {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem 0.75rem;
+  width: 100%;
+  max-width: 34rem;
+}
+
+.ts-geo-coords .ts-field-block {
+  max-width: none;
+}
+
+.ts-field-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.18rem;
+  width: 100%;
+  max-width: 22rem;
+  margin: 0;
+  min-width: 0;
+}
+
+.ts-field-label {
+  color: #334155;
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.ts-field-help {
+  color: #94a3b8;
+  font-size: 0.72rem;
+  line-height: 1.3;
+}
+
+.ts-page--embed .ts-geo-hint {
+  font-size: 0.74rem;
+  margin-bottom: 0.1rem;
+}
+
+.ts-page--embed .ts-geo-coords {
+  max-width: 100%;
+  gap: 0.45rem 0.55rem;
+}
+
+.ts-page--embed .ts-field-block {
+  max-width: 18rem;
+  gap: 0.12rem;
+}
+
+.ts-page--embed .ts-geo-coords .ts-field-block {
+  max-width: none;
+}
+
+@media (max-width: 560px) {
+  .ts-geo-coords {
+    grid-template-columns: 1fr;
+  }
+}
+
+.ts-page--embed .ts-field-label {
+  font-size: 0.74rem;
+}
+
+.ts-page--embed .ts-field-help {
+  font-size: 0.68rem;
+}
+
+.ts-switch-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  width: fit-content;
+  max-width: 100%;
+  margin: 0;
+  cursor: pointer;
+  user-select: none;
+}
+
+.ts-switch {
+  position: relative;
+  width: 2.45rem;
+  height: 1.35rem;
+  border-radius: 999px;
+  background: #cbd5e1;
+  flex-shrink: 0;
+  transition: background 0.15s ease;
+}
+
+.ts-switch.is-on {
+  background: #6366f1;
+}
+
+.ts-switch-knob {
+  position: absolute;
+  top: 0.14rem;
+  left: 0.14rem;
+  width: 1.07rem;
+  height: 1.07rem;
+  border-radius: 999px;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.2);
+  transition: transform 0.15s ease;
+}
+
+.ts-switch.is-on .ts-switch-knob {
+  transform: translateX(1.1rem);
+}
+
+.ts-switch-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: #0f172a;
+  font-size: 0.84rem;
+  font-weight: 500;
+  line-height: 1.3;
+}
+
+.ts-switch-label svg {
+  color: #64748b;
+  flex-shrink: 0;
+}
+
+.ts-switch-input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  cursor: pointer;
+}
+
+.ts-page--embed .ts-switch-row {
+  gap: 0.55rem;
+}
+
+.ts-page--embed .ts-switch {
+  width: 2.25rem;
+  height: 1.25rem;
+}
+
+.ts-page--embed .ts-switch-knob {
+  width: 0.97rem;
+  height: 0.97rem;
+}
+
+.ts-page--embed .ts-switch.is-on .ts-switch-knob {
+  transform: translateX(1rem);
+}
+
+.ts-page--embed .ts-switch-label {
+  font-size: 0.8rem;
+}
+
 .ts-bio-toggle {
   align-items: flex-start;
   gap: 10px;

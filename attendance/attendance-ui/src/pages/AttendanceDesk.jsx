@@ -1987,7 +1987,9 @@ function AwayModal({ reasons, reason, setReason, note, setNote, onClose, onConfi
       className="att-away-overlay is-open"
       aria-hidden="false"
       role="dialog"
+      aria-modal="true"
       aria-labelledby="awayModalTitle"
+      aria-describedby="awayModalDesc"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
@@ -1996,17 +1998,19 @@ function AwayModal({ reasons, reason, setReason, note, setNote, onClose, onConfi
         <button type="button" className="att-away-close" onClick={onClose} aria-label="Close">
           <i className="fas fa-times" aria-hidden="true" />
         </button>
-        <div className="att-away-header">
+
+        <header className="att-away-header">
           <div className="att-away-header-icon" aria-hidden="true">
             <i className="fas fa-door-open" />
           </div>
           <h2 id="awayModalTitle" className="att-away-title">
             Step out
           </h2>
-          <p className="att-away-desc">
+          <p id="awayModalDesc" className="att-away-desc">
             Stay clocked in. Pick why you are leaving the desk.
           </p>
-        </div>
+        </header>
+
         <div className="att-away-body">
           <div className="att-away-reasons" role="radiogroup" aria-label="Away reason">
             {options.map((item) => {
@@ -2017,7 +2021,7 @@ function AwayModal({ reasons, reason, setReason, note, setNote, onClose, onConfi
                   type="button"
                   role="radio"
                   aria-checked={selected}
-                  className={`att-away-reason is-${awayStatusTone(item.value)}${selected ? ' is-selected' : ''}`}
+                  className={`att-away-reason${selected ? ' is-selected' : ''}`}
                   onClick={() => setReason(item.value)}
                 >
                   <span className="att-away-reason-label">{item.label}</span>
@@ -2026,27 +2030,43 @@ function AwayModal({ reasons, reason, setReason, note, setNote, onClose, onConfi
               );
             })}
           </div>
-          <label className="att-away-note-label" htmlFor="awayNoteInput">
-            Note <span>(optional)</span>
-          </label>
-          <input
-            id="awayNoteInput"
-            type="text"
-            className="att-away-note-input"
-            maxLength={255}
-            placeholder="Customer name, order no., destination…"
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-          />
+
+          <div className="att-away-note">
+            <label className="att-away-note-label" htmlFor="awayNoteInput">
+              Note <span>(optional)</span>
+            </label>
+            <input
+              id="awayNoteInput"
+              type="text"
+              className="att-away-note-input"
+              maxLength={255}
+              placeholder="Customer name, order no., destination…"
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+            />
+          </div>
         </div>
-        <div className="att-away-footer">
+
+        <footer className="att-away-footer">
           <button type="button" className="att-away-btn-cancel" onClick={onClose}>
             Cancel
           </button>
-          <button type="button" className="att-away-btn-confirm" disabled={busy || !reason} onClick={onConfirm}>
-            <i className="fas fa-check" aria-hidden="true" /> Confirm &amp; step out
+          <button
+            type="button"
+            className="att-away-btn-confirm"
+            disabled={busy || !reason}
+            onClick={onConfirm}
+          >
+            {busy ? (
+              'Processing...'
+            ) : (
+              <>
+                <i className="fas fa-check" aria-hidden="true" />
+                Confirm &amp; step out
+              </>
+            )}
           </button>
-        </div>
+        </footer>
       </div>
     </div>
   );

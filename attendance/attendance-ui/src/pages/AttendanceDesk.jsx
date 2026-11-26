@@ -59,9 +59,9 @@ function formatDisplayTime(raw) {
 const DEFAULT_WEATHER_COORDS = { latitude: -6.7924, longitude: 39.2083 }; // Dar es Salaam
 
 const DEFAULT_AWAY_REASONS = [
-  { value: 'break', label: 'Break', status: 'On break' },
-  { value: 'customer_visit', label: 'Customer visit', status: 'On visit' },
-  { value: 'delivery', label: 'Delivery', status: 'On delivery' },
+  { value: 'break', label: 'Break', status: 'On break', icon: 'fas fa-mug-hot' },
+  { value: 'customer_visit', label: 'Customer visit', status: 'On visit', icon: 'fas fa-handshake' },
+  { value: 'delivery', label: 'Delivery', status: 'On delivery', icon: 'fas fa-truck' },
 ];
 
 function awayStatusTone(reason) {
@@ -69,6 +69,13 @@ function awayStatusTone(reason) {
   if (key === 'customer_visit') return 'visit';
   if (key === 'delivery') return 'delivery';
   return 'break';
+}
+
+function awayReasonIcon(reason) {
+  const key = String(reason || '').toLowerCase();
+  if (key === 'customer_visit') return 'fas fa-handshake';
+  if (key === 'delivery') return 'fas fa-truck';
+  return 'fas fa-mug-hot';
 }
 
 function weatherFromCode(code) {
@@ -2015,17 +2022,20 @@ function AwayModal({ reasons, reason, setReason, note, setNote, onClose, onConfi
           <div className="att-away-reasons" role="radiogroup" aria-label="Away reason">
             {options.map((item) => {
               const selected = item.value === reason;
+              const icon = item.icon || awayReasonIcon(item.value);
               return (
                 <button
                   key={item.value}
                   type="button"
                   role="radio"
                   aria-checked={selected}
-                  className={`att-away-reason${selected ? ' is-selected' : ''}`}
+                  className={`att-away-reason is-${awayStatusTone(item.value)}${selected ? ' is-selected' : ''}`}
                   onClick={() => setReason(item.value)}
                 >
+                  <span className="att-away-reason-icon" aria-hidden="true">
+                    <i className={icon} />
+                  </span>
                   <span className="att-away-reason-label">{item.label}</span>
-                  <span className="att-away-reason-status">{item.status}</span>
                 </button>
               );
             })}

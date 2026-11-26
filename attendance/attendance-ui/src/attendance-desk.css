@@ -2170,6 +2170,7 @@
         }
         .att-away-modal {
             max-width: 100%;
+            width: 100%;
             border-radius: 16px 16px 0 0;
             max-height: min(92vh, 720px);
             overflow-y: auto;
@@ -2178,6 +2179,9 @@
         .att-away-overlay.is-open .att-away-modal {
             animation: att-review-sheet-in 0.38s cubic-bezier(0.32, 0.72, 0, 1) forwards;
         }
+        .att-away-reasons {
+            grid-template-columns: 1fr;
+        }
         .att-away-footer {
             flex-direction: column-reverse;
         }
@@ -2185,6 +2189,12 @@
         .att-away-btn-confirm {
             width: 100%;
             justify-content: center;
+        }
+    }
+
+    @media (min-width: 481px) and (max-width: 720px) {
+        .att-away-reasons {
+            grid-template-columns: 1fr;
         }
     }
 
@@ -2203,11 +2213,11 @@
     .att-away-overlay.is-open { display: flex; }
     .att-away-modal {
         position: relative;
-        width: min(100%, 26.5rem);
+        width: min(100%, 40rem);
         background: #fff;
         border-radius: 18px;
         box-shadow: 0 24px 60px rgba(15, 23, 42, 0.22);
-        padding: 1.5rem 1.5rem 1.25rem;
+        padding: 1.5rem 1.6rem 1.3rem;
         display: flex;
         flex-direction: column;
         gap: 1.15rem;
@@ -2250,7 +2260,7 @@
     .att-away-title {
         margin: 0;
         font-size: 1.35rem;
-        font-weight: 700;
+        font-weight: 500;
         color: #0f172a;
         letter-spacing: -0.025em;
         line-height: 1.2;
@@ -2268,47 +2278,67 @@
         gap: 1rem;
     }
     .att-away-reasons {
-        display: flex;
-        flex-direction: column;
-        gap: 0.55rem;
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 0.85rem;
     }
     .att-away-reason {
         display: flex;
         flex-direction: column;
-        align-items: flex-start;
-        gap: 0.12rem;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 0.55rem;
         width: 100%;
-        text-align: left;
-        padding: 0.8rem 0.95rem;
-        border-radius: 12px;
-        border: 1px solid #e2e8f0;
-        background: #fff;
+        text-align: center;
+        padding: 0.35rem 0.25rem;
+        border: 0;
+        border-radius: 0;
+        background: transparent;
+        box-shadow: none;
         cursor: pointer;
-        transition: border-color 0.15s ease, background 0.15s ease;
+        color: #64748b;
+        transition: color 0.15s ease;
     }
     .att-away-reason:hover {
-        border-color: #cbd5e1;
-        background: #f8fafc;
+        color: #0f172a;
+        background: transparent;
     }
-    .att-away-reason.is-selected {
-        border-color: #fb923c;
-        background: #fff7ed;
-    }
-    .att-away-reason.is-selected:hover {
-        border-color: #fb923c;
-        background: #fff7ed;
+    .att-away-reason-icon {
+        width: 2.6rem;
+        height: 2.6rem;
+        border-radius: 999px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1rem;
+        color: #64748b;
+        background: #f1f5f9;
+        transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
     }
     .att-away-reason-label {
-        font-size: 0.95rem;
-        font-weight: 600;
-        color: #0f172a;
+        font-size: 0.92rem;
+        font-weight: 500;
+        color: inherit;
         line-height: 1.25;
     }
-    .att-away-reason-status {
-        font-size: 0.8rem;
-        font-weight: 400;
-        color: #64748b;
-        line-height: 1.3;
+    .att-away-reason.is-selected {
+        color: #0f172a;
+        background: transparent;
+    }
+    .att-away-reason.is-selected.is-break .att-away-reason-icon {
+        color: #c2410c;
+        background: #fff7ed;
+        box-shadow: 0 0 0 3px rgba(251, 146, 60, 0.18);
+    }
+    .att-away-reason.is-selected.is-visit .att-away-reason-icon {
+        color: #0369a1;
+        background: #e0f2fe;
+        box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.18);
+    }
+    .att-away-reason.is-selected.is-delivery .att-away-reason-icon {
+        color: #6d28d9;
+        background: #ede9fe;
+        box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.18);
     }
     .att-away-note {
         display: flex;
@@ -2318,7 +2348,7 @@
     .att-away-note-label {
         display: block;
         font-size: 0.8rem;
-        font-weight: 500;
+        font-weight: 400;
         color: #475569;
     }
     .att-away-note-label span {
@@ -2361,7 +2391,7 @@
         padding: 0.55rem 1.15rem;
         border-radius: 999px;
         font-size: 0.9rem;
-        font-weight: 500;
+        font-weight: 400;
         cursor: pointer;
         border: 1px solid transparent;
     }

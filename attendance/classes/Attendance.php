@@ -7,10 +7,290 @@ class Attendance {
 
     /** Daily clock records (distinct from legacy GPS `attendance` table). */
     const RECORDS_TABLE = 'attendance_records';
+    const AWAY_TABLE = 'attendance_away_sessions';
+
+    /** @var array<string, array{label:string,status:string}> */
+    const AWAY_REASONS = [
+        'break' => ['label' => 'Break', 'status' => 'On break'],
+        'customer_visit' => ['label' => 'Customer visit', 'status' => 'On visit'],
+        'delivery' => ['label' => 'Delivery', 'status' => 'On delivery'],
+    ];
 
     public function __construct($pdo) {
         $this->pdo = $pdo;
         $this->loadSettings();
+    }
+
+    /**
+     * @return list<array{value:string,label:string,status:string}>
+     */
+    public function getAwayReasonOptions(): array
+    {
+        $out = [];
+        foreach (self::AWAY_REASONS as $value => $meta) {
+            $out[] = [
+                'value' => $value,
+                'label' => $meta['label'],
+                'status' => $meta['status'],
+            ];
+        }
+        return $out;
+    }
+
+    public function normalizeAwayReason(?string $reason): ?string
+    {
+        $key = strtolower(trim((string) $reason));
+        return isset(self::AWAY_REASONS[$key]) ? $key : null;
+    }
+
+    /**
+     * @param array<string,mixed>|false|null $row
+     * @return array<string,mixed>|null
+     */
+    public function formatAwaySession($row): ?array
+    {
+        if (!is_array($row) || empty($row['id'])) {
+            return null;
+        }
+        $reason = $this->normalizeAwayReason((string) ($row['reason'] ?? ''));
+        if ($reason === null) {
+            $reason = 'break';
+        }
+        $meta = self::AWAY_REASONS[$reason];
+        $note = trim((string) ($row['note'] ?? ''));
+        return [
+            'id' => (int) $row['id'],
+            'user_id' => (int) ($row['user_id'] ?? 0),
+            'attendance_record_id' => isset($row['attendance_record_id']) && $row['attendance_record_id'] !== null
+                ? (int) $row['attendance_record_id']
+                : null,
+            'date' => (string) ($row['date'] ?? ''),
+            'reason' => $reason,
+            'reason_label' => $meta['label'],
+            'status_label' => $meta['status'],
+            'note' => $note !== '' ? $note : null,
+            'started_at' => (string) ($row['started_at'] ?? ''),
+            'ended_at' => !empty($row['ended_at']) ? (string) $row['ended_at'] : null,
+            'duration_minutes' => isset($row['duration_minutes']) && $row['duration_minutes'] !== null
+                ? (int) $row['duration_minutes']
+                : null,
+            'is_open' => empty($row['ended_at']),
+        ];
+    }
+
+    public function getActiveAwaySession(int $userId): ?array
+    {
+        if ($userId <= 0) {
+            return null;
+        }
+        try {
+            $t = self::AWAY_TABLE;
+            $stmt = $this->pdo->prepare("
+                SELECT * FROM `{$t}`
+                WHERE user_id = ? AND ended_at IS NULL
+                ORDER BY started_at DESC, id DESC
+                LIMIT 1
+            ");
+            $stmt->execute([$userId]);
+            return $this->formatAwaySession($stmt->fetch(PDO::FETCH_ASSOC) ?: null);
+        } catch (Throwable $e) {
+            error_log('Attendance::getActiveAwaySession: ' . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Open away sessions keyed by user_id for a calendar date.
+     *
+     * @return array<int, array<string,mixed>>
+     */
+    public function getOpenAwaySessionsByDate(string $date): array
+    {
+        $out = [];
+        try {
+            $t = self::AWAY_TABLE;
+            $stmt = $this->pdo->prepare("
+                SELECT * FROM `{$t}`
+                WHERE `date` = ? AND ended_at IS NULL
+                ORDER BY started_at DESC, id DESC
+            ");
+            $stmt->execute([$date]);
+            while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                $uid = (int) ($row['user_id'] ?? 0);
+                if ($uid <= 0 || isset($out[$uid])) {
+                    continue;
+                }
+                $formatted = $this->formatAwaySession($row);
+                if ($formatted) {
+                    $out[$uid] = $formatted;
+                }
+            }
+        } catch (Throwable $e) {
+            error_log('Attendance::getOpenAwaySessionsByDate: ' . $e->getMessage());
+        }
+        return $out;
+    }
+
+    /**
+     * @return array{success:bool,message:string,away?:array<string,mixed>|null}
+     */
+    public function startAway(int $userId, string $reason, ?string $note = null): array
+    {
+        $reasonKey = $this->normalizeAwayReason($reason);
+        if ($reasonKey === null) {
+            return ['success' => false, 'message' => 'Choose a valid away reason.'];
+        }
+
+        $record = $this->getTodayRecord($userId);
+        if (!$record || empty($record['time_in'])) {
+            return ['success' => false, 'message' => 'Clock in before starting an away session.'];
+        }
+        if (!empty($record['time_out'])) {
+            return ['success' => false, 'message' => 'You already clocked out today.'];
+        }
+
+        $active = $this->getActiveAwaySession($userId);
+        if ($active) {
+            return [
+                'success' => false,
+                'message' => 'You already have an active away session. End it first.',
+                'away' => $active,
+            ];
+        }
+
+        $noteClean = trim((string) $note);
+        if (function_exists('mb_substr')) {
+            $noteClean = mb_substr($noteClean, 0, 255);
+        } else {
+            $noteClean = substr($noteClean, 0, 255);
+        }
+        if ($noteClean === '') {
+            $noteClean = null;
+        }
+
+        $today = $this->getTodayDateString();
+        $now = date('Y-m-d H:i:s');
+        $t = self::AWAY_TABLE;
+
+        try {
+            $stmt = $this->pdo->prepare("
+                INSERT INTO `{$t}`
+                    (user_id, attendance_record_id, `date`, reason, note, started_at)
+                VALUES (?, ?, ?, ?, ?, ?)
+            ");
+            $ok = $stmt->execute([
+                $userId,
+                (int) ($record['id'] ?? 0) ?: null,
+                $today,
+                $reasonKey,
+                $noteClean,
+                $now,
+            ]);
+            if (!$ok) {
+                return ['success' => false, 'message' => 'Could not start away session.'];
+            }
+            $away = $this->getActiveAwaySession($userId);
+            $label = self::AWAY_REASONS[$reasonKey]['status'];
+            return [
+                'success' => true,
+                'message' => $label . '.',
+                'away' => $away,
+            ];
+        } catch (Throwable $e) {
+            error_log('Attendance::startAway: ' . $e->getMessage());
+            return ['success' => false, 'message' => 'Could not start away session.'];
+        }
+    }
+
+    /**
+     * @return array{success:bool,message:string,away?:array<string,mixed>|null}
+     */
+    public function endAway(int $userId): array
+    {
+        $active = $this->getActiveAwaySession($userId);
+        if (!$active) {
+            return ['success' => false, 'message' => 'No active away session to end.'];
+        }
+
+        $ended = $this->closeAwaySessionById((int) $active['id'], $userId);
+        if (!$ended) {
+            return ['success' => false, 'message' => 'Could not end away session.'];
+        }
+
+        return [
+            'success' => true,
+            'message' => 'Welcome back.',
+            'away' => $ended,
+        ];
+    }
+
+    /**
+     * Close every open away session for a user (used on clock-out).
+     *
+     * @return list<array<string,mixed>>
+     */
+    public function endOpenAwaySessions(int $userId): array
+    {
+        $closed = [];
+        try {
+            $t = self::AWAY_TABLE;
+            $stmt = $this->pdo->prepare("
+                SELECT id FROM `{$t}`
+                WHERE user_id = ? AND ended_at IS NULL
+                ORDER BY started_at ASC, id ASC
+            ");
+            $stmt->execute([$userId]);
+            $ids = $stmt->fetchAll(PDO::FETCH_COLUMN) ?: [];
+            foreach ($ids as $id) {
+                $row = $this->closeAwaySessionById((int) $id, $userId);
+                if ($row) {
+                    $closed[] = $row;
+                }
+            }
+        } catch (Throwable $e) {
+            error_log('Attendance::endOpenAwaySessions: ' . $e->getMessage());
+        }
+        return $closed;
+    }
+
+    /**
+     * @return array<string,mixed>|null
+     */
+    private function closeAwaySessionById(int $awayId, int $userId): ?array
+    {
+        if ($awayId <= 0 || $userId <= 0) {
+            return null;
+        }
+        try {
+            $t = self::AWAY_TABLE;
+            $stmt = $this->pdo->prepare("SELECT * FROM `{$t}` WHERE id = ? AND user_id = ? LIMIT 1");
+            $stmt->execute([$awayId, $userId]);
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            if (!$row || !empty($row['ended_at'])) {
+                return $this->formatAwaySession($row ?: null);
+            }
+
+            $now = date('Y-m-d H:i:s');
+            $startedTs = strtotime((string) ($row['started_at'] ?? ''));
+            $endedTs = strtotime($now);
+            $minutes = ($startedTs && $endedTs && $endedTs >= $startedTs)
+                ? (int) max(0, round(($endedTs - $startedTs) / 60))
+                : 0;
+
+            $upd = $this->pdo->prepare("
+                UPDATE `{$t}`
+                SET ended_at = ?, duration_minutes = ?
+                WHERE id = ? AND user_id = ? AND ended_at IS NULL
+            ");
+            $upd->execute([$now, $minutes, $awayId, $userId]);
+
+            $row['ended_at'] = $now;
+            $row['duration_minutes'] = $minutes;
+            return $this->formatAwaySession($row);
+        } catch (Throwable $e) {
+            error_log('Attendance::closeAwaySessionById: ' . $e->getMessage());
+            return null;
+        }
     }
 
     private function loadSettings() {
@@ -326,6 +606,7 @@ class Attendance {
             ");
             $stmt->execute($params);
             $rows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+            $openAway = $this->getOpenAwaySessionsByDate($date);
 
             $out = [];
             foreach ($rows as $row) {
@@ -334,9 +615,11 @@ class Attendance {
                 if ($name === '') {
                     $name = $username !== '' ? $username : ('User #' . (int) ($row['user_id'] ?? 0));
                 }
+                $uid = (int) ($row['user_id'] ?? 0);
+                $away = $openAway[$uid] ?? null;
                 $out[] = [
                     'id' => (int) ($row['id'] ?? 0),
-                    'user_id' => (int) ($row['user_id'] ?? 0),
+                    'user_id' => $uid,
                     'full_name' => $name,
                     'username' => $username,
                     'department' => trim((string) ($row['department'] ?? '')),
@@ -349,6 +632,8 @@ class Attendance {
                     'overtime_hours' => $row['overtime_hours'] !== null && $row['overtime_hours'] !== ''
                         ? (float) $row['overtime_hours']
                         : null,
+                    'away' => $away,
+                    'away_status' => $away['status_label'] ?? null,
                 ];
             }
             return $out;
@@ -851,6 +1136,9 @@ class Attendance {
         if ($record['time_out']) {
             return ['success' => false, 'message' => 'You have already clocked out.'];
         }
+
+        // Close any open away session before finishing the day.
+        $this->endOpenAwaySessions((int) $userId);
 
         // 2. IP & Location Check
         $currentIp = $this->getCurrentUserIp();

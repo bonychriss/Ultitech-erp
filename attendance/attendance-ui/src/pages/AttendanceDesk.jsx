@@ -58,6 +58,19 @@ function formatDisplayTime(raw) {
 
 const DEFAULT_WEATHER_COORDS = { latitude: -6.7924, longitude: 39.2083 }; // Dar es Salaam
 
+const DEFAULT_AWAY_REASONS = [
+  { value: 'break', label: 'Break', status: 'On break' },
+  { value: 'customer_visit', label: 'Customer visit', status: 'On visit' },
+  { value: 'delivery', label: 'Delivery', status: 'On delivery' },
+];
+
+function awayStatusTone(reason) {
+  const key = String(reason || '').toLowerCase();
+  if (key === 'customer_visit') return 'visit';
+  if (key === 'delivery') return 'delivery';
+  return 'break';
+}
+
 function weatherFromCode(code) {
   const c = Number(code);
   if (c === 0) return { label: 'Clear', icon: 'fa-sun' };
@@ -352,6 +365,10 @@ export default function AttendanceDesk({ data }) {
         secure_ok: true,
         rp_id: '',
       },
+      activeAway: data.activeAway || null,
+      awayReasons: Array.isArray(data.awayReasons) && data.awayReasons.length
+        ? data.awayReasons
+        : DEFAULT_AWAY_REASONS,
       message: data.message || '',
       msgType: data.msgType || '',
       clockInSuccess: data.clockInSuccess || null,
@@ -361,6 +378,9 @@ export default function AttendanceDesk({ data }) {
 
   const [planOpen, setPlanOpen] = useState(false);
   const [reviewOpen, setReviewOpen] = useState(false);
+  const [awayOpen, setAwayOpen] = useState(false);
+  const [awayReason, setAwayReason] = useState('break');
+  const [awayNote, setAwayNote] = useState('');
   const [newTasks, setNewTasks] = useState(['']);
   const [completedIds, setCompletedIds] = useState(() => new Set());
   const [busy, setBusy] = useState(false);
@@ -500,8 +520,15 @@ export default function AttendanceDesk({ data }) {
   const todayRecord = state.todayRecord;
   const isOut = todayRecord && todayRecord.time_out;
   const isIn = todayRecord && todayRecord.time_in && !todayRecord.time_out;
+  const activeAway = state.activeAway && state.activeAway.is_open !== false ? state.activeAway : null;
+  const isAway = Boolean(isIn && activeAway);
   const canClockIn = !todayRecord;
   const canClockOut = Boolean(isIn);
+  const canStartAway = Boolean(isIn && !isAway);
+  const canEndAway = Boolean(isAway);
+  const awayReasons = Array.isArray(state.awayReasons) && state.awayReasons.length
+    ? state.awayReasons
+    : DEFAULT_AWAY_REASONS;
   const dailyTargetHours = Number(shift.dailyTargetHours || 8) || 8;
   const shiftStart = shift.start || '09:00';
   const shiftGraceMinutes = Number(shift.graceMinutes ?? 15) || 0;
@@ -553,6 +580,12 @@ export default function AttendanceDesk({ data }) {
         label: `Out at ${formatTimeHm(todayRecord.time_out)}`,
       };
     }
+    if (isAway && activeAway) {
+      return {
+        tone: awayStatusTone(activeAway.reason),
+        label: activeAway.status_label || 'Away',
+      };
+    }
     if (isIn) {
       return {
         tone: 'online',
@@ -563,7 +596,7 @@ export default function AttendanceDesk({ data }) {
       tone: 'standby',
       label: 'Standby',
     };
-  }, [isIn, isOut, todayRecord]);
+  }, [isIn, isOut, isAway, activeAway, todayRecord]);
 
   function openPlan() {
     setNewTasks(['']);
@@ -573,6 +606,12 @@ export default function AttendanceDesk({ data }) {
   function openReview() {
     setCompletedIds(new Set());
     setReviewOpen(true);
+  }
+
+  function openAway() {
+    setAwayReason(awayReasons[0]?.value || 'break');
+    setAwayNote('');
+    setAwayOpen(true);
   }
 
   function dismissSuccess() {
@@ -601,6 +640,12 @@ export default function AttendanceDesk({ data }) {
       isIpAllowed: payload.isIpAllowed ?? cur.isIpAllowed,
       currentIp: payload.currentIp ?? cur.currentIp,
       biometric: payload.biometric ?? cur.biometric,
+      activeAway: Object.prototype.hasOwnProperty.call(payload, 'activeAway')
+        ? (payload.activeAway || null)
+        : cur.activeAway,
+      awayReasons: Array.isArray(payload.awayReasons) && payload.awayReasons.length
+        ? payload.awayReasons
+        : cur.awayReasons,
       message: extras.message ?? '',
       msgType: extras.msgType ?? '',
       clockInSuccess: extras.clockInSuccess ?? null,
@@ -939,6 +984,71 @@ export default function AttendanceDesk({ data }) {
     }
   }
 
+  async function submitAwayStart() {
+    if (!awayReason) {
+      window.alert('Choose why you are leaving.');
+      return;
+    }
+    setAwayOpen(false);
+    setBusy(true);
+    try {
+      const result = await postAttendanceAction({
+        action: 'away_start',
+        reason: awayReason,
+        note: awayNote.trim(),
+        history_month: state.historyMonth,
+      });
+      if (!result.success) {
+        applyPayload(result.data, {
+          message: result.message || 'Could not start away.',
+          msgType: 'danger',
+        });
+        return;
+      }
+      applyPayload(result.data, {
+        message: result.message || 'Away started.',
+        msgType: 'success',
+      });
+    } catch (err) {
+      setState((cur) => ({
+        ...cur,
+        message: err instanceof Error ? err.message : 'Could not start away.',
+        msgType: 'danger',
+      }));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function submitAwayEnd() {
+    setBusy(true);
+    try {
+      const result = await postAttendanceAction({
+        action: 'away_end',
+        history_month: state.historyMonth,
+      });
+      if (!result.success) {
+        applyPayload(result.data, {
+          message: result.message || 'Could not end away.',
+          msgType: 'danger',
+        });
+        return;
+      }
+      applyPayload(result.data, {
+        message: result.message || 'Welcome back.',
+        msgType: 'success',
+      });
+    } catch (err) {
+      setState((cur) => ({
+        ...cur,
+        message: err instanceof Error ? err.message : 'Could not end away.',
+        msgType: 'danger',
+      }));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   const showInSuccess = state.clockInSuccess && !successDismissed;
   const showOutSuccess = state.clockOutSuccess && !successDismissed;
   const stats = state.stats || {};
@@ -1077,6 +1187,26 @@ export default function AttendanceDesk({ data }) {
                     onClick={openPlan}
                   >
                     {busy ? 'Processing...' : 'Clock in'}
+                  </button>
+                ) : null}
+                {canStartAway ? (
+                  <button
+                    type="button"
+                    className="att-btn-away"
+                    disabled={busy}
+                    onClick={openAway}
+                  >
+                    {busy ? 'Processing...' : 'Start away'}
+                  </button>
+                ) : null}
+                {canEndAway ? (
+                  <button
+                    type="button"
+                    className="att-btn-away att-btn-away--back"
+                    disabled={busy}
+                    onClick={submitAwayEnd}
+                  >
+                    {busy ? 'Processing...' : "I'm back"}
                   </button>
                 ) : null}
                 {canClockOut ? (
@@ -1317,13 +1447,17 @@ export default function AttendanceDesk({ data }) {
                 <div className="att-present-list">
                   {teamToday.map((row) => {
                     const stillIn = Boolean(row.time_in) && !row.time_out;
+                    const rowAway = stillIn && row.away ? row.away : null;
                     const isMe = Number(row.user_id) === Number(user.id || 0);
                     const name = row.full_name || row.username || '—';
                     const timing = arrivalTiming(row.time_in, shiftStart, shiftGraceMinutes);
+                    const presenceLabel = row.time_out
+                      ? `Out ${formatTimeHm(row.time_out)}`
+                      : (rowAway?.status_label || 'Still in');
                     return (
                       <div
                         key={`${row.user_id}-${row.id || row.time_in || ''}`}
-                        className={`att-present-item${isMe ? ' is-me' : ''}${stillIn ? ' is-active' : ''}`}
+                        className={`att-present-item${isMe ? ' is-me' : ''}${stillIn ? ' is-active' : ''}${rowAway ? ' is-away' : ''}`}
                       >
                         <div className="att-present-avatar" aria-hidden="true">
                           {nameInitials(name)}
@@ -1336,9 +1470,14 @@ export default function AttendanceDesk({ data }) {
                           <div className="att-present-meta">
                             {row.department ? <span>{row.department}</span> : null}
                             <span>In {formatTimeHm(row.time_in)}</span>
-                            <span>{row.time_out ? `Out ${formatTimeHm(row.time_out)}` : 'Still in'}</span>
+                            <span>{presenceLabel}</span>
                           </div>
-                          {timing ? (
+                          {rowAway ? (
+                            <span className={`att-present-away is-${awayStatusTone(rowAway.reason)}`}>
+                              {rowAway.status_label}
+                              {rowAway.note ? ` · ${rowAway.note}` : ''}
+                            </span>
+                          ) : timing ? (
                             <span className={`att-present-timing is-${timing.tone}`}>
                               {timing.label}
                             </span>
@@ -1449,6 +1588,19 @@ export default function AttendanceDesk({ data }) {
           setCompletedIds={setCompletedIds}
           onClose={() => setReviewOpen(false)}
           onConfirm={submitClockOut}
+          busy={busy}
+        />
+      ) : null}
+
+      {awayOpen ? (
+        <AwayModal
+          reasons={awayReasons}
+          reason={awayReason}
+          setReason={setAwayReason}
+          note={awayNote}
+          setNote={setAwayNote}
+          onClose={() => setAwayOpen(false)}
+          onConfirm={submitAwayStart}
           busy={busy}
         />
       ) : null}
@@ -1800,6 +1952,78 @@ function ReviewModal({ pendingTasks, completedIds, setCompletedIds, onClose, onC
           </button>
           <button type="button" className="att-review-btn-confirm" disabled={busy} onClick={onConfirm}>
             <i className="far fa-clock" aria-hidden="true" /> Confirm &amp; Clock Out
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AwayModal({ reasons, reason, setReason, note, setNote, onClose, onConfirm, busy }) {
+  const options = Array.isArray(reasons) && reasons.length ? reasons : DEFAULT_AWAY_REASONS;
+  return (
+    <div
+      className="att-away-overlay is-open"
+      aria-hidden="false"
+      role="dialog"
+      aria-labelledby="awayModalTitle"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div className="att-away-modal" role="document" onClick={(e) => e.stopPropagation()}>
+        <button type="button" className="att-away-close" onClick={onClose} aria-label="Close">
+          <i className="fas fa-times" aria-hidden="true" />
+        </button>
+        <div className="att-away-header">
+          <div className="att-away-header-icon" aria-hidden="true">
+            <i className="fas fa-door-open" />
+          </div>
+          <h2 id="awayModalTitle" className="att-away-title">
+            Start away
+          </h2>
+          <p className="att-away-desc">
+            Stay clocked in. Pick why you are leaving the desk.
+          </p>
+        </div>
+        <div className="att-away-body">
+          <div className="att-away-reasons" role="radiogroup" aria-label="Away reason">
+            {options.map((item) => {
+              const selected = item.value === reason;
+              return (
+                <button
+                  key={item.value}
+                  type="button"
+                  role="radio"
+                  aria-checked={selected}
+                  className={`att-away-reason is-${awayStatusTone(item.value)}${selected ? ' is-selected' : ''}`}
+                  onClick={() => setReason(item.value)}
+                >
+                  <span className="att-away-reason-label">{item.label}</span>
+                  <span className="att-away-reason-status">{item.status}</span>
+                </button>
+              );
+            })}
+          </div>
+          <label className="att-away-note-label" htmlFor="awayNoteInput">
+            Note <span>(optional)</span>
+          </label>
+          <input
+            id="awayNoteInput"
+            type="text"
+            className="att-away-note-input"
+            maxLength={255}
+            placeholder="Customer name, order no., destination…"
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+          />
+        </div>
+        <div className="att-away-footer">
+          <button type="button" className="att-away-btn-cancel" onClick={onClose}>
+            Cancel
+          </button>
+          <button type="button" className="att-away-btn-confirm" disabled={busy || !reason} onClick={onConfirm}>
+            <i className="fas fa-check" aria-hidden="true" /> Confirm away
           </button>
         </div>
       </div>

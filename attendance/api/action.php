@@ -136,6 +136,8 @@ function attendance_desk_payload(Attendance $attendance, PDO $pdo, int $userId, 
         'isIpAllowed' => $attendance->isIpAllowed($currentIp),
         'currentIp' => $currentIp,
         'biometric' => $biometric,
+        'activeAway' => $attendance->getActiveAwaySession($userId),
+        'awayReasons' => $attendance->getAwayReasonOptions(),
     ];
 }
 
@@ -355,6 +357,28 @@ if ($action === 'clock_in') {
         'success' => true,
         'message' => 'Clocked in successfully.',
         'clockInSuccess' => $clockInSuccess,
+        'data' => attendance_desk_payload($attendance, $pdo, $userId, $historyMonth, $webauthn),
+    ]);
+    exit;
+}
+
+if ($action === 'away_start') {
+    $reason = isset($payload['reason']) ? (string) $payload['reason'] : '';
+    $note = isset($payload['note']) ? (string) $payload['note'] : null;
+    $result = $attendance->startAway($userId, $reason, $note);
+    echo json_encode([
+        'success' => !empty($result['success']),
+        'message' => (string) ($result['message'] ?? ''),
+        'data' => attendance_desk_payload($attendance, $pdo, $userId, $historyMonth, $webauthn),
+    ]);
+    exit;
+}
+
+if ($action === 'away_end') {
+    $result = $attendance->endAway($userId);
+    echo json_encode([
+        'success' => !empty($result['success']),
+        'message' => (string) ($result['message'] ?? ''),
         'data' => attendance_desk_payload($attendance, $pdo, $userId, $historyMonth, $webauthn),
     ]);
     exit;

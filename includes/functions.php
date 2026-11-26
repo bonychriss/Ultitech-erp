@@ -18689,6 +18689,24 @@ function ensureAttendanceClockModuleSchema()
     } catch (PDOException $e) {
         error_log('ensureAttendanceClockModuleSchema(webauthn): ' . $e->getMessage());
     }
+    try {
+        $pdo->exec("CREATE TABLE IF NOT EXISTS attendance_away_sessions (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            user_id INT NOT NULL,
+            attendance_record_id INT NULL,
+            date DATE NOT NULL,
+            reason VARCHAR(32) NOT NULL,
+            note VARCHAR(255) NULL,
+            started_at DATETIME NOT NULL,
+            ended_at DATETIME NULL,
+            duration_minutes INT NULL,
+            INDEX idx_att_away_user_date (user_id, date),
+            INDEX idx_att_away_open (user_id, ended_at),
+            INDEX idx_att_away_record (attendance_record_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+    } catch (PDOException $e) {
+        error_log('ensureAttendanceClockModuleSchema(away): ' . $e->getMessage());
+    }
     $auxReady = true;
 }
 

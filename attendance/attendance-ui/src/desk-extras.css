@@ -688,6 +688,39 @@ html[data-theme="dark"] .att-desk-toast-close:hover {
   color: #15803d;
   background: #dcfce7;
 }
+.att-present-away {
+  grid-area: timing;
+  display: inline-flex;
+  align-items: center;
+  align-self: center;
+  justify-self: end;
+  flex: 0 0 auto;
+  max-width: 12rem;
+  padding: 0.08rem 0.42rem;
+  border-radius: 999px;
+  font-size: 0.55rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.att-present-away.is-break {
+  color: #9a3412;
+  background: #ffedd5;
+}
+.att-present-away.is-visit {
+  color: #0369a1;
+  background: #e0f2fe;
+}
+.att-present-away.is-delivery {
+  color: #5b21b6;
+  background: #ede9fe;
+}
+.att-present-item.is-away .att-present-avatar {
+  box-shadow: 0 0 0 2px #fdba74;
+}
 .att-present-side {
   display: flex;
   flex-direction: column;

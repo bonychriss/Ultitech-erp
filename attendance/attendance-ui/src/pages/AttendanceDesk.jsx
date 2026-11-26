@@ -1000,19 +1000,19 @@ export default function AttendanceDesk({ data }) {
       });
       if (!result.success) {
         applyPayload(result.data, {
-          message: result.message || 'Could not start away.',
+          message: result.message || 'Could not step out.',
           msgType: 'danger',
         });
         return;
       }
       applyPayload(result.data, {
-        message: result.message || 'Away started.',
+        message: result.message || 'Stepped out.',
         msgType: 'success',
       });
     } catch (err) {
       setState((cur) => ({
         ...cur,
-        message: err instanceof Error ? err.message : 'Could not start away.',
+        message: err instanceof Error ? err.message : 'Could not step out.',
         msgType: 'danger',
       }));
     } finally {
@@ -1177,9 +1177,9 @@ export default function AttendanceDesk({ data }) {
               </div>
             </div>
 
-            {showHeroClockActions && !showMobileEnroll ? (
+            {!showMobileEnroll && (showHeroClockActions || canStartAway || canEndAway) ? (
               <div className="att-clock-actions att-clock-actions--below-card">
-                {canClockIn ? (
+                {showHeroClockActions && canClockIn ? (
                   <button
                     type="button"
                     className="att-glass-btn"
@@ -1196,7 +1196,14 @@ export default function AttendanceDesk({ data }) {
                     disabled={busy}
                     onClick={openAway}
                   >
-                    {busy ? 'Processing...' : 'Start away'}
+                    {busy ? (
+                      'Processing...'
+                    ) : (
+                      <>
+                        <i className="fas fa-door-open" aria-hidden="true" />
+                        Step out
+                      </>
+                    )}
                   </button>
                 ) : null}
                 {canEndAway ? (
@@ -1206,20 +1213,34 @@ export default function AttendanceDesk({ data }) {
                     disabled={busy}
                     onClick={submitAwayEnd}
                   >
-                    {busy ? 'Processing...' : "I'm back"}
+                    {busy ? (
+                      'Processing...'
+                    ) : (
+                      <>
+                        <i className="fas fa-door-closed" aria-hidden="true" />
+                        I&apos;m back
+                      </>
+                    )}
                   </button>
                 ) : null}
-                {canClockOut ? (
+                {showHeroClockActions && canClockOut ? (
                   <button
                     type="button"
                     className="att-btn-clock-out"
                     disabled={busy}
                     onClick={openReview}
                   >
-                    {busy ? 'Processing...' : 'Clock out'}
+                    {busy ? (
+                      'Processing...'
+                    ) : (
+                      <>
+                        <i className="fas fa-sign-out-alt" aria-hidden="true" />
+                        Clock out
+                      </>
+                    )}
                   </button>
                 ) : null}
-                {!canClockIn && !canClockOut ? (
+                {showHeroClockActions && !canClockIn && !canClockOut ? (
                   <button type="button" className="att-glass-btn att-glass-btn--muted" disabled>
                     Shift complete
                   </button>
@@ -1980,7 +2001,7 @@ function AwayModal({ reasons, reason, setReason, note, setNote, onClose, onConfi
             <i className="fas fa-door-open" />
           </div>
           <h2 id="awayModalTitle" className="att-away-title">
-            Start away
+            Step out
           </h2>
           <p className="att-away-desc">
             Stay clocked in. Pick why you are leaving the desk.
@@ -2023,7 +2044,7 @@ function AwayModal({ reasons, reason, setReason, note, setNote, onClose, onConfi
             Cancel
           </button>
           <button type="button" className="att-away-btn-confirm" disabled={busy || !reason} onClick={onConfirm}>
-            <i className="fas fa-check" aria-hidden="true" /> Confirm away
+            <i className="fas fa-check" aria-hidden="true" /> Confirm &amp; step out
           </button>
         </div>
       </div>

@@ -255,7 +255,7 @@ body.page-attendance-desk #native-sidebar .nav-pills .nav-link:hover i {
 body.page-attendance-desk #native-sidebar .nav-pills .nav-link.active {
     color: #0f172a !important;
     font-weight: 600 !important;
-    background: #f1f5f9 !important;
+    background: transparent !important;
     box-shadow: none !important;
     transform: none !important;
 }

@@ -376,6 +376,7 @@ export default function AttendanceDesk({ data }) {
       awayReasons: Array.isArray(data.awayReasons) && data.awayReasons.length
         ? data.awayReasons
         : DEFAULT_AWAY_REASONS,
+      todayTimeline: Array.isArray(data.todayTimeline) ? data.todayTimeline : [],
       message: data.message || '',
       msgType: data.msgType || '',
       clockInSuccess: data.clockInSuccess || null,
@@ -653,6 +654,9 @@ export default function AttendanceDesk({ data }) {
       awayReasons: Array.isArray(payload.awayReasons) && payload.awayReasons.length
         ? payload.awayReasons
         : cur.awayReasons,
+      todayTimeline: Array.isArray(payload.todayTimeline)
+        ? payload.todayTimeline
+        : cur.todayTimeline,
       message: extras.message ?? '',
       msgType: extras.msgType ?? '',
       clockInSuccess: extras.clockInSuccess ?? null,
@@ -1253,6 +1257,43 @@ export default function AttendanceDesk({ data }) {
                   </button>
                 ) : null}
               </div>
+            ) : null}
+
+            {Array.isArray(state.todayTimeline) && state.todayTimeline.length > 0 ? (
+              <section className="att-today-timeline" aria-label="Today activity">
+                <div className="att-today-timeline-head">
+                  <h3 className="att-today-timeline-title">Today</h3>
+                  <span className="att-today-timeline-sub">Your day so far</span>
+                </div>
+                <ol className="att-today-timeline-list">
+                  {state.todayTimeline.map((item, index) => {
+                    const isLast = index === state.todayTimeline.length - 1;
+                    return (
+                      <li
+                        key={item.id || `${item.type}-${item.at}-${index}`}
+                        className={`att-today-timeline-item is-${item.tone || 'in'}${isLast ? ' is-latest' : ''}`}
+                      >
+                        <span className="att-today-timeline-rail" aria-hidden="true">
+                          <span className="att-today-timeline-dot">
+                            <i className={item.icon || 'fas fa-circle'} />
+                          </span>
+                        </span>
+                        <div className="att-today-timeline-body">
+                          <div className="att-today-timeline-row">
+                            <span className="att-today-timeline-event">{item.title}</span>
+                            <time className="att-today-timeline-time" dateTime={item.at || undefined}>
+                              {item.time_label || '--:--'}
+                            </time>
+                          </div>
+                          {item.detail ? (
+                            <p className="att-today-timeline-detail">{item.detail}</p>
+                          ) : null}
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ol>
+              </section>
             ) : null}
 
             {phoneToast && usePhoneForClock && !alreadyClockedToday ? (

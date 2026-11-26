@@ -138,6 +138,7 @@ function attendance_desk_payload(Attendance $attendance, PDO $pdo, int $userId, 
         'biometric' => $biometric,
         'activeAway' => $attendance->getActiveAwaySession($userId),
         'awayReasons' => $attendance->getAwayReasonOptions(),
+        'todayTimeline' => $attendance->getTodayTimeline($userId),
     ];
 }
 

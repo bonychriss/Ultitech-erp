@@ -293,6 +293,189 @@ class Attendance {
         }
     }
 
+    /**
+     * @return list<array<string,mixed>>
+     */
+    public function getTodayAwaySessions(int $userId): array
+    {
+        if ($userId <= 0) {
+            return [];
+        }
+        $date = $this->getTodayDateString();
+        try {
+            $t = self::AWAY_TABLE;
+            $stmt = $this->pdo->prepare("
+                SELECT * FROM `{$t}`
+                WHERE user_id = ? AND `date` = ?
+                ORDER BY started_at ASC, id ASC
+            ");
+            $stmt->execute([$userId, $date]);
+            $out = [];
+            while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                $formatted = $this->formatAwaySession($row);
+                if ($formatted) {
+                    $out[] = $formatted;
+                }
+            }
+            return $out;
+        } catch (Throwable $e) {
+            error_log('Attendance::getTodayAwaySessions: ' . $e->getMessage());
+            return [];
+        }
+    }
+
+    private function formatTimelineClockLabel($value): string
+    {
+        $raw = trim((string) $value);
+        if ($raw === '') {
+            return '';
+        }
+        $ts = strtotime($raw);
+        if ($ts === false && preg_match('/^\d{1,2}:\d{2}(:\d{2})?$/', $raw)) {
+            $ts = strtotime(date('Y-m-d') . ' ' . $raw);
+        }
+        if ($ts === false) {
+            return $raw;
+        }
+        return date('g:i A', $ts);
+    }
+
+    private function formatTimelineDuration(?int $minutes): ?string
+    {
+        if ($minutes === null || $minutes < 0) {
+            return null;
+        }
+        if ($minutes < 60) {
+            return $minutes . ' min';
+        }
+        $h = intdiv($minutes, 60);
+        $m = $minutes % 60;
+        if ($m === 0) {
+            return $h . 'h';
+        }
+        return $h . 'h ' . $m . 'm';
+    }
+
+    /**
+     * Personal day story: clock in → away start/end → clock out.
+     *
+     * @return list<array{
+     *   id:string,type:string,at:string,time_label:string,title:string,
+     *   detail:?string,reason:?string,tone:string,icon:string
+     * }>
+     */
+    public function getTodayTimeline(int $userId): array
+    {
+        $events = [];
+        $record = $this->getTodayRecord($userId);
+        if (!$record || empty($record['time_in'])) {
+            return [];
+        }
+
+        $date = (string) ($record['date'] ?? $this->getTodayDateString());
+        $timeIn = (string) ($record['time_in'] ?? '');
+        $clockInAt = (strpos($timeIn, '-') !== false || strpos($timeIn, ' ') !== false)
+            ? $timeIn
+            : ($date . ' ' . $timeIn);
+        $events[] = [
+            'id' => 'clock_in',
+            'type' => 'clock_in',
+            'at' => $clockInAt,
+            'time_label' => $this->formatTimelineClockLabel($clockInAt),
+            'title' => 'Clocked in',
+            'detail' => trim((string) ($record['status'] ?? '')) !== ''
+                ? (string) $record['status']
+                : null,
+            'reason' => null,
+            'tone' => 'in',
+            'icon' => 'fas fa-sign-in-alt',
+        ];
+
+        foreach ($this->getTodayAwaySessions($userId) as $away) {
+            $reason = (string) ($away['reason'] ?? 'break');
+            $reasonLabel = (string) ($away['reason_label'] ?? 'Break');
+            $statusLabel = (string) ($away['status_label'] ?? ('On ' . strtolower($reasonLabel)));
+            $tone = $reason === 'customer_visit' ? 'visit' : ($reason === 'delivery' ? 'delivery' : 'break');
+            $startIcon = $reason === 'customer_visit'
+                ? 'fas fa-handshake'
+                : ($reason === 'delivery' ? 'fas fa-truck' : 'fas fa-pause-circle');
+            $startedAt = (string) ($away['started_at'] ?? '');
+            $note = isset($away['note']) && $away['note'] !== null && trim((string) $away['note']) !== ''
+                ? trim((string) $away['note'])
+                : null;
+
+            $events[] = [
+                'id' => 'away_start_' . (int) ($away['id'] ?? 0),
+                'type' => 'away_start',
+                'at' => $startedAt,
+                'time_label' => $this->formatTimelineClockLabel($startedAt),
+                'title' => $reasonLabel . ' started',
+                'detail' => $note !== null ? $note : $statusLabel,
+                'reason' => $reason,
+                'tone' => $tone,
+                'icon' => $startIcon,
+            ];
+
+            if (!empty($away['ended_at'])) {
+                $endedAt = (string) $away['ended_at'];
+                $duration = $this->formatTimelineDuration(
+                    isset($away['duration_minutes']) ? (int) $away['duration_minutes'] : null
+                );
+                $backDetailParts = [];
+                if ($duration) {
+                    $backDetailParts[] = $duration;
+                }
+                if ($note) {
+                    $backDetailParts[] = $note;
+                }
+                $events[] = [
+                    'id' => 'away_end_' . (int) ($away['id'] ?? 0),
+                    'type' => 'away_end',
+                    'at' => $endedAt,
+                    'time_label' => $this->formatTimelineClockLabel($endedAt),
+                    'title' => 'Back from ' . strtolower($reasonLabel),
+                    'detail' => $backDetailParts !== [] ? implode(' · ', $backDetailParts) : null,
+                    'reason' => $reason,
+                    'tone' => 'back',
+                    'icon' => 'fas fa-door-closed',
+                ];
+            }
+        }
+
+        if (!empty($record['time_out'])) {
+            $timeOut = (string) $record['time_out'];
+            $clockOutAt = (strpos($timeOut, '-') !== false || strpos($timeOut, ' ') !== false)
+                ? $timeOut
+                : ($date . ' ' . $timeOut);
+            $hoursDetail = null;
+            if (isset($record['total_hours']) && $record['total_hours'] !== null && $record['total_hours'] !== '') {
+                $hoursDetail = number_format((float) $record['total_hours'], 1) . 'h worked';
+            }
+            $events[] = [
+                'id' => 'clock_out',
+                'type' => 'clock_out',
+                'at' => $clockOutAt,
+                'time_label' => $this->formatTimelineClockLabel($clockOutAt),
+                'title' => 'Clocked out',
+                'detail' => $hoursDetail,
+                'reason' => null,
+                'tone' => 'out',
+                'icon' => 'fas fa-sign-out-alt',
+            ];
+        }
+
+        usort($events, static function (array $a, array $b): int {
+            $ta = strtotime((string) ($a['at'] ?? '')) ?: 0;
+            $tb = strtotime((string) ($b['at'] ?? '')) ?: 0;
+            if ($ta === $tb) {
+                return strcmp((string) ($a['id'] ?? ''), (string) ($b['id'] ?? ''));
+            }
+            return $ta <=> $tb;
+        });
+
+        return $events;
+    }
+
     private function loadSettings() {
         try {
             $order = (function_exists('columnExists') && columnExists('attendance_settings', 'updated_at', $this->pdo))

@@ -2242,7 +2242,7 @@
         display: flex;
         flex-direction: row;
         align-items: flex-start;
-        justify-content: space-between;
+        justify-content: flex-start;
         gap: 0.85rem;
         padding-right: 2.5rem;
     }
@@ -2427,4 +2427,162 @@
     }
     .att-away-btn-confirm i {
         font-size: 0.75rem;
+    }
+
+    .att-today-timeline {
+        margin: 0.85rem 0 0.35rem;
+        padding: 0.95rem 1rem 0.85rem;
+        background: #fff;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        box-shadow: 0 8px 20px rgba(15, 23, 42, 0.04);
+    }
+    .att-today-timeline-head {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 0.75rem;
+        margin-bottom: 0.75rem;
+    }
+    .att-today-timeline-title {
+        margin: 0;
+        font-size: 0.95rem;
+        font-weight: 500;
+        color: #0f172a;
+        letter-spacing: -0.01em;
+    }
+    .att-today-timeline-sub {
+        font-size: 0.78rem;
+        font-weight: 400;
+        color: #94a3b8;
+    }
+    .att-today-timeline-list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 0;
+    }
+    .att-today-timeline-item {
+        display: grid;
+        grid-template-columns: 1.6rem minmax(0, 1fr);
+        gap: 0.7rem;
+        position: relative;
+        padding-bottom: 0.9rem;
+    }
+    .att-today-timeline-item:last-child {
+        padding-bottom: 0;
+    }
+    .att-today-timeline-rail {
+        position: relative;
+        display: flex;
+        justify-content: center;
+        min-height: 100%;
+    }
+    .att-today-timeline-rail::before {
+        content: '';
+        position: absolute;
+        top: 1.55rem;
+        bottom: -0.15rem;
+        left: 50%;
+        width: 1px;
+        transform: translateX(-50%);
+        background: #e2e8f0;
+    }
+    .att-today-timeline-item:last-child .att-today-timeline-rail::before {
+        display: none;
+    }
+    .att-today-timeline-dot {
+        width: 1.55rem;
+        height: 1.55rem;
+        border-radius: 999px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: #f1f5f9;
+        color: #64748b;
+        font-size: 0.68rem;
+        z-index: 1;
+        flex-shrink: 0;
+    }
+    .att-today-timeline-item.is-in .att-today-timeline-dot {
+        background: #dcfce7;
+        color: #15803d;
+    }
+    .att-today-timeline-item.is-break .att-today-timeline-dot {
+        background: #fff7ed;
+        color: #c2410c;
+    }
+    .att-today-timeline-item.is-visit .att-today-timeline-dot {
+        background: #e0f2fe;
+        color: #0369a1;
+    }
+    .att-today-timeline-item.is-delivery .att-today-timeline-dot {
+        background: #ede9fe;
+        color: #6d28d9;
+    }
+    .att-today-timeline-item.is-back .att-today-timeline-dot {
+        background: #e0f2fe;
+        color: #0284c7;
+    }
+    .att-today-timeline-item.is-out .att-today-timeline-dot {
+        background: #ffedd5;
+        color: #c2410c;
+    }
+    .att-today-timeline-body {
+        min-width: 0;
+        padding-top: 0.1rem;
+    }
+    .att-today-timeline-row {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 0.75rem;
+    }
+    .att-today-timeline-event {
+        font-size: 0.9rem;
+        font-weight: 500;
+        color: #0f172a;
+        line-height: 1.3;
+    }
+    .att-today-timeline-time {
+        flex: 0 0 auto;
+        font-size: 0.78rem;
+        font-weight: 400;
+        color: #64748b;
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+    }
+    .att-today-timeline-detail {
+        margin: 0.15rem 0 0;
+        font-size: 0.78rem;
+        font-weight: 400;
+        color: #94a3b8;
+        line-height: 1.35;
+    }
+    .att-today-timeline-item.is-latest .att-today-timeline-event {
+        color: #0f172a;
+    }
+
+    html[data-theme="dark"] .att-today-timeline {
+        background: #1e293b;
+        border-color: #334155;
+        box-shadow: none;
+    }
+    html[data-theme="dark"] .att-today-timeline-title,
+    html[data-theme="dark"] .att-today-timeline-event {
+        color: #e2e8f0;
+    }
+    html[data-theme="dark"] .att-today-timeline-sub,
+    html[data-theme="dark"] .att-today-timeline-detail,
+    html[data-theme="dark"] .att-today-timeline-time {
+        color: #94a3b8;
+    }
+    html[data-theme="dark"] .att-today-timeline-rail::before {
+        background: #334155;
+    }
+    html[data-theme="dark"] .att-today-timeline-dot {
+        background: #334155;
+        color: #cbd5e1;
     }

@@ -2010,12 +2010,14 @@ function AwayModal({ reasons, reason, setReason, note, setNote, onClose, onConfi
           <div className="att-away-header-icon" aria-hidden="true">
             <i className="fas fa-door-open" />
           </div>
-          <h2 id="awayModalTitle" className="att-away-title">
-            Step out
-          </h2>
-          <p id="awayModalDesc" className="att-away-desc">
-            Stay clocked in. Pick why you are leaving the desk.
-          </p>
+          <div className="att-away-header-copy">
+            <h2 id="awayModalTitle" className="att-away-title">
+              Step out
+            </h2>
+            <p id="awayModalDesc" className="att-away-desc">
+              Stay clocked in. Pick why you are leaving the desk.
+            </p>
+          </div>
         </header>
 
         <div className="att-away-body">

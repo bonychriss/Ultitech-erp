@@ -2240,10 +2240,19 @@
     .att-away-close:hover { background: #e2e8f0; color: #0f172a; }
     .att-away-header {
         display: flex;
+        flex-direction: row;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 0.85rem;
+        padding-right: 2.5rem;
+    }
+    .att-away-header-copy {
+        display: flex;
         flex-direction: column;
         align-items: flex-start;
         gap: 0.3rem;
-        padding-right: 2.25rem;
+        min-width: 0;
+        flex: 1 1 auto;
     }
     .att-away-header-icon {
         width: 2.35rem;
@@ -2254,8 +2263,9 @@
         justify-content: center;
         background: #fff7ed;
         color: #ea580c;
-        margin-bottom: 0.35rem;
         font-size: 0.95rem;
+        flex: 0 0 auto;
+        margin-top: 0.1rem;
     }
     .att-away-title {
         margin: 0;
@@ -2386,14 +2396,18 @@
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        gap: 0.4rem;
-        min-height: 2.55rem;
-        padding: 0.55rem 1.15rem;
-        border-radius: 999px;
+        gap: 0.45rem;
+        min-height: 2.6rem;
+        padding: 0.6rem 1.45rem !important;
+        border-radius: 999px !important;
         font-size: 0.9rem;
         font-weight: 400;
+        line-height: 1;
         cursor: pointer;
         border: 1px solid transparent;
+        box-shadow: none;
+        appearance: none;
+        -webkit-appearance: none;
     }
     .att-away-btn-cancel {
         background: #f1f5f9;

@@ -184,13 +184,13 @@ body.page-attendance-desk .sidebar-container {
     background: #ffffff !important;
     border-right: 1px solid #e5e7eb !important;
     --sidebar-bg: #ffffff;
-    --sidebar-text: #9ca3af;
-    --sidebar-icon-color: #9ca3af;
+    --sidebar-text: #475569;
+    --sidebar-icon-color: #64748b;
     --sidebar-hover-bg: transparent;
-    --sidebar-hover-text: #6b7280;
-    --sidebar-hover-icon: #6b7280;
+    --sidebar-hover-text: #0f172a;
+    --sidebar-hover-icon: #0f172a;
     --sidebar-active-bg: transparent;
-    --sidebar-active-text: #111827;
+    --sidebar-active-text: #0f172a;
     --sidebar-border: #e5e7eb;
 }
 body.page-attendance-desk #native-sidebar .nav-pills {
@@ -201,15 +201,17 @@ body.page-attendance-desk #native-sidebar .nav-pills {
 }
 body.page-attendance-desk #native-sidebar .nav-pills .nav-link {
     position: relative;
-    color: #9ca3af !important;
-    font-weight: 300 !important;
+    color: #475569 !important;
+    font-weight: 400 !important;
+    font-size: 0.875rem !important;
+    line-height: 1.3 !important;
     background: transparent !important;
     border: 0 !important;
     border-radius: 0 !important;
     box-shadow: none !important;
     transform: none !important;
-    padding: 0.45rem 0.55rem 0.45rem 0.75rem !important;
-    margin: 0.05rem 0 !important;
+    padding: 0.38rem 0.5rem 0.38rem 0.7rem !important;
+    margin: 0.04rem 0 !important;
     overflow: visible !important;
 }
 body.page-attendance-desk #native-sidebar .nav-pills .nav-link::before {
@@ -224,37 +226,50 @@ body.page-attendance-desk #native-sidebar .nav-pills .nav-link::before {
     transform: translate(-50%, -50%);
 }
 body.page-attendance-desk #native-sidebar .nav-pills .nav-link i {
-    color: #9ca3af !important;
+    color: #64748b !important;
+    font-size: 0.9rem !important;
+    width: 1.05rem !important;
     transform: none !important;
     filter: none !important;
 }
 body.page-attendance-desk #native-sidebar .nav-pills .nav-link:hover {
-    color: #6b7280 !important;
+    color: #0f172a !important;
     background: transparent !important;
     box-shadow: none !important;
     padding-left: 0.75rem !important;
 }
 body.page-attendance-desk #native-sidebar .nav-pills .nav-link:hover i {
-    color: #6b7280 !important;
+    color: #0f172a !important;
     transform: none !important;
     filter: none !important;
 }
 body.page-attendance-desk #native-sidebar .nav-pills .nav-link.active {
-    color: #111827 !important;
-    font-weight: 500 !important;
+    color: #0f172a !important;
+    font-weight: 600 !important;
     background: transparent !important;
     box-shadow: none !important;
     transform: none !important;
 }
 body.page-attendance-desk #native-sidebar .nav-pills .nav-link.active::before {
-    background: #111827;
+    background: #0f172a;
 }
 body.page-attendance-desk #native-sidebar .nav-pills .nav-link.active i {
-    color: #111827 !important;
+    color: #0f172a !important;
 }
 body.page-attendance-desk #native-sidebar .sidebar-text,
 body.page-attendance-desk #native-sidebar .nav-link span {
     font-weight: inherit !important;
+}
+body.page-attendance-desk #native-sidebar .nav-section-label,
+body.page-attendance-desk #native-sidebar .sidebar-section-title,
+body.page-attendance-desk #native-sidebar .text-uppercase {
+    color: #94a3b8 !important;
+    font-size: 0.68rem !important;
+    letter-spacing: 0.05em !important;
+}
+body.page-attendance-desk #native-sidebar .user-profile-link,
+body.page-attendance-desk #native-sidebar .sidebar-user-name {
+    font-size: 0.875rem !important;
 }
 body.page-attendance-desk .employee-header.employee-header--products-desk {
     background: #f8fafc !important;

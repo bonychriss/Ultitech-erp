@@ -138,6 +138,7 @@ Route::middleware([AttachErpContext::class])->group(function () {
     Route::get('/attendance', [AttendancePageController::class, 'show'])->name('attendance.page');
     Route::get('/attendance/analytics', [AttendancePageController::class, 'analytics'])->name('attendance.page.analytics');
     Route::get('/attendance/overtime', [AttendancePageController::class, 'overtime'])->name('attendance.page.overtime');
+    Route::get('/attendance/logs', [AttendancePageController::class, 'logs'])->name('attendance.page.logs');
 
     // Weekly tasks dashboard (React; plans and reports stay on weekly_tasks/*.php)
     Route::get('/weekly-tasks/dashboard', [WeeklyTasksPageController::class, 'show'])->name('weekly-tasks.page.dashboard');

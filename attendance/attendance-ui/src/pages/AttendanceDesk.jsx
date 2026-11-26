@@ -1259,43 +1259,6 @@ export default function AttendanceDesk({ data }) {
               </div>
             ) : null}
 
-            {Array.isArray(state.todayTimeline) && state.todayTimeline.length > 0 ? (
-              <section className="att-today-timeline" aria-label="Today activity">
-                <div className="att-today-timeline-head">
-                  <h3 className="att-today-timeline-title">Today</h3>
-                  <span className="att-today-timeline-sub">Your day so far</span>
-                </div>
-                <ol className="att-today-timeline-list">
-                  {state.todayTimeline.map((item, index) => {
-                    const isLast = index === state.todayTimeline.length - 1;
-                    return (
-                      <li
-                        key={item.id || `${item.type}-${item.at}-${index}`}
-                        className={`att-today-timeline-item is-${item.tone || 'in'}${isLast ? ' is-latest' : ''}`}
-                      >
-                        <span className="att-today-timeline-rail" aria-hidden="true">
-                          <span className="att-today-timeline-dot">
-                            <i className={item.icon || 'fas fa-circle'} />
-                          </span>
-                        </span>
-                        <div className="att-today-timeline-body">
-                          <div className="att-today-timeline-row">
-                            <span className="att-today-timeline-event">{item.title}</span>
-                            <time className="att-today-timeline-time" dateTime={item.at || undefined}>
-                              {item.time_label || '--:--'}
-                            </time>
-                          </div>
-                          {item.detail ? (
-                            <p className="att-today-timeline-detail">{item.detail}</p>
-                          ) : null}
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ol>
-              </section>
-            ) : null}
-
             {phoneToast && usePhoneForClock && !alreadyClockedToday ? (
               <div className="att-desk-toast att-desk-toast--below att-desk-toast--compact is-show" role="status" aria-live="polite">
                 <div className="att-desk-toast-icon" aria-hidden="true">

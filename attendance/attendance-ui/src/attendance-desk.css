@@ -2586,3 +2586,328 @@
         background: #334155;
         color: #cbd5e1;
     }
+
+    .att-page-logs .att-top-bar {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+    .att-logs-refresh {
+        min-height: 2.15rem;
+        padding: 0.35rem 0.95rem;
+        border-radius: 10px;
+        border: 1px solid #e2e8f0;
+        background: #f8fafc;
+        color: #334155;
+        font-size: 0.82rem;
+        font-weight: 500;
+        cursor: pointer;
+        flex: 0 0 auto;
+        align-self: flex-end;
+    }
+    .att-logs-refresh:hover { background: #f1f5f9; }
+    .att-logs-refresh:disabled {
+        opacity: 0.65;
+        cursor: not-allowed;
+    }
+    .att-logs-toolbar {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 0.55rem;
+        flex: 0 0 auto;
+    }
+    .att-logs-range-card {
+        display: inline-flex;
+        align-items: flex-end;
+        flex-wrap: wrap;
+        gap: 0.65rem 0.75rem;
+        padding: 0.7rem 0.85rem;
+        background: #fff;
+        border: 1px solid #e2e8f0;
+        border-radius: 14px;
+        box-shadow: 0 6px 16px rgba(15, 23, 42, 0.04);
+    }
+    .att-logs-range-card.is-busy {
+        opacity: 0.72;
+    }
+    .att-logs-date-field {
+        display: inline-flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.28rem;
+        font-size: 0.72rem;
+        font-weight: 500;
+        color: #64748b;
+        letter-spacing: 0.02em;
+        text-transform: uppercase;
+    }
+    .att-logs-date-input {
+        min-height: 2.15rem;
+        min-width: 9.5rem;
+        padding: 0.3rem 0.65rem;
+        border-radius: 10px;
+        border: 1px solid #e2e8f0;
+        background: #f8fafc;
+        color: #334155;
+        font-size: 0.84rem;
+        font-weight: 400;
+    }
+    .att-logs-date-input:focus {
+        outline: none;
+        border-color: #cbd5e1;
+        background: #fff;
+    }
+    .att-logs-day-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.65rem;
+    }
+    .att-logs-day-heading {
+        margin: 0.35rem 0 0;
+        font-size: 0.82rem;
+        font-weight: 600;
+        color: #64748b;
+        letter-spacing: 0.01em;
+    }
+    .att-logs-day-stack {
+        display: flex;
+        flex-direction: column;
+        gap: 0.85rem;
+    }
+    .att-logs-count {
+        margin: 0 0 0.55rem;
+        font-size: 0.82rem;
+        color: #94a3b8;
+    }
+    .att-logs-stack {
+        display: flex;
+        flex-direction: column;
+        gap: 0.85rem;
+    }
+    .att-logs-card {
+        background: #fff;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        box-shadow: 0 8px 20px rgba(15, 23, 42, 0.04);
+        overflow: hidden;
+    }
+    .att-logs-card.is-me {
+        border-color: #cbd5e1;
+        box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+    }
+    .att-logs-avatar {
+        width: 2.35rem;
+        height: 2.35rem;
+        border-radius: 999px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: #e2e8f0;
+        color: #334155;
+        font-size: 0.78rem;
+        font-weight: 600;
+        flex: 0 0 auto;
+    }
+    .att-logs-card-meta {
+        min-width: 0;
+    }
+    .att-logs-card-name {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        font-size: 0.95rem;
+        font-weight: 500;
+        color: #0f172a;
+    }
+    .att-logs-you {
+        font-size: 0.68rem;
+        font-weight: 500;
+        color: #0369a1;
+        background: #e0f2fe;
+        border-radius: 999px;
+        padding: 0.1rem 0.45rem;
+    }
+    .att-logs-card-sub {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.35rem 0.65rem;
+        margin-top: 0.15rem;
+        font-size: 0.78rem;
+        color: #94a3b8;
+    }
+    .att-logs-card-body {
+        padding: 0.95rem 1rem 1rem;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    .att-logs-card-body--inline {
+        display: flex;
+        flex-direction: row;
+        align-items: flex-start;
+        gap: 0;
+        min-width: max-content;
+        width: 100%;
+    }
+    .att-logs-person-start {
+        display: flex;
+        align-items: center;
+        gap: 0.7rem;
+        flex: 0 0 auto;
+        min-width: 11rem;
+        max-width: 15rem;
+        padding-right: 1rem;
+        padding-top: 0.1rem;
+    }
+    .att-logs-person-connector {
+        width: 1.25rem;
+        height: 1px;
+        background: #e2e8f0;
+        flex: 0 0 auto;
+        margin-top: 1.05rem;
+        margin-right: 0.35rem;
+    }
+    .att-logs-timeline-h {
+        list-style: none;
+        margin: 0;
+        padding: 0.15rem 0 0.2rem;
+        display: flex;
+        flex-direction: row;
+        align-items: stretch;
+        gap: 0;
+        min-width: max-content;
+        flex: 1 1 auto;
+    }
+    .att-logs-step {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.45rem;
+        flex: 1 1 0;
+        min-width: 9.5rem;
+        max-width: 14rem;
+        padding: 0 1.1rem 0 0;
+    }
+    .att-logs-step-dot {
+        width: 1.7rem;
+        height: 1.7rem;
+        border-radius: 999px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: #f1f5f9;
+        color: #64748b;
+        font-size: 0.72rem;
+        z-index: 1;
+        flex-shrink: 0;
+    }
+    .att-logs-step-connector {
+        position: absolute;
+        top: 0.82rem;
+        left: 1.7rem;
+        right: 0.2rem;
+        height: 1px;
+        background: #e2e8f0;
+        z-index: 0;
+    }
+    .att-logs-step-copy {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.12rem;
+        min-width: 0;
+        padding-right: 0.35rem;
+    }
+    .att-logs-step-title {
+        font-size: 0.9rem;
+        font-weight: 500;
+        color: #0f172a;
+        line-height: 1.25;
+    }
+    .att-logs-step-time {
+        font-size: 0.78rem;
+        font-weight: 400;
+        color: #64748b;
+        font-variant-numeric: tabular-nums;
+    }
+    .att-logs-step-detail {
+        font-size: 0.76rem;
+        font-weight: 400;
+        color: #94a3b8;
+        line-height: 1.35;
+        max-width: 11rem;
+        word-break: break-word;
+    }
+    .att-logs-step.is-in .att-logs-step-dot {
+        background: #dcfce7;
+        color: #15803d;
+    }
+    .att-logs-step.is-break .att-logs-step-dot {
+        background: #fff7ed;
+        color: #c2410c;
+    }
+    .att-logs-step.is-visit .att-logs-step-dot {
+        background: #e0f2fe;
+        color: #0369a1;
+    }
+    .att-logs-step.is-delivery .att-logs-step-dot {
+        background: #ede9fe;
+        color: #6d28d9;
+    }
+    .att-logs-step.is-back .att-logs-step-dot {
+        background: #e0f2fe;
+        color: #0284c7;
+    }
+    .att-logs-step.is-out .att-logs-step-dot {
+        background: #ffedd5;
+        color: #c2410c;
+    }
+    .att-logs-empty {
+        margin-top: 1.5rem;
+    }
+    .att-logs-empty-inline {
+        margin: 0;
+        font-size: 0.85rem;
+        color: #94a3b8;
+    }
+
+    @media (max-width: 720px) {
+        .att-logs-step {
+            min-width: 8.5rem;
+        }
+        .att-logs-person-start {
+            min-width: 9.5rem;
+        }
+        .att-logs-toolbar {
+            width: 100%;
+            justify-content: flex-start;
+        }
+    }
+
+    html[data-theme="dark"] .att-logs-card,
+    html[data-theme="dark"] .att-logs-range-card,
+    html[data-theme="dark"] .att-logs-date-input,
+    html[data-theme="dark"] .att-logs-refresh {
+        background: #1e293b;
+        border-color: #334155;
+        color: #e2e8f0;
+    }
+    html[data-theme="dark"] .att-logs-date-input,
+    html[data-theme="dark"] .att-logs-refresh {
+        background: #0f172a;
+    }
+    html[data-theme="dark"] .att-logs-card-name,
+    html[data-theme="dark"] .att-logs-step-title {
+        color: #e2e8f0;
+    }
+    html[data-theme="dark"] .att-logs-step-connector,
+    html[data-theme="dark"] .att-logs-person-connector {
+        background: #334155;
+    }
+    html[data-theme="dark"] .att-logs-step-dot {
+        background: #334155;
+        color: #cbd5e1;
+    }

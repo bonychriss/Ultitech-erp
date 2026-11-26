@@ -248,6 +248,34 @@ if (str_starts_with($action, 'webauthn_')) {
     }
 }
 
+if ($action === 'today_logs') {
+    $logsDate = isset($payload['date']) ? trim((string) $payload['date']) : '';
+    if ($logsDate !== '' && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $logsDate)) {
+        $logsDate = '';
+    }
+    $logsFrom = isset($payload['date_from']) ? trim((string) $payload['date_from']) : '';
+    if ($logsFrom !== '' && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $logsFrom)) {
+        $logsFrom = '';
+    }
+    $logsTo = isset($payload['date_to']) ? trim((string) $payload['date_to']) : '';
+    if ($logsTo !== '' && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $logsTo)) {
+        $logsTo = '';
+    }
+    echo json_encode([
+        'success' => true,
+        'message' => '',
+        'data' => [
+            'todayLogs' => $attendance->getTodayLogsBoard(
+                $userId,
+                $logsDate !== '' ? $logsDate : null,
+                $logsFrom !== '' ? $logsFrom : null,
+                $logsTo !== '' ? $logsTo : null
+            ),
+        ],
+    ]);
+    exit;
+}
+
 if ($action === 'history') {
     $desk = attendance_desk_payload($attendance, $pdo, $userId, $historyMonth, $webauthn);
     echo json_encode([

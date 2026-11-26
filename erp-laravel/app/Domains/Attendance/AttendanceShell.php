@@ -31,7 +31,7 @@ final class AttendanceShell
 
         $erp = is_array($cfg['erp'] ?? null) ? $cfg['erp'] : [];
         $page = strtolower(trim((string) ($cfg['page'] ?? 'clock')));
-        if (!in_array($page, ['analytics', 'overtime'], true)) {
+        if (!in_array($page, ['analytics', 'overtime', 'logs'], true)) {
             $page = 'clock';
         }
 
@@ -51,6 +51,12 @@ final class AttendanceShell
             if ($page === 'overtime') {
                 $bodyClass .= ' page-attendance-overtime';
             }
+        } elseif ($page === 'logs') {
+            $boot = (new LogsBoot())->build($erp);
+            $wallpaperUrl = (new ClockBoot())->wallpaperUrl();
+            $pageTitle = 'Logs';
+            $headerTitle = 'Logs';
+            $bodyClass = 'page-products-desk page-attendance-desk page-attendance-analytics page-attendance-logs page-attendance-laravel page-erp-laravel';
         } else {
             $boot = (new ClockBoot())->build($erp);
             $wallpaperUrl = (new ClockBoot())->wallpaperUrl();
@@ -88,7 +94,7 @@ final class AttendanceShell
             'footerScripts' => $footerScripts,
             'employeeHeaderTitle' => $headerTitle,
             'hideHeaderCompanyBranding' => true,
-            'hideErpBreadcrumbs' => $page === 'clock',
+            'hideErpBreadcrumbs' => $page === 'clock' || $page === 'logs',
             'employeeHeaderExtraClass' => 'employee-header--products-desk',
             'mainRootClass' => 'att-react-root',
         ];
@@ -454,6 +460,12 @@ body.page-attendance-desk:not(.page-attendance-analytics) .employee-header--prod
 body.page-attendance-desk:not(.page-attendance-analytics) .erp-auto-breadcrumb,
 body.page-attendance-desk:not(.page-attendance-analytics) #erp-auto-breadcrumb,
 body.page-attendance-desk:not(.page-attendance-analytics) .att-page-clock .att-top-bar {
+    display: none !important;
+}
+/* Logs keeps one header title; hide breadcrumb trail (Home / Logs / Logs). */
+body.page-attendance-logs .erp-auto-breadcrumb,
+body.page-attendance-logs #erp-auto-breadcrumb,
+body.page-attendance-logs .employee-header--products-desk .erp-auto-breadcrumb {
     display: none !important;
 }
 @media (min-width: 768px) {

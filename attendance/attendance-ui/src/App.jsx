@@ -4,6 +4,7 @@ import AttendanceRecords from './pages/AttendanceRecords';
 import AttendanceSettings from './pages/AttendanceSettings';
 import AttendanceAnalytics from './pages/AttendanceAnalytics';
 import AttendanceOvertime from './pages/AttendanceOvertime';
+import AttendanceLogs from './pages/AttendanceLogs';
 
 export default function App({ page = 'clock', data = {} }) {
   switch (page) {
@@ -15,6 +16,8 @@ export default function App({ page = 'clock', data = {} }) {
       return <AttendanceAnalytics data={data} />;
     case 'overtime':
       return <AttendanceOvertime data={data} />;
+    case 'logs':
+      return <AttendanceLogs data={data} />;
     case 'clock':
     default:
       return <AttendanceDesk data={data} />;

@@ -785,6 +785,7 @@ switch ($active_module) {
 
     case 'attendance':
         addItem($menuItems, 'clock', 'Clock In/Out', 'clock', $attClockHref);
+        addItem($menuItems, 'logs', 'Logs', 'journal-text', $prefix . 'employee/attendance-logs.php?module=attendance');
         if ($is_admin) {
             addItem($menuItems, 'ai_assistant', 'AI Assistant', 'stars', $prefix . 'admin/ai_assistant.php?module=attendance');
             addItem($menuItems, 'view', 'View Records', 'calendar-check', $prefix . 'admin/view-attendance.php?module=attendance');

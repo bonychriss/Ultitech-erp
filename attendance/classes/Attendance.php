@@ -298,10 +298,17 @@ class Attendance {
      */
     public function getTodayAwaySessions(int $userId): array
     {
-        if ($userId <= 0) {
+        return $this->getAwaySessionsForDate($userId, $this->getTodayDateString());
+    }
+
+    /**
+     * @return list<array<string,mixed>>
+     */
+    public function getAwaySessionsForDate(int $userId, string $date): array
+    {
+        if ($userId <= 0 || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
             return [];
         }
-        $date = $this->getTodayDateString();
         try {
             $t = self::AWAY_TABLE;
             $stmt = $this->pdo->prepare("
@@ -319,7 +326,7 @@ class Attendance {
             }
             return $out;
         } catch (Throwable $e) {
-            error_log('Attendance::getTodayAwaySessions: ' . $e->getMessage());
+            error_log('Attendance::getAwaySessionsForDate: ' . $e->getMessage());
             return [];
         }
     }
@@ -342,7 +349,7 @@ class Attendance {
 
     private function formatTimelineDuration(?int $minutes): ?string
     {
-        if ($minutes === null || $minutes < 0) {
+        if ($minutes === null || $minutes <= 0) {
             return null;
         }
         if ($minutes < 60) {
@@ -366,19 +373,36 @@ class Attendance {
      */
     public function getTodayTimeline(int $userId): array
     {
+        return $this->getTimelineForDate($userId, $this->getTodayDateString());
+    }
+
+    /**
+     * @param array<string,mixed>|null $record
+     * @return list<array{
+     *   id:string,type:string,at:string,time_label:string,title:string,
+     *   detail:?string,reason:?string,tone:string,icon:string
+     * }>
+     */
+    public function getTimelineForDate(int $userId, string $date, $record = null): array
+    {
         $events = [];
-        $record = $this->getTodayRecord($userId);
+        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
+            return [];
+        }
+        if (!is_array($record)) {
+            $record = $this->getRecordForDate($userId, $date);
+        }
         if (!$record || empty($record['time_in'])) {
             return [];
         }
 
-        $date = (string) ($record['date'] ?? $this->getTodayDateString());
+        $date = (string) ($record['date'] ?? $date);
         $timeIn = (string) ($record['time_in'] ?? '');
         $clockInAt = (strpos($timeIn, '-') !== false || strpos($timeIn, ' ') !== false)
             ? $timeIn
             : ($date . ' ' . $timeIn);
         $events[] = [
-            'id' => 'clock_in',
+            'id' => 'clock_in_' . $userId . '_' . $date,
             'type' => 'clock_in',
             'at' => $clockInAt,
             'time_label' => $this->formatTimelineClockLabel($clockInAt),
@@ -391,7 +415,7 @@ class Attendance {
             'icon' => 'fas fa-sign-in-alt',
         ];
 
-        foreach ($this->getTodayAwaySessions($userId) as $away) {
+        foreach ($this->getAwaySessionsForDate($userId, $date) as $away) {
             $reason = (string) ($away['reason'] ?? 'break');
             $reasonLabel = (string) ($away['reason_label'] ?? 'Break');
             $statusLabel = (string) ($away['status_label'] ?? ('On ' . strtolower($reasonLabel)));
@@ -452,7 +476,7 @@ class Attendance {
                 $hoursDetail = number_format((float) $record['total_hours'], 1) . 'h worked';
             }
             $events[] = [
-                'id' => 'clock_out',
+                'id' => 'clock_out_' . $userId . '_' . $date,
                 'type' => 'clock_out',
                 'at' => $clockOutAt,
                 'time_label' => $this->formatTimelineClockLabel($clockOutAt),
@@ -474,6 +498,248 @@ class Attendance {
         });
 
         return $events;
+    }
+
+    /**
+     * @return array<string,mixed>|false
+     */
+    public function getRecordForDate(int $userId, string $date)
+    {
+        if ($userId <= 0 || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
+            return false;
+        }
+        try {
+            $t = self::RECORDS_TABLE;
+            $stmt = $this->pdo->prepare("SELECT * FROM `{$t}` WHERE user_id = ? AND `date` = ? LIMIT 1");
+            $stmt->execute([$userId, $date]);
+            return $stmt->fetch(PDO::FETCH_ASSOC);
+        } catch (Throwable $e) {
+            return false;
+        }
+    }
+
+    /**
+     * Day activity logs for everyone who clocked in (company-scoped).
+     * Supports a single date or an inclusive date_from / date_to range.
+     *
+     * @return array{
+     *   date:string,
+     *   dateFrom:string,
+     *   dateTo:string,
+     *   dateLabel:string,
+     *   rows:list<array<string,mixed>>,
+     *   events:list<array<string,mixed>>
+     * }
+     */
+    public function getTodayLogsBoard(
+        ?int $viewerUserId = null,
+        ?string $date = null,
+        ?string $dateFrom = null,
+        ?string $dateTo = null
+    ): array {
+        $tz = new \DateTimeZone('Africa/Dar_es_Salaam');
+        $today = $this->getTodayDateString();
+
+        $from = is_string($dateFrom) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $dateFrom) ? $dateFrom : null;
+        $to = is_string($dateTo) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $dateTo) ? $dateTo : null;
+        $single = is_string($date) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) ? $date : null;
+
+        if ($from === null && $to === null) {
+            $from = $single ?: $today;
+            $to = $from;
+        } elseif ($from === null) {
+            $from = $to;
+        } elseif ($to === null) {
+            $to = $from;
+        }
+
+        if ($from > $to) {
+            [$from, $to] = [$to, $from];
+        }
+
+        // Keep range bounded for responsiveness.
+        try {
+            $fromDt = new \DateTimeImmutable($from, $tz);
+            $toDt = new \DateTimeImmutable($to, $tz);
+            $maxTo = $fromDt->modify('+31 days');
+            if ($toDt > $maxTo) {
+                $toDt = $maxTo;
+                $to = $toDt->format('Y-m-d');
+            }
+        } catch (Throwable $e) {
+            $from = $today;
+            $to = $today;
+            $fromDt = new \DateTimeImmutable($from, $tz);
+            $toDt = $fromDt;
+        }
+
+        $dateLabel = $from === $to
+            ? $fromDt->format('l, d M Y')
+            : ($fromDt->format('d M Y') . ' – ' . $toDt->format('d M Y'));
+
+        $rows = [];
+        $events = [];
+        $cursor = $fromDt;
+        while ($cursor <= $toDt) {
+            $day = $cursor->format('Y-m-d');
+            $dayLabel = $cursor->format('l, d M Y');
+            $people = $this->getPresentListForDate($day);
+            $openAway = $this->getOpenAwaySessionsByDate($day);
+
+            foreach ($people as $person) {
+                $uid = (int) ($person['user_id'] ?? 0);
+                if ($uid <= 0) {
+                    continue;
+                }
+                $away = $openAway[$uid] ?? null;
+                $timeline = $this->getTimelineForDate($uid, $day, $person['_record'] ?? null);
+                $name = (string) ($person['full_name'] ?? '');
+                $rows[] = [
+                    'user_id' => $uid,
+                    'date' => $day,
+                    'date_label' => $dayLabel,
+                    'full_name' => $name,
+                    'username' => (string) ($person['username'] ?? ''),
+                    'department' => (string) ($person['department'] ?? ''),
+                    'time_in' => $person['time_in'] ?? null,
+                    'time_out' => $person['time_out'] ?? null,
+                    'status' => (string) ($person['status'] ?? ''),
+                    'away_status' => $away['status_label'] ?? null,
+                    'timeline' => $timeline,
+                ];
+                foreach ($timeline as $item) {
+                    $events[] = array_merge($item, [
+                        'user_id' => $uid,
+                        'date' => $day,
+                        'full_name' => $name,
+                        'username' => (string) ($person['username'] ?? ''),
+                        'department' => (string) ($person['department'] ?? ''),
+                        'is_me' => $viewerUserId && $uid === (int) $viewerUserId,
+                    ]);
+                }
+            }
+
+            $cursor = $cursor->modify('+1 day');
+        }
+
+        if ($viewerUserId && $viewerUserId > 0) {
+            usort($rows, static function (array $a, array $b) use ($viewerUserId): int {
+                $dateCmp = strcmp((string) ($b['date'] ?? ''), (string) ($a['date'] ?? ''));
+                if ($dateCmp !== 0) {
+                    return $dateCmp;
+                }
+                $aMe = ((int) ($a['user_id'] ?? 0) === $viewerUserId) ? 0 : 1;
+                $bMe = ((int) ($b['user_id'] ?? 0) === $viewerUserId) ? 0 : 1;
+                if ($aMe !== $bMe) {
+                    return $aMe <=> $bMe;
+                }
+                return strcasecmp((string) ($a['full_name'] ?? ''), (string) ($b['full_name'] ?? ''));
+            });
+        } else {
+            usort($rows, static function (array $a, array $b): int {
+                $dateCmp = strcmp((string) ($b['date'] ?? ''), (string) ($a['date'] ?? ''));
+                if ($dateCmp !== 0) {
+                    return $dateCmp;
+                }
+                return strcasecmp((string) ($a['full_name'] ?? ''), (string) ($b['full_name'] ?? ''));
+            });
+        }
+
+        usort($events, static function (array $a, array $b): int {
+            $ta = strtotime((string) ($a['at'] ?? '')) ?: 0;
+            $tb = strtotime((string) ($b['at'] ?? '')) ?: 0;
+            if ($ta === $tb) {
+                return strcmp((string) ($a['id'] ?? ''), (string) ($b['id'] ?? ''));
+            }
+            return $ta <=> $tb;
+        });
+
+        return [
+            'date' => $from === $to ? $from : $to,
+            'dateFrom' => $from,
+            'dateTo' => $to,
+            'dateLabel' => $dateLabel,
+            'rows' => $rows,
+            'events' => $events,
+        ];
+    }
+
+    /**
+     * Everyone who clocked in on a given date (company-scoped).
+     *
+     * @return list<array<string,mixed>>
+     */
+    public function getPresentListForDate(string $date): array
+    {
+        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
+            return [];
+        }
+        try {
+            $t = self::RECORDS_TABLE;
+            $hasCompanyId = function_exists('columnExists') && columnExists('users', 'company_id', $this->pdo);
+            $companyId = function_exists('currentCompanyId') ? (int) currentCompanyId() : 0;
+
+            $where = ['a.`date` = ?'];
+            $params = [$date];
+            if ($hasCompanyId && $companyId > 0) {
+                $where[] = 'u.company_id = ?';
+                $params[] = $companyId;
+            }
+            $whereSql = implode(' AND ', $where);
+
+            $stmt = $this->pdo->prepare("
+                SELECT
+                    a.id,
+                    a.user_id,
+                    a.`date`,
+                    a.time_in,
+                    a.time_out,
+                    a.status,
+                    a.total_hours,
+                    a.overtime_hours,
+                    u.full_name,
+                    u.username,
+                    u.department
+                FROM `{$t}` a
+                INNER JOIN users u ON u.id = a.user_id
+                WHERE {$whereSql}
+                ORDER BY
+                    a.time_in ASC,
+                    COALESCE(NULLIF(TRIM(u.full_name), ''), u.username) ASC
+            ");
+            $stmt->execute($params);
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+            $out = [];
+            foreach ($rows as $row) {
+                $name = trim((string) ($row['full_name'] ?? ''));
+                $username = trim((string) ($row['username'] ?? ''));
+                if ($name === '') {
+                    $name = $username !== '' ? $username : ('User #' . (int) ($row['user_id'] ?? 0));
+                }
+                $out[] = [
+                    'id' => (int) ($row['id'] ?? 0),
+                    'user_id' => (int) ($row['user_id'] ?? 0),
+                    'full_name' => $name,
+                    'username' => $username,
+                    'department' => trim((string) ($row['department'] ?? '')),
+                    'time_in' => $row['time_in'] ?? null,
+                    'time_out' => $row['time_out'] ?? null,
+                    'status' => (string) ($row['status'] ?? ''),
+                    'total_hours' => $row['total_hours'] !== null && $row['total_hours'] !== ''
+                        ? (float) $row['total_hours']
+                        : null,
+                    'overtime_hours' => $row['overtime_hours'] !== null && $row['overtime_hours'] !== ''
+                        ? (float) $row['overtime_hours']
+                        : null,
+                    '_record' => $row,
+                ];
+            }
+            return $out;
+        } catch (Throwable $e) {
+            error_log('Attendance::getPresentListForDate: ' . $e->getMessage());
+            return [];
+        }
     }
 
     private function loadSettings() {

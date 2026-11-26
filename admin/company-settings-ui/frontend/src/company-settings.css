@@ -913,6 +913,15 @@ button.cs-btn-ghost {
   box-sizing: border-box;
 }
 
+.cs-embed-wrap {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  width: 100%;
+}
+
 .cs-embed-frame {
   width: 100%;
   flex: 1;
@@ -921,6 +930,86 @@ button.cs-btn-ghost {
   border: 0;
   background: #fff;
   display: block;
+  opacity: 1;
+  transition: opacity 0.18s ease;
+}
+
+.cs-embed-frame.is-loading {
+  opacity: 0;
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+.cs-embed-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  justify-content: flex-start;
+  flex: 1;
+  min-height: min(68vh, 720px);
+  padding: 0.15rem 0 0.2rem;
+  box-sizing: border-box;
+}
+
+.cs-embed-wrap .cs-embed-frame--section + .cs-embed-skeleton,
+.cs-embed-wrap:has(.cs-embed-frame--section) .cs-embed-skeleton {
+  min-height: 228px;
+}
+
+.cs-skel-bar,
+.cs-skel-field,
+.cs-skel-btn {
+  display: block;
+  border-radius: 8px;
+  background: linear-gradient(90deg, #eef2f7 0%, #f8fafc 45%, #eef2f7 100%);
+  background-size: 200% 100%;
+  animation: cs-skel-shimmer 1.15s ease-in-out infinite;
+}
+
+.cs-skel-bar--label {
+  width: 6.25rem;
+  height: 0.68rem;
+  margin-top: 0.15rem;
+}
+
+.cs-skel-field {
+  width: 100%;
+  height: 1.85rem;
+  border: 1px solid #e8edf3;
+}
+
+.cs-skel-footer {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: auto;
+  padding-top: 0.35rem;
+}
+
+.cs-skel-btn {
+  width: 4.75rem;
+  height: 1.85rem;
+  border-radius: 999px;
+}
+
+@keyframes cs-skel-shimmer {
+  0% { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .cs-section-stack {
@@ -934,19 +1023,29 @@ button.cs-btn-ghost {
   height: 228px;
 }
 
-.cs-section-stack .cs-card--embed:nth-child(1) .cs-embed-frame--section {
+.cs-section-stack .cs-card--embed:nth-child(1) .cs-embed-wrap,
+.cs-section-stack .cs-card--embed:nth-child(1) .cs-embed-frame--section,
+.cs-section-stack .cs-card--embed:nth-child(1) .cs-embed-skeleton {
   min-height: 228px;
   height: 228px;
 }
 
-.cs-section-stack .cs-card--embed:nth-child(2) .cs-embed-frame--section {
+.cs-section-stack .cs-card--embed:nth-child(2) .cs-embed-wrap,
+.cs-section-stack .cs-card--embed:nth-child(2) .cs-embed-frame--section,
+.cs-section-stack .cs-card--embed:nth-child(2) .cs-embed-skeleton {
   min-height: 228px;
   height: 228px;
 }
 
-.cs-section-stack .cs-card--embed:nth-child(3) .cs-embed-frame--section {
+.cs-section-stack .cs-card--embed:nth-child(3) .cs-embed-wrap,
+.cs-section-stack .cs-card--embed:nth-child(3) .cs-embed-frame--section,
+.cs-section-stack .cs-card--embed:nth-child(3) .cs-embed-skeleton {
   min-height: 360px;
   height: 360px;
+}
+
+.cs-section-stack .cs-embed-wrap {
+  overflow: hidden;
 }
 
 .cs-section-stack .cs-embed-frame--section {

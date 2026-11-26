@@ -314,6 +314,12 @@ function Field({ label, children, help }) {
 }
 
 function EmbedPanel({ title, subtitle, icon: Icon, accent, src, frameClassName = '' }) {
+  const [frameReady, setFrameReady] = useState(false)
+
+  useEffect(() => {
+    setFrameReady(false)
+  }, [src])
+
   if (!src) {
     return (
       <Card className="cs-card--compact cs-card--profile" icon={Icon} accent={accent} title={title} subtitle={subtitle}>
@@ -323,13 +329,30 @@ function EmbedPanel({ title, subtitle, icon: Icon, accent, src, frameClassName =
   }
   return (
     <Card className="cs-card--compact cs-card--profile cs-card--embed" icon={Icon} accent={accent} title={title} subtitle={subtitle}>
-      <iframe
-        className={`cs-embed-frame${frameClassName ? ` ${frameClassName}` : ''}`}
-        title={title}
-        src={src}
-        loading="lazy"
-        referrerPolicy="same-origin"
-      />
+      <div className={`cs-embed-wrap${frameReady ? ' is-ready' : ''}`}>
+        {!frameReady ? (
+          <div className="cs-embed-skeleton" aria-busy="true" aria-live="polite">
+            <span className="sr-only">Loading {title}...</span>
+            <span className="cs-skel-bar cs-skel-bar--label" />
+            <span className="cs-skel-field" />
+            <span className="cs-skel-bar cs-skel-bar--label" />
+            <span className="cs-skel-field" />
+            <span className="cs-skel-bar cs-skel-bar--label" />
+            <span className="cs-skel-field" />
+            <div className="cs-skel-footer">
+              <span className="cs-skel-btn" />
+            </div>
+          </div>
+        ) : null}
+        <iframe
+          className={`cs-embed-frame${frameClassName ? ` ${frameClassName}` : ''}${frameReady ? '' : ' is-loading'}`}
+          title={title}
+          src={src}
+          loading="lazy"
+          referrerPolicy="same-origin"
+          onLoad={() => setFrameReady(true)}
+        />
+      </div>
     </Card>
   )
 }

@@ -264,10 +264,32 @@ export default function TimeSettingsPage() {
   }
 
   if (loading) {
+    const skeletonRows = singleStep ? 3 : 4
     return (
-      <div className="ts-page ts-loading">
-        <Loader2 className="ts-spin" size={18} />
-        <span>Loading time & attendance settings...</span>
+      <div className={`ts-page${embedded ? ' ts-page--embed' : ''} ts-page--skeleton`} aria-busy="true" aria-live="polite">
+        <span className="sr-only">Loading time & attendance settings...</span>
+        {!embedded && !singleStep ? (
+          <div className="ts-skel-topbar">
+            <span className="ts-skel-bar ts-skel-bar--sm" />
+            <span className="ts-skel-pill" />
+          </div>
+        ) : null}
+        <div className="wizard wizard--skeleton">
+          {!singleStep ? (
+            <div className="ts-skel-title">
+              <span className="ts-skel-bar ts-skel-bar--md" />
+            </div>
+          ) : null}
+          {Array.from({ length: skeletonRows }).map((_, index) => (
+            <div className="ts-skel-row" key={`skel-row-${index}`}>
+              <span className="ts-skel-bar ts-skel-bar--label" />
+              <span className="ts-skel-field" />
+            </div>
+          ))}
+          <div className="ts-skel-footer">
+            <span className="ts-skel-btn" />
+          </div>
+        </div>
       </div>
     )
   }

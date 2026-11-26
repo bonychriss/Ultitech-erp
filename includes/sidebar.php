@@ -535,7 +535,7 @@ addItem($menuItems, 'email-global', 'Customer Email', 'envelope', $prefix . 'mod
 addItem($menuItems, 'account', 'Profile Settings', 'person', $accountUrl);
 
 if ($is_admin) {
-    addItem($menuItems, 'system-settings', 'System Settings', 'cog', $prefix . 'admin/settings.php');
+    addItem($menuItems, 'system-settings', 'System Settings', 'cog', $prefix . 'admin/company-settings.php?module=settings');
 }
 
 addItem($menuItems, 'logout', 'Logout', 'logout', app_url('logout.php'));

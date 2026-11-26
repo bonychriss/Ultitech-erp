@@ -25,7 +25,7 @@
       window.__COMPANY_SETTINGS_CFG__ = <?= $cfgJson ?>;
     </script>
 </head>
-<body class="dashboard page-exp-desk page-company-settings">
+<body class="dashboard page-exp-desk page-company-settings page-company-settings--shell">
 
 <?php include dirname(__DIR__, 2) . '/includes/header_employee.php'; ?>
 
@@ -67,22 +67,55 @@ body.page-exp-desk .employee-header--exp-desk .employee-header-page-title {
     font-weight: 400 !important;
     color: #0f172a !important;
 }
+/* Settings rail only — hide ERP sidebar + top header (same pattern as profile) */
+body.page-company-settings--shell #native-sidebar,
+body.page-company-settings--shell .sidebar-overlay,
+body.page-company-settings--shell .employee-header-menu-btn,
+body.page-company-settings--shell .employee-header,
+body.page-company-settings--shell .mobile-footer,
+body.page-company-settings--shell .erp-auto-breadcrumb,
+body.page-company-settings--shell nav[aria-label="Breadcrumb"] {
+    display: none !important;
+}
+body.page-company-settings--shell.sidebar-mobile-open {
+    overflow: auto !important;
+}
+body.page-company-settings--shell .layout-main-wrapper,
+body.page-company-settings--shell .layout-main-wrapper > .flex-grow-1 {
+    margin-left: 0 !important;
+    width: 100% !important;
+    max-width: none !important;
+}
+body.page-company-settings--shell,
+body.page-company-settings--shell.dashboard {
+    overflow-x: hidden;
+}
+body.page-company-settings--shell .layout-main-wrapper {
+    overflow: visible !important;
+}
 main.main-content.exp-desk-react-root {
     flex: 1 1 auto;
     width: 100% !important;
     max-width: none !important;
-    padding: 0 1.25rem 2rem !important;
-    overflow: auto !important;
+    padding: 0 !important;
+    overflow: visible !important;
     box-sizing: border-box;
     background: #f8fafc !important;
 }
 main.main-content.exp-desk-react-root #root {
     width: 100%;
-    min-height: 320px;
+    min-height: 100vh;
 }
-@media (max-width: 767.98px) {
-    body.page-exp-desk .employee-header.employee-header--exp-desk { padding: 0 0.75rem !important; }
-    main.main-content.exp-desk-react-root { padding: 0 0.75rem 1.5rem !important; }
+/* Beat ERP/Bootstrap button radius so Save actions stay pill-shaped */
+html body.page-company-settings--shell .cs-btn-primary,
+html body.page-company-settings--shell .cs-btn-danger,
+html body.page-company-settings--shell .cs-btn-ghost,
+html body.page-company-settings--shell button.cs-btn-primary,
+html body.page-company-settings--shell button.cs-btn-danger,
+html body.page-company-settings--shell button.cs-btn-ghost,
+html body.page-company-settings--shell .cs-actions .cs-btn-primary,
+html body.page-company-settings--shell .cs-card--profile .cs-btn-primary {
+    border-radius: 9999px !important;
 }
 </style>
 

@@ -319,27 +319,15 @@ $psThemeUrl = static function (string $theme): string {
     $params['set_theme'] = $theme;
     return '?' . http_build_query($params);
 };
-$employeeHeaderTitle = 'Profile Settings';
+$employeeHeaderTitle = null;
+$employeeHeaderSubtitle = null;
+$employeeHeaderRightHtml = null;
 $homeUrl = $profileBackUrl;
 $esc = static function ($value): string {
     return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
 };
-$employeeHeaderSubtitle = '<span class="ps-crumbs"><a href="' . $esc($profileBackUrl) . '">Home</a> <span class="ps-crumb-sep">/</span> <a href="#profile-photo">Account</a> <span class="ps-crumb-sep">/</span> <span class="ps-crumb-current">Profile Settings</span></span>';
-$psNotificationsUrl = function_exists('company_url') ? company_url('notifications.php') : '../notifications.php';
-$psUnreadCount = 0;
-if (function_exists('getTotalHeaderUnreadNotificationCount')) {
-    try {
-        $psUnreadCount = getTotalHeaderUnreadNotificationCount();
-    } catch (Throwable $e) {
-        $psUnreadCount = 0;
-    }
-}
-$employeeHeaderRightHtml = '<div class="ps-head-tools">'
-    . '<label class="ps-head-search"><i class="fas fa-magnifying-glass" aria-hidden="true"></i>'
-    . '<input type="search" id="psHeadSearch" placeholder="Search anything..." autocomplete="off" aria-label="Search profile settings"></label>'
-    . '<a href="' . $esc($psNotificationsUrl) . '" class="ps-head-bell ps-head-bell--mobile" title="Notifications" aria-label="Notifications">'
-    . '<i class="far fa-bell"></i>' . ($psUnreadCount > 0 ? '<span class="ps-head-dot"></span>' : '') . '</a>'
-    . '</div>';
+$hideHeaderCompanyBranding = true;
+$hideHeaderThemeAndNotifications = true;
 $selectArrow = "background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http://www.w3.org/2000/svg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%2394a3b8%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C/polyline%3E%3C/svg%3E'); background-size: 1.25rem; background-repeat: no-repeat; background-position: right 12px center;";
 $saveEmailApiUrl = function_exists('company_url')
     ? company_url('api/save_user_email_settings.php')
@@ -400,7 +388,7 @@ $psBiometricJsUrl = function_exists('app_url')
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>Profile Settings - <?= $esc($user['full_name']) ?></title>
+	<title>Settings - <?= $esc($user['full_name']) ?></title>
 	<link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
 	<link rel="stylesheet" href="<?= $esc(function_exists('app_url') ? app_url('/assets/css/style.css') : '../assets/css/style.css') ?>">
 	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -420,7 +408,11 @@ $psBiometricJsUrl = function_exists('app_url')
     } catch (e) {}
 })();
 </script>
-<?php $hideErpBreadcrumbs = true; require_once __DIR__ . '/../includes/header_employee.php'; ?>
+<?php
+$hideSidebar = true;
+$hideErpBreadcrumbs = true;
+require_once __DIR__ . '/../includes/header_employee.php';
+?>
 
 <div class="main-content-wrapper">
 		<?php if (!empty($feedback)): ?>
@@ -447,52 +439,77 @@ $psBiometricJsUrl = function_exists('app_url')
         <?php endif; ?>
 
         <div class="page-shell editor-shell">
-            <section class="ps-hero">
-                <div class="ps-hero-main">
-                    <div class="account-avatar-wrap">
-                        <div class="account-avatar">
-                            <?php if ($profilePhotoUrl !== ''): ?>
-                                <img src="<?= $esc($profilePhotoUrl) ?>" alt="Profile photo" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                                <span class="account-avatar-fallback" style="display:none;"><?= $esc($initial) ?></span>
-                            <?php else: ?>
-                                <span class="account-avatar-fallback"><?= $esc($initial) ?></span>
-                            <?php endif; ?>
-                </div>
-                        <form method="post" enctype="multipart/form-data">
-                            <label class="account-avatar-btn" title="Upload photo">
-                                <i class="fas fa-camera"></i>
-                                <input type="file" name="profile_photo" accept="image/*" hidden onchange="this.form.submit()">
-                            </label>
-                        </form>
-            </div>
-                    <div class="ps-hero-copy">
-                        <h2><?= $esc($user['full_name'] ?? '') ?></h2>
-                        <div class="ps-hero-chips">
-                            <span class="ps-hero-handle">@<?= $esc($user['username'] ?? '') ?></span>
-                            <span class="profile-badge"><?= $esc($roleLabel) ?></span>
+            <div class="ps-settings-rail">
+                <a href="<?= $esc($profileBackUrl) ?>" class="ps-rail-back" aria-label="Back" title="Back">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M15 6 9 12l6 6"/>
+                    </svg>
+                </a>
+                <section class="ps-hero">
+                    <div class="ps-hero-main">
+                        <div class="account-avatar-wrap">
+                            <div class="account-avatar">
+                                <?php if ($profilePhotoUrl !== ''): ?>
+                                    <img src="<?= $esc($profilePhotoUrl) ?>" alt="Profile photo" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                    <span class="account-avatar-fallback" style="display:none;"><?= $esc($initial) ?></span>
+                                <?php else: ?>
+                                    <span class="account-avatar-fallback"><?= $esc($initial) ?></span>
+                                <?php endif; ?>
+                            </div>
+                            <form method="post" enctype="multipart/form-data">
+                                <label class="account-avatar-btn" title="Upload photo">
+                                    <i class="fas fa-camera"></i>
+                                    <input type="file" name="profile_photo" accept="image/*" hidden onchange="this.form.submit()">
+                                </label>
+                            </form>
                         </div>
-                        <p class="ps-hero-email"><?= $esc($user['email'] ?? '') ?></p>
+                        <div class="ps-hero-copy">
+                            <h2><?= $esc($user['full_name'] ?? '') ?></h2>
+                            <div class="ps-hero-chips">
+                                <span class="ps-hero-handle">@<?= $esc($user['username'] ?? '') ?></span>
+                                <span class="profile-badge"><?= $esc($roleLabel) ?></span>
+                            </div>
+                            <p class="ps-hero-email"><?= $esc($user['email'] ?? '') ?></p>
+                        </div>
                     </div>
-                </div>
-                <a href="<?= $esc($logoutUrl) ?>" class="ps-logout"><i class="fas fa-arrow-right-from-bracket"></i> Log out</a>
-            </section>
+                </section>
 
-            <nav class="section-nav" aria-label="Profile sections">
-                <div class="ps-settings-heading" aria-hidden="true">
-                    <span>Settings</span>
+                <div class="ps-rail-search">
+                    <label class="ps-head-search" for="psHeadSearch">
+                        <i class="fas fa-magnifying-glass" aria-hidden="true"></i>
+                        <input type="search" id="psHeadSearch" placeholder="Find a setting..." autocomplete="off" aria-label="Filter settings">
+                    </label>
                 </div>
-                <ul>
-                    <li><a href="#profile-photo" class="is-active"><i class="far fa-user" aria-hidden="true"></i><span class="ps-nav-text"><strong>Profile</strong></span></a></li>
-                    <li><a href="#personal-details"><i class="far fa-address-card" aria-hidden="true"></i><span class="ps-nav-text"><strong>Account details</strong></span></a></li>
-                    <li><a href="#change-password"><i class="ps-nav-svg" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></i><span class="ps-nav-text"><strong>Security</strong></span></a></li>
-                    <li><a href="#digital-signature"><i class="far fa-pen-to-square" aria-hidden="true"></i><span class="ps-nav-text"><strong>Signature</strong></span></a></li>
-                    <li><a href="#personal-email"><i class="far fa-envelope" aria-hidden="true"></i><span class="ps-nav-text"><strong>Email</strong></span></a></li>
-                    <li class="ps-nav-sep" aria-hidden="true"></li>
-                    <li><a href="#ps-pref-ai"><i class="far fa-lightbulb" aria-hidden="true"></i><span class="ps-nav-text"><strong>AI Agent</strong></span></a></li>
-                    <li><a href="#ps-pref-appearance"><i class="far fa-moon" aria-hidden="true"></i><span class="ps-nav-text"><strong>Appearance</strong></span></a></li>
-                    <li><a href="#ps-pref-accessibility"><i class="far fa-eye" aria-hidden="true"></i><span class="ps-nav-text"><strong>Accessibility</strong></span></a></li>
-                    </ul>
-            </nav>
+
+                <?php
+                $psIgIcon = static function (string $paths): string {
+                    return '<i class="ps-nav-svg" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">' . $paths . '</svg></i>';
+                };
+                ?>
+                <nav class="section-nav" aria-label="Settings">
+                    <div class="ps-nav-scroll" id="psNavScroll">
+                        <ul id="psNavList">
+                            <li><a href="#profile-photo" class="is-active" data-ps-keywords="photo avatar image profile name username email whatsapp contact details account"><?= $psIgIcon('<circle cx="12" cy="8" r="3.25"/><path d="M5.5 19.25c.9-3.1 3.2-4.75 6.5-4.75s5.6 1.65 6.5 4.75"/>') ?><span class="ps-nav-text"><strong>Profile</strong></span></a></li>
+                            <li class="ps-nav-sep" aria-hidden="true"></li>
+                            <li><a href="#change-password" data-ps-keywords="password security biometric face id unlock phone smartphone fingerprint passkey"><?= $psIgIcon('<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8.5a4 4 0 0 1 8 0V11"/><circle cx="12" cy="15.5" r="1.15"/>') ?><span class="ps-nav-text"><strong>Security</strong></span></a></li>
+                            <li><a href="#digital-signature" data-ps-keywords="signature vouchers approvals draw"><?= $psIgIcon('<path d="M4 19.5h7.5"/><path d="M14.2 4.8l4.5 4.5"/><path d="M6.5 17.2 16.7 7a2.1 2.1 0 0 1 3 3L9.5 20.2 5 21.5z"/>') ?><span class="ps-nav-text"><strong>Signature</strong></span></a></li>
+                            <li><a href="#personal-email" data-ps-keywords="email imap smtp mailbox"><?= $psIgIcon('<rect x="3.5" y="5.5" width="17" height="13" rx="2.5"/><path d="m5.5 8 6.5 5 6.5-5"/>') ?><span class="ps-nav-text"><strong>Email</strong></span></a></li>
+                            <li class="ps-nav-sep" aria-hidden="true"></li>
+                            <li><a href="#ps-pref-ai" data-ps-keywords="ai agent briefing insights"><?= $psIgIcon('<path d="M12 3.5 13.7 8.3 18.5 10 13.7 11.7 12 16.5 10.3 11.7 5.5 10 10.3 8.3z"/><path d="M18.2 14.2 19 16.5 21.3 17.3 19 18.1 18.2 20.4 17.4 18.1 15.1 17.3 17.4 16.5z"/>') ?><span class="ps-nav-text"><strong>AI Agent</strong></span></a></li>
+                            <li><a href="#ps-pref-appearance" data-ps-keywords="appearance theme font dark light"><?= $psIgIcon('<circle cx="12" cy="12" r="8.25"/><path d="M12 3.75v16.5A8.25 8.25 0 0 0 12 3.75z"/>') ?><span class="ps-nav-text"><strong>Appearance</strong></span></a></li>
+                            <li><a href="#ps-pref-accessibility" data-ps-keywords="accessibility reading contrast size"><?= $psIgIcon('<circle cx="12" cy="5.25" r="1.75"/><path d="M8 9.25h8"/><path d="M12 9.25v5.5"/><path d="m8.5 20.25 3.5-5.5 3.5 5.5"/>') ?><span class="ps-nav-text"><strong>Accessibility</strong></span></a></li>
+                        </ul>
+                    </div>
+                    <button type="button" class="ps-nav-more" id="psNavMore" hidden aria-controls="psNavScroll">
+                        <span>View more settings</span>
+                        <i class="fas fa-chevron-down" aria-hidden="true"></i>
+                    </button>
+                </nav>
+
+                <div class="ps-rail-foot">
+                    <a href="<?= $esc($logoutUrl) ?>" class="ps-logout"><i class="fas fa-arrow-right-from-bracket"></i> Log out</a>
+                </div>
+            </div>
 
             <div class="ps-mobile-back" id="psMobileBack" hidden>
                 <button type="button" class="ps-mobile-back-btn" id="psMobileBackBtn" aria-label="Back to settings">
@@ -511,10 +528,10 @@ $psBiometricJsUrl = function_exists('app_url')
                         <div class="ps-sec-head">
                             <span class="ps-sec-icon"><i class="fas fa-pen"></i></span>
                     <div>
-                                <h2 class="section-title"><?= $currentSig ? 'Replace Signature' : 'Digital Signature' ?></h2>
+                                <h2 class="section-title">Signature</h2>
                                 <p class="section-subtitle"><?= $currentSig
-                                    ? 'Draw a new signature. Saving it replaces your current one.'
-                                    : 'Draw your signature below. It will appear on vouchers and approvals where your name is used.' ?></p>
+                                    ? 'Draw a new signature to replace your current one.'
+                                    : 'Draw your signature for vouchers and approvals.' ?></p>
                             </div>
                     </div>
                     <?php if ($currentSig): ?>
@@ -556,7 +573,7 @@ $psBiometricJsUrl = function_exists('app_url')
                         <?php if ($currentSig): ?>
                 <div class="ps-sig-card">
                     <div class="ps-sec-head ps-sig-current-head">
-                        <span class="ps-sec-icon"><i class="far fa-image"></i></span>
+                        <span class="ps-sec-icon"><i class="fas fa-file-signature"></i></span>
                         <div>
                             <h2 class="section-title">Current Signature</h2>
                             <p class="section-subtitle">This is your currently saved signature.</p>
@@ -583,8 +600,8 @@ $psBiometricJsUrl = function_exists('app_url')
                 <div class="section-header ps-sec-head">
                     <span class="ps-sec-icon"><i class="far fa-envelope"></i></span>
                     <div>
-					<h2 class="section-title">Personal Email Account</h2>
-                    <p class="section-subtitle">Configure your personal IMAP/SMTP credentials for the email module.</p>
+					<h2 class="section-title">Email</h2>
+                    <p class="section-subtitle">Personal IMAP/SMTP credentials for the email module.</p>
 				</div>
 				</div>
                 <?php $psEmailComingSoon = true; ?>
@@ -691,63 +708,26 @@ $psBiometricJsUrl = function_exists('app_url')
                 </div>
             </section>
 
-            <section class="editor-section ps-pref" id="ps-pref-appearance" hidden>
-                <div class="section-header ps-sec-head ps-pref-appearance-head">
-                    <span class="ps-sec-icon"><i class="fas fa-palette"></i></span>
-                    <div>
-                        <h2 class="section-title">Appearance</h2>
-                        <p class="section-subtitle">Font, light / dark mode, and sidebar look.</p>
-                    </div>
-                </div>
+            <section class="editor-section ps-pref ps-appearance-stack" id="ps-pref-appearance" hidden>
+                <?php
+                $psFontCfg = is_array($psFontConfig ?? null) ? $psFontConfig : [];
+                $psFontSelected = (string) ($psFontCfg['selectedKey'] ?? '');
+                $psCompanyFont = is_array($psFontCfg['companyFont'] ?? null)
+                    ? $psFontCfg['companyFont']
+                    : ['label' => 'Company default', 'stack' => 'inherit'];
+                $psEffectiveFont = is_array($psFontCfg['effectiveFont'] ?? null) ? $psFontCfg['effectiveFont'] : [];
+                $psEffectiveStack = (string) ($psEffectiveFont['stack'] ?? ($psCompanyFont['stack'] ?? 'inherit'));
+                $psEffectiveLabel = (string) ($psEffectiveFont['label'] ?? 'Company default');
+                ?>
 
-                <div class="ps-pref-block">
-                    <p class="subsection-label">Font size and style</p>
-                    <?php if ($psFontConfig === null): ?>
-                    <p class="ps-pref-empty">Font settings are not available right now.</p>
-                    <?php else: ?>
-                    <?php
-                    $psFontSelected = (string) ($psFontConfig['selectedKey'] ?? '');
-                    $psCompanyFont = $psFontConfig['companyFont'] ?? ['label' => 'Company default', 'stack' => 'inherit'];
-                    $psEffectiveStack = (string) ($psFontConfig['effectiveFont']['stack'] ?? ($psCompanyFont['stack'] ?? 'inherit'));
-                    $psEffectiveLabel = (string) ($psFontConfig['effectiveFont']['label'] ?? 'Company default');
-                    ?>
-                    <div class="ps-font-samsung" id="psFontSamsung">
-                        <div class="ps-font-preview-card" id="psFontPreviewCard">
-                            <p class="ps-font-preview-text" id="psFontPreview" style="font-family: <?= $esc($psEffectiveStack) ?>;">
-                                While resolving a conflict with a colleague, remember to keep a positive attitude and focus on finding a solution that works for everyone.
-                            </p>
-                            <div class="ps-font-loading" id="psFontLoading" hidden aria-live="polite">
-                                <span class="ps-font-loading-ring" aria-hidden="true"></span>
-                                <span class="ps-font-loading-copy">
-                                    <strong id="psFontLoadingTitle">Applying font</strong>
-                                    <small id="psFontLoadingSub">Please wait…</small>
-                                </span>
-                            </div>
-                        </div>
-                        <p class="ps-font-style-label">Font style</p>
-                        <div class="ps-font-panel">
-                            <div class="ps-font-grid" id="psFontGrid" data-api="<?= $esc($psFontApiUrl) ?>" data-selected="<?= $esc($psFontSelected) ?>">
-                                <button type="button" class="ps-font-card<?= $psFontSelected === '' ? ' is-selected' : '' ?>" data-font="" data-label="Company default" style="--ps-font: <?= $esc($psCompanyFont['stack'] ?? 'inherit') ?>;">
-                                    <span class="ps-font-sample" title="<?= $esc($psCompanyFont['label'] ?? '') ?>">Company default</span>
-                                    <i class="fas fa-check ps-font-check"></i>
-                                </button>
-                                <?php foreach (($psFontConfig['fonts'] ?? []) as $psFont): ?>
-                                <button type="button" class="ps-font-card<?= $psFontSelected === (string) $psFont['id'] ? ' is-selected' : '' ?>" data-font="<?= $esc($psFont['id']) ?>" data-label="<?= $esc($psFont['label']) ?>" data-google="<?= $esc($psFont['google'] ?? '') ?>" data-local="<?= $esc($psFont['localCss'] ?? '') ?>" style="--ps-font: <?= $esc($psFont['stack'] ?? 'inherit') ?>;">
-                                    <span class="ps-font-sample"><?= $esc($psFont['label']) ?></span>
-                                    <i class="fas fa-check ps-font-check"></i>
-                                </button>
-                                <?php endforeach; ?>
-                            </div>
-                            <div class="ps-pref-actions ps-font-note-row">
-                                <span class="ps-pref-note" id="psFontNote">Current: <?= $esc($psEffectiveLabel) ?><?= empty($psFontConfig['isPersonalChoice']) ? ' (company default)' : ' (your choice)' ?></span>
-                            </div>
+                <div class="ps-profile-card ps-profile-card--appearance ps-profile-card--mode">
+                    <div class="section-header ps-sec-head">
+                        <span class="ps-sec-icon"><i class="fas fa-circle-half-stroke"></i></span>
+                        <div>
+                            <h2 class="section-title">Mode</h2>
+                            <p class="section-subtitle">Light, dark, or match your device.</p>
                         </div>
                     </div>
-                    <?php endif; ?>
-                </div>
-
-                <div class="ps-pref-block">
-                    <p class="subsection-label">Mode</p>
                     <div class="ps-mode-grid" id="psModeGrid">
                         <button type="button" class="ps-mode-card" data-mode="light">
                             <span class="ps-mode-phone ps-mode-preview--light" aria-hidden="true">
@@ -801,11 +781,62 @@ $psBiometricJsUrl = function_exists('app_url')
                             </span>
                         </button>
                     </div>
-                    <p class="ps-pref-note ps-mode-hint">System follows your phone’s light or dark setting.</p>
+                    <p class="ps-pref-note ps-mode-hint">System follows your device light or dark setting.</p>
                 </div>
 
-                <div class="ps-pref-block">
-                    <p class="subsection-label">Sidebar theme <small>(used in light mode)</small></p>
+                <div class="ps-profile-card ps-profile-card--appearance ps-profile-card--font">
+                    <div class="section-header ps-sec-head">
+                        <span class="ps-sec-icon"><i class="fas fa-font"></i></span>
+                        <div>
+                            <h2 class="section-title">Font</h2>
+                            <p class="section-subtitle">Preview and choose your reading style.</p>
+                        </div>
+                    </div>
+                    <?php if ($psFontConfig === null): ?>
+                    <p class="ps-pref-empty">Font settings are not available right now.</p>
+                    <?php else: ?>
+                    <div class="ps-font-samsung" id="psFontSamsung">
+                        <div class="ps-font-preview-card" id="psFontPreviewCard">
+                            <p class="ps-font-preview-text" id="psFontPreview" style="font-family: <?= $esc($psEffectiveStack) ?>;">
+                                While resolving a conflict with a colleague, remember to keep a positive attitude and focus on finding a solution that works for everyone.
+                            </p>
+                            <div class="ps-font-loading" id="psFontLoading" hidden aria-live="polite">
+                                <span class="ps-font-loading-ring" aria-hidden="true"></span>
+                                <span class="ps-font-loading-copy">
+                                    <strong id="psFontLoadingTitle">Applying font</strong>
+                                    <small id="psFontLoadingSub">Please wait…</small>
+                                </span>
+                            </div>
+                        </div>
+                        <div class="ps-font-panel">
+                            <div class="ps-font-grid" id="psFontGrid" data-api="<?= $esc($psFontApiUrl) ?>" data-selected="<?= $esc($psFontSelected) ?>">
+                                <button type="button" class="ps-font-card<?= $psFontSelected === '' ? ' is-selected' : '' ?>" data-font="" data-label="Company default" style="--ps-font: <?= $esc($psCompanyFont['stack'] ?? 'inherit') ?>;">
+                                    <span class="ps-font-sample" title="<?= $esc($psCompanyFont['label'] ?? '') ?>">Company default</span>
+                                    <i class="fas fa-check ps-font-check"></i>
+                                </button>
+                                <?php foreach (($psFontCfg['fonts'] ?? []) as $psFont): ?>
+                                <button type="button" class="ps-font-card<?= $psFontSelected === (string) $psFont['id'] ? ' is-selected' : '' ?>" data-font="<?= $esc($psFont['id']) ?>" data-label="<?= $esc($psFont['label']) ?>" data-google="<?= $esc($psFont['google'] ?? '') ?>" data-local="<?= $esc($psFont['localCss'] ?? '') ?>" style="--ps-font: <?= $esc($psFont['stack'] ?? 'inherit') ?>;">
+                                    <span class="ps-font-sample"><?= $esc($psFont['label']) ?></span>
+                                    <i class="fas fa-check ps-font-check"></i>
+                                </button>
+                                <?php endforeach; ?>
+                            </div>
+                            <div class="ps-pref-actions ps-font-note-row">
+                                <span class="ps-pref-note" id="psFontNote">Current: <?= $esc($psEffectiveLabel) ?><?= empty($psFontCfg['isPersonalChoice']) ? ' (company default)' : ' (your choice)' ?></span>
+                            </div>
+                        </div>
+                    </div>
+                    <?php endif; ?>
+                </div>
+
+                <div class="ps-profile-card ps-profile-card--appearance ps-profile-card--theme">
+                    <div class="section-header ps-sec-head">
+                        <span class="ps-sec-icon"><i class="fas fa-palette"></i></span>
+                        <div>
+                            <h2 class="section-title">Sidebar theme</h2>
+                            <p class="section-subtitle">Used in light mode across the app.</p>
+                        </div>
+                    </div>
                     <div class="ps-theme-grid">
                         <?php foreach ($psSidebarThemes as $psThemeKey => [$psThemeLabel, $psThemeBg, $psThemeFg, $psThemeBorder]): ?>
                         <a href="<?= $esc($psThemeUrl($psThemeKey)) ?>" class="ps-theme-card<?= $psCurrentTheme === $psThemeKey ? ' is-selected' : '' ?>" data-theme-key="<?= $esc($psThemeKey) ?>">
@@ -839,7 +870,7 @@ $psBiometricJsUrl = function_exists('app_url')
                     <span class="ps-sec-icon"><i class="fas fa-universal-access"></i></span>
                     <div>
                         <h2 class="section-title">Accessibility</h2>
-                        <p class="section-subtitle">Personal reading and interaction preferences for your account on this device.</p>
+                        <p class="section-subtitle">Reading and interaction preferences on this device.</p>
                     </div>
                 </div>
 
@@ -1422,6 +1453,8 @@ var psShowTab = (function () {
     }
 
     function show(id, updateHash, forceDetail) {
+        if (id === 'personal-details') id = 'profile-photo';
+        if (id === 'attendance-biometric') id = 'change-password';
         if (!sections.some(function (s) { return s.id === id; })) id = sections[0].id;
         sections.forEach(function (section) {
             section.hidden = section.id !== id;
@@ -1569,7 +1602,7 @@ function psOnTab(id, fn) {
     if (refresh) refresh.addEventListener('click', load);
 })();
 
-function psNotify(message, type) {
+function psNotify(message, type, durationMs) {
     type = type === 'error' ? 'error' : (type === 'info' ? 'info' : 'success');
     var existing = document.getElementById('psToast');
     if (existing) existing.remove();
@@ -1584,10 +1617,14 @@ function psNotify(message, type) {
     toast.querySelector('.ps-toast-close').addEventListener('click', function () { toast.remove(); });
     document.body.appendChild(toast);
     requestAnimationFrame(function () { toast.classList.add('is-in'); });
+    var hold = Number(durationMs);
+    if (!Number.isFinite(hold) || hold <= 0) {
+        hold = type === 'error' ? 5500 : 3000;
+    }
     setTimeout(function () {
         toast.classList.remove('is-in');
         setTimeout(function () { if (toast.parentNode) toast.remove(); }, 250);
-    }, 3000);
+    }, hold);
 }
 
 (function () {
@@ -1910,12 +1947,66 @@ function psNotify(message, type) {
     }
 
     var search = document.getElementById('psHeadSearch');
+    var navScroll = document.getElementById('psNavScroll');
+    var navMore = document.getElementById('psNavMore');
+    var navRoot = document.querySelector('.section-nav');
+    var navItems = Array.prototype.slice.call(document.querySelectorAll('.section-nav li'));
+
+    var syncNavMore = function () {
+        if (!navScroll || !navMore || !navRoot) return;
+        var overflow = navScroll.scrollHeight > navScroll.clientHeight + 4;
+        var atEnd = navScroll.scrollTop + navScroll.clientHeight >= navScroll.scrollHeight - 6;
+        navMore.hidden = !overflow || atEnd;
+        navRoot.classList.toggle('is-scrolled-end', !overflow || atEnd);
+        navMore.setAttribute('aria-hidden', navMore.hidden ? 'true' : 'false');
+    };
+
+    if (navScroll) {
+        navScroll.addEventListener('scroll', syncNavMore, { passive: true });
+        window.addEventListener('resize', syncNavMore);
+        if (typeof ResizeObserver !== 'undefined') {
+            try { new ResizeObserver(syncNavMore).observe(navScroll); } catch (e) {}
+        }
+        requestAnimationFrame(syncNavMore);
+    }
+    if (navMore && navScroll) {
+        navMore.addEventListener('click', function () {
+            navScroll.scrollBy({ top: Math.max(120, navScroll.clientHeight * 0.7), behavior: 'smooth' });
+        });
+    }
+
     if (!search) return;
+    var filterNav = function () {
+        var q = search.value.trim().toLowerCase();
+        navItems.forEach(function (li) {
+            if (li.classList.contains('ps-nav-sep')) {
+                li.classList.toggle('is-filtered-out', !!q);
+                return;
+            }
+            var link = li.querySelector('a[href^="#"]');
+            if (!link) return;
+            var hay = (
+                (link.textContent || '') + ' ' +
+                (link.getAttribute('data-ps-keywords') || '')
+            ).toLowerCase();
+            li.classList.toggle('is-filtered-out', !!(q && hay.indexOf(q) === -1));
+        });
+        requestAnimationFrame(syncNavMore);
+    };
+    search.addEventListener('input', filterNav);
     search.addEventListener('keydown', function (e) {
         if (e.key !== 'Enter') return;
         e.preventDefault();
         var q = search.value.trim().toLowerCase();
         if (!q) return;
+        var visible = Array.prototype.find.call(document.querySelectorAll('.section-nav a[href^="#"]'), function (link) {
+            var li = link.closest('li');
+            return li && !li.classList.contains('is-filtered-out');
+        });
+        if (visible) {
+            psShowTab(visible.getAttribute('href').slice(1), true);
+            return;
+        }
         var hit = Array.prototype.find.call(document.querySelectorAll('.editor-section[id]'), function (section) {
             return section.textContent.toLowerCase().indexOf(q) !== -1;
         });

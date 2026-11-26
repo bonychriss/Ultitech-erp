@@ -60,6 +60,44 @@ const A11Y_DEFAULTS = {
   deliveryNoteQr: true,
 }
 
+const SETTINGS_GROUPS = [
+  {
+    id: 'company',
+    title: 'Company',
+    subtitle: 'Branding, modules, tax, and business identity.',
+  },
+  {
+    id: 'appearance',
+    title: 'Appearance',
+    subtitle: 'Reading style and accessibility for everyone in this company.',
+  },
+  {
+    id: 'people',
+    title: 'People & access',
+    subtitle: 'Employees and who can use specific features.',
+  },
+  {
+    id: 'operations',
+    title: 'Operations',
+    subtitle: 'Attendance, sales, purchases, and voucher workflows.',
+  },
+  {
+    id: 'communications',
+    title: 'Communications',
+    subtitle: 'Messaging channels and outbound email.',
+  },
+  {
+    id: 'platform',
+    title: 'Platform',
+    subtitle: 'Multi-company tools, public site, and system integrations.',
+  },
+  {
+    id: 'danger',
+    title: 'Danger zone',
+    subtitle: 'Irreversible actions for this company.',
+  },
+]
+
 function applyA11yToDocument(prefs) {
   if (typeof document === 'undefined') return
   const next = { ...A11Y_DEFAULTS, ...(prefs || {}) }
@@ -398,6 +436,135 @@ export default function SettingsHubPage() {
       .some((part) => String(part).toLowerCase().includes(q))
   })
 
+  const groupedCards = useMemo(() => {
+    const cards = cfg.cards || []
+    const byGroup = new Map()
+    cards.forEach((card) => {
+      const key = card.group || 'other'
+      if (!byGroup.has(key)) byGroup.set(key, [])
+      byGroup.get(key).push(card)
+    })
+    const known = SETTINGS_GROUPS
+      .map((group) => ({ ...group, cards: byGroup.get(group.id) || [] }))
+      .filter((group) => group.cards.length > 0)
+    const leftover = [...byGroup.entries()]
+      .filter(([id]) => !SETTINGS_GROUPS.some((g) => g.id === id))
+      .map(([id, groupCards]) => ({
+        id,
+        title: 'More settings',
+        subtitle: '',
+        cards: groupCards,
+      }))
+    return [...known, ...leftover]
+  }, [cfg.cards])
+
+  const renderCard = (card) => {
+    const Icon = ICON_MAP[card.icon] || Building2
+    const isReset = card.action === 'factory_reset'
+    const isRegister = card.action === 'register_company'
+    const isFont = card.action === 'system_font'
+    const isA11y = card.action === 'accessibility'
+    const isBusinessField = card.action === 'business_field'
+    const isContact = card.action === 'site_contact'
+    const isQuoteAccess = card.action === 'permissions' || card.action === 'web_quote_access'
+    const content = (
+      <article
+        className={`ash-card${card.danger ? ' ash-card--danger' : ''}`}
+        style={{ '--ash-accent': card.accent || '#2563eb' }}
+      >
+        <div className="ash-card-icon-wrap" aria-hidden="true">
+          <Icon className="ash-card-icon" strokeWidth={1.75} />
+        </div>
+        <div className="ash-card-body">
+          <div className="ash-card-value">
+            {card.title}
+            {card.badge ? <span className="ash-badge">{card.badge}</span> : null}
+          </div>
+          {card.description ? <p className="ash-card-helper">{card.description}</p> : null}
+        </div>
+      </article>
+    )
+
+    if (isFont) {
+      return (
+        <button key={card.id} type="button" className="ash-card-link" onClick={() => setFontOpen(true)}>
+          {content}
+        </button>
+      )
+    }
+
+    if (isA11y) {
+      return (
+        <button
+          key={card.id}
+          type="button"
+          className="ash-card-link"
+          onClick={() => {
+            setA11yForm({ ...A11Y_DEFAULTS, ...(cfg.accessibility || {}) })
+            setA11yOpen(true)
+          }}
+        >
+          {content}
+        </button>
+      )
+    }
+
+    if (isBusinessField) {
+      return (
+        <button key={card.id} type="button" className="ash-card-link" onClick={openBusinessField}>
+          {content}
+        </button>
+      )
+    }
+
+    if (isContact) {
+      return (
+        <button key={card.id} type="button" className="ash-card-link" onClick={openContact}>
+          {content}
+        </button>
+      )
+    }
+
+    if (isQuoteAccess) {
+      return (
+        <button key={card.id} type="button" className="ash-card-link" onClick={openQuoteAccess}>
+          {content}
+        </button>
+      )
+    }
+
+    if (isReset) {
+      return (
+        <button
+          key={card.id}
+          type="button"
+          className="ash-card-link"
+          onClick={() => {
+            setResetOpen(true)
+            setResetPhase('confirm')
+            setResetConfirm('')
+          }}
+        >
+          {content}
+        </button>
+      )
+    }
+
+    if (isRegister) {
+      return (
+        <button key={card.id} type="button" className="ash-card-link" onClick={() => setRegisterOpen(true)}>
+          {content}
+        </button>
+      )
+    }
+
+    return (
+      <a key={card.id} href={card.href} className="ash-card-link">
+        {content}
+      </a>
+    )
+  }
+
   return (
     <div className="ash-page">
       <header className="ash-sticky">
@@ -420,122 +587,24 @@ export default function SettingsHubPage() {
 
         <p className="ash-lead">Manage system configurations across departments.</p>
 
-        <div className="ash-grid">
-          {(cfg.cards || []).map((card) => {
-            const Icon = ICON_MAP[card.icon] || Building2
-            const isReset = card.action === 'factory_reset'
-            const isRegister = card.action === 'register_company'
-            const isFont = card.action === 'system_font'
-            const isA11y = card.action === 'accessibility'
-            const isBusinessField = card.action === 'business_field'
-            const isContact = card.action === 'site_contact'
-            const isQuoteAccess = card.action === 'permissions' || card.action === 'web_quote_access'
-            const content = (
-              <article
-                className={`ash-card${card.danger ? ' ash-card--danger' : ''}`}
-                style={{ '--ash-accent': card.accent || '#2563eb' }}
-              >
-                <div className="ash-card-icon-wrap" aria-hidden="true">
-                  <Icon className="ash-card-icon" strokeWidth={1.75} />
+        <div className="ash-sections">
+          {groupedCards.map((group) => (
+            <section
+              key={group.id}
+              className={`ash-section${group.id === 'danger' ? ' ash-section--danger' : ''}`}
+              aria-labelledby={`ash-group-${group.id}`}
+            >
+              <header className="ash-section-head">
+                <div>
+                  <h2 id={`ash-group-${group.id}`} className="ash-section-title">
+                    {group.title}
+                  </h2>
+                  {group.subtitle ? <p className="ash-section-subtitle">{group.subtitle}</p> : null}
                 </div>
-                <div className="ash-card-body">
-                  <div className="ash-card-value">
-                    {card.title}
-                    {card.badge ? <span className="ash-badge">{card.badge}</span> : null}
-                  </div>
-                </div>
-              </article>
-            )
-
-            if (isFont) {
-              return (
-                <button
-                  key={card.id}
-                  type="button"
-                  className="ash-card-link"
-                  onClick={() => setFontOpen(true)}
-                >
-                  {content}
-                </button>
-              )
-            }
-
-            if (isA11y) {
-              return (
-                <button
-                  key={card.id}
-                  type="button"
-                  className="ash-card-link"
-                  onClick={() => {
-                    setA11yForm({ ...A11Y_DEFAULTS, ...(cfg.accessibility || {}) })
-                    setA11yOpen(true)
-                  }}
-                >
-                  {content}
-                </button>
-              )
-            }
-
-            if (isBusinessField) {
-              return (
-                <button key={card.id} type="button" className="ash-card-link" onClick={openBusinessField}>
-                  {content}
-                </button>
-              )
-            }
-
-            if (isContact) {
-              return (
-                <button key={card.id} type="button" className="ash-card-link" onClick={openContact}>
-                  {content}
-                </button>
-              )
-            }
-
-            if (isQuoteAccess) {
-              return (
-                <button key={card.id} type="button" className="ash-card-link" onClick={openQuoteAccess}>
-                  {content}
-                </button>
-              )
-            }
-
-            if (isReset) {
-              return (
-                <button
-                  key={card.id}
-                  type="button"
-                  className="ash-card-link"
-                  onClick={() => {
-                    setResetOpen(true)
-                    setResetPhase('confirm')
-                    setResetConfirm('')
-                  }}
-                >
-                  {content}
-                </button>
-              )
-            }
-
-            if (isRegister) {
-              return (
-                <button
-                  key={card.id}
-                  type="button"
-                  className="ash-card-link"
-                  onClick={() => setRegisterOpen(true)}
-                >
-                  {content}
-                </button>
-              )
-            }
-
-            return (
-              <a key={card.id} href={card.href} className="ash-card-link">
-                {content}
-              </a>
-            )
-          })}
+              </header>
+              <div className="ash-grid">{group.cards.map(renderCard)}</div>
+            </section>
+          ))}
         </div>
       </div>
 
@@ -678,40 +747,51 @@ export default function SettingsHubPage() {
             aria-labelledby="ash-font-title"
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 id="ash-font-title">System font</h2>
-            <p className="ash-reset-lead">
-              Applies across modules, sidebars, forms, and dashboards for this company.
-            </p>
-            <form className="ash-font-form" onSubmit={onApplyFont}>
-              <label className="ash-label" htmlFor="ash-system-font">
-                Font family
-              </label>
-              <div className="ash-font-row">
-                <select
-                  id="ash-system-font"
-                  className="ash-select"
-                  value={fontKey}
-                  onChange={(e) => setFontKey(e.target.value)}
-                  autoFocus
-                >
-                  {catalog.map((font) => (
-                    <option key={font.id} value={font.id}>
-                      {font.label}
-                    </option>
-                  ))}
-                </select>
+            <div className="ash-modal-head">
+              <span className="ash-modal-icon ash-modal-icon--font" aria-hidden="true">
+                <Type strokeWidth={1.75} />
+              </span>
+              <div>
+                <h2 id="ash-font-title">System font</h2>
+                <p className="ash-reset-lead">
+                  Preview and choose the company-wide reading style.
+                </p>
               </div>
+            </div>
+            <form className="ash-font-form" onSubmit={onApplyFont}>
               <div
                 key={`${selectedFont.id}-${fontPreviewTick}`}
                 className="ash-font-preview"
                 style={{ fontFamily: selectedFont.stack }}
               >
-                <p className="ash-font-preview-title">Preview - {selectedFont.label}</p>
                 <p className="ash-font-preview-body">
-                  The quick brown fox jumps over the lazy dog. 0123456789 - Payment voucher #1042 -
-                  Jumatano, 28 May 2026
+                  While resolving a conflict with a colleague, remember to keep a positive attitude
+                  and focus on finding a solution that works for everyone.
                 </p>
               </div>
+              <div className="ash-font-pick-grid" role="listbox" aria-label="Font style">
+                {catalog.map((font) => {
+                  const selected = font.id === fontKey
+                  return (
+                    <button
+                      key={font.id}
+                      type="button"
+                      role="option"
+                      aria-selected={selected}
+                      className={`ash-font-pick${selected ? ' is-selected' : ''}`}
+                      style={{ '--ash-font': font.stack }}
+                      onClick={() => {
+                        if (font.google) loadGoogleFont(font.google)
+                        setFontKey(font.id)
+                      }}
+                    >
+                      <span className="ash-font-pick-sample">{font.label}</span>
+                      {selected ? <Check className="ash-font-pick-check" strokeWidth={2.25} aria-hidden="true" /> : null}
+                    </button>
+                  )
+                })}
+              </div>
+              <p className="ash-font-current-note">Current: {selectedFont.label}</p>
               <div className="ash-modal-actions">
                 <button
                   type="button"

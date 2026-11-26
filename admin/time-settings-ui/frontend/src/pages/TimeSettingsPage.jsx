@@ -69,6 +69,18 @@ async function parseJson(res) {
 export default function TimeSettingsPage() {
   const cfg = useMemo(() => getCfg(), [])
   const apiBase = String(cfg.apiBase || '').replace(/\/$/, '')
+  const embedded = !!(
+    cfg.embedded
+    || (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('embed') === '1')
+  )
+  const fixedStep = useMemo(() => {
+    const fromCfg = Number(cfg.timeStep || 0)
+    if (fromCfg >= 1 && fromCfg <= 3) return fromCfg
+    if (typeof window === 'undefined') return 0
+    const fromUrl = Number(new URLSearchParams(window.location.search).get('time_step') || 0)
+    return fromUrl >= 1 && fromUrl <= 3 ? fromUrl : 0
+  }, [cfg.timeStep])
+  const singleStep = fixedStep > 0
   const [form, setForm] = useState(() => normalizeForm(cfg.initial?.form))
   const [links, setLinks] = useState(cfg.initial?.links || {})
   const [meta, setMeta] = useState(cfg.initial?.meta || {})
@@ -76,7 +88,7 @@ export default function TimeSettingsPage() {
     timezones: [],
     formats: [],
   })
-  const [step, setStep] = useState(1)
+  const [step, setStep] = useState(() => (fixedStep > 0 ? fixedStep : 1))
   const [loading, setLoading] = useState(!cfg.initial)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -174,7 +186,7 @@ export default function TimeSettingsPage() {
 
   async function handleSave(event) {
     event.preventDefault()
-    const msg = validateStep(3)
+    const msg = validateStep(singleStep ? step : 3)
     if (msg) {
       setError(msg)
       return
@@ -271,18 +283,20 @@ export default function TimeSettingsPage() {
       ]
 
   return (
-    <div className="ts-page">
-      <div className="ts-topbar">
-        <a className="ts-back" href={links.backUrl || '#'}>
-          <ArrowLeft size={16} />
-          Settings
-        </a>
-        {form.geofenceEnabled ? (
-          <span className="ts-badge">Geofence on</span>
-        ) : (
-          <span className="ts-badge">Time & attendance</span>
-        )}
-      </div>
+    <div className={`ts-page${embedded ? ' ts-page--embed' : ''}`}>
+      {!embedded ? (
+        <div className="ts-topbar">
+          <a className="ts-back" href={links.backUrl || '#'}>
+            <ArrowLeft size={16} />
+            Settings
+          </a>
+          {form.geofenceEnabled ? (
+            <span className="ts-badge">Geofence on</span>
+          ) : (
+            <span className="ts-badge">Time & attendance</span>
+          )}
+        </div>
+      ) : null}
 
       {error ? (
         <div className="ts-flash ts-flash-error" role="alert">
@@ -295,37 +309,45 @@ export default function TimeSettingsPage() {
         </div>
       ) : null}
 
-      <div className="wizard">
-        <header className="wizard-top">
-          <div className="wizard-mark" aria-hidden>
-            <Clock3 size={18} />
-          </div>
-          <nav className="wizard-stepper" aria-label={`Step ${step} of 3`}>
-            {[1, 2, 3].map((n, i) => (
-              <div key={n} className="wizard-step-wrap">
-                {i > 0 ? <div className={`wizard-line ${n <= step ? 'on' : ''}`} /> : null}
-                <button
-                  type="button"
-                  className={`wizard-step ${n === step ? 'active' : ''} ${n < step ? 'done' : ''}`}
-                  onClick={() => {
-                    if (n < step) {
-                      setError('')
-                      setStep(n)
-                    }
-                  }}
-                >
-                  <span className="wizard-num">{n}</span>
-                  <span className="wizard-label">{STEP_LABELS[n]}</span>
-                </button>
+      <div className={`wizard${singleStep ? ' wizard--single' : ''}`}>
+        {!singleStep ? (
+          <header className="wizard-top">
+            {!embedded ? (
+              <div className="wizard-mark" aria-hidden>
+                <Clock3 size={18} />
               </div>
-            ))}
-          </nav>
-        </header>
+            ) : (
+              <span className={`ts-badge${form.geofenceEnabled ? ' ts-badge-ok' : ''}`}>
+                {form.geofenceEnabled ? 'Geofence on' : 'Time & attendance'}
+              </span>
+            )}
+            <nav className="wizard-stepper" aria-label={`Step ${step} of 3`}>
+              {[1, 2, 3].map((n, i) => (
+                <div key={n} className="wizard-step-wrap">
+                  {i > 0 ? <div className={`wizard-line ${n <= step ? 'on' : ''}`} /> : null}
+                  <button
+                    type="button"
+                    className={`wizard-step ${n === step ? 'active' : ''} ${n < step ? 'done' : ''}`}
+                    onClick={() => {
+                      if (n < step) {
+                        setError('')
+                        setStep(n)
+                      }
+                    }}
+                  >
+                    <span className="wizard-num">{n}</span>
+                    <span className="wizard-label">{STEP_LABELS[n]}</span>
+                  </button>
+                </div>
+              ))}
+            </nav>
+          </header>
+        ) : null}
 
         <form
           className="wizard-body"
           onSubmit={(e) => {
-            if (step < 3) {
+            if (!singleStep && step < 3) {
               e.preventDefault()
               goNext()
               return
@@ -333,9 +355,11 @@ export default function TimeSettingsPage() {
             void handleSave(e)
           }}
         >
-          <div className="wizard-title-row">
-            <h1>{STEP_LABELS[step]}</h1>
-          </div>
+          {!singleStep ? (
+            <div className="wizard-title-row">
+              <h1>{STEP_LABELS[step]}</h1>
+            </div>
+          ) : null}
 
           {step === 1 ? (
             <>
@@ -344,7 +368,6 @@ export default function TimeSettingsPage() {
                   <h2>
                     System timezone<span className="req">*</span>
                   </h2>
-                  <p>Used for attendance logs, vouchers, and reports.</p>
                 </div>
                 <div className="wizard-auth-fields">
                   <div className="field-line">
@@ -366,7 +389,6 @@ export default function TimeSettingsPage() {
               <div className="wizard-row">
                 <div className="wizard-aside">
                   <h2>Display format</h2>
-                  <p>How times appear across the ERP.</p>
                 </div>
                 <div className="wizard-auth-fields">
                   <div className="field-line">
@@ -388,7 +410,6 @@ export default function TimeSettingsPage() {
               <div className="wizard-row">
                 <div className="wizard-aside">
                   <h2>Manual override</h2>
-                  <p>Emergency fixed time for attendance records. Use only for emergencies or testing.</p>
                 </div>
                 <div className="wizard-auth-fields">
                   <label className="ts-override-toggle">
@@ -422,13 +443,13 @@ export default function TimeSettingsPage() {
                   <h2>
                     Work start<span className="req">*</span>
                   </h2>
-                  <p>Standard reporting time for staff.</p>
                 </div>
                 <div className="wizard-auth-fields">
                   <div className="field-line">
                     <Clock3 size={18} aria-hidden />
                     <input
                       type="time"
+                      lang={form.timeFormat === '12' ? 'en-US' : 'en-GB'}
                       value={form.startTime}
                       onChange={(e) => patch('startTime', e.target.value)}
                       aria-label="Work start time"
@@ -441,13 +462,13 @@ export default function TimeSettingsPage() {
                   <h2>
                     Work end<span className="req">*</span>
                   </h2>
-                  <p>Standard departure time for staff.</p>
                 </div>
                 <div className="wizard-auth-fields">
                   <div className="field-line">
                     <Clock3 size={18} aria-hidden />
                     <input
                       type="time"
+                      lang={form.timeFormat === '12' ? 'en-US' : 'en-GB'}
                       value={form.endTime}
                       onChange={(e) => patch('endTime', e.target.value)}
                       aria-label="Work end time"
@@ -458,7 +479,6 @@ export default function TimeSettingsPage() {
               <div className="wizard-row">
                 <div className="wizard-aside">
                   <h2>Grace period</h2>
-                  <p>Minutes allowed before a record is marked late.</p>
                 </div>
                 <div className="wizard-auth-fields">
                   <div className="field-line">
@@ -481,7 +501,6 @@ export default function TimeSettingsPage() {
               <div className="wizard-row">
                 <div className="wizard-aside">
                   <h2>Office IPs</h2>
-                  <p>Restrict clock-in to approved public IPs (optional).</p>
                 </div>
                 <div className="wizard-auth-fields">
                   {form.officeIps.map((ip, index) => (
@@ -518,7 +537,6 @@ export default function TimeSettingsPage() {
               <div className="wizard-row">
                 <div className="wizard-aside">
                   <h2>Geofencing</h2>
-                  <p>GPS fallback when office IP check fails.</p>
                 </div>
                 <div className="wizard-auth-fields">
                   <label className="same-pass">
@@ -574,10 +592,6 @@ export default function TimeSettingsPage() {
               <div className="wizard-row">
                 <div className="wizard-aside">
                   <h2>Biometric clock-in</h2>
-                  <p>
-                    Require Face ID, fingerprint, or device PIN before clock in/out.
-                    Turning this off keeps enrolled devices and lets staff clock out without unlock.
-                  </p>
                 </div>
                 <div className="wizard-auth-fields">
                   <label className="same-pass ts-bio-toggle">
@@ -591,46 +605,43 @@ export default function TimeSettingsPage() {
                         <Fingerprint size={16} aria-hidden />
                         Require phone unlock verification
                       </span>
-                      <span className="ts-bio-toggle-hint">
-                        {form.biometricRequired
-                          ? 'On — staff must unlock their phone to clock in or out.'
-                          : 'Off — enrollments are kept; clock-out works without biometric.'}
-                      </span>
                     </span>
                   </label>
-                  {!form.biometricRequired ? (
-                    <div className="ts-bio-note" role="note">
-                      <ShieldCheck size={15} aria-hidden />
-                      Existing biometric enrollments are preserved. Staff already clocked in can clock out normally.
-                    </div>
-                  ) : null}
                 </div>
               </div>
-              <div className="setup-summary">
-                <strong>Ready to save</strong>
-                <ul>
-                  <li>Timezone: {form.timezone}</li>
-                  <li>Hours: {form.startTime} - {form.endTime} (grace {form.gracePeriodMinutes}m)</li>
-                  <li>Geofence: {form.geofenceEnabled ? 'on' : 'off'}</li>
-                  <li>Biometric clock-in: {form.biometricRequired ? 'on' : 'off'}</li>
-                </ul>
-              </div>
+              {!singleStep ? (
+                <div className="setup-summary">
+                  <strong>Ready to save</strong>
+                  <ul>
+                    <li>Timezone: {form.timezone}</li>
+                    <li>Hours: {form.startTime} - {form.endTime} (grace {form.gracePeriodMinutes}m)</li>
+                    <li>Geofence: {form.geofenceEnabled ? 'on' : 'off'}</li>
+                    <li>Biometric clock-in: {form.biometricRequired ? 'on' : 'off'}</li>
+                  </ul>
+                </div>
+              ) : null}
             </>
           ) : null}
 
           <footer className="wizard-footer">
-            <p className="wizard-note">Step {step} of 3 - time format and attendance in one place.</p>
+            {!singleStep ? (
+              <p className="wizard-note">Step {step} of 3 - time format and attendance in one place.</p>
+            ) : (
+              <span className="wizard-note" aria-hidden="true" />
+            )}
             <div className="wizard-footer-actions">
-              <button
-                type="button"
-                className="wizard-btn-prev"
-                onClick={goPrevious}
-                disabled={step === 1 || saving}
-              >
-                <ArrowLeft size={16} />
-                Back
-              </button>
-              {step < 3 ? (
+              {!singleStep ? (
+                <button
+                  type="button"
+                  className="wizard-btn-prev"
+                  onClick={goPrevious}
+                  disabled={step === 1 || saving}
+                >
+                  <ArrowLeft size={16} />
+                  Back
+                </button>
+              ) : null}
+              {!singleStep && step < 3 ? (
                 <button type="submit" className="wizard-btn-next">
                   Continue
                   <ArrowRight size={16} />
@@ -638,7 +649,7 @@ export default function TimeSettingsPage() {
               ) : (
                 <button type="submit" className="wizard-btn-next" disabled={saving}>
                   {saving ? <Loader2 className="ts-spin" size={16} /> : <Check size={16} />}
-                  Save configuration
+                  {singleStep ? 'Save' : 'Save configuration'}
                 </button>
               )}
             </div>

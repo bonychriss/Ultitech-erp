@@ -195,17 +195,44 @@ class AttendanceWebAuthn
         return 'uid:' . $userId;
     }
 
-    private function storeChallenge(int $userId, \lbuchs\WebAuthn\Binary\ByteBuffer $challenge): void
+    private function normalizeMode(string $mode): string
     {
-        $_SESSION[self::SESSION_CHALLENGE_KEY] = $challenge->getBinaryString();
+        return strtolower(trim($mode)) === 'passkey' ? 'passkey' : 'platform';
+    }
+
+    private function storeChallenge(
+        int $userId,
+        \lbuchs\WebAuthn\Binary\ByteBuffer $challenge,
+        string $mode = 'platform'
+    ): void {
+        $mode = $this->normalizeMode($mode);
+        $bag = $_SESSION[self::SESSION_CHALLENGE_KEY] ?? null;
+        if (!is_array($bag)) {
+            $bag = (is_string($bag) && $bag !== '') ? ['platform' => $bag] : [];
+        }
+        $bag[$mode] = $challenge->getBinaryString();
+        $_SESSION[self::SESSION_CHALLENGE_KEY] = $bag;
         $_SESSION[self::SESSION_CHALLENGE_USER_KEY] = $userId;
     }
 
-    private function takeChallenge(int $userId): string
+    private function takeChallenge(int $userId, string $mode = 'platform'): string
     {
-        $challenge = $_SESSION[self::SESSION_CHALLENGE_KEY] ?? null;
+        $mode = $this->normalizeMode($mode);
+        $bag = $_SESSION[self::SESSION_CHALLENGE_KEY] ?? null;
         $challengeUser = (int) ($_SESSION[self::SESSION_CHALLENGE_USER_KEY] ?? 0);
-        unset($_SESSION[self::SESSION_CHALLENGE_KEY], $_SESSION[self::SESSION_CHALLENGE_USER_KEY]);
+        $challenge = null;
+        if (is_array($bag)) {
+            $challenge = $bag[$mode] ?? ($bag['platform'] ?? null);
+            unset($bag[$mode]);
+            if ($bag === []) {
+                unset($_SESSION[self::SESSION_CHALLENGE_KEY], $_SESSION[self::SESSION_CHALLENGE_USER_KEY]);
+            } else {
+                $_SESSION[self::SESSION_CHALLENGE_KEY] = $bag;
+            }
+        } elseif (is_string($bag) && $bag !== '') {
+            $challenge = $bag;
+            unset($_SESSION[self::SESSION_CHALLENGE_KEY], $_SESSION[self::SESSION_CHALLENGE_USER_KEY]);
+        }
         if (!is_string($challenge) || $challenge === '' || $challengeUser !== $userId) {
             throw new RuntimeException('Biometric challenge expired. Please try again.');
         }
@@ -213,17 +240,22 @@ class AttendanceWebAuthn
     }
 
     /**
-     * @return array{success:bool,message?:string,publicKey?:object}
+     * @param string $mode platform = Face ID / device unlock; passkey = Google / cross-platform passkey
+     * @return array{success:bool,message?:string,publicKey?:object,mode?:string}
      */
-    public function createRegisterOptions(int $userId, string $userName, string $displayName): array
-    {
+    public function createRegisterOptions(
+        int $userId,
+        string $userName,
+        string $displayName,
+        string $mode = 'platform'
+    ): array {
         if (!$this->isLibraryAvailable()) {
             return ['success' => false, 'message' => 'Biometric library is not available on the server.'];
         }
         if (!$this->isSecureContextHint()) {
             return [
                 'success' => false,
-                'message' => 'iPhone Face ID requires HTTPS. Open your company HTTPS URL (not plain http).',
+                'message' => 'Passkeys require HTTPS. Open your company HTTPS URL (not plain http).',
             ];
         }
         if (!$this->isRpIdUsable()) {
@@ -240,6 +272,8 @@ class AttendanceWebAuthn
             ];
         }
 
+        $mode = $this->normalizeMode($mode);
+
         try {
             $webAuthn = $this->makeWebAuthn();
             $excludeIds = [];
@@ -251,25 +285,33 @@ class AttendanceWebAuthn
                 $excludeIds[] = $row['credential_id'];
             }
 
-            // Platform authenticator + UV required: Face ID / fingerprint, or device passcode/PIN.
+            // platform = Face ID only; passkey = any passkey provider (Google / iCloud / etc.)
+            // null attachment = do NOT force security-key / QR hybrid — let the browser offer Google Password Manager.
+            $crossPlatform = $mode === 'passkey' ? null : false;
+            $residentKey = $mode === 'passkey' ? 'preferred' : 'discouraged';
+
             $createArgs = $webAuthn->getCreateArgs(
                 $this->userHandle($userId),
                 $userName !== '' ? $userName : ('user' . $userId),
                 $displayName !== '' ? $displayName : ('User ' . $userId),
                 120,
+                $residentKey,
                 'preferred',
-                'required',
-                false,
+                $crossPlatform,
                 $excludeIds
             );
             // Avoid non-standard extension bags that Safari may reject.
             if (isset($createArgs->publicKey->extensions)) {
                 unset($createArgs->publicKey->extensions);
             }
-            $this->storeChallenge($userId, $webAuthn->getChallenge());
+            if ($mode === 'passkey' && isset($createArgs->publicKey->authenticatorSelection->authenticatorAttachment)) {
+                unset($createArgs->publicKey->authenticatorSelection->authenticatorAttachment);
+            }
+            $this->storeChallenge($userId, $webAuthn->getChallenge(), $mode);
 
             return [
                 'success' => true,
+                'mode' => $mode,
                 'publicKey' => $createArgs->publicKey,
             ];
         } catch (Throwable $e) {
@@ -282,8 +324,12 @@ class AttendanceWebAuthn
      * @param array<string,mixed> $client
      * @return array{success:bool,message:string,data?:array}
      */
-    public function finishRegister(int $userId, array $client, ?string $deviceLabel = null): array
-    {
+    public function finishRegister(
+        int $userId,
+        array $client,
+        ?string $deviceLabel = null,
+        string $mode = 'platform'
+    ): array {
         if (!$this->isLibraryAvailable()) {
             return ['success' => false, 'message' => 'Biometric library is not available on the server.'];
         }
@@ -295,7 +341,7 @@ class AttendanceWebAuthn
         }
 
         try {
-            $challenge = $this->takeChallenge($userId);
+            $challenge = $this->takeChallenge($userId, $mode);
             $clientDataJSON = $this->decodeBinaryField($client['clientDataJSON'] ?? null);
             $attestationObject = $this->decodeBinaryField($client['attestationObject'] ?? null);
             if ($clientDataJSON === '' || $attestationObject === '') {
@@ -303,11 +349,12 @@ class AttendanceWebAuthn
             }
 
             $webAuthn = $this->makeWebAuthn();
+            // UV preferred (not required): Google/iCloud passkeys often omit the UV flag.
             $data = $webAuthn->processCreate(
                 $clientDataJSON,
                 $attestationObject,
                 $challenge,
-                true,
+                false,
                 true,
                 false
             );
@@ -373,8 +420,8 @@ class AttendanceWebAuthn
             }
 
             $webAuthn = $this->makeWebAuthn();
-            // Platform authenticator only (Face ID / fingerprint / device passcode).
-            $getArgs = $webAuthn->getGetArgs($ids, 120, false, false, false, false, true, 'required');
+            // Allow Face ID (internal) and Google / hybrid / security-key passkeys.
+            $getArgs = $webAuthn->getGetArgs($ids, 120, true, true, true, true, true, 'preferred');
             if (isset($getArgs->publicKey->extensions)) {
                 unset($getArgs->publicKey->extensions);
             }
@@ -444,6 +491,7 @@ class AttendanceWebAuthn
             $webAuthn = $this->makeWebAuthn();
             $prevCount = (int) ($cred['sign_count'] ?? 0);
             // Many phone platform authenticators keep signCount at 0; only enforce when non-zero.
+            // UV preferred (not required): match create options; passkeys may omit UV.
             $webAuthn->processGet(
                 $clientDataJSON,
                 $authenticatorData,
@@ -451,7 +499,7 @@ class AttendanceWebAuthn
                 (string) $cred['public_key'],
                 $challenge,
                 $prevCount > 0 ? $prevCount : null,
-                true,
+                false,
                 true
             );
 
@@ -509,6 +557,28 @@ class AttendanceWebAuthn
             ];
         } catch (Throwable $e) {
             return ['success' => false, 'message' => 'Could not remove enrolled phone.'];
+        }
+    }
+
+    /**
+     * Clear all enrollments for this user (e.g. after Face ID / screen replacement).
+     *
+     * @return array{success:bool,message:string,data?:array}
+     */
+    public function resetCredentials(int $userId): array
+    {
+        try {
+            $stmt = $this->pdo->prepare(
+                'DELETE FROM attendance_webauthn_credentials WHERE user_id = ?'
+            );
+            $stmt->execute([$userId]);
+            return [
+                'success' => true,
+                'message' => 'Old phone unlock cleared. Enroll this phone again with Face ID or passcode.',
+                'data' => ['biometric' => $this->statusForUser($userId)],
+            ];
+        } catch (Throwable $e) {
+            return ['success' => false, 'message' => 'Could not clear enrolled phones.'];
         }
     }
 

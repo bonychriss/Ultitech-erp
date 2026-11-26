@@ -163,7 +163,7 @@ header('Content-Type: text/html; charset=UTF-8');
             ?>
             <a href="<?= $esc(app_url('/admin/management.php' . $mgmtQs)) ?>">Company management</a>
             &nbsp;|&nbsp;
-            <a href="<?= $esc(app_url('/admin/settings.php' . $mgmtQs)) ?>">Settings hub</a>
+            <a href="<?= $esc(app_url('/admin/company-settings.php' . $mgmtQs)) ?>">Settings</a>
             &nbsp;|&nbsp;
             <a href="<?= $esc(app_url('/select-module.php')) ?>">Modules</a>
         </p>

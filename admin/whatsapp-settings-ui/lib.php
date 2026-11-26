@@ -139,8 +139,8 @@ function whatsappSettingsUiGetPayload(PDO $pdo): array
     );
     $slug = trim((string) ($_SESSION['company_slug'] ?? ''));
     $backUrl = $slug !== ''
-        ? company_url('admin/settings.php?module=settings', $slug)
-        : (function_exists('app_url') ? app_url('/admin/settings.php?module=settings') : '/admin/settings.php?module=settings');
+        ? company_url('admin/company-settings.php?module=settings', $slug)
+        : (function_exists('app_url') ? app_url('/admin/company-settings.php?module=settings') : '/admin/company-settings.php?module=settings');
     $botUrl = function_exists('app_url')
         ? rtrim((string) app_url('/whatsapp/frontend/web/'), '/') . '/'
         : '/public_html/whatsapp/frontend/web/';

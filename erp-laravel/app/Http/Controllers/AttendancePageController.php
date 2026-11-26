@@ -56,12 +56,14 @@ class AttendancePageController extends Controller
         $employeeHeaderTitle = $viewData['employeeHeaderTitle'];
         $hideHeaderCompanyBranding = $viewData['hideHeaderCompanyBranding'];
         $employeeHeaderExtraClass = $viewData['employeeHeaderExtraClass'];
+        $hideErpBreadcrumbs = !empty($viewData['hideErpBreadcrumbs']);
 
         return view('erp.react-shell', $viewData + [
             'page_title' => $page_title,
             'employeeHeaderTitle' => $employeeHeaderTitle,
             'hideHeaderCompanyBranding' => $hideHeaderCompanyBranding,
             'employeeHeaderExtraClass' => $employeeHeaderExtraClass,
+            'hideErpBreadcrumbs' => $hideErpBreadcrumbs,
         ]);
     }
 }

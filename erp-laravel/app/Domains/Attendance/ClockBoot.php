@@ -49,6 +49,7 @@ final class ClockBoot
                     'todayRecord' => null,
                     'todayPresent' => [],
                     'teamBoard' => [],
+                    'punctualityBoard' => ['monthLabel' => '', 'rows' => []],
                     'history' => [],
                     'stats' => [],
                     'pendingTasks' => [],
@@ -143,6 +144,7 @@ final class ClockBoot
                 'todayRecord' => $attendance->getTodayRecord($userId) ?: null,
                 'todayPresent' => $attendance->getTodayPresentList(),
                 'teamBoard' => $attendance->getTeamHoursBoard($userId),
+                'punctualityBoard' => $attendance->getPunctualityBoard($userId),
                 'history' => $attendance->getHistory($userId, $historyMonth) ?: [],
                 'historyMonth' => $historyMonth,
                 'historyMonthLabel' => $attendance->formatHistoryMonthLabel($historyMonth),
@@ -201,11 +203,17 @@ final class ClockBoot
             $dailyTargetHours = 8.0;
         }
 
+        $graceMinutes = (int) ($settings['grace_period_minutes'] ?? 15);
+        if ($graceMinutes < 0) {
+            $graceMinutes = 0;
+        }
+
         return [
             'start' => $start,
             'end' => $end,
             'windowLabel' => $start . '–' . $end,
             'dailyTargetHours' => $dailyTargetHours,
+            'graceMinutes' => $graceMinutes,
         ];
     }
 
@@ -221,7 +229,8 @@ final class ClockBoot
         } else {
             $wallpaperFile = 'att-hero-morning.jpg';
         }
-        $path = '/wallpapers/' . $wallpaperFile . '?v=20261125hd2';
+        // New folder path bypasses StackCDN entries cached under /wallpapers/?v=hd2.
+        $path = '/assets/att-lock/v1/' . $wallpaperFile . '?v=20261125lock1';
         if (function_exists('app_url')) {
             return (string) app_url($path);
         }
@@ -314,10 +323,10 @@ final class ClockBoot
      */
     private function wallpapers(): array
     {
-        // Bust browser cache when HD assets are replaced.
-        $assetVer = '20261125hd2';
+        // New folder path bypasses StackCDN entries cached under /wallpapers/?v=hd2.
+        $assetVer = '20261125lock1';
         $url = static function (string $file) use ($assetVer): string {
-            $path = '/wallpapers/' . $file . '?v=' . $assetVer;
+            $path = '/assets/att-lock/v1/' . $file . '?v=' . $assetVer;
             return function_exists('app_url')
                 ? (string) app_url($path)
                 : $path;
@@ -351,16 +360,26 @@ final class ClockBoot
         if ($root === '') {
             $root = rtrim((string) ($GLOBALS['ERP_ATTENDANCE_CONTEXT']['app_root'] ?? dirname(__DIR__, 4)), '\\/');
         }
+        // Always publish the full HD pool URLs so the desk can rotate.
+        // Prefer the CDN-safe assets path; fall back to legacy /wallpapers.
         $slides = [];
+        $wallpaperDir = $root !== '' ? $root . '/assets/att-lock/v1' : '';
+        if ($wallpaperDir === '' || !is_dir($wallpaperDir)) {
+            $wallpaperDir = $root !== '' ? $root . '/wallpapers' : '';
+        }
+        $canCheckDisk = $wallpaperDir !== '' && is_dir($wallpaperDir);
         foreach ($slideFiles as $file) {
-            $abs = $root . '/wallpapers/' . $file;
-            if (is_file($abs)) {
+            if ($canCheckDisk && !is_file($wallpaperDir . '/' . $file)) {
+                continue;
+            }
+            $slides[] = $url($file);
+        }
+        if ($slides === []) {
+            foreach ($slideFiles as $file) {
                 $slides[] = $url($file);
             }
         }
-        if ($slides === []) {
-            $slides = array_values(array_filter([$morning, $noon, $dusk]));
-        }
+        $slides = array_values(array_unique($slides));
 
         return [
             'morning' => $morning,

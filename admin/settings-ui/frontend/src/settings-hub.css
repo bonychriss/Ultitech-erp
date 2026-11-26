@@ -60,11 +60,54 @@
 
 .ash-body {
   padding-top: 0.25rem;
+  max-width: 72rem;
 }
 
 .ash-lead {
   color: var(--ash-muted);
-  margin: 0 0 1rem;
+  margin: 0 0 1.35rem;
+  font-size: 0.9rem;
+  font-weight: 400;
+}
+
+.ash-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 1.65rem;
+}
+
+.ash-section {
+  margin: 0;
+}
+
+.ash-section-head {
+  margin: 0 0 0.7rem;
+  padding: 0 0.1rem;
+}
+
+.ash-section-title {
+  margin: 0;
+  font-size: 1.02rem;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  color: #0f172a;
+  line-height: 1.25;
+}
+
+.ash-section-subtitle {
+  margin: 0.2rem 0 0;
+  font-size: 0.8rem;
+  font-weight: 400;
+  line-height: 1.4;
+  color: #64748b;
+}
+
+.ash-section--danger .ash-section-title {
+  color: #b91c1c;
+}
+
+.ash-section--danger .ash-section-subtitle {
+  color: #9f1239;
 }
 
 .ash-alert {
@@ -265,64 +308,137 @@ html body.dashboard .ash-modal--a11y button.ash-btn-ghost {
 }
 
 .ash-modal--font {
-  max-width: 28rem;
-  padding: 1rem 1.1rem 0.95rem;
-  border-radius: 14px;
+  max-width: min(40rem, 100%);
+  padding: 1.15rem 1.25rem 1.1rem;
+  border-radius: 0.75rem;
+}
+
+.ash-modal-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin-bottom: 0.95rem;
+}
+
+.ash-modal-icon {
+  flex: 0 0 auto;
+  width: 2.35rem;
+  height: 2.35rem;
+  border-radius: 0.65rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 0.05rem;
+}
+
+.ash-modal-icon svg {
+  width: 1.05rem;
+  height: 1.05rem;
+}
+
+.ash-modal-icon--font {
+  background: #fdf4ff;
+  color: #a21caf;
 }
 
 .ash-modal--font h2 {
-  margin: 0 0 0.2rem;
-  font-size: 1rem;
+  margin: 0 0 0.1rem;
+  font-size: 1.05rem;
   font-weight: 600;
   color: #0f172a;
+  letter-spacing: -0.01em;
 }
 
 .ash-modal--font .ash-reset-lead {
-  margin: 0 0 0.65rem;
-  font-size: 0.78rem;
-  line-height: 1.35;
+  margin: 0;
+  font-size: 0.8rem;
+  font-weight: 400;
+  line-height: 1.4;
+  color: #64748b;
 }
 
 .ash-modal--font .ash-font-form {
-  margin-top: 0.55rem;
-}
-
-.ash-modal--font .ash-label {
-  font-size: 0.72rem;
-  margin-bottom: 0.25rem;
-}
-
-.ash-modal--font .ash-select {
-  padding: 0.45rem 0.7rem;
-  font-size: 0.85rem;
-  border-radius: 8px;
-  max-width: none;
-  width: 100%;
-}
-
-.ash-modal--font .ash-font-row {
-  gap: 0.5rem;
+  margin-top: 0;
 }
 
 .ash-modal--font .ash-font-preview {
-  padding: 0.65rem 0.8rem;
-  margin-top: 0.55rem;
-  border-radius: 10px;
-}
-
-.ash-modal--font .ash-font-preview-title {
-  margin: 0 0 0.2rem;
-  font-size: 0.9rem;
-  font-weight: 600;
+  margin: 0 0 0.85rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.75rem;
+  background: #f8fafc;
+  padding: 1rem 1.1rem;
 }
 
 .ash-modal--font .ash-font-preview-body {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 400;
+  line-height: 1.55;
+  color: #334155;
+}
+
+.ash-font-pick-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
+  gap: 0.65rem;
+}
+
+.ash-font-pick {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  min-height: 3.4rem;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.75rem;
+  background: #fff;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.ash-font-pick:hover {
+  border-color: #cbd5e1;
+  background: #f8fafc;
+}
+
+.ash-font-pick.is-selected {
+  border-color: #a21caf;
+  box-shadow: 0 0 0 3px rgba(162, 28, 175, 0.12);
+  background: #fdf4ff;
+}
+
+.ash-font-pick-sample {
+  font-family: var(--ash-font, inherit) !important;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #0f172a;
+  line-height: 1.25;
+  padding-right: 1.1rem;
+}
+
+.ash-font-pick.is-selected .ash-font-pick-sample {
+  color: #86198f;
+}
+
+.ash-font-pick-check {
+  position: absolute;
+  top: 0.55rem;
+  right: 0.55rem;
+  width: 0.95rem;
+  height: 0.95rem;
+  color: #a21caf;
+}
+
+.ash-font-current-note {
+  margin: 0.7rem 0 0;
   font-size: 0.78rem;
-  line-height: 1.4;
+  color: #64748b;
 }
 
 .ash-modal--font .ash-modal-actions {
-  margin-top: 0.75rem;
+  margin-top: 0.85rem;
   gap: 0.45rem;
 }
 
@@ -626,18 +742,18 @@ html body.dashboard .ash-modal--contact a.ash-btn-ghost {
 .ash-grid {
   display: grid;
   grid-template-columns: repeat(1, minmax(0, 1fr));
-  gap: 0.75rem;
+  gap: 0.85rem;
 }
 
-@media (min-width: 640px) {
+@media (min-width: 720px) {
   .ash-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
-@media (min-width: 1100px) {
+@media (min-width: 1200px) {
   .ash-grid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -657,21 +773,21 @@ html body.dashboard .ash-modal--contact a.ash-btn-ghost {
 .ash-card {
   height: 100%;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 0.9rem;
-  min-height: 5.25rem;
-  border: 1px solid #e8edf3;
-  border-radius: 16px;
+  min-height: 0;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.75rem;
   background: #fff;
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
-  padding: 1rem 1.05rem;
-  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  padding: 1.15rem 1.25rem;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
 }
 
 .ash-card-link:hover .ash-card {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 22px -10px rgba(15, 23, 42, 0.14);
-  border-color: #dbe3ee;
+  border-color: #cbd5e1;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+  background: #f8fafc;
 }
 
 .ash-card--danger {
@@ -709,9 +825,9 @@ html body.dashboard .ash-modal--contact a.ash-btn-ghost {
 
 .ash-card-value {
   margin: 0;
-  font-size: clamp(0.95rem, 1.2vw, 1.1rem);
-  font-weight: 500;
-  line-height: 1.2;
+  font-size: 1.05rem;
+  font-weight: 600;
+  line-height: 1.25;
   color: #0f172a;
   letter-spacing: -0.01em;
   display: flex;
@@ -725,10 +841,11 @@ html body.dashboard .ash-modal--contact a.ash-btn-ghost {
 }
 
 .ash-card-helper {
-  margin: 0.25rem 0 0;
-  color: #94a3b8;
-  font-size: 0.75rem;
-  line-height: 1.35;
+  margin: 0.28rem 0 0;
+  color: #64748b;
+  font-size: 0.8rem;
+  font-weight: 400;
+  line-height: 1.45;
 }
 
 .ash-badge {

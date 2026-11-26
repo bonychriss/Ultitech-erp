@@ -218,11 +218,18 @@ body.page-whatsapp-settings .employee-header--exp-desk .employee-header-page-tit
             }
         }
 
+        $embedded = isset($_GET['embed']) && (string) $_GET['embed'] === '1';
+        $timeStep = (int) ($_GET['time_step'] ?? ($cfg['timeStep'] ?? 0));
+        if ($timeStep < 1 || $timeStep > 3) {
+            $timeStep = 0;
+        }
         $windowCfg = [
             'apiBase' => $apiBase,
             'module' => 'settings',
             'engine' => 'erp-laravel Domains/Admin + admin/time-settings-ui',
             'companySlug' => (string) ($cfg['companySlug'] ?? ''),
+            'embedded' => $embedded,
+            'timeStep' => $timeStep,
             'initial' => $initial,
         ];
 
@@ -238,7 +245,8 @@ body.page-whatsapp-settings .employee-header--exp-desk .employee-header-page-tit
 
         return [
             'pageTitle' => 'Time & Attendance',
-            'bodyClass' => 'page-exp-desk page-time-settings page-admin-laravel page-erp-laravel',
+            'bodyClass' => 'page-exp-desk page-time-settings page-admin-laravel page-erp-laravel'
+                . ($embedded ? ' page-settings-embed' : ''),
             'headMarkup' => $head,
             'footerScripts' => '<style>
 body.page-time-settings,
@@ -249,8 +257,8 @@ body.page-time-settings .employee-header.employee-header--exp-desk,
 body.page-time-settings main.main-content,
 body.page-time-settings main.main-content.exp-desk-react-root,
 body.page-time-settings main.main-content.exp-desk-react-root #root {
-    background: #f9fafb !important;
-    background-color: #f9fafb !important;
+    background: ' . ($embedded ? '#ffffff' : '#f9fafb') . ' !important;
+    background-color: ' . ($embedded ? '#ffffff' : '#f9fafb') . ' !important;
     box-shadow: none !important;
 }
 body.page-time-settings .ts-page,
@@ -270,6 +278,45 @@ body.page-time-settings button.wizard-btn-next {
 }
 body.page-time-settings .employee-header--exp-desk .employee-header-page-title {
     font-weight: 600 !important;
+}
+body.page-settings-embed .ts-topbar,
+body.page-settings-embed .ts-back {
+    display: none !important;
+}
+body.page-settings-embed .ts-page,
+body.page-settings-embed .wizard,
+body.page-settings-embed .wizard-body {
+    max-width: 100% !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-sizing: border-box !important;
+}
+body.page-settings-embed .wizard-row {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0.28rem !important;
+    padding: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+}
+body.page-settings-embed .wizard-auth-fields,
+body.page-settings-embed .field-line {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+}
+body.page-settings-embed .wizard-footer {
+    margin-top: 0.35rem !important;
+    padding-top: 0 !important;
+    border-top: none !important;
+}
+body.page-settings-embed button.wizard-btn-next,
+body.page-settings-embed button.wizard-btn-prev {
+    padding: 6px 14px !important;
 }
 </style>
 <script type="module" crossorigin src="'

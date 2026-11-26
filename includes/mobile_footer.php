@@ -542,9 +542,9 @@ switch ($active_module) {
         break;
 
     case 'settings':
-        $settingsHome = $modUrl('admin/settings.php?module=settings');
+        $settingsHome = $modUrl('admin/company-settings.php?module=settings');
         $links = [
-            ['slug' => 'home', 'url' => $settingsHome, 'label' => 'Hub', 'bi' => 'grid'],
+            ['slug' => 'home', 'url' => $settingsHome, 'label' => 'Settings', 'bi' => 'gear'],
             ['slug' => 'cart', 'url' => $modUrl('admin/whatsapp-settings.php?module=settings'), 'label' => 'WA', 'bi' => 'whatsapp'],
             ['slug' => 'modules', 'url' => $modUrl('select-module.php'), 'label' => 'Modules', 'bi' => 'grid'],
             ['slug' => 'account', 'url' => $modUrl($accountPath . '?module=settings'), 'label' => 'Account', 'bi' => $mfBiAccount],
@@ -552,7 +552,11 @@ switch ($active_module) {
         ];
         if (strpos($script, 'select-module') !== false) {
             $mf_active_slug = 'modules';
-        } elseif (strpos($script, '/admin/settings') !== false && strpos($script, 'whatsapp') === false && strpos($script, 'time-settings') === false) {
+        } elseif (
+            (strpos($script, 'company-settings') !== false || strpos($script, '/admin/settings') !== false)
+            && strpos($script, 'whatsapp') === false
+            && strpos($script, 'time-settings') === false
+        ) {
             $mf_active_slug = 'home';
         } elseif (strpos($script, 'whatsapp-settings') !== false) {
             $mf_active_slug = 'cart';
@@ -631,7 +635,7 @@ switch ($active_module) {
             ['slug' => 'cart', 'url' => $modUrl('messages.php'), 'label' => 'Chat', 'bi' => 'chat-dots'],
             ['slug' => 'modules', 'url' => $modUrl('select-module.php'), 'label' => 'Modules', 'bi' => 'grid'],
             ['slug' => 'account', 'url' => $accountUrl, 'label' => 'Account', 'bi' => $mfBiAccount],
-            ['slug' => 'settings', 'url' => $isAdmin ? $modUrl('admin/settings.php?module=settings') : $modUrl('employee/system-settings.php?module=account'), 'label' => 'Settings', 'bi' => 'gear'],
+            ['slug' => 'settings', 'url' => $isAdmin ? $modUrl('admin/company-settings.php?module=settings') : $modUrl('employee/system-settings.php?module=account'), 'label' => 'Settings', 'bi' => 'gear'],
         ];
         if (strpos($script, 'select-module') !== false) {
             $mf_active_slug = 'modules';
@@ -639,7 +643,7 @@ switch ($active_module) {
             $mf_active_slug = 'cart';
         } elseif (strpos($script, 'account.php') !== false || strpos($script, 'employee/account') !== false) {
             $mf_active_slug = 'account';
-        } elseif (strpos($script, 'system-settings') !== false || strpos($script, 'admin/settings') !== false) {
+        } elseif (strpos($script, 'system-settings') !== false || strpos($script, 'company-settings') !== false || strpos($script, 'admin/settings') !== false) {
             $mf_active_slug = 'settings';
         } elseif (strpos($script, 'dashboard') !== false) {
             $mf_active_slug = 'home';

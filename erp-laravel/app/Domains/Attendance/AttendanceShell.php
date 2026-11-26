@@ -323,20 +323,24 @@ body.page-attendance-desk .clock-card-v2 {
     background-image: none !important;
     box-shadow: 0 14px 36px rgba(15, 23, 42, 0.22) !important;
 }
+body.page-attendance-desk .clock-card-v2-photo--base:not([style*="background-image"]) {
+    background-image: var(--att-clock-photo);
+}
 body.page-attendance-desk .clock-card-v2-photo {
-    background-image: var(--att-clock-photo) !important;
     background-position: center center !important;
     background-size: cover !important;
     background-repeat: no-repeat !important;
+    background-color: transparent !important;
+}
+/* Always hide clock-desk breadcrumbs/title (match local attendance desk). */
+body.page-attendance-desk:not(.page-attendance-analytics) .employee-header--products-desk .employee-header-page-title,
+body.page-attendance-desk:not(.page-attendance-analytics) .employee-header--products-desk .employee-header-page-heading,
+body.page-attendance-desk:not(.page-attendance-analytics) .erp-auto-breadcrumb,
+body.page-attendance-desk:not(.page-attendance-analytics) #erp-auto-breadcrumb,
+body.page-attendance-desk:not(.page-attendance-analytics) .att-page-clock .att-top-bar {
+    display: none !important;
 }
 @media (min-width: 768px) {
-    /* Lead with the cover banner — drop duplicate page title block */
-    body.page-attendance-desk:not(.page-attendance-analytics) .employee-header--products-desk .employee-header-page-title,
-    body.page-attendance-desk:not(.page-attendance-analytics) .employee-header--products-desk .employee-header-page-heading,
-    body.page-attendance-desk:not(.page-attendance-analytics) .erp-auto-breadcrumb,
-    body.page-attendance-desk:not(.page-attendance-analytics) .att-page-clock .att-top-bar {
-        display: none !important;
-    }
     body.page-attendance-desk:not(.page-attendance-analytics) .employee-header.employee-header--products-desk .header-content {
         padding: 0.35rem 0 !important;
     }

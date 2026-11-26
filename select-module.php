@@ -293,7 +293,7 @@ if ($isAdmin || $isRootAdminUsername) {
         'id' => 'settings',
         'label' => 'General Settings',
         'desc' => 'Manage Global Preferences',
-        'href' => $companyRoute('admin/settings') . '?' . http_build_query($settingsHubQs),
+        'href' => $companyRoute('admin/company-settings.php') . '?' . http_build_query($settingsHubQs),
         'icon' => 'settings_admin',
         'color' => '#4b5563',
     ]);

@@ -10,167 +10,177 @@ $esc = static function ($value): string {
 };
 $forgotPasswordUrl = function_exists('company_url') ? company_url('forgot-password') : '../forgot-password.php';
 ?>
-<section class="editor-section" id="profile-photo">
-    <div class="section-header ps-sec-head">
-        <span class="ps-sec-icon"><i class="far fa-image"></i></span>
-        <div>
-            <h2 class="section-title">Profile Photo</h2>
-            <p class="section-subtitle">Use the camera on your device or upload a new avatar. JPG, PNG, GIF or WEBP (max 2MB).</p>
-        </div>
-    </div>
-    <div class="ps-photo-actions">
-        <form method="post" enctype="multipart/form-data" class="ps-photo-preview-wrap">
-            <div class="ps-photo-preview">
+<section class="editor-section ps-profile-stack" id="profile-photo">
+    <div class="ps-profile-card ps-profile-card--photo">
+        <div class="ps-photo-row">
+            <form method="post" enctype="multipart/form-data" class="ps-photo-preview-wrap">
+                <div class="ps-photo-preview">
+                    <?php if ($profilePhotoUrl !== ''): ?>
+                        <img src="<?= $esc($profilePhotoUrl) ?>" alt="Current photo">
+                    <?php else: ?>
+                        <span><?= $esc($initial) ?></span>
+                    <?php endif; ?>
+                </div>
+                <label class="ps-photo-cam" title="Take or choose a photo">
+                    <i class="fas fa-camera"></i>
+                    <input type="file" name="profile_photo" accept="image/*" capture="user" hidden onchange="this.form.submit()">
+                </label>
+            </form>
+            <div class="ps-photo-copy">
+                <h2 class="section-title">Profile</h2>
+                <p class="section-subtitle">Update your photo. JPG, PNG, GIF or WEBP (max 2MB).</p>
+            </div>
+            <div class="ps-photo-actions">
+                <form method="post" enctype="multipart/form-data" style="margin:0;">
+                    <label class="ps-upload-btn">
+                        <i class="fas fa-arrow-up-from-bracket"></i> Upload new photo
+                        <input type="file" name="profile_photo" accept="image/*" hidden onchange="this.form.submit()">
+                    </label>
+                </form>
                 <?php if ($profilePhotoUrl !== ''): ?>
-                    <img src="<?= $esc($profilePhotoUrl) ?>" alt="Current photo">
-                <?php else: ?>
-                    <span><?= $esc($initial) ?></span>
+                    <form method="post" style="margin:0;" onsubmit="return confirm('Remove your profile photo?');">
+                        <button type="submit" name="remove_profile_photo" value="1" class="ps-remove-btn">
+                            <i class="far fa-trash-can"></i> Remove
+                        </button>
+                    </form>
                 <?php endif; ?>
             </div>
-            <label class="ps-photo-cam" title="Take or choose a photo">
-                <i class="fas fa-camera"></i>
-                <input type="file" name="profile_photo" accept="image/*" capture="user" hidden onchange="this.form.submit()">
-            </label>
+        </div>
+    </div>
+
+    <div class="ps-profile-card" id="personal-details">
+        <div class="section-header ps-sec-head">
+            <span class="ps-sec-icon"><i class="far fa-address-card"></i></span>
+            <div>
+                <h2 class="section-title">Account details</h2>
+                <p class="section-subtitle">Name, username, email, and WhatsApp number.</p>
+            </div>
+        </div>
+        <form method="post" id="psDetailsForm" class="ps-profile-details">
+            <input type="hidden" name="action" value="save_personal_details">
+            <div class="ps-details-grid">
+                <div>
+                    <label class="form-label" for="psFullName">Full Name</label>
+                    <div class="ps-icon-field">
+                        <i class="fas fa-user"></i>
+                        <input type="text" id="psFullName" name="new_full_name" class="form-input" value="<?= $esc($user['full_name'] ?? '') ?>" required minlength="2">
+                    </div>
+                </div>
+                <div>
+                    <label class="form-label" for="psUsername">Username</label>
+                    <div class="ps-icon-field">
+                        <i class="fas fa-at"></i>
+                        <input type="text" id="psUsername" name="new_username" class="form-input" value="<?= $esc($user['username'] ?? '') ?>" required minlength="3">
+                    </div>
+                </div>
+                <div>
+                    <label class="form-label" for="psEmail">Email</label>
+                    <div class="ps-icon-field">
+                        <i class="fas fa-envelope"></i>
+                        <input type="email" id="psEmail" name="new_email" class="form-input" value="<?= $esc($user['email'] ?? '') ?>" required autocomplete="email">
+                    </div>
+                </div>
+                <div>
+                    <label class="form-label" for="psWhatsapp">WhatsApp</label>
+                    <div class="ps-icon-field">
+                        <i class="fas fa-phone"></i>
+                        <input type="text" id="psWhatsapp" name="whatsapp_number" class="form-input" value="<?= $esc($user['whatsapp_number'] ?? '') ?>" placeholder="+255 712 345 678">
+                    </div>
+                </div>
+            </div>
+            <div class="ps-details-actions">
+                <button type="submit" class="btn-save ps-details-save"><i class="fas fa-floppy-disk"></i> Save changes</button>
+            </div>
         </form>
-        <form method="post" enctype="multipart/form-data" style="margin:0;">
-            <label class="ps-upload-btn">
-                <i class="fas fa-arrow-up-from-bracket"></i> Upload new photo
-                <input type="file" name="profile_photo" accept="image/*" hidden onchange="this.form.submit()">
-            </label>
+    </div>
+</section>
+
+<section class="editor-section ps-security-stack" id="change-password">
+    <div class="ps-profile-card ps-profile-card--security">
+        <div class="section-header ps-sec-head">
+            <span class="ps-sec-icon"><i class="fas fa-shield-halved"></i></span>
+            <div>
+                <h2 class="section-title">Security</h2>
+                <p class="section-subtitle">Password recovery and account access.</p>
+            </div>
+        </div>
+        <?php if (!empty($userHasPassword)): ?>
+        <div class="ps-pw-reset">
+            <div class="ps-pw-reset-text">
+                <strong><i class="fas fa-lock" aria-hidden="true"></i> Your password is set</strong>
+                <span>Forgot it or want a new one? We'll email you a reset link.</span>
+            </div>
+            <a href="<?= $esc($forgotPasswordUrl) ?>" class="ps-pw-reset-btn">
+                <i class="fas fa-envelope" aria-hidden="true"></i> Forgot password?
+            </a>
+        </div>
+        <?php else: ?>
+        <form method="post" class="account-password-form">
+            <input type="hidden" name="action" value="change_password">
+            <div class="form-row">
+                <label class="form-label" for="accountNewPassword">New Password</label>
+                <div>
+                    <div class="account-pw-field">
+                        <input type="password" name="new_password" id="accountNewPassword" class="form-input account-pw-input" required minlength="8" autocomplete="new-password" placeholder="At least 8 characters">
+                        <button type="button" class="account-pw-toggle" data-target="accountNewPassword" aria-label="Show password" title="Show password">
+                            <svg class="account-pw-toggle-svg account-pw-toggle-svg--show" viewBox="0 0 24 24" aria-hidden="true"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>
+                            <svg class="account-pw-toggle-svg account-pw-toggle-svg--hide" viewBox="0 0 24 24" aria-hidden="true"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 19c-7 0-11-7-11-7a21.8 21.8 0 0 1 5.06-6.94M9.9 4.24A10.94 10.94 0 0 1 12 5c7 0 11 7 11 7a21.8 21.8 0 0 1-3.87 5.16"/><path d="M1 1l22 22"/><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"/></svg>
+                        </button>
+                    </div>
+                    <div class="account-pw-strength" id="accountPwStrength" aria-live="polite">
+                        <div class="account-pw-strength-top">
+                            <span class="account-pw-strength-label" id="accountPwStrengthLabel">Enter a password</span>
+                            <span class="account-pw-strength-score" id="accountPwStrengthScore"></span>
+                        </div>
+                        <div class="account-pw-strength-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="accountPwStrengthBar">
+                            <span class="account-pw-strength-fill" id="accountPwStrengthFill"></span>
+                        </div>
+                        <ul class="account-pw-rules" id="accountPwRules">
+                            <li data-rule="length"><i class="fas fa-circle" aria-hidden="true"></i> At least 8 characters</li>
+                            <li data-rule="mixed_case"><i class="fas fa-circle" aria-hidden="true"></i> Uppercase and lowercase letters</li>
+                            <li data-rule="digit"><i class="fas fa-circle" aria-hidden="true"></i> At least one number</li>
+                            <li data-rule="special"><i class="fas fa-circle" aria-hidden="true"></i> Special character (recommended)</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="form-row">
+                <label class="form-label" for="accountConfirmPassword">Confirm Password</label>
+                <div>
+                    <div class="account-pw-field">
+                        <input type="password" name="confirm_password" id="accountConfirmPassword" class="form-input account-pw-input" required minlength="8" autocomplete="new-password" placeholder="Re-enter new password">
+                        <button type="button" class="account-pw-toggle" data-target="accountConfirmPassword" aria-label="Show password" title="Show password">
+                            <svg class="account-pw-toggle-svg account-pw-toggle-svg--show" viewBox="0 0 24 24" aria-hidden="true"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>
+                            <svg class="account-pw-toggle-svg account-pw-toggle-svg--hide" viewBox="0 0 24 24" aria-hidden="true"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 19c-7 0-11-7-11-7a21.8 21.8 0 0 1 5.06-6.94M9.9 4.24A10.94 10.94 0 0 1 12 5c7 0 11 7 11 7a21.8 21.8 0 0 1-3.87 5.16"/><path d="M1 1l22 22"/><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"/></svg>
+                        </button>
+                    </div>
+                    <p class="account-pw-match help-text" id="accountPwMatch" aria-live="polite"></p>
+                    <p class="help-text">You are already signed in. Current password is not required.</p>
+                </div>
+            </div>
+            <div class="form-row">
+                <label class="form-label">Recovery</label>
+                <div class="password-actions-row">
+                    <a href="<?= $esc($forgotPasswordUrl) ?>" class="account-forgot-link">
+                        <i class="fas fa-envelope" aria-hidden="true"></i>
+                        Forgot password? Reset by email
+                    </a>
+                    <button type="submit" class="btn-save btn-save-inline" id="accountPwSubmitBtn">Update Password</button>
+                </div>
+            </div>
         </form>
-        <?php if ($profilePhotoUrl !== ''): ?>
-            <form method="post" style="margin:0;" onsubmit="return confirm('Remove your profile photo?');">
-                <button type="submit" name="remove_profile_photo" value="1" class="ps-remove-btn">
-                    <i class="far fa-trash-can"></i> Remove
-                </button>
-            </form>
         <?php endif; ?>
     </div>
-</section>
 
-<section class="editor-section" id="personal-details">
-    <div class="section-header ps-sec-head">
-        <span class="ps-sec-icon"><i class="far fa-user"></i></span>
-        <div>
-            <h2 class="section-title">Personal Details</h2>
-            <p class="section-subtitle">Update your name, contact information, and account identifiers.</p>
-        </div>
-    </div>
-    <form method="post" id="psDetailsForm">
-        <input type="hidden" name="action" value="save_personal_details">
-        <div class="ps-details-grid">
+    <div class="ps-profile-card ps-profile-card--bio" id="attendance-biometric">
+        <div class="section-header ps-sec-head ps-bio-card-head">
+            <span class="ps-sec-icon"><i class="fas fa-fingerprint"></i></span>
             <div>
-                <label class="form-label" for="psFullName">Full Name</label>
-                <div class="ps-icon-field">
-                    <i class="fas fa-user"></i>
-                    <input type="text" id="psFullName" name="new_full_name" class="form-input" value="<?= $esc($user['full_name'] ?? '') ?>" required minlength="2">
-                </div>
+                <h2 class="section-title">Smartphone unlock</h2>
+                <p class="section-subtitle">Face ID, fingerprint, or phone passcode for attendance.</p>
             </div>
-            <div>
-                <label class="form-label" for="psUsername">Username</label>
-                <div class="ps-icon-field">
-                    <i class="fas fa-at"></i>
-                    <input type="text" id="psUsername" name="new_username" class="form-input" value="<?= $esc($user['username'] ?? '') ?>" required minlength="3">
-                </div>
-            </div>
-            <div>
-                <label class="form-label" for="psEmail">Email</label>
-                <div class="ps-icon-field">
-                    <i class="fas fa-envelope"></i>
-                    <input type="email" id="psEmail" name="new_email" class="form-input" value="<?= $esc($user['email'] ?? '') ?>" required autocomplete="email">
-                </div>
-            </div>
-            <div>
-                <label class="form-label" for="psWhatsapp">WhatsApp</label>
-                <div class="ps-icon-field">
-                    <i class="fas fa-phone"></i>
-                    <input type="text" id="psWhatsapp" name="whatsapp_number" class="form-input" value="<?= $esc($user['whatsapp_number'] ?? '') ?>" placeholder="+255 712 345 678">
-                </div>
-            </div>
+            <div class="ps-bio-card-status" id="psBioStatusSlot" aria-live="polite"></div>
         </div>
-        <div class="ps-details-actions">
-            <button type="submit" class="btn-save ps-details-save"><i class="fas fa-floppy-disk"></i> Save changes</button>
-        </div>
-    </form>
-</section>
-
-<section class="editor-section" id="change-password">
-    <div class="section-header ps-sec-head">
-        <span class="ps-sec-icon"><i class="fas fa-shield-halved"></i></span>
-        <div>
-            <h2 class="section-title">Security &amp; Password</h2>
-            <p class="section-subtitle">Manage your password and smartphone unlock for attendance.</p>
-        </div>
-    </div>
-    <?php if (!empty($userHasPassword)): ?>
-    <div class="ps-pw-reset">
-        <div class="ps-pw-reset-text">
-            <strong>Your password is set</strong>
-            <span>Forgot it or want a new one? We'll email you a reset link.</span>
-        </div>
-        <a href="<?= $esc($forgotPasswordUrl) ?>" class="ps-pw-reset-btn">
-            <i class="fas fa-envelope" aria-hidden="true"></i> Forgot password?
-        </a>
-    </div>
-    <?php else: ?>
-    <form method="post" class="account-password-form">
-        <input type="hidden" name="action" value="change_password">
-        <div class="form-row">
-            <label class="form-label" for="accountNewPassword">New Password</label>
-            <div>
-                <div class="account-pw-field">
-                    <input type="password" name="new_password" id="accountNewPassword" class="form-input account-pw-input" required minlength="8" autocomplete="new-password" placeholder="At least 8 characters">
-                    <button type="button" class="account-pw-toggle" data-target="accountNewPassword" aria-label="Show password" title="Show password">
-                        <svg class="account-pw-toggle-svg account-pw-toggle-svg--show" viewBox="0 0 24 24" aria-hidden="true"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>
-                        <svg class="account-pw-toggle-svg account-pw-toggle-svg--hide" viewBox="0 0 24 24" aria-hidden="true"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 19c-7 0-11-7-11-7a21.8 21.8 0 0 1 5.06-6.94M9.9 4.24A10.94 10.94 0 0 1 12 5c7 0 11 7 11 7a21.8 21.8 0 0 1-3.87 5.16"/><path d="M1 1l22 22"/><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"/></svg>
-                    </button>
-                </div>
-                <div class="account-pw-strength" id="accountPwStrength" aria-live="polite">
-                    <div class="account-pw-strength-top">
-                        <span class="account-pw-strength-label" id="accountPwStrengthLabel">Enter a password</span>
-                        <span class="account-pw-strength-score" id="accountPwStrengthScore"></span>
-                    </div>
-                    <div class="account-pw-strength-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="accountPwStrengthBar">
-                        <span class="account-pw-strength-fill" id="accountPwStrengthFill"></span>
-                    </div>
-                    <ul class="account-pw-rules" id="accountPwRules">
-                        <li data-rule="length"><i class="fas fa-circle" aria-hidden="true"></i> At least 8 characters</li>
-                        <li data-rule="mixed_case"><i class="fas fa-circle" aria-hidden="true"></i> Uppercase and lowercase letters</li>
-                        <li data-rule="digit"><i class="fas fa-circle" aria-hidden="true"></i> At least one number</li>
-                        <li data-rule="special"><i class="fas fa-circle" aria-hidden="true"></i> Special character (recommended)</li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-        <div class="form-row">
-            <label class="form-label" for="accountConfirmPassword">Confirm Password</label>
-            <div>
-                <div class="account-pw-field">
-                    <input type="password" name="confirm_password" id="accountConfirmPassword" class="form-input account-pw-input" required minlength="8" autocomplete="new-password" placeholder="Re-enter new password">
-                    <button type="button" class="account-pw-toggle" data-target="accountConfirmPassword" aria-label="Show password" title="Show password">
-                        <svg class="account-pw-toggle-svg account-pw-toggle-svg--show" viewBox="0 0 24 24" aria-hidden="true"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>
-                        <svg class="account-pw-toggle-svg account-pw-toggle-svg--hide" viewBox="0 0 24 24" aria-hidden="true"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 19c-7 0-11-7-11-7a21.8 21.8 0 0 1 5.06-6.94M9.9 4.24A10.94 10.94 0 0 1 12 5c7 0 11 7 11 7a21.8 21.8 0 0 1-3.87 5.16"/><path d="M1 1l22 22"/><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"/></svg>
-                    </button>
-                </div>
-                <p class="account-pw-match help-text" id="accountPwMatch" aria-live="polite"></p>
-                <p class="help-text">You are already signed in. Current password is not required.</p>
-            </div>
-        </div>
-        <div class="form-row">
-            <label class="form-label">Recovery</label>
-            <div class="password-actions-row">
-                <a href="<?= $esc($forgotPasswordUrl) ?>" class="account-forgot-link">
-                    <i class="fas fa-envelope" aria-hidden="true"></i>
-                    Forgot password? Reset by email
-                </a>
-                <button type="submit" class="btn-save btn-save-inline" id="accountPwSubmitBtn">Update Password</button>
-            </div>
-        </div>
-    </form>
-    <?php endif; ?>
-
-    <div class="ps-bio-block" id="attendance-biometric">
-        <div class="ps-bio-divider" aria-hidden="true"></div>
         <div id="psBioRoot" class="ps-bio-panel" aria-live="polite">
             <p class="ps-bio-help">Loading biometric settings…</p>
         </div>

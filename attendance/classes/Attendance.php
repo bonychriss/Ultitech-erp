@@ -477,6 +477,259 @@ class Attendance {
         }
     }
 
+    /**
+     * Monthly punctuality leaderboard: early + on-time clock-ins for the current month.
+     *
+     * @return array{
+     *   month:string,
+     *   monthLabel:string,
+     *   start:string,
+     *   graceMinutes:int,
+     *   rows:list<array{
+     *     user_id:int,full_name:string,username:string,department:string,
+     *     early_count:int,ontime_count:int,late_count:int,days_present:int,
+     *     score:int,rating:int
+     *   }>
+     * }
+     */
+    public function getPunctualityBoard(?int $viewerUserId = null, ?string $month = null): array
+    {
+        $tz = new \DateTimeZone('Africa/Dar_es_Salaam');
+        $now = new \DateTime('now', $tz);
+        $monthKey = $month !== null && preg_match('/^\d{4}-\d{2}$/', $month)
+            ? $month
+            : $now->format('Y-m');
+        $monthStart = $monthKey . '-01';
+        try {
+            $monthEndDt = new \DateTime($monthStart, $tz);
+            $monthEndDt->modify('last day of this month');
+            $monthEnd = $monthEndDt->format('Y-m-d');
+            $monthLabel = $monthEndDt->format('M Y');
+        } catch (Throwable $e) {
+            $monthEnd = $now->format('Y-m-t');
+            $monthLabel = $now->format('M Y');
+        }
+
+        $settings = $this->getSettings() ?: [];
+        $startRaw = (string) ($settings['start_time'] ?? '09:00:00');
+        $start = substr($startRaw, 0, 5);
+        if (!preg_match('/^\d{2}:\d{2}$/', $start)) {
+            $start = '09:00';
+        }
+        $graceMinutes = (int) ($settings['grace_period_minutes'] ?? 15);
+        if ($graceMinutes < 0) {
+            $graceMinutes = 0;
+        }
+        $startParts = array_map('intval', explode(':', $start));
+        $startMinutes = ($startParts[0] * 60) + ($startParts[1] ?? 0);
+        $ontimeDeadline = $startMinutes + $graceMinutes;
+
+        $empty = [
+            'month' => $monthKey,
+            'monthLabel' => $monthLabel,
+            'start' => $start,
+            'graceMinutes' => $graceMinutes,
+            'rows' => [],
+        ];
+
+        try {
+            $t = self::RECORDS_TABLE;
+            $hasCompanyId = function_exists('columnExists') && columnExists('users', 'company_id', $this->pdo);
+            $hasDepartment = function_exists('columnExists') && columnExists('users', 'department', $this->pdo);
+            $hasActive = function_exists('columnExists') && columnExists('users', 'is_active', $this->pdo);
+            $hasRole = function_exists('columnExists') && columnExists('users', 'role', $this->pdo);
+            $hasStatus = function_exists('columnExists') && columnExists('users', 'status', $this->pdo);
+            $companyId = function_exists('currentCompanyId') ? (int) currentCompanyId() : 0;
+
+            if ($hasCompanyId && $companyId <= 0 && $viewerUserId) {
+                try {
+                    $stmtCo = $this->pdo->prepare('SELECT company_id FROM users WHERE id = ? LIMIT 1');
+                    $stmtCo->execute([(int) $viewerUserId]);
+                    $companyId = (int) ($stmtCo->fetchColumn() ?: 0);
+                } catch (Throwable $e) {
+                    $companyId = 0;
+                }
+            }
+
+            $deptSelect = $hasDepartment ? 'u.department' : "'' AS department";
+            $where = ['1=1'];
+            $bind = [];
+            if ($hasCompanyId && $companyId > 0) {
+                $where[] = 'u.company_id = ?';
+                $bind[] = $companyId;
+            }
+            if ($hasActive) {
+                $where[] = 'COALESCE(u.is_active, 1) = 1';
+            }
+            if ($hasStatus) {
+                $where[] = "LOWER(TRIM(COALESCE(u.status, 'active'))) IN ('active', '')";
+            }
+            $adminRoles = [
+                'admin', 'administrator', 'superadmin', 'super_admin',
+                'company_admin', 'company admin', 'owner', 'system_admin', 'platform_admin',
+            ];
+            if ($hasRole) {
+                $adminPlaceholders = implode(',', array_fill(0, count($adminRoles), '?'));
+                $where[] = "LOWER(TRIM(COALESCE(u.role, 'employee'))) NOT IN ({$adminPlaceholders})";
+                foreach ($adminRoles as $role) {
+                    $bind[] = $role;
+                }
+            }
+            $whereSql = implode(' AND ', $where);
+
+            $stmtUsers = $this->pdo->prepare("
+                SELECT u.id AS user_id, u.full_name, u.username, {$deptSelect}
+                FROM users u
+                WHERE {$whereSql}
+                ORDER BY COALESCE(NULLIF(TRIM(u.full_name), ''), u.username) ASC
+            ");
+            $stmtUsers->execute($bind);
+            $users = $stmtUsers->fetchAll(PDO::FETCH_ASSOC) ?: [];
+            if (!$users) {
+                return $empty;
+            }
+
+            $byUser = [];
+            foreach ($users as $u) {
+                $uid = (int) ($u['user_id'] ?? 0);
+                if ($uid <= 0) {
+                    continue;
+                }
+                $name = trim((string) ($u['full_name'] ?? ''));
+                $username = trim((string) ($u['username'] ?? ''));
+                if ($name === '') {
+                    $name = $username !== '' ? $username : ('User #' . $uid);
+                }
+                $byUser[$uid] = [
+                    'user_id' => $uid,
+                    'full_name' => $name,
+                    'username' => $username,
+                    'department' => trim((string) ($u['department'] ?? '')),
+                    'early_count' => 0,
+                    'ontime_count' => 0,
+                    'late_count' => 0,
+                    'weekday_count' => 0,
+                    'weekend_count' => 0,
+                    'days_present' => 0,
+                    'score' => 0,
+                    'rating' => 0,
+                ];
+            }
+
+            $userIds = array_keys($byUser);
+            if (!$userIds) {
+                return $empty;
+            }
+            $idPlaceholders = implode(',', array_fill(0, count($userIds), '?'));
+            $stmtRec = $this->pdo->prepare("
+                SELECT user_id, `date`, time_in
+                FROM `{$t}`
+                WHERE user_id IN ({$idPlaceholders})
+                  AND `date` >= ?
+                  AND `date` <= ?
+                  AND time_in IS NOT NULL
+                  AND TRIM(time_in) <> ''
+            ");
+            $stmtRec->execute(array_merge($userIds, [$monthStart, $monthEnd]));
+            $records = $stmtRec->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+            foreach ($records as $rec) {
+                $uid = (int) ($rec['user_id'] ?? 0);
+                if (!isset($byUser[$uid])) {
+                    continue;
+                }
+                $timeIn = trim((string) ($rec['time_in'] ?? ''));
+                $parts = explode(':', $timeIn);
+                if (count($parts) < 2) {
+                    continue;
+                }
+                $dateStr = trim((string) ($rec['date'] ?? ''));
+                $dow = 0;
+                try {
+                    $dow = (int) (new \DateTime($dateStr, $tz))->format('N'); // 1=Mon … 7=Sun
+                } catch (Throwable $e) {
+                    $dow = 0;
+                }
+                $inMinutes = ((int) $parts[0] * 60) + (int) $parts[1];
+                $byUser[$uid]['days_present']++;
+
+                // Weekdays: 1 pt if signed in (missed day = 0).
+                // Sat/Sun are excluded from month base pts; sign-in = +2 bonus each.
+                if ($dow >= 6) {
+                    $byUser[$uid]['weekend_count']++;
+                    $byUser[$uid]['score'] += 2;
+                } elseif ($dow >= 1) {
+                    $byUser[$uid]['weekday_count']++;
+                    $byUser[$uid]['score'] += 1;
+                }
+
+                if ($inMinutes < $startMinutes) {
+                    $byUser[$uid]['early_count']++;
+                } elseif ($inMinutes <= $ontimeDeadline) {
+                    $byUser[$uid]['ontime_count']++;
+                } else {
+                    $byUser[$uid]['late_count']++;
+                }
+            }
+
+            // Working days elapsed in month (Mon–Fri through today, or full month if past).
+            $rangeEnd = $monthKey === $now->format('Y-m')
+                ? $now->format('Y-m-d')
+                : $monthEnd;
+            $workDays = 0;
+            try {
+                $cursor = new \DateTime($monthStart, $tz);
+                $endCursor = new \DateTime($rangeEnd, $tz);
+                while ($cursor <= $endCursor) {
+                    $dow = (int) $cursor->format('N');
+                    if ($dow <= 5) {
+                        $workDays++;
+                    }
+                    $cursor->modify('+1 day');
+                }
+            } catch (Throwable $e) {
+                $workDays = max(1, (int) $now->format('j'));
+            }
+            $workDays = max(1, $workDays);
+
+            $rows = array_values($byUser);
+            foreach ($rows as &$row) {
+                // Progress bar: weekday attendance vs working days; bonus can push over 100 visually capped.
+                $row['rating'] = (int) max(0, min(100, round(($row['weekday_count'] / $workDays) * 100)));
+            }
+            unset($row);
+
+            usort($rows, static function (array $a, array $b): int {
+                if ($b['score'] !== $a['score']) {
+                    return $b['score'] <=> $a['score'];
+                }
+                if ($b['weekend_count'] !== $a['weekend_count']) {
+                    return $b['weekend_count'] <=> $a['weekend_count'];
+                }
+                if ($b['early_count'] !== $a['early_count']) {
+                    return $b['early_count'] <=> $a['early_count'];
+                }
+                if ($b['ontime_count'] !== $a['ontime_count']) {
+                    return $b['ontime_count'] <=> $a['ontime_count'];
+                }
+                return strcasecmp((string) $a['full_name'], (string) $b['full_name']);
+            });
+
+            return [
+                'month' => $monthKey,
+                'monthLabel' => $monthLabel,
+                'start' => $start,
+                'graceMinutes' => $graceMinutes,
+                'workDays' => $workDays,
+                'weekendBonusPts' => 2,
+                'rows' => $rows,
+            ];
+        } catch (Throwable $e) {
+            error_log('Attendance::getPunctualityBoard: ' . $e->getMessage());
+            return $empty;
+        }
+    }
+
     public function clockIn($userId, $latitude = null, $longitude = null) {
         // 1. IP & Location Check
         $currentIp = $this->getCurrentUserIp();

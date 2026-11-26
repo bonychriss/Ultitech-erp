@@ -417,9 +417,9 @@ $adminIp = $_SERVER['REMOTE_ADDR'];
                     </div>
 
                     <div class="actions-bar">
-                        <a href="settings.php" class="btn-back">
+                        <a href="company-settings.php?module=settings" class="btn-back">
                             <i class="fas fa-arrow-left"></i>
-                            Back to Settings Hub
+                            Back to Settings
                         </a>
                         <button type="submit" class="btn-save">
                             <i class="fas fa-save"></i>

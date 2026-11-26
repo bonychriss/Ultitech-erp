@@ -53,7 +53,8 @@
 @php
     $GLOBALS['_erp_header_style_linked'] = true;
     // Ensure include scope sees Blade view flags (e.g. accounting hub).
-    $hideSidebar = !empty($hideSidebar ?? false);
+    $hideSidebar = !empty($hideSidebar ?? false) || (isset($_GET['embed']) && (string) $_GET['embed'] === '1');
+    $hideErpBreadcrumbs = !empty($hideErpBreadcrumbs ?? false) || $hideSidebar;
     if (!empty($active_module)) {
         $active_module = (string) $active_module;
         $_SESSION['active_module'] = $active_module;

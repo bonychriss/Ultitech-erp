@@ -1,0 +1,4 @@
+# Attendance lock-screen images — avoid long CDN/browser caching of replaced files.
+<IfModule mod_headers.c>
+    Header set Cache-Control "public, max-age=300, must-revalidate"
+</IfModule>

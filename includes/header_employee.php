@@ -122,6 +122,78 @@ if (empty($GLOBALS['_erp_header_style_linked']) && function_exists('app_url')) {
     }
 }
 ?>
+<?php
+$isSettingsEmbed = isset($_GET['embed']) && (string) $_GET['embed'] === '1';
+if ($isSettingsEmbed) {
+    $hideSidebar = true;
+}
+?>
+<?php if ($isSettingsEmbed): ?>
+<style id="erp-settings-embed-chrome">
+body.dashboard #native-sidebar,
+body.dashboard .sidebar-overlay,
+body.dashboard .employee-header,
+body.dashboard .employee-header-menu-btn,
+body.dashboard .mobile-footer,
+body.dashboard .erp-auto-breadcrumb,
+body.dashboard nav[aria-label="Breadcrumb"],
+body.dashboard .ts-back,
+body.dashboard .ts-topbar,
+body.dashboard .es-back,
+body.dashboard .ws-back,
+body.dashboard .sp-btn-outline[href*="company-settings"],
+body.dashboard a.btn-back,
+body.dashboard #erp-chatbot-root,
+body.dashboard .erp-chatbot,
+body.dashboard [data-erp-chatbot],
+body.dashboard .ai-agent-alert,
+body.dashboard #ai-agent-alert,
+body.dashboard .partial-ai-agent-alert {
+    display: none !important;
+}
+html, body.dashboard {
+    background: #fff !important;
+    min-height: 0 !important;
+    height: auto !important;
+}
+body.dashboard .layout-main-wrapper {
+    min-height: 0 !important;
+    height: auto !important;
+}
+body.dashboard .layout-main-wrapper > .flex-grow-1 {
+    padding-top: 0 !important;
+    min-height: 0 !important;
+}
+body.dashboard main.main-content,
+body.dashboard main.main-content.exp-desk-react-root,
+body.dashboard main.main-content.exp-desk-react-root #root {
+    background: #fff !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    min-height: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+}
+body.dashboard .ts-page,
+body.dashboard .wizard,
+body.dashboard .wizard-body {
+    max-width: 100% !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-sizing: border-box !important;
+}
+body.dashboard .wizard-row,
+body.dashboard .wizard-auth-fields,
+body.dashboard .field-line {
+    max-width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+}
+</style>
+<script>document.documentElement.setAttribute('data-settings-embed', '1');</script>
+<?php endif; ?>
 <div class="d-flex w-100 min-vh-100 layout-main-wrapper">
     <?php 
     $hideSidebar = !empty($hideSidebar ?? false);
@@ -501,8 +573,11 @@ window.__ERP_DESKTOP_UPDATE__ = <?= json_encode([
 
 <script src="<?= app_url('/assets/js/responsive-table.js') ?>"></script>
 <?php require __DIR__ . '/text-selection-copy-assets.php'; ?>
+<?php if (empty($isSettingsEmbed)): ?>
 <?php require_once __DIR__ . '/mobile_footer.php'; ?>
+<?php endif; ?>
 
+<?php if (empty($isSettingsEmbed)): ?>
 <?php require __DIR__ . '/partials/ai_agent_alert.php'; ?>
 <!-- Floating Chatbot (React) -->
 <?php
@@ -529,6 +604,7 @@ window.__CHATBOT__ = {
 <?php endif; ?>
 <?php if (is_file($chatbotUiJs)): ?>
 <script type="module" src="<?= app_url('/assets/chatbot-ui/dist/assets/chatbot-ui.js') ?>?v=<?= (int) $chatbotUiVer ?>"></script>
+<?php endif; ?>
 <?php endif; ?>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <?php

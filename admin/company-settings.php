@@ -472,7 +472,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $list[] = $deptName;
             companySettingsSaveDepartments($pdo, $targetCompanyId, $list);
             $_SESSION['company_settings_flash'] = 'Department "' . $deptName . '" added.';
-            redirectCompanySettingsTab('profile', $targetCompanyId, $postSlug, $postModule);
+            redirectCompanySettingsTab('departments', $targetCompanyId, $postSlug, $postModule);
         }
 
         if (isset($_POST['remove_department'])) {
@@ -499,7 +499,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             companySettingsSaveDepartments($pdo, $targetCompanyId, $next);
             $_SESSION['company_settings_flash'] = 'Department "' . $deptName . '" removed.';
-            redirectCompanySettingsTab('profile', $targetCompanyId, $postSlug, $postModule);
+            redirectCompanySettingsTab('departments', $targetCompanyId, $postSlug, $postModule);
         }
 
         if (isset($_POST['register_admin_by_email'])) {
@@ -922,7 +922,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (isset($_POST['add_department']) || isset($_POST['remove_department'])) {
             $_SESSION['company_settings_flash_error'] = $e->getMessage();
             redirectCompanySettingsTab(
-                'profile',
+                'departments',
                 $targetCompanyId,
                 trim((string) ($_GET['company_slug'] ?? '')),
                 trim((string) ($_GET['module'] ?? ''))
@@ -1089,7 +1089,40 @@ $employeeInvitePath = $companySlug !== ''
     : app_url('/company/register-employee.php' . ($inviteCodeCurrent !== '' ? ('?code=' . rawurlencode($inviteCodeCurrent)) : ''));
 $employeeInviteLink = $linkScheme . '://' . $linkHost . $employeeInvitePath;
 $activeTab = (string) ($_GET['tab'] ?? 'profile');
-$allowedTabs = ['profile', 'branding', 'finance', 'modules', 'numbering', 'employees', 'security', 'danger'];
+$allowedTabs = [
+    'profile',
+    'departments',
+    'business_field',
+    'system_font',
+    'accessibility',
+    'branding',
+    'finance',
+    'modules',
+    'numbering',
+    'employees',
+    'register_employee',
+    'permissions',
+    'security',
+    'time',
+    'time_format',
+    'time_hours',
+    'time_network',
+    'sales',
+    'stock_purchase',
+    'whatsapp',
+    'email',
+    'register_company',
+    'company_management',
+    'company_users',
+    'sync_login',
+    'site_contact',
+    'ai',
+    'danger',
+    'factory_reset',
+];
+if ($activeTab === 'time' || $activeTab === 'time_hours' || $activeTab === 'time_network') {
+    $activeTab = 'time_format';
+}
 if (!in_array($activeTab, $allowedTabs, true)) {
     $activeTab = 'profile';
 }
@@ -1120,7 +1153,13 @@ $settingsQs = static function (array $extra = []) use ($targetCompanyId, $compan
     return $qs === '' ? '' : ('?' . $qs);
 };
 $settingsBaseUrl = 'company-settings.php' . $settingsQs();
-$settingsHubBackUrl = 'settings.php' . $settingsQs(['module' => trim((string) ($_GET['module'] ?? '')) !== '' ? (string) $_GET['module'] : 'settings']);
+$modulesHomeQs = array_filter([
+    'company_id' => $targetCompanyId > 0 ? $targetCompanyId : null,
+    'company_slug' => $companySlug !== '' ? $companySlug : null,
+]);
+$settingsHubBackUrl = function_exists('company_url') && $companySlug !== ''
+    ? (company_url('select-module.php', $companySlug) . ($modulesHomeQs ? ('?' . http_build_query($modulesHomeQs)) : ''))
+    : ((function_exists('app_url') ? app_url('/select-module.php') : '../select-module.php') . ($modulesHomeQs ? ('?' . http_build_query($modulesHomeQs)) : ''));
 $topSaveFormId = null;
 if ($isPendingSetup) {
     $topSaveFormId = 'wizard-form-step-' . $wizardStep;
@@ -1196,26 +1235,264 @@ foreach ($moduleDefaults as $modKey => $modLabel) {
     ];
 }
 
-$tabs = [
-    ['id' => 'profile', 'label' => 'Profile'],
-    ['id' => 'branding', 'label' => 'Branding'],
-    ['id' => 'finance', 'label' => 'Finance'],
-    ['id' => 'modules', 'label' => 'Modules'],
-    ['id' => 'numbering', 'label' => 'Numbering'],
-    ['id' => 'employees', 'label' => 'Employees'],
-    ['id' => 'security', 'label' => 'Security'],
+$qsKeep = $settingsQs([]);
+$qsSettingsModule = $settingsQs(['module' => 'settings']);
+$qsSalesModule = $settingsQs(['module' => 'sales']);
+$mgmtQsParams = [];
+if ($companySlug !== '') {
+    $mgmtQsParams['company_slug'] = $companySlug;
+}
+if ($targetCompanyId > 0) {
+    $mgmtQsParams['company_id'] = $targetCompanyId;
+}
+$mgmtQs = $mgmtQsParams === [] ? '' : ('?' . http_build_query($mgmtQsParams));
+$aiHubParams = array_filter([
+    'module' => 'settings',
+    'company_slug' => $companySlug !== '' ? $companySlug : null,
+    'company_id' => $targetCompanyId > 0 ? $targetCompanyId : null,
+    'embed' => '1',
+]);
+$siteContactPageUrl = function_exists('app_url') ? app_url('/contact.php') : '../contact.php';
+
+$embedUrl = static function (string $href): string {
+    $href = trim($href);
+    if ($href === '' || $href[0] === '#') {
+        return $href;
+    }
+    if (preg_match('/(?:\?|&)embed=1(?:&|$)/', $href)) {
+        return $href;
+    }
+    return $href . (strpos($href, '?') !== false ? '&' : '?') . 'embed=1';
+};
+
+$isSystemAdminUser = function_exists('isUltimateSystemAdmin') && isUltimateSystemAdmin();
+$isSuperAdminUser = function_exists('isSuperAdmin') && isSuperAdmin();
+
+$railGroups = [
+    [
+        'id' => 'company',
+        'title' => 'Company',
+        'items' => [
+            ['id' => 'profile', 'kind' => 'tab', 'title' => 'Profile', 'icon' => 'building', 'subtitle' => 'Name, contact, location, and company identity.'],
+            ['id' => 'departments', 'kind' => 'tab', 'title' => 'Departments', 'icon' => 'folder-tree', 'subtitle' => 'Teams used when inviting and assigning employees.'],
+            ['id' => 'business_field', 'kind' => 'tab', 'title' => 'Company field', 'icon' => 'briefcase', 'subtitle' => 'Your line of business; sets the matching character in welcome emails.'],
+            ['id' => 'branding', 'kind' => 'tab', 'title' => 'Branding', 'icon' => 'palette', 'subtitle' => 'Logo and primary color for documents.'],
+            ['id' => 'finance', 'kind' => 'tab', 'title' => 'Tax & Finance', 'icon' => 'receipt', 'subtitle' => 'VAT, TIN, bank details, and voucher workflow.'],
+            ['id' => 'modules', 'kind' => 'tab', 'title' => 'Modules', 'icon' => 'modules', 'subtitle' => 'Enable modules available for this company.'],
+            ['id' => 'numbering', 'kind' => 'tab', 'title' => 'Numbering', 'icon' => 'hash', 'subtitle' => 'Document prefixes and next numbers.'],
+            ['id' => 'security', 'kind' => 'tab', 'title' => 'Security', 'icon' => 'shield', 'subtitle' => 'Access controls for this company.'],
+        ],
+    ],
+    [
+        'id' => 'appearance',
+        'title' => 'Appearance',
+        'items' => [
+            ['id' => 'system_font', 'kind' => 'tab', 'title' => 'System font', 'icon' => 'type', 'subtitle' => 'Applies across modules, sidebars, forms, and dashboards for this company.'],
+            ['id' => 'accessibility', 'kind' => 'tab', 'title' => 'Accessibility', 'icon' => 'accessibility', 'subtitle' => 'Text size, contrast, motion, tap targets, and delivery-note QR visibility.'],
+        ],
+    ],
+    [
+        'id' => 'people',
+        'title' => 'People & access',
+        'items' => [
+            ['id' => 'employees', 'kind' => 'tab', 'title' => 'People', 'icon' => 'users', 'subtitle' => 'Admins, employees, and registration rules.'],
+            ['id' => 'register_employee', 'kind' => 'tab', 'title' => 'Register employee', 'icon' => 'user-plus', 'subtitle' => 'Add team members with roles and departments.'],
+            ['id' => 'permissions', 'kind' => 'tab', 'title' => 'Permissions', 'icon' => 'users', 'subtitle' => 'Control who can use features such as website quote requests.'],
+        ],
+    ],
+    [
+        'id' => 'operations',
+        'title' => 'Operations',
+        'items' => [
+            [
+                'id' => 'time_format',
+                'kind' => 'tab',
+                'title' => 'Timezone & format',
+                'icon' => 'clock',
+                'subtitle' => 'Timezone, display format, working hours, office network, and geofencing.',
+                'embedUrl' => $embedUrl('time-settings.php' . $settingsQs(['module' => 'settings', 'time_step' => 1])),
+                'sectionEmbeds' => [
+                    [
+                        'id' => 'time_format',
+                        'title' => 'Timezone & format',
+                        'subtitle' => 'System timezone, display format, and manual time override.',
+                        'icon' => 'clock',
+                        'embedUrl' => $embedUrl('time-settings.php' . $settingsQs(['module' => 'settings', 'time_step' => 1])),
+                    ],
+                    [
+                        'id' => 'time_hours',
+                        'title' => 'Working hours',
+                        'subtitle' => 'Work start/end times and late grace period.',
+                        'icon' => 'clock',
+                        'embedUrl' => $embedUrl('time-settings.php' . $settingsQs(['module' => 'settings', 'time_step' => 2])),
+                    ],
+                    [
+                        'id' => 'time_network',
+                        'title' => 'Network & location',
+                        'subtitle' => 'Office network IPs, geofencing, and biometric clock-in.',
+                        'icon' => 'globe',
+                        'embedUrl' => $embedUrl('time-settings.php' . $settingsQs(['module' => 'settings', 'time_step' => 3])),
+                    ],
+                ],
+            ],
+            ['id' => 'sales', 'kind' => 'tab', 'title' => 'Sales settings', 'icon' => 'cart', 'subtitle' => 'Quotations, catalog display, and company logo for sales docs.', 'embedUrl' => $embedUrl('../modules/sales/settings/index.php' . $qsSalesModule)],
+            ['id' => 'stock_purchase', 'kind' => 'tab', 'title' => 'Stock purchase & vouchers', 'icon' => 'invoice', 'subtitle' => 'Set PO type (Internal / Abroad), link Stock Purchase payment vouchers, and route to Finance approval.', 'embedUrl' => $embedUrl('stock-purchase-settings.php' . $qsSettingsModule)],
+        ],
+    ],
+    [
+        'id' => 'communications',
+        'title' => 'Communications',
+        'items' => [
+            ['id' => 'whatsapp', 'kind' => 'tab', 'title' => 'WhatsApp', 'icon' => 'whatsapp', 'subtitle' => 'Messaging bot for customers/staff, plus voucher group link.', 'badge' => 'New', 'embedUrl' => $embedUrl('whatsapp-settings.php' . $qsKeep)],
+            ['id' => 'email', 'kind' => 'tab', 'title' => 'Email SMTP settings', 'icon' => 'mail', 'subtitle' => 'SMTP/IMAP servers and the system mailbox used by payroll, sales, purchases, and more.', 'embedUrl' => $embedUrl('email-settings.php' . $qsKeep)],
+        ],
+    ],
 ];
-if (isSuperAdmin()) {
-    $tabs[] = ['id' => 'danger', 'label' => 'Danger'];
+
+$platformItems = [];
+if ($isSystemAdminUser) {
+    $platformItems[] = ['id' => 'register_company', 'kind' => 'tab', 'title' => 'Register new company', 'icon' => 'plus-square', 'subtitle' => 'Create a company tenant with default module setup.'];
+    $platformItems[] = ['id' => 'company_management', 'kind' => 'tab', 'title' => 'Company management', 'icon' => 'sitemap', 'subtitle' => 'Monitor companies and switch active company context.', 'embedUrl' => $embedUrl('management.php' . $mgmtQs)];
+    $platformItems[] = [
+        'id' => 'company_users',
+        'kind' => 'tab',
+        'title' => 'Company users & emails',
+        'icon' => 'users',
+        'subtitle' => 'All tenant users and login emails per company (login index).',
+        'embedUrl' => $embedUrl('list-company-users.php' . ($companySlug !== '' ? '?company=' . rawurlencode($companySlug) : '')),
+    ];
+    $platformItems[] = ['id' => 'sync_login', 'kind' => 'tab', 'title' => 'Sync login index', 'icon' => 'sync', 'subtitle' => 'Rebuild user_company_index from tenant databases.', 'embedUrl' => $embedUrl('sync-user-company-index.php')];
+    $platformItems[] = ['id' => 'site_contact', 'kind' => 'tab', 'title' => 'Website contact page', 'icon' => 'globe', 'subtitle' => 'Contact details and wording on the public Contact page and site footer.'];
+}
+if ($isSuperAdminUser) {
+    $platformItems[] = ['id' => 'ai', 'kind' => 'tab', 'title' => 'AI Integration', 'icon' => 'robot', 'subtitle' => 'System-wide OpenAI key, usage limits, and connection test.', 'embedUrl' => 'management.php?' . http_build_query($aiHubParams)];
+}
+if ($platformItems !== []) {
+    $railGroups[] = [
+        'id' => 'platform',
+        'title' => 'Platform',
+        'items' => $platformItems,
+    ];
+}
+
+$railGroups[] = [
+    'id' => 'danger',
+    'title' => 'Danger zone',
+    'items' => array_values(array_filter([
+        $isSuperAdminUser
+            ? ['id' => 'danger', 'kind' => 'tab', 'title' => 'Lifecycle', 'icon' => 'alert', 'subtitle' => 'Status and setup controls for this company.', 'danger' => true]
+            : null,
+        ['id' => 'factory_reset', 'kind' => 'tab', 'title' => 'Factory Reset', 'icon' => 'trash', 'subtitle' => 'Wipe all operational transactions, stock logs, attendance, and uploaded files for this company.', 'danger' => true],
+    ])),
+];
+
+$tabs = [];
+foreach ($railGroups as $group) {
+    foreach ($group['items'] as $item) {
+        if (($item['kind'] ?? '') === 'tab') {
+            $tabs[] = ['id' => $item['id'], 'label' => $item['title']];
+        }
+    }
 }
 
 $companyUsersUrl = 'company-users.php' . $settingsQs([]);
 $selfUrl = 'company-settings.php' . $settingsQs(['tab' => $activeTab]);
 $formAction = 'company-settings.php' . $settingsQs([]);
 
+require_once dirname(__DIR__) . '/includes/welcome-characters.php';
+$businessFieldOptions = [];
+foreach (companyBusinessFields() as $fieldId => $field) {
+    $businessFieldOptions[] = [
+        'id' => $fieldId,
+        'label' => $field['label'],
+        'description' => $field['description'],
+        'character' => $field['character'],
+        'image' => welcomeCharacterImagePath($field['character']),
+    ];
+}
+$businessFieldPreviewUrl = function_exists('app_url')
+    ? rtrim((string) app_url('/admin/email-preview.php'), '/')
+    : 'email-preview.php';
+$settingsApiBase = function_exists('app_url')
+    ? rtrim((string) app_url('/admin/settings-ui/api'), '/')
+    : 'settings-ui/api';
+$businessFieldSaveUrl = $settingsApiBase . '/save-business-field.php';
+
+$systemFontKey = function_exists('getSystemFontKey') ? getSystemFontKey() : 'dm_sans';
+$systemFontCatalog = function_exists('getSystemFontCatalog') ? getSystemFontCatalog() : [];
+$systemFontDef = function_exists('getSystemFontDefinition')
+    ? getSystemFontDefinition($systemFontKey)
+    : ['label' => 'Poppins', 'stack' => "'Poppins', sans-serif", 'google' => ''];
+$fontsPayload = [];
+foreach ($systemFontCatalog as $fontId => $fontDef) {
+    $fontsPayload[] = [
+        'id' => $fontId,
+        'label' => (string) ($fontDef['label'] ?? $fontId),
+        'stack' => (string) ($fontDef['stack'] ?? ''),
+        'google' => (string) ($fontDef['google'] ?? ''),
+    ];
+}
+
+$webQuoteAccess = ['users' => [], 'selectedIds' => []];
+$quoteLib = dirname(__DIR__) . '/modules/sales/quote-requests/includes/quote-requests-lib.php';
+if (is_file($quoteLib)) {
+    require_once $quoteLib;
+    if (function_exists('salesQuoteRequestsCompanyUsers') && function_exists('salesQuoteRequestsAllowedUserIds')) {
+        $webQuoteAccess['users'] = salesQuoteRequestsCompanyUsers();
+        $webQuoteAccess['selectedIds'] = salesQuoteRequestsAllowedUserIds();
+    }
+}
+
+$siteContactPayload = null;
+if ($isSystemAdminUser) {
+    $siteContactFile = dirname(__DIR__) . '/includes/site-contact.php';
+    if (is_file($siteContactFile)) {
+        require_once $siteContactFile;
+        if (function_exists('erp_site_contact') && function_exists('erp_site_contact_defaults')) {
+            $siteContactPayload = array_intersect_key(erp_site_contact(), erp_site_contact_defaults());
+        }
+    }
+}
+
 $reactCfg = [
     'selfUrl' => $formAction,
     'hubUrl' => $settingsHubBackUrl,
+    'railGroups' => $railGroups,
+    'factoryResetUrl' => $settingsApiBase . '/factory-reset.php',
+    'siteContact' => $siteContactPayload,
+    'siteContactPageUrl' => $siteContactPageUrl,
+    'siteContactSaveUrl' => $settingsApiBase . '/save-site-contact.php',
+    'registerCompany' => [
+        'formAction' => 'management.php' . $mgmtQs,
+        'returnTo' => 'company-settings.php' . $settingsQs(['tab' => 'register_company']),
+        'companiesUrl' => $embedUrl('management.php' . $mgmtQs),
+    ],
+    'businessField' => [
+        'current' => companyBusinessField(),
+        'options' => $businessFieldOptions,
+        'previewUrl' => $businessFieldPreviewUrl,
+        'saveUrl' => $businessFieldSaveUrl,
+    ],
+    'font' => [
+        'current' => $systemFontKey,
+        'label' => (string) ($systemFontDef['label'] ?? 'Poppins'),
+        'stack' => (string) ($systemFontDef['stack'] ?? "'Poppins', sans-serif"),
+        'catalog' => $fontsPayload,
+        'saveUrl' => $settingsApiBase . '/save-font.php',
+    ],
+    'accessibility' => function_exists('erp_get_accessibility_prefs')
+        ? erp_get_accessibility_prefs()
+        : [
+            'textScale' => '100',
+            'highContrast' => false,
+            'reduceMotion' => false,
+            'underlineLinks' => false,
+            'largeTargets' => false,
+            'deliveryNoteQr' => true,
+        ],
+    'accessibilitySaveUrl' => $settingsApiBase . '/save-accessibility.php',
+    'webQuoteAccess' => $webQuoteAccess,
+    'webQuoteAccessSaveUrl' => $settingsApiBase . '/save-web-quote-access.php',
     'companyUsersUrl' => $companyUsersUrl,
     'companyAccessLink' => (string) $companyAccessLink,
     'employeeInviteLink' => (string) $employeeInviteLink,

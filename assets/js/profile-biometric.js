@@ -62,9 +62,22 @@
     );
   }
 
+  function isMobilePhone() {
+    var ua = String(navigator.userAgent || '');
+    if (/Android|iPhone|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(ua)) return true;
+    if (/iPad/i.test(ua)) return true;
+    if (navigator.platform === 'MacIntel' && Number(navigator.maxTouchPoints || 0) > 1) return true;
+    try {
+      if (window.matchMedia && window.matchMedia('(pointer: coarse) and (max-width: 900px)').matches) {
+        return true;
+      }
+    } catch (e) {}
+    return false;
+  }
+
   function supportBlockReason() {
     if (!window.isSecureContext) {
-      return 'Phone unlock needs HTTPS (or localhost). Open your company HTTPS URL ù plain http:// or a LAN IP will not work.';
+      return 'Phone unlock needs HTTPS (or localhost). Open your company HTTPS URL ? plain http:// or a LAN IP will not work.';
     }
     if (hostLooksLikeIp()) {
       return 'Phone unlock cannot use a raw IP address. Open the site with your company domain over HTTPS.';
@@ -85,8 +98,9 @@
     return 'Smartphone';
   }
 
-  function prepareCreateOptions(publicKey) {
+  function prepareCreateOptions(publicKey, mode) {
     var pk = Object.assign({}, publicKey || {});
+    var usePasskey = mode === 'passkey';
     pk.challenge = coerceToBuffer(pk.challenge);
     if (pk.user) {
       pk.user = Object.assign({}, pk.user, { id: coerceToBuffer(pk.user.id) });
@@ -96,7 +110,9 @@
         .map(function (cred) {
           return Object.assign({}, cred, {
             id: coerceToBuffer(cred.id),
-            transports: Array.isArray(cred.transports) ? cred.transports : ['internal'],
+            transports: Array.isArray(cred.transports) && cred.transports.length
+              ? cred.transports
+              : ['internal', 'hybrid', 'usb', 'nfc', 'ble'],
           });
         })
         .filter(function (cred) {
@@ -111,10 +127,18 @@
       pk.authenticatorSelection = {};
     }
     pk.authenticatorSelection = Object.assign({}, pk.authenticatorSelection, {
-      authenticatorAttachment: 'platform',
-      userVerification: 'required',
-      residentKey: pk.authenticatorSelection.residentKey || 'preferred',
+      userVerification: 'preferred',
+      residentKey: usePasskey ? 'preferred' : 'discouraged',
+      requireResidentKey: false,
     });
+    if (usePasskey) {
+      // Omit attachment so Chrome can offer Google Password Manager (not only NFC/QR security keys).
+      delete pk.authenticatorSelection.authenticatorAttachment;
+    } else {
+      pk.authenticatorSelection.authenticatorAttachment = 'platform';
+    }
+    // Dead credentials after Face ID / screen repair can block Safari create.
+    if (!usePasskey) pk.excludeCredentials = [];
     return pk;
   }
 
@@ -137,18 +161,45 @@
   }
 
   function toast(type, title) {
-    if (window.Swal) {
-      window.Swal.fire({
-        toast: true,
-        position: 'top-end',
-        icon: type,
-        title: title,
-        showConfirmButton: false,
-        timer: type === 'success' ? 3200 : 5500,
-      });
+    var kind = type === 'error' ? 'error' : type === 'info' ? 'info' : 'success';
+    var message = String(title || '');
+    if (!message) return;
+
+    if (typeof window.psNotify === 'function') {
+      window.psNotify(message, kind, kind === 'error' ? 5500 : 3200);
       return;
     }
-    window.alert(title);
+
+    var existing = document.getElementById('psToast');
+    if (existing) existing.remove();
+    var el = document.createElement('div');
+    el.className = 'ps-toast ps-toast--' + kind;
+    el.id = 'psToast';
+    el.setAttribute('role', 'status');
+    el.setAttribute('aria-live', 'polite');
+    var icon =
+      kind === 'error' ? 'fa-circle-exclamation' : kind === 'info' ? 'fa-circle-info' : 'fa-circle-check';
+    el.innerHTML =
+      '<i class="fas ' +
+      icon +
+      '" aria-hidden="true"></i><span></span><button type="button" class="ps-toast-close" aria-label="Dismiss">&times;</button>';
+    el.querySelector('span').textContent = message;
+    el.querySelector('.ps-toast-close').addEventListener('click', function () {
+      el.remove();
+    });
+    document.body.appendChild(el);
+    requestAnimationFrame(function () {
+      el.classList.add('is-in');
+    });
+    setTimeout(
+      function () {
+        el.classList.remove('is-in');
+        setTimeout(function () {
+          if (el.parentNode) el.remove();
+        }, 250);
+      },
+      kind === 'error' ? 5500 : 3200
+    );
   }
 
   function postAction(apiUrl, payload) {
@@ -192,6 +243,7 @@
     var supported = isWebAuthnSupported() && !hostLooksLikeIp();
     var blockReason = supportBlockReason();
     var required = !!bio.required;
+    var onPhone = isMobilePhone();
 
     var statusHtml =
       '<span class="ps-bio-pill ' +
@@ -199,6 +251,9 @@
       '">' +
       (devices.length ? devices.length + ' enrolled' : 'Not enrolled') +
       '</span>';
+
+    var statusSlot = document.getElementById('psBioStatusSlot');
+    if (statusSlot) statusSlot.innerHTML = statusHtml;
 
     var devicesHtml = '';
     if (devices.length) {
@@ -212,7 +267,7 @@
               escapeHtml(device.device_label || 'Smartphone') +
               '</strong>' +
               (device.last_used_at
-                ? '<em> ù last used ' + escapeHtml(String(device.last_used_at).slice(0, 16)) + '</em>'
+                ? '<em> ? last used ' + escapeHtml(String(device.last_used_at).slice(0, 16)) + '</em>'
                 : '') +
               '</span>' +
               '<button type="button" class="ps-bio-remove" data-device-id="' +
@@ -228,58 +283,92 @@
     }
 
     var helpHtml = '';
-    if (blockReason) {
-      helpHtml = '<p class="ps-bio-help">' + escapeHtml(blockReason) + '</p>';
-    } else if (required) {
-      helpHtml =
-        '<p class="ps-bio-help">Attendance clock in/out requires an enrolled phone for this company. Use Face ID, fingerprint, or your phone passcode if biometrics are not available.</p>';
-    } else {
-      helpHtml =
-        '<p class="ps-bio-help">Optional: enroll a phone so attendance can verify it is really you. Face ID, fingerprint, or phone passcode all work.</p>';
-    }
-    if (state.prefetchError) {
-      helpHtml +=
-        '<p class="ps-bio-help" style="color:#b91c1c;">' +
-        escapeHtml(state.prefetchError) +
-        '</p>';
-    }
-
     var actionHtml = '';
-    if (canEnrollMore) {
-      var ready = supported && !!state.prefetchedPublicKey && !state.prefetching;
-      actionHtml =
-        '<button type="button" class="btn-save ps-bio-enroll" id="psBioEnrollBtn"' +
-        (state.busy || !ready ? ' disabled' : '') +
-        '>' +
-        '<i class="fas fa-fingerprint" aria-hidden="true"></i> ' +
-        (state.busy
-          ? 'Waiting for unlock...'
-          : state.prefetching
-            ? 'Preparing...'
-            : devices.length
-              ? 'Enroll another phone'
-              : 'Enroll this phone') +
-        '</button>';
-      if (supported && !state.prefetchedPublicKey && !state.prefetching && !state.prefetchError) {
-        actionHtml +=
-          '<button type="button" class="ps-bio-retry" id="psBioPrefetchBtn">Retry prepare</button>';
+
+    if (!onPhone) {
+      helpHtml =
+        '<div class="ps-bio-desktop-note">' +
+        '<i class="fas fa-mobile-screen-button" aria-hidden="true"></i>' +
+        '<div>' +
+        '<strong>Use your phone to enroll</strong>' +
+        '<p>Open Settings on your mobile phone to enroll Face ID, fingerprint, or passcode. Enrolled phones will show here on desktop.</p>' +
+        '</div>' +
+        '</div>';
+      if (required && !devices.length) {
+        helpHtml += '<p class="ps-bio-help">Required for clock in / out.</p>';
+      }
+      if (devices.length) {
+        actionHtml =
+          '<button type="button" class="ps-bio-reset" id="psBioResetBtn"' +
+          (state.busy ? ' disabled' : '') +
+          '>Clear all &amp; re-enroll</button>';
       }
     } else {
-      actionHtml =
-        '<p class="ps-bio-help">Enrollment limit reached (' +
-        max +
-        '). Remove a phone to add a new one.</p>';
+      if (blockReason) {
+        helpHtml = '<p class="ps-bio-help">' + escapeHtml(blockReason) + '</p>';
+      } else if (required && !devices.length) {
+        helpHtml = '<p class="ps-bio-help">Required for clock in / out.</p>';
+      }
+      if (state.prefetchError) {
+        helpHtml +=
+          '<p class="ps-bio-help" style="color:#b91c1c;">' +
+          escapeHtml(state.prefetchError) +
+          '</p>';
+      }
+
+      if (canEnrollMore) {
+        var ready = supported && !!state.prefetchedPublicKey && !state.prefetching;
+        var passkeyReady = supported && !!state.prefetchedPasskeyPublicKey && !state.prefetching;
+        var showPasskey = !!state.showPasskey;
+        actionHtml =
+          '<div class="ps-bio-actions">' +
+          (!showPasskey
+            ? '<button type="button" class="ps-bio-passkey-link" id="psBioShowPasskeyBtn">Failed to enroll?</button>'
+            : '<span class="ps-bio-actions-spacer" aria-hidden="true"></span>') +
+          '<div class="ps-bio-actions-right">' +
+          '<button type="button" class="btn-save ps-bio-enroll" id="psBioEnrollBtn"' +
+          (state.busy || !ready ? ' disabled' : '') +
+          '>' +
+          '<i class="fas fa-fingerprint" aria-hidden="true"></i> ' +
+          (state.busy
+            ? 'Waiting...'
+            : state.prefetching
+              ? 'Preparing...'
+              : 'Enroll security') +
+          '</button>' +
+          (showPasskey
+            ? '<button type="button" class="ps-bio-passkey" id="psBioPasskeyBtn"' +
+              (state.busy || !passkeyReady ? ' disabled' : '') +
+              '>' +
+              '<i class="fab fa-google" aria-hidden="true"></i> ' +
+              (state.busy ? 'Waiting...' : 'Passkey (Google / iCloud)') +
+              '</button>'
+            : '') +
+          '</div>' +
+          '</div>';
+        if (supported && !state.prefetchedPublicKey && !state.prefetching && !state.prefetchError) {
+          actionHtml +=
+            '<button type="button" class="ps-bio-retry" id="psBioPrefetchBtn">Retry prepare</button>';
+        }
+      } else {
+        helpHtml +=
+          '<p class="ps-bio-help">Limit reached (' + max + '). Remove a phone to add another.</p>';
+      }
+
+      if (devices.length) {
+        actionHtml +=
+          '<button type="button" class="ps-bio-reset" id="psBioResetBtn"' +
+          (state.busy ? ' disabled' : '') +
+          '>Clear all &amp; re-enroll</button>';
+      }
     }
 
     root.innerHTML =
-      '<div class="ps-bio-head">' +
-      '<div><strong class="ps-bio-title"><i class="fas fa-fingerprint" aria-hidden="true"></i> Smartphone unlock</strong>' +
-      '<p class="ps-bio-sub">Verify with Face ID, fingerprint, or your phone passcode when clocking in or out.</p></div>' +
-      statusHtml +
-      '</div>' +
+      '<div class="ps-bio-copy">' +
       helpHtml +
       devicesHtml +
-      actionHtml;
+      '</div>' +
+      (actionHtml ? '<div class="ps-bio-side">' + actionHtml + '</div>' : '');
   }
 
   function escapeHtml(value) {
@@ -299,7 +388,9 @@
       busy: false,
       prefetching: false,
       prefetchedPublicKey: null,
+      prefetchedPasskeyPublicKey: null,
       prefetchError: '',
+      showPasskey: false,
       biometric: cfg.biometric || {
         required: false,
         enrolled: false,
@@ -326,6 +417,13 @@
     function prefetchOptions() {
       var devices = Array.isArray(state.biometric.devices) ? state.biometric.devices : [];
       var max = Number(state.biometric.max || 2);
+      if (!isMobilePhone()) {
+        state.prefetchedPublicKey = null;
+        state.prefetchedPasskeyPublicKey = null;
+        state.prefetchError = '';
+        paint();
+        return Promise.resolve();
+      }
       if (devices.length >= max) return Promise.resolve();
       if (!isWebAuthnSupported() || hostLooksLikeIp()) {
         state.prefetchedPublicKey = null;
@@ -338,16 +436,25 @@
       state.prefetchError = '';
       paint();
 
-      return postAction(cfg.apiUrl, { action: 'webauthn_register_options' })
+      return postAction(cfg.apiUrl, { action: 'webauthn_register_options', mode: 'platform' })
         .then(function (options) {
           if (!options.success || !options.publicKey) {
             throw new Error(options.message || 'Could not prepare enrollment.');
           }
           state.prefetchedPublicKey = options.publicKey;
           state.prefetchError = '';
+          return postAction(cfg.apiUrl, { action: 'webauthn_register_options', mode: 'passkey' });
+        })
+        .then(function (passkeyOptions) {
+          if (passkeyOptions && passkeyOptions.success && passkeyOptions.publicKey) {
+            state.prefetchedPasskeyPublicKey = passkeyOptions.publicKey;
+          } else {
+            state.prefetchedPasskeyPublicKey = null;
+          }
         })
         .catch(function (err) {
           state.prefetchedPublicKey = null;
+          state.prefetchedPasskeyPublicKey = null;
           state.prefetchError = (err && err.message) || 'Could not prepare enrollment.';
         })
         .finally(function () {
@@ -361,7 +468,22 @@
       if (enrollBtn) {
         e.preventDefault();
         e.stopPropagation();
-        enroll();
+        enroll('platform');
+        return;
+      }
+      var showPasskeyBtn = e.target.closest('#psBioShowPasskeyBtn');
+      if (showPasskeyBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        state.showPasskey = true;
+        paint();
+        return;
+      }
+      var passkeyBtn = e.target.closest('#psBioPasskeyBtn');
+      if (passkeyBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        enroll('passkey');
         return;
       }
       var retryBtn = e.target.closest('#psBioPrefetchBtn');
@@ -374,28 +496,45 @@
       if (removeBtn) {
         e.preventDefault();
         removeDevice(Number(removeBtn.getAttribute('data-device-id') || 0));
+        return;
+      }
+      var resetBtn = e.target.closest('#psBioResetBtn');
+      if (resetBtn) {
+        e.preventDefault();
+        resetAllDevices();
       }
     });
 
-    function enroll() {
+    function enroll(mode) {
+      mode = mode === 'passkey' ? 'passkey' : 'platform';
+      if (!isMobilePhone()) {
+        toast('info', 'Open Settings on your phone to enroll smartphone unlock.');
+        paint();
+        return;
+      }
       var blockReason = supportBlockReason();
       if (blockReason) {
         toast('error', blockReason);
         return;
       }
-      var publicKey = state.prefetchedPublicKey;
+      var publicKey =
+        mode === 'passkey' ? state.prefetchedPasskeyPublicKey : state.prefetchedPublicKey;
       if (!publicKey) {
-        toast('error', 'Still preparing phone unlock. Wait a moment, then tap Enroll again.');
+        toast(
+          'error',
+          mode === 'passkey'
+            ? 'Still preparing Google passkey. Wait a moment, then try again.'
+            : 'Still preparing phone unlock. Wait a moment, then tap Enroll again.'
+        );
         prefetchOptions();
         return;
       }
 
       // Critical for iPhone: call credentials.create() synchronously in the tap handler.
-      // Do not await/fetch/re-render before this, or Safari drops user activation.
       var createPromise;
       try {
         createPromise = navigator.credentials.create({
-          publicKey: prepareCreateOptions(publicKey),
+          publicKey: prepareCreateOptions(publicKey, mode),
         });
       } catch (err) {
         toast('error', formatWebAuthnError(err));
@@ -404,20 +543,24 @@
       }
 
       state.busy = true;
-      // Update button label without wiping the gesture context mid-flight more than needed.
-      var btn = document.getElementById('psBioEnrollBtn');
+      var btn = document.getElementById(mode === 'passkey' ? 'psBioPasskeyBtn' : 'psBioEnrollBtn');
       if (btn) {
         btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-fingerprint" aria-hidden="true"></i> Waiting for unlock...';
+        btn.innerHTML =
+          mode === 'passkey'
+            ? '<i class="fab fa-google" aria-hidden="true"></i> Waiting...'
+            : '<i class="fas fa-fingerprint" aria-hidden="true"></i> Waiting...';
       }
 
       createPromise
         .then(function (credential) {
           if (!credential) throw new Error('Phone unlock enrollment was cancelled.');
-          state.prefetchedPublicKey = null;
+          if (mode === 'passkey') state.prefetchedPasskeyPublicKey = null;
+          else state.prefetchedPublicKey = null;
           return postAction(cfg.apiUrl, {
             action: 'webauthn_register',
-            device_label: guessDeviceLabel(),
+            mode: mode,
+            device_label: mode === 'passkey' ? 'Google passkey' : guessDeviceLabel(),
             credential: {
               id: bufferToB64url(credential.rawId),
               rawId: bufferToB64url(credential.rawId),
@@ -430,7 +573,11 @@
         .then(function (result) {
           if (!result.success) throw new Error(result.message || 'Enrollment failed.');
           applyBiometric((result.data && result.data.biometric) || state.biometric);
-          toast('success', result.message || 'Phone unlock enrolled.');
+          toast(
+            'success',
+            result.message ||
+              (mode === 'passkey' ? 'Google passkey enrolled.' : 'Phone unlock enrolled.')
+          );
           return prefetchOptions();
         })
         .catch(function (err) {
@@ -455,6 +602,30 @@
         })
         .catch(function (err) {
           toast('error', (err && err.message) || 'Could not remove device.');
+        })
+        .finally(function () {
+          setBusy(false);
+        });
+    }
+
+    function resetAllDevices() {
+      if (
+        !window.confirm(
+          'Clear all enrolled phones for this account? You will need to enroll Face ID or passcode again on this iPhone.'
+        )
+      ) {
+        return;
+      }
+      setBusy(true);
+      postAction(cfg.apiUrl, { action: 'webauthn_reset' })
+        .then(function (result) {
+          if (!result.success) throw new Error(result.message || 'Could not clear enrollments.');
+          applyBiometric((result.data && result.data.biometric) || state.biometric);
+          toast('success', result.message || 'Old unlock cleared. Tap Enroll this phone.');
+          return prefetchOptions();
+        })
+        .catch(function (err) {
+          toast('error', (err && err.message) || 'Could not clear enrollments.');
         })
         .finally(function () {
           setBusy(false);

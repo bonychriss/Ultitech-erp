@@ -66,7 +66,11 @@ export function guessDeviceLabel() {
   return 'Smartphone';
 }
 
-function prepareCreateOptions(publicKey) {
+/**
+ * @param {object} publicKey
+ * @param {'platform'|'passkey'} [mode]
+ */
+function prepareCreateOptions(publicKey, mode = 'platform') {
   const pk = { ...(publicKey || {}) };
   pk.challenge = coerceToBuffer(pk.challenge);
   if (pk.user) {
@@ -80,17 +84,32 @@ function prepareCreateOptions(publicKey) {
       .map((cred) => ({
         ...cred,
         id: coerceToBuffer(cred.id),
-        transports: Array.isArray(cred.transports) ? cred.transports : ['internal'],
+        transports: Array.isArray(cred.transports) && cred.transports.length
+          ? cred.transports
+          : ['internal', 'hybrid', 'usb', 'nfc', 'ble'],
       }))
       .filter((cred) => cred.id && cred.id.byteLength > 0);
   }
   if (pk.extensions) delete pk.extensions;
-  pk.authenticatorSelection = {
+
+  const usePasskey = mode === 'passkey';
+  const selection = {
     ...(pk.authenticatorSelection || {}),
-    authenticatorAttachment: 'platform',
-    userVerification: 'required',
-    residentKey: (pk.authenticatorSelection && pk.authenticatorSelection.residentKey) || 'preferred',
+    userVerification: 'preferred',
+    residentKey: usePasskey ? 'preferred' : 'discouraged',
+    requireResidentKey: false,
   };
+  if (usePasskey) {
+    // Do not force cross-platform — that only shows QR / NFC security keys.
+    delete selection.authenticatorAttachment;
+  } else {
+    selection.authenticatorAttachment = 'platform';
+  }
+  pk.authenticatorSelection = selection;
+  // Dead Face ID credentials in exclude can block Safari after a screen repair.
+  if (!usePasskey && Array.isArray(pk.excludeCredentials) && pk.excludeCredentials.length) {
+    pk.excludeCredentials = [];
+  }
   return pk;
 }
 
@@ -102,12 +121,14 @@ export function prepareGetOptions(publicKey) {
       .map((cred) => ({
         ...cred,
         id: coerceToBuffer(cred.id),
-        transports: Array.isArray(cred.transports) ? cred.transports : ['internal'],
+        transports: Array.isArray(cred.transports) && cred.transports.length
+          ? cred.transports
+          : ['internal', 'hybrid', 'usb', 'nfc', 'ble'],
       }))
       .filter((cred) => cred.id && cred.id.byteLength > 0);
   }
   if (pk.extensions) delete pk.extensions;
-  pk.userVerification = pk.userVerification || 'required';
+  pk.userVerification = pk.userVerification || 'preferred';
   return pk;
 }
 
@@ -138,12 +159,12 @@ export function serializeAssertion(assertion) {
 }
 
 /** Start create() in the same user gesture (required on iPhone Safari). */
-export function beginCreateCredential(publicKey) {
+export function beginCreateCredential(publicKey, mode = 'platform') {
   if (!isWebAuthnSupported()) {
     throw new Error('This browser/device does not support phone unlock. Use your smartphone.');
   }
   return navigator.credentials.create({
-    publicKey: prepareCreateOptions(publicKey),
+    publicKey: prepareCreateOptions(publicKey, mode),
   });
 }
 
@@ -160,8 +181,8 @@ export function serializeAttestation(credential) {
   };
 }
 
-export async function createCredential(publicKey) {
-  const credential = await beginCreateCredential(publicKey);
+export async function createCredential(publicKey, mode = 'platform') {
+  const credential = await beginCreateCredential(publicKey, mode);
   return serializeAttestation(credential);
 }
 

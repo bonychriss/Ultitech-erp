@@ -24,8 +24,8 @@ if ($slug === '' && function_exists('getRequestedCompanySlug')) {
     $slug = trim((string) getRequestedCompanySlug());
 }
 $backUrl = $slug !== ''
-    ? company_url('admin/settings.php?module=settings', $slug)
-    : app_url('/admin/settings.php?module=settings');
+    ? company_url('admin/company-settings.php?module=settings', $slug)
+    : app_url('/admin/company-settings.php?module=settings');
 
 $dbName = '';
 try {

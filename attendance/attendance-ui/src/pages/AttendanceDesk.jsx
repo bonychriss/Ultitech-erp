@@ -22,6 +22,32 @@ function formatTimeHm(value) {
   return str;
 }
 
+/** Minutes from midnight for HH:MM / HH:MM:SS values. */
+function timeToMinutes(value) {
+  const str = String(value || '').trim();
+  const timePart = str.includes(' ') ? str.split(' ').pop() : str.includes('T') ? str.split('T').pop() : str;
+  const parts = String(timePart).split(':');
+  if (parts.length < 2) return null;
+  const h = Number(parts[0]);
+  const m = Number(parts[1]);
+  if (!Number.isFinite(h) || !Number.isFinite(m)) return null;
+  return h * 60 + m;
+}
+
+/**
+ * Arrival label vs shift start (+ grace).
+ * @returns {{tone:'early'|'late'|'ontime', label:string}|null}
+ */
+function arrivalTiming(timeIn, shiftStart, graceMinutes = 0) {
+  const inMins = timeToMinutes(timeIn);
+  const startMins = timeToMinutes(shiftStart);
+  if (inMins == null || startMins == null) return null;
+  const grace = Math.max(0, Number(graceMinutes) || 0);
+  if (inMins < startMins) return { tone: 'early', label: 'Came early' };
+  if (inMins > startMins + grace) return { tone: 'late', label: 'Came late' };
+  return { tone: 'ontime', label: 'On time' };
+}
+
 function formatDisplayTime(raw) {
   if (!raw) return '';
   const normalized = String(raw).includes('T') ? raw : `1970-01-01T${raw}`;
@@ -223,41 +249,50 @@ function nameInitials(name) {
   return `${parts[0][0] || ''}${parts[parts.length - 1][0] || ''}`.toUpperCase();
 }
 
-function buildTeamHoursLeaderboard(rows, dailyTargetHours, hour, minute, second, currentUserId) {
-  const target = Math.max(Number(dailyTargetHours) || 8, 0.1);
-  return (Array.isArray(rows) ? rows : [])
-    .map((row) => {
-      const clockedIn = Boolean(row?.time_in) || row?.clocked_in === true;
-      const stillIn = clockedIn && !row?.time_out;
-      const liveHours = clockedIn
-        ? elapsedSeconds(row.time_in, row.time_out, hour, minute, second) / 3600
-        : 0;
-      const hours = clockedIn
-        ? (!stillIn && row?.total_hours != null ? Number(row.total_hours) || 0 : liveHours)
-        : 0;
-      const progress = Math.max(0, Math.min(100, Math.round((hours / target) * 100)));
+function buildPunctualityLeaderboard(board, currentUserId) {
+  const rows = Array.isArray(board?.rows) ? board.rows : (Array.isArray(board) ? board : []);
+  const monthLabel = board?.monthLabel || '';
+  const workDays = Math.max(1, Number(board?.workDays || 0) || 1);
+  const weekendBonusPts = Math.max(1, Number(board?.weekendBonusPts || 2));
+  return {
+    monthLabel,
+    workDays,
+    weekendBonusPts,
+    rows: rows.map((row) => {
       const name = row.full_name || row.username || 'Teammate';
+      const early = Number(row.early_count || 0);
+      const ontime = Number(row.ontime_count || 0);
+      const late = Number(row.late_count || 0);
+      const weekday = Number(row.weekday_count || 0);
+      const weekend = Number(row.weekend_count || 0);
+      const bonusPts = weekend * weekendBonusPts;
+      const score = Number(row.score != null ? row.score : weekday + bonusPts);
+      const progress = Math.max(
+        0,
+        Math.min(100, Number(row.rating != null ? row.rating : Math.round((weekday / workDays) * 100)))
+      );
+      const goodDays = early + ontime;
       return {
-        key: `${row.user_id || 0}-${row.id || row.time_in || name}`,
+        key: `p-${row.user_id || 0}-${name}`,
         userId: Number(row.user_id || 0),
         name,
         initial: nameInitials(name),
         department: row.department || '',
-        hours,
+        early,
+        ontime,
+        late,
+        weekday,
+        weekend,
+        bonusPts,
+        weekendBonusPts,
+        score,
         progress,
-        hitTarget: clockedIn && hours >= target,
-        stillIn,
-        clockedIn,
-        timeIn: row.time_in || null,
-        timeOut: row.time_out || null,
+        goodDays,
+        daysPresent: Number(row.days_present || 0),
         isMe: Number(row.user_id || 0) === Number(currentUserId || 0),
       };
-    })
-    .sort((a, b) => {
-      if (Number(b.clockedIn) !== Number(a.clockedIn)) return Number(b.clockedIn) - Number(a.clockedIn);
-      if (b.hours !== a.hours) return b.hours - a.hours;
-      return String(a.name).localeCompare(String(b.name));
-    });
+    }),
+  };
 }
 
 function buildMonthOptions(monthsBack = 12) {
@@ -296,6 +331,9 @@ export default function AttendanceDesk({ data }) {
       teamBoard: Array.isArray(data.teamBoard) && data.teamBoard.length
         ? data.teamBoard
         : (Array.isArray(data.todayPresent) ? data.todayPresent : []),
+      punctualityBoard: data.punctualityBoard && typeof data.punctualityBoard === 'object'
+        ? data.punctualityBoard
+        : { monthLabel: '', rows: [] },
       history: data.history || [],
       historyMonth: month,
       historyMonthLabel: label,
@@ -328,6 +366,7 @@ export default function AttendanceDesk({ data }) {
   const [busy, setBusy] = useState(false);
   const [enrollBusy, setEnrollBusy] = useState(false);
   const [enrollReady, setEnrollReady] = useState(false);
+  const [passkeyReady, setPasskeyReady] = useState(false);
   const [successDismissed, setSuccessDismissed] = useState(false);
   const [phoneToast, setPhoneToast] = useState(null);
   const [enrollToastDismissed, setEnrollToastDismissed] = useState(false);
@@ -341,6 +380,7 @@ export default function AttendanceDesk({ data }) {
   const webAuthnOk = isWebAuthnSupported();
   const assertPublicKeyRef = useRef(null);
   const registerPublicKeyRef = useRef(null);
+  const registerPasskeyPublicKeyRef = useRef(null);
   const phoneToastShownRef = useRef(false);
 
   useEffect(() => {
@@ -370,8 +410,7 @@ export default function AttendanceDesk({ data }) {
   const { dateLabel, hour, minute, second, nowMs } = clock;
   const weather = useLocalWeather();
   const wallpapers = data.wallpapers || {};
-  // One lock-screen image per calendar day (stable for the whole day).
-  const dailyWallpaper = useMemo(() => {
+  const wallpaperSlides = useMemo(() => {
     const fromBoot = Array.isArray(wallpapers.slides) ? wallpapers.slides : [];
     const named = [
       wallpapers.morning || wallpapers.sunrise || '',
@@ -386,18 +425,74 @@ export default function AttendanceDesk({ data }) {
       seen.add(url);
       list.push(url);
     });
-    if (list.length === 0) return '';
+    return list;
+  }, [wallpapers]);
+
+  // Start on a day-stable slide, then auto-rotate through the HD pool.
+  const wallpaperStartIndex = useMemo(() => {
+    if (wallpaperSlides.length === 0) return 0;
     const dayKeySource = dateLabel || String(Date.now());
     let hash = 0;
     for (let i = 0; i < dayKeySource.length; i += 1) {
       hash = ((hash << 5) - hash + dayKeySource.charCodeAt(i)) | 0;
     }
-    return list[Math.abs(hash) % list.length];
-  }, [wallpapers, dateLabel]);
+    return Math.abs(hash) % wallpaperSlides.length;
+  }, [wallpaperSlides, dateLabel]);
 
-  const clockCardStyle = dailyWallpaper
+  const [wallpaperIndex, setWallpaperIndex] = useState(wallpaperStartIndex);
+  const [incomingWallpaper, setIncomingWallpaper] = useState('');
+  const [wallpaperCrossfade, setWallpaperCrossfade] = useState(false);
+  const wallpaperIndexRef = useRef(wallpaperStartIndex);
+  const wallpaperBusyRef = useRef(false);
+
+  useEffect(() => {
+    wallpaperIndexRef.current = wallpaperStartIndex;
+    wallpaperBusyRef.current = false;
+    setWallpaperIndex(wallpaperStartIndex);
+    setIncomingWallpaper('');
+    setWallpaperCrossfade(false);
+  }, [wallpaperStartIndex]);
+
+  useEffect(() => {
+    if (wallpaperSlides.length < 2) return undefined;
+    let fadeTimer = 0;
+    let raf1 = 0;
+    let raf2 = 0;
+    const rotateMs = 14000;
+    const fadeMs = 1100;
+    const id = window.setInterval(() => {
+      if (wallpaperBusyRef.current) return;
+      const prev = wallpaperIndexRef.current;
+      const next = (prev + 1) % wallpaperSlides.length;
+      const nextUrl = wallpaperSlides[next] || '';
+      if (!nextUrl) return;
+      wallpaperBusyRef.current = true;
+      setIncomingWallpaper(nextUrl);
+      raf1 = window.requestAnimationFrame(() => {
+        raf2 = window.requestAnimationFrame(() => setWallpaperCrossfade(true));
+      });
+      window.clearTimeout(fadeTimer);
+      fadeTimer = window.setTimeout(() => {
+        wallpaperIndexRef.current = next;
+        setWallpaperIndex(next);
+        setWallpaperCrossfade(false);
+        setIncomingWallpaper('');
+        wallpaperBusyRef.current = false;
+      }, fadeMs);
+    }, rotateMs);
+    return () => {
+      window.clearInterval(id);
+      window.clearTimeout(fadeTimer);
+      window.cancelAnimationFrame(raf1);
+      window.cancelAnimationFrame(raf2);
+      wallpaperBusyRef.current = false;
+    };
+  }, [wallpaperSlides]);
+
+  const activeWallpaper = wallpaperSlides[wallpaperIndex] || wallpaperSlides[0] || '';
+  const clockCardStyle = activeWallpaper
     ? {
-        '--att-clock-photo': `url('${dailyWallpaper}')`,
+        '--att-clock-photo': `url('${activeWallpaper}')`,
         backgroundColor: '#0f172a',
       }
     : undefined;
@@ -408,6 +503,8 @@ export default function AttendanceDesk({ data }) {
   const canClockIn = !todayRecord;
   const canClockOut = Boolean(isIn);
   const dailyTargetHours = Number(shift.dailyTargetHours || 8) || 8;
+  const shiftStart = shift.start || '09:00';
+  const shiftGraceMinutes = Number(shift.graceMinutes ?? 15) || 0;
   const timeParts = formatClockParts(hour, minute, second, true);
   const elapsedLabel = formatElapsedCompact(
     todayRecord?.time_in,
@@ -432,17 +529,15 @@ export default function AttendanceDesk({ data }) {
     ? state.teamBoard
     : teamToday;
   const teamActiveNow = teamToday.filter((row) => row && row.time_in && !row.time_out).length;
-  const teamLeaderboard = useMemo(
-    () => buildTeamHoursLeaderboard(
-      teamBoard,
-      dailyTargetHours,
-      hour,
-      minute,
-      second,
-      user.id
-    ),
-    [teamBoard, dailyTargetHours, hour, minute, second, user.id]
+  const punctualityBoard = state.punctualityBoard && typeof state.punctualityBoard === 'object'
+    ? state.punctualityBoard
+    : { monthLabel: '', rows: [] };
+  const punctualityLeaderboard = useMemo(
+    () => buildPunctualityLeaderboard(punctualityBoard, user.id),
+    [punctualityBoard, user.id]
   );
+  const teamLeaderboard = punctualityLeaderboard.rows;
+  const leaderboardMonthLabel = punctualityLeaderboard.monthLabel || 'This month';
 
   useEffect(() => {
     if (!state.clockInSuccess && !state.clockOutSuccess) return undefined;
@@ -494,6 +589,9 @@ export default function AttendanceDesk({ data }) {
       teamBoard: Array.isArray(payload.teamBoard)
         ? payload.teamBoard
         : (Array.isArray(payload.todayPresent) ? payload.todayPresent : (cur.teamBoard || [])),
+      punctualityBoard: payload.punctualityBoard && typeof payload.punctualityBoard === 'object'
+        ? payload.punctualityBoard
+        : (cur.punctualityBoard || { monthLabel: '', rows: [] }),
       history: payload.history ?? cur.history,
       historyMonth: payload.historyMonth ?? cur.historyMonth,
       historyMonthLabel: payload.historyMonthLabel ?? cur.historyMonthLabel,
@@ -527,26 +625,98 @@ export default function AttendanceDesk({ data }) {
     }
   }
 
-  async function prefetchRegisterOptions() {
+  async function prefetchRegisterOptions(force = false) {
     const bio = state.biometric || {};
-    if (!bio.required || bio.enrolled || !webAuthnOk || !isMobileClock) {
+    // Only prefetch create options when not already enrolled (or after reset).
+    if (!force && (!bio.required || bio.enrolled || !webAuthnOk || !isMobileClock)) {
       registerPublicKeyRef.current = null;
+      registerPasskeyPublicKeyRef.current = null;
       setEnrollReady(false);
+      setPasskeyReady(false);
+      return;
+    }
+    if (!webAuthnOk || !isMobileClock) {
+      registerPublicKeyRef.current = null;
+      registerPasskeyPublicKeyRef.current = null;
+      setEnrollReady(false);
+      setPasskeyReady(false);
       return;
     }
     setEnrollReady(false);
+    setPasskeyReady(false);
     try {
-      const options = await postAttendanceAction({ action: 'webauthn_register_options' });
-      if (options.success && options.publicKey) {
-        registerPublicKeyRef.current = options.publicKey;
+      // Sequential: both modes store challenges in the same session bag.
+      const platformOpts = await postAttendanceAction({
+        action: 'webauthn_register_options',
+        mode: 'platform',
+      });
+      const passkeyOpts = await postAttendanceAction({
+        action: 'webauthn_register_options',
+        mode: 'passkey',
+      });
+      if (platformOpts.success && platformOpts.publicKey) {
+        registerPublicKeyRef.current = platformOpts.publicKey;
         setEnrollReady(true);
       } else {
         registerPublicKeyRef.current = null;
         setEnrollReady(false);
+        if (force && platformOpts.message) {
+          setState((cur) => ({
+            ...cur,
+            message: platformOpts.message,
+            msgType: 'danger',
+          }));
+        }
       }
-    } catch (_) {
+      if (passkeyOpts.success && passkeyOpts.publicKey) {
+        registerPasskeyPublicKeyRef.current = passkeyOpts.publicKey;
+        setPasskeyReady(true);
+      } else {
+        registerPasskeyPublicKeyRef.current = null;
+        setPasskeyReady(false);
+      }
+    } catch (err) {
       registerPublicKeyRef.current = null;
+      registerPasskeyPublicKeyRef.current = null;
       setEnrollReady(false);
+      setPasskeyReady(false);
+      if (force) {
+        setState((cur) => ({
+          ...cur,
+          message: err instanceof Error ? err.message : 'Could not prepare enrollment.',
+          msgType: 'danger',
+        }));
+      }
+    }
+  }
+
+  /** Clear dead Face ID enrollments (screen / Face ID change), then prepare re-enroll. */
+  async function resetPhoneUnlock(event) {
+    if (event && typeof event.preventDefault === 'function') event.preventDefault();
+    if (enrollBusy) return;
+    setEnrollBusy(true);
+    try {
+      const result = await postAttendanceAction({ action: 'webauthn_reset' });
+      if (!result.success) {
+        throw new Error(result.message || 'Could not clear old phone unlock.');
+      }
+      applyPayload(result.data || {});
+      setEnrollToastDismissed(false);
+      // Force prefetch — React state from applyPayload is not updated yet in this tick.
+      await prefetchRegisterOptions(true);
+      setState((cur) => ({
+        ...cur,
+        message: result.message || 'Old unlock cleared. Tap Setup and use Face ID or your phone passcode.',
+        msgType: 'success',
+      }));
+    } catch (err) {
+      setState((cur) => ({
+        ...cur,
+        message: err instanceof Error ? err.message : 'Could not clear old phone unlock.',
+        msgType: 'danger',
+      }));
+    } finally {
+      setEnrollBusy(false);
     }
   }
 
@@ -575,7 +745,7 @@ export default function AttendanceDesk({ data }) {
     return promise;
   }
 
-  function enrollPhoneUnlock(event) {
+  function enrollPhoneUnlock(event, mode = 'platform') {
     if (event && typeof event.preventDefault === 'function') event.preventDefault();
     const bio = state.biometric || {};
     if (!bio.required || bio.enrolled || enrollBusy) return;
@@ -583,17 +753,22 @@ export default function AttendanceDesk({ data }) {
     if (!webAuthnOk) {
       setState((cur) => ({
         ...cur,
-        message: 'Open attendance on your smartphone to enroll Face ID, fingerprint, or passcode.',
+        message: 'Open attendance on your smartphone to enroll Face ID, fingerprint, passcode, or a Google passkey.',
         msgType: 'danger',
       }));
       return;
     }
 
-    const publicKey = registerPublicKeyRef.current;
+    const usePasskey = mode === 'passkey';
+    const publicKey = usePasskey
+      ? registerPasskeyPublicKeyRef.current
+      : registerPublicKeyRef.current;
     if (!publicKey) {
       setState((cur) => ({
         ...cur,
-        message: 'Still preparing phone unlock. Wait a moment, then try again.',
+        message: usePasskey
+          ? 'Still preparing Google passkey. Wait a moment, then try again.'
+          : 'Still preparing phone unlock. Wait a moment, then try again.',
         msgType: 'danger',
       }));
       prefetchRegisterOptions();
@@ -603,7 +778,7 @@ export default function AttendanceDesk({ data }) {
     let createPromise;
     try {
       // Must start in the same tap as the button (iPhone Safari).
-      createPromise = beginCreateCredential(publicKey);
+      createPromise = beginCreateCredential(publicKey, usePasskey ? 'passkey' : 'platform');
     } catch (err) {
       setState((cur) => ({
         ...cur,
@@ -614,15 +789,21 @@ export default function AttendanceDesk({ data }) {
       return;
     }
 
-    registerPublicKeyRef.current = null;
-    setEnrollReady(false);
+    if (usePasskey) {
+      registerPasskeyPublicKeyRef.current = null;
+      setPasskeyReady(false);
+    } else {
+      registerPublicKeyRef.current = null;
+      setEnrollReady(false);
+    }
     setEnrollBusy(true);
 
     createPromise
       .then((credential) =>
         postAttendanceAction({
           action: 'webauthn_register',
-          device_label: guessDeviceLabel(),
+          mode: usePasskey ? 'passkey' : 'platform',
+          device_label: usePasskey ? 'Google passkey' : guessDeviceLabel(),
           credential: serializeAttestation(credential),
         })
       )
@@ -633,7 +814,9 @@ export default function AttendanceDesk({ data }) {
         applyPayload(result.data || {});
         setState((cur) => ({
           ...cur,
-          message: result.message || 'Phone unlock enrolled. You can clock in now.',
+          message: result.message || (usePasskey
+            ? 'Google passkey enrolled. You can clock in now.'
+            : 'Phone unlock enrolled. You can clock in now.'),
           msgType: 'success',
         }));
         // Continue into clock-in plan once enrollment succeeds.
@@ -814,7 +997,18 @@ export default function AttendanceDesk({ data }) {
               style={clockCardStyle}
               aria-label="Time card"
             >
-              <div className="clock-card-v2-photo" aria-hidden="true" />
+              <div
+                className="clock-card-v2-photo clock-card-v2-photo--base"
+                style={activeWallpaper ? { backgroundImage: `url('${activeWallpaper}')` } : undefined}
+                aria-hidden="true"
+              />
+              {incomingWallpaper ? (
+                <div
+                  className={`clock-card-v2-photo clock-card-v2-photo--next${wallpaperCrossfade ? ' is-in' : ''}`}
+                  style={{ backgroundImage: `url('${incomingWallpaper}')` }}
+                  aria-hidden="true"
+                />
+              ) : null}
               <div className="clock-card-v2-fade" aria-hidden="true" />
               <div className="clock-card-v2-inner">
                 <div className="clock-card-v2-identity">
@@ -882,11 +1076,7 @@ export default function AttendanceDesk({ data }) {
                     disabled={busy}
                     onClick={openPlan}
                   >
-                    {busy
-                      ? 'Processing...'
-                      : bioRequired
-                        ? 'Clock in with phone unlock'
-                        : 'Clock in'}
+                    {busy ? 'Processing...' : 'Clock in'}
                   </button>
                 ) : null}
                 {canClockOut ? (
@@ -896,11 +1086,7 @@ export default function AttendanceDesk({ data }) {
                     disabled={busy}
                     onClick={openReview}
                   >
-                    {busy
-                      ? 'Processing...'
-                      : bioRequired
-                        ? 'Clock out with phone unlock'
-                        : 'Clock out'}
+                    {busy ? 'Processing...' : 'Clock out'}
                   </button>
                 ) : null}
                 {!canClockIn && !canClockOut ? (
@@ -952,13 +1138,23 @@ export default function AttendanceDesk({ data }) {
                           type="button"
                           className="att-desk-toast-link"
                           disabled={enrollBusy || !enrollReady}
-                          onClick={enrollPhoneUnlock}
+                          onClick={(e) => enrollPhoneUnlock(e, 'platform')}
                         >
                           {enrollBusy
                             ? 'Waiting…'
                             : enrollReady
-                              ? 'Setup'
+                              ? 'Face ID'
                               : 'Getting ready…'}
+                        </button>
+                        {' · '}
+                        <button
+                          type="button"
+                          className="att-desk-toast-link"
+                          disabled={enrollBusy || !passkeyReady}
+                          onClick={(e) => enrollPhoneUnlock(e, 'passkey')}
+                          title="Save a passkey with Google Password Manager or iCloud (not NFC security key)"
+                        >
+                          {passkeyReady ? 'Passkey' : 'Passkey…'}
                         </button>
                       </>
                     ) : (
@@ -1086,7 +1282,7 @@ export default function AttendanceDesk({ data }) {
                     <UsersRound size={16} strokeWidth={2} />
                   </div>
                   <div className="att-kpi-body">
-                    <div className="att-kpi-label">Team logged today</div>
+                    <div className="att-kpi-label">Team today</div>
                     <div className="att-kpi-value is-team">{teamToday.length}</div>
                   </div>
                   <span className="att-kpi-aside is-active">
@@ -1123,6 +1319,7 @@ export default function AttendanceDesk({ data }) {
                     const stillIn = Boolean(row.time_in) && !row.time_out;
                     const isMe = Number(row.user_id) === Number(user.id || 0);
                     const name = row.full_name || row.username || '—';
+                    const timing = arrivalTiming(row.time_in, shiftStart, shiftGraceMinutes);
                     return (
                       <div
                         key={`${row.user_id}-${row.id || row.time_in || ''}`}
@@ -1138,23 +1335,14 @@ export default function AttendanceDesk({ data }) {
                           </div>
                           <div className="att-present-meta">
                             {row.department ? <span>{row.department}</span> : null}
-                            <span>
-                              In {formatTimeHm(row.time_in)}
-                              {row.time_out ? ` · Out ${formatTimeHm(row.time_out)}` : ' · Still in'}
-                            </span>
+                            <span>In {formatTimeHm(row.time_in)}</span>
+                            <span>{row.time_out ? `Out ${formatTimeHm(row.time_out)}` : 'Still in'}</span>
                           </div>
-                        </div>
-                        <div className="att-present-side">
-                          <span className={`att-present-status ${stillIn ? 'is-in' : 'is-out'}`}>
-                            {stillIn ? 'In' : (row.status || 'Out')}
-                          </span>
-                          <span className="att-present-hours">
-                            {row.total_hours != null
-                              ? `${Number(row.total_hours).toFixed(1)}h`
-                              : stillIn
-                                ? formatElapsedCompact(row.time_in, null, hour, minute, second)
-                                : '—'}
-                          </span>
+                          {timing ? (
+                            <span className={`att-present-timing is-${timing.tone}`}>
+                              {timing.label}
+                            </span>
+                          ) : null}
                         </div>
                       </div>
                     );
@@ -1163,10 +1351,10 @@ export default function AttendanceDesk({ data }) {
               )}
             </section>
 
-            <section className="att-leaderboard-card" aria-label="Team hours leaderboard">
+            <section className="att-leaderboard-card" aria-label="Monthly punctuality leaderboard">
               <div className="att-leaderboard-header">
                 <h3 className="att-leaderboard-title">Leaderboard</h3>
-                <span className="att-leaderboard-subtitle">Hours today</span>
+                <span className="att-leaderboard-subtitle">Early & on time · {leaderboardMonthLabel}</span>
               </div>
               {teamLeaderboard.length === 0 ? (
                 <div className="att-desk-empty att-leaderboard-empty">
@@ -1175,7 +1363,7 @@ export default function AttendanceDesk({ data }) {
                   </div>
                   <p className="att-desk-empty-title">No teammates found</p>
                   <p className="att-desk-empty-sub">
-                    Company users will rank here against the {dailyTargetHours.toFixed(1)}h shift target.
+                    1 pt per weekday signed in · Sat/Sun +2 bonus · {leaderboardMonthLabel}.
                   </p>
                 </div>
               ) : (
@@ -1185,20 +1373,14 @@ export default function AttendanceDesk({ data }) {
                       key={row.key}
                       className={[
                         'att-leaderboard-item',
-                        row.hitTarget ? 'is-target-hit' : '',
                         row.isMe ? 'is-me' : '',
-                        !row.clockedIn ? 'is-standby' : '',
+                        row.goodDays === 0 ? 'is-standby' : '',
                       ].filter(Boolean).join(' ')}
                     >
-                      {row.hitTarget ? (
-                        <>
-                          <span className="att-leaderboard-spark att-leaderboard-spark--1" aria-hidden="true" />
-                          <span className="att-leaderboard-spark att-leaderboard-spark--2" aria-hidden="true" />
-                          <span className="att-leaderboard-spark att-leaderboard-spark--3" aria-hidden="true" />
-                        </>
-                      ) : null}
-                      <span className="att-leaderboard-rank">{index + 1}</span>
-                      <div className={`att-leaderboard-avatar${row.hitTarget ? ' is-target-hit' : ''}`}>
+                      <span className="att-leaderboard-rank" aria-label={`Rank ${index + 1}`}>
+                        {index + 1}
+                      </span>
+                      <div className="att-leaderboard-avatar">
                         {row.initial}
                       </div>
                       <div className="att-leaderboard-info">
@@ -1207,33 +1389,38 @@ export default function AttendanceDesk({ data }) {
                             {row.name}
                             {row.isMe ? <span className="att-leaderboard-you">You</span> : null}
                           </div>
-                          {row.hitTarget ? (
-                            <span className="att-leaderboard-congrats">
-                              <i className="fas fa-trophy" aria-hidden="true" />
-                              Target reached!
-                            </span>
-                          ) : null}
                         </div>
                         <div className="att-leaderboard-progress-wrap">
                           <div className="att-leaderboard-progress-bar" aria-hidden="true">
                             <span
-                              className={`att-leaderboard-progress-fill${row.hitTarget ? ' is-complete' : ''}`}
+                              className="att-leaderboard-progress-fill"
                               style={{ width: `${row.progress}%` }}
                             />
                           </div>
                           <div className="att-leaderboard-progress-text">
-                            <span>{row.progress}% of {dailyTargetHours.toFixed(1)}h</span>
-                            <span className="att-leaderboard-meta">
-                              {!row.clockedIn
-                                ? '· Standby'
-                                : row.stillIn
-                                  ? `· In ${formatTimeHm(row.timeIn)}`
-                                  : `· Out ${formatTimeHm(row.timeOut || row.timeIn)}`}
-                            </span>
+                            <span>{row.weekday} weekdays</span>
+                            {row.weekend > 0 ? (
+                              <span className="att-leaderboard-meta">
+                                · +{row.bonusPts} Sat/Sun
+                              </span>
+                            ) : null}
+                            {row.early + row.ontime > 0 ? (
+                              <span className="att-leaderboard-meta att-leaderboard-meta--timing">
+                                {' '}· {row.early} early · {row.ontime} on time
+                              </span>
+                            ) : null}
                           </div>
                         </div>
                       </div>
-                      <div className="att-leaderboard-hours">{row.hours.toFixed(1)}h</div>
+                      <div
+                        className="att-leaderboard-hours"
+                        title={row.weekend > 0
+                          ? `${row.weekday} weekday pts + ${row.weekend}×${row.weekendBonusPts} weekend bonus`
+                          : `${row.weekday} weekday pts (missed weekdays = 0)`}
+                      >
+                        {row.score}
+                        <span className="att-leaderboard-hours-suffix">pts</span>
+                      </div>
                     </div>
                   ))}
                 </div>

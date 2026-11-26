@@ -113,6 +113,7 @@ $stockPoListUrl = function_exists('app_url')
     : '/stock/modules/purchases/index.php';
 
 $page_title = 'Stock purchase settings';
+$isSettingsEmbed = isset($_GET['embed']) && (string) $_GET['embed'] === '1';
 include_once __DIR__ . '/../includes/header_employee.php';
 ?>
 
@@ -130,13 +131,17 @@ include_once __DIR__ . '/../includes/header_employee.php';
     .sp-btn-primary:hover { background: #9333ea; color: #fff; }
     .sp-btn-outline { border: 1px solid #e2e8f0; background: #fff; color: #334155; padding: 0.45rem 1rem; }
     .sp-btn-outline:hover { background: #f8fafc; }
+    <?php if ($isSettingsEmbed): ?>
+    .sp-embed-hide { display: none !important; }
+    .sp-settings { min-height: 0; }
+    <?php endif; ?>
 </style>
 
 <main class="main-content sp-settings bg-[#F9F9F9] min-h-[50vh] pb-10">
     <div class="bg-white border-b border-gray-200 sticky top-0 z-30 shadow-sm">
         <div class="px-4 py-3 flex flex-wrap items-center gap-3">
-            <a href="settings.php<?= htmlspecialchars($settingsQs(['module' => 'settings'])) ?>" class="sp-btn-outline text-sm no-underline inline-flex items-center gap-2">
-                <i class="fas fa-arrow-left"></i> Settings hub
+            <a href="company-settings.php<?= htmlspecialchars($settingsQs(['module' => 'settings'])) ?>" class="sp-btn-outline text-sm no-underline inline-flex items-center gap-2<?= $isSettingsEmbed ? ' sp-embed-hide' : '' ?>">
+                <i class="fas fa-arrow-left"></i> Settings
             </a>
             <h1 class="text-xl font-bold text-gray-900 m-0 flex items-center gap-2">
                 <i class="fas fa-file-invoice-dollar text-purple-600"></i> Stock purchase &amp; vouchers

@@ -304,8 +304,8 @@ if (!function_exists('attendanceSettingsFetchPayload')) {
                 'page' => $settingsUrl,
                 'api' => $apiUrl,
                 'hub' => function_exists('company_url')
-                    ? company_url('admin/settings.php?module=settings')
-                    : (function_exists('app_url') ? app_url('/admin/settings.php?module=settings') : '/admin/settings.php'),
+                    ? company_url('admin/company-settings.php?module=settings')
+                    : (function_exists('app_url') ? app_url('/admin/company-settings.php?module=settings') : '/admin/company-settings.php'),
                 'clock' => function_exists('company_url')
                     ? company_url('attendance/')
                     : (function_exists('app_url') ? app_url('/attendance/') : '/attendance/'),

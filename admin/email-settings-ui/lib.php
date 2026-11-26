@@ -250,8 +250,8 @@ function emailSettingsUiGetPayload(PDO $pdo): array
 {
     $form = emailSettingsUiBuildFormState(emailSettingsUiLoadRaw($pdo));
     $settingsHubUrl = function_exists('company_url')
-        ? company_url('admin/settings.php?module=settings')
-        : (function_exists('app_url') ? app_url('/admin/settings.php?module=settings') : '../settings.php?module=settings');
+        ? company_url('admin/company-settings.php?module=settings')
+        : (function_exists('app_url') ? app_url('/admin/company-settings.php?module=settings') : '../company-settings.php?module=settings');
     $testApiUrl = function_exists('company_url')
         ? company_url('admin/api/test_mail_config.php?module=settings')
         : (function_exists('app_url') ? app_url('/admin/api/test_mail_config.php?module=settings') : 'api/test_mail_config.php?module=settings');

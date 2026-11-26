@@ -349,8 +349,10 @@ if (!function_exists('addParentItem')) {
     }
 }
 
-// Module Header (All Modules)
-addItem($menuItems, 'all-modules', 'All Modules', 'house', $selectModuleUrl);
+// Module Header (All Modules) — skip on Settings / Company Settings (in-page rail covers nav)
+if ($active_module !== 'settings' && $active_module !== 'company-settings') {
+    addItem($menuItems, 'all-modules', 'All Modules', 'house', $selectModuleUrl);
+}
 
 // Attendance clock shortcut (pretty company URL)
 $attClockHref = function_exists('company_url')
@@ -966,77 +968,11 @@ switch ($active_module) {
         break;
 
     case 'company-settings':
-        if ($is_admin) {
-            addItem($menuItems, 'ai_assistant', 'AI Assistant', 'stars', $prefix . 'admin/ai_assistant.php?module=company-settings');
-        } else {
-            addItem($menuItems, 'ai_assistant', 'AI Assistant', 'stars', $prefix . 'employee/ai_assistant.php?module=company-settings');
-        }
-        $csCompanyId = (int) ($_GET['company_id'] ?? ($_SESSION['active_company_id'] ?? (function_exists('currentCompanyId') ? (int) currentCompanyId() : 0)));
-        $csSlug = trim((string) ($_GET['company_slug'] ?? $_SESSION['company_slug'] ?? ''));
-        if ($csCompanyId <= 0 && $csSlug !== '') {
-            global $control_pdo;
-            if (isset($control_pdo) && $control_pdo instanceof PDO) {
-                try {
-                    $csSlugStmt = $control_pdo->prepare('SELECT id FROM companies WHERE company_slug = ? LIMIT 1');
-                    $csSlugStmt->execute([$csSlug]);
-                    $csCompanyId = (int) $csSlugStmt->fetchColumn();
-                } catch (Throwable $e) {
-                    // keep sidebar resilient
-                }
-            }
-        }
-        $csModule = trim((string) ($_GET['module'] ?? 'settings'));
-        $csHubQs = 'module=settings';
-        if ($csCompanyId > 0) {
-            $csHubQs .= '&company_id=' . $csCompanyId;
-        }
-        if ($csSlug !== '') {
-            $csHubQs .= '&company_slug=' . rawurlencode($csSlug);
-        }
-        $csBuildUrl = static function (string $tab) use ($prefix, $csCompanyId, $csSlug, $csModule): string {
-            $params = [];
-            if ($csCompanyId > 0) {
-                $params['company_id'] = $csCompanyId;
-            }
-            if ($csSlug !== '') {
-                $params['company_slug'] = $csSlug;
-            }
-            if ($csModule !== '') {
-                $params['module'] = $csModule;
-            }
-            $params['tab'] = $tab;
-            return $prefix . 'admin/company-settings.php?' . http_build_query($params);
-        };
-        addItem($menuItems, 'cs-hub', 'Settings hub', 'grid', $prefix . 'admin/settings.php?' . $csHubQs);
-        addItem($menuItems, 'cs-profile', 'Profile', 'building', $csBuildUrl('profile'));
-        addItem($menuItems, 'cs-branding', 'Branding', 'palette', $csBuildUrl('branding'));
-        addItem($menuItems, 'cs-finance', 'Tax & Finance', 'cash-coin', $csBuildUrl('finance'));
-        addItem($menuItems, 'cs-modules', 'Modules', 'grid-3x3-gap', $csBuildUrl('modules'));
-        addItem($menuItems, 'cs-numbering', 'Document Numbering', 'hash', $csBuildUrl('numbering'));
-        addItem($menuItems, 'cs-employees', 'Employee Registration', 'person-plus', $csBuildUrl('employees'));
-        addItem($menuItems, 'cs-security', 'Security', 'shield-lock', $csBuildUrl('security'));
-        addItem($menuItems, 'cs-danger', 'Danger Zone', 'exclamation-octagon', $csBuildUrl('danger'), null, 'text-danger');
+        // In-page company settings rail covers navigation — keep ERP sidebar clear.
         break;
 
     case 'settings':
-        if ($is_admin) {
-            addItem($menuItems, 'ai_assistant', 'AI Assistant', 'stars', $prefix . 'admin/ai_assistant.php?module=settings');
-            $csSidebarQs = ['module' => 'settings', 'tab' => 'profile'];
-            $csSidebarCid = (int) (function_exists('currentCompanyId') ? currentCompanyId() : ($_SESSION['active_company_id'] ?? 0));
-            if ($csSidebarCid > 0) {
-                $csSidebarQs['company_id'] = $csSidebarCid;
-            }
-            $csSidebarSlug = trim((string) ($_SESSION['company_slug'] ?? ''));
-            if ($csSidebarSlug !== '') {
-                $csSidebarQs['company_slug'] = $csSidebarSlug;
-            }
-            addItem($menuItems, 'settings-hub', 'Settings Hub', 'grid', $prefix . 'admin/settings.php?module=settings'
-                . ($csSidebarCid > 0 ? '&company_id=' . $csSidebarCid : '')
-                . ($csSidebarSlug !== '' ? '&company_slug=' . rawurlencode($csSidebarSlug) : ''));
-            addItem($menuItems, 'company-settings', 'Company Settings', 'building', $prefix . 'admin/company-settings.php?' . http_build_query($csSidebarQs));
-            addItem($menuItems, 'sys-wa', 'WhatsApp Config', 'whatsapp', $prefix . 'admin/whatsapp-settings.php?module=settings');
-            addItem($menuItems, 'sys-time', 'Time & Attendance', 'clock', $prefix . 'admin/time-settings.php?module=settings');
-        }
+        // Settings hub cards cover these links — keep sidebar clear.
         break;
 
     case 'account':

@@ -1,7 +1,7 @@
 <?php
 /**
  * Alias: /ultimate/admin/settings.php and /ultimate/admin/settings
- * ? parent admin/settings.php (Settings hub) with Ultimate tenant context.
+ * Redirects via parent admin/settings.php → company-settings.php (main settings page).
  */
 if (empty($_GET['company_slug'])) {
     $_GET['company_slug'] = 'ultimate';

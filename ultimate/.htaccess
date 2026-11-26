@@ -3,6 +3,10 @@ RewriteEngine On
 # Physical /ultimate/ directory: pretty-URL aliases for company "ultimate" only.
 # Parent .htaccess tenant rules do not apply once Apache is inside this real folder.
 
+# Shared lock-screen wallpapers live in parent folders (not duplicated per company).
+RewriteRule ^wallpapers/(.+)$ ../wallpapers/$1 [L,QSA]
+RewriteRule ^assets/att-lock/(.+)$ ../assets/att-lock/$1 [L,QSA]
+
 # Root API scripts (coach, notifications, etc.) — no physical ultimate/api/
 RewriteRule ^api/([^/]+\.php)$ ../api/$1?company_slug=ultimate [L,QSA,NC]
 # Shared root scripts used by chatbot / call (must not 404 under /ultimate/)

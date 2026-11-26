@@ -153,8 +153,8 @@ function timeSettingsUiGetPayload(PDO $pdo): array
 {
     $slug = trim((string) ($_SESSION['company_slug'] ?? ''));
     $backUrl = $slug !== ''
-        ? company_url('admin/settings.php?module=settings', $slug)
-        : (function_exists('app_url') ? app_url('/admin/settings.php?module=settings') : '/admin/settings.php?module=settings');
+        ? company_url('admin/company-settings.php?module=settings', $slug)
+        : (function_exists('app_url') ? app_url('/admin/company-settings.php?module=settings') : '/admin/company-settings.php?module=settings');
 
     $timezone = timeSettingsUiGetSetting($pdo, 'system_timezone', 'Africa/Dar_es_Salaam');
     $format = timeSettingsUiGetSetting($pdo, 'system_time_format', '24');

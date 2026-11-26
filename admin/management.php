@@ -38,7 +38,7 @@ $aiManagementUrl = app_url('admin/management.php') . '?' . http_build_query($aiM
 $mgmtHomeParams = $_GET ?: [];
 unset($mgmtHomeParams['module']);
 $managementHomeUrl = app_url('admin/management.php') . ($mgmtHomeParams ? '?' . http_build_query($mgmtHomeParams) : '');
-$settingsHubUrl = app_url('admin/settings.php' . $qsPreserve);
+$settingsHubUrl = app_url('admin/company-settings.php' . $qsPreserve);
 $modulesUrl = app_url('select-module.php' . $qsPreserve);
 $logoutUrl = app_url('logout.php');
 $arimaDef = function_exists('getSystemFontDefinition') ? getSystemFontDefinition('arima') : null;
@@ -1264,7 +1264,15 @@ if (!$showAiSettings) {
         }
     </style>
 </head>
-<body<?= $showAiSettings ? ' class="ai-settings-view"' : '' ?>>
+<body<?= $showAiSettings ? ' class="ai-settings-view"' : '' ?><?= (isset($_GET['embed']) && (string) $_GET['embed'] === '1') ? ' data-embed="1"' : '' ?>>
+<?php if (isset($_GET['embed']) && (string) $_GET['embed'] === '1'): ?>
+<style>
+body[data-embed="1"] .platform-sidebar { display: none !important; }
+body[data-embed="1"] .platform-shell { display: block !important; }
+body[data-embed="1"] .platform-main { max-width: none !important; margin: 0 !important; padding: 1rem !important; }
+body[data-embed="1"] .editor-back { display: none !important; }
+</style>
+<?php endif; ?>
 
 <div class="platform-shell">
     <aside class="platform-sidebar">
@@ -1274,7 +1282,7 @@ if (!$showAiSettings) {
         </div>
         <nav class="platform-nav" aria-label="Platform navigation">
             <a href="<?= htmlspecialchars($settingsHubUrl) ?>">
-                <i class="bi bi-sliders"></i> Settings hub
+                <i class="bi bi-sliders"></i> Settings
             </a>
             <a href="<?= htmlspecialchars($aiManagementUrl) ?>" class="<?= $showAiSettings ? 'active-ai' : '' ?>">
                 <i class="bi bi-robot"></i> AI Integration
@@ -1317,7 +1325,7 @@ if (!$showAiSettings) {
                 <p class="editor-lead">System-wide OpenAI configuration for all companies. Keys are encrypted and never shown in full.</p>
             </div>
             <a href="<?= htmlspecialchars($settingsHubUrl) ?>" class="editor-back">
-                <i class="fas fa-arrow-left"></i> Settings hub
+                <i class="fas fa-arrow-left"></i> Settings
             </a>
         </div>
 

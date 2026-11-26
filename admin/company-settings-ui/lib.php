@@ -97,6 +97,7 @@ function companySettingsRenderReactShell(array $cfg): void
     $page_title = 'Company Settings';
     $employeeHeaderTitle = 'Company Settings';
     $hideHeaderCompanyBranding = true;
+    $hideErpBreadcrumbs = true;
     $employeeHeaderExtraClass = 'employee-header--exp-desk';
     $cfgJson = json_encode($cfg, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
     if ($cfgJson === false) {

@@ -126,6 +126,7 @@ function attendance_desk_payload(Attendance $attendance, PDO $pdo, int $userId, 
         'todayRecord' => $attendance->getTodayRecord($userId) ?: null,
         'todayPresent' => $attendance->getTodayPresentList(),
         'teamBoard' => $attendance->getTeamHoursBoard($userId),
+        'punctualityBoard' => $attendance->getPunctualityBoard($userId),
         'history' => $attendance->getHistory($userId, $month) ?: [],
         'historyMonth' => $month,
         'historyMonthLabel' => $attendance->formatHistoryMonthLabel($month),
@@ -162,10 +163,12 @@ if (str_starts_with($action, 'webauthn_')) {
 
         if ($action === 'webauthn_register_options') {
             $names = attendance_user_names($pdo, $userId);
-            $result = $webauthn->createRegisterOptions($userId, $names['username'], $names['display']);
+            $mode = isset($payload['mode']) ? (string) $payload['mode'] : 'platform';
+            $result = $webauthn->createRegisterOptions($userId, $names['username'], $names['display'], $mode);
             echo json_encode([
                 'success' => !empty($result['success']),
                 'message' => (string) ($result['message'] ?? ''),
+                'mode' => (string) ($result['mode'] ?? $mode),
                 'publicKey' => attendance_webauthn_public_key_payload($result['publicKey'] ?? null),
                 'data' => ['biometric' => $webauthn->statusForUser($userId)],
             ]);
@@ -175,7 +178,14 @@ if (str_starts_with($action, 'webauthn_')) {
         if ($action === 'webauthn_register') {
             $client = is_array($payload['credential'] ?? null) ? $payload['credential'] : [];
             $deviceLabel = isset($payload['device_label']) ? (string) $payload['device_label'] : null;
-            $result = $webauthn->finishRegister($userId, $client, $deviceLabel);
+            $mode = isset($payload['mode']) ? strtolower((string) $payload['mode']) : 'platform';
+            if ($mode !== 'passkey') {
+                $mode = 'platform';
+            }
+            if ($deviceLabel === null || trim($deviceLabel) === '') {
+                $deviceLabel = $mode === 'passkey' ? 'Google passkey' : null;
+            }
+            $result = $webauthn->finishRegister($userId, $client, $deviceLabel, $mode);
             echo json_encode([
                 'success' => !empty($result['success']),
                 'message' => (string) ($result['message'] ?? ''),
@@ -201,6 +211,19 @@ if (str_starts_with($action, 'webauthn_')) {
         if ($action === 'webauthn_remove') {
             $credId = (int) ($payload['credential_row_id'] ?? $payload['id'] ?? 0);
             $result = $webauthn->removeCredential($userId, $credId);
+            echo json_encode([
+                'success' => !empty($result['success']),
+                'message' => (string) ($result['message'] ?? ''),
+                'data' => array_merge(
+                    attendance_desk_payload($attendance, $pdo, $userId, $historyMonth, $webauthn),
+                    is_array($result['data'] ?? null) ? $result['data'] : ['biometric' => $webauthn->statusForUser($userId)]
+                ),
+            ]);
+            exit;
+        }
+
+        if ($action === 'webauthn_reset') {
+            $result = $webauthn->resetCredentials($userId);
             echo json_encode([
                 'success' => !empty($result['success']),
                 'message' => (string) ($result['message'] ?? ''),

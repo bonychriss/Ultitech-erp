@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { Tabs } from '@animate-ui/react/primitives/radix-ui'
 import {
   Accessibility,
   AlertTriangle,
@@ -770,41 +771,45 @@ export default function CompanySettingsPage() {
   }
 
   const renderNav = (mobileList = false) => (
-    <nav className={`cs-rail-nav${mobileList ? ' cs-rail-nav--mobile' : ''}`} aria-label="Company settings">
+    <Tabs.List
+      className={`cs-rail-nav${mobileList ? ' cs-rail-nav--mobile' : ''}`}
+      aria-label="Company settings"
+    >
       {filteredGroups.map((group) => (
-        <div key={group.id} className="cs-rail-group">
+        <div key={group.id} className="cs-rail-group" role="presentation">
           <p className={`cs-rail-section-label${group.id === 'danger' ? ' is-danger' : ''}`}>{group.title}</p>
-          <ul>
-            {group.items.map((item) => {
-              const Icon = ITEM_ICONS[item.icon] || Building2
-              const isActive = activeTab === item.id && view === 'detail'
-              const className = `cs-nav-link${isActive ? ' is-active' : ''}${item.danger ? ' is-danger' : ''}`
-              return (
-                <li key={item.id}>
-                  <button type="button" className={className} onClick={() => switchTab(item.id)}>
-                    <span className="cs-nav-icon" aria-hidden="true">
-                      <Icon strokeWidth={1.6} />
-                    </span>
-                    <span className="cs-nav-text">
-                      <strong>
-                        {item.title}
-                        {item.badge ? <span className="cs-nav-badge">{item.badge}</span> : null}
-                      </strong>
-                      {mobileList && item.subtitle ? <em>{item.subtitle}</em> : null}
-                    </span>
-                  </button>
-                </li>
-              )
-            })}
-          </ul>
+          {group.items.map((item) => {
+            const Icon = ITEM_ICONS[item.icon] || Building2
+            const className = `cs-nav-link${item.danger ? ' is-danger' : ''}`
+            return (
+              <Tabs.Trigger key={item.id} value={item.id} className={className}>
+                <span className="cs-nav-icon" aria-hidden="true">
+                  <Icon strokeWidth={1.6} />
+                </span>
+                <span className="cs-nav-text">
+                  <strong>
+                    {item.title}
+                    {item.badge ? <span className="cs-nav-badge">{item.badge}</span> : null}
+                  </strong>
+                  {mobileList && item.subtitle ? <em>{item.subtitle}</em> : null}
+                </span>
+              </Tabs.Trigger>
+            )
+          })}
         </div>
       ))}
       {filteredGroups.length === 0 ? <p className="cs-help cs-nav-empty">No matching settings.</p> : null}
-    </nav>
+    </Tabs.List>
   )
 
   return (
-    <div className="cs-shell" data-cs-view={view}>
+    <Tabs.Root
+      className="cs-shell"
+      data-cs-view={view}
+      value={activeTab}
+      orientation="vertical"
+      onValueChange={(next) => switchTab(next)}
+    >
       <aside className="cs-rail">
         <a className="cs-rail-back" href={hubUrl}>
           <ChevronLeft strokeWidth={2} aria-hidden="true" />
@@ -1979,6 +1984,6 @@ export default function CompanySettingsPage() {
           </Card>
         ) : null}
       </div>
-    </div>
+    </Tabs.Root>
   )
 }

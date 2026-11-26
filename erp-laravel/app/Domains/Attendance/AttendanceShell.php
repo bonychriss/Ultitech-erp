@@ -178,6 +178,84 @@ body.page-attendance-desk .layout-main-wrapper,
 body.page-attendance-desk .layout-main-wrapper > .flex-grow-1 {
     background: #f8fafc !important;
 }
+/* Light sidebar nav (company-settings style) */
+body.page-attendance-desk #native-sidebar,
+body.page-attendance-desk .sidebar-container {
+    background: #ffffff !important;
+    border-right: 1px solid #e5e7eb !important;
+    --sidebar-bg: #ffffff;
+    --sidebar-text: #9ca3af;
+    --sidebar-icon-color: #9ca3af;
+    --sidebar-hover-bg: transparent;
+    --sidebar-hover-text: #6b7280;
+    --sidebar-hover-icon: #6b7280;
+    --sidebar-active-bg: transparent;
+    --sidebar-active-text: #111827;
+    --sidebar-border: #e5e7eb;
+}
+body.page-attendance-desk #native-sidebar .nav-pills {
+    position: relative;
+    margin-left: 0.65rem;
+    padding-left: 0.85rem;
+    border-left: 1px solid #e5e7eb;
+}
+body.page-attendance-desk #native-sidebar .nav-pills .nav-link {
+    position: relative;
+    color: #9ca3af !important;
+    font-weight: 300 !important;
+    background: transparent !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    transform: none !important;
+    padding: 0.45rem 0.55rem 0.45rem 0.75rem !important;
+    margin: 0.05rem 0 !important;
+    overflow: visible !important;
+}
+body.page-attendance-desk #native-sidebar .nav-pills .nav-link::before {
+    content: '';
+    position: absolute;
+    left: -1px;
+    top: 50%;
+    width: 3px;
+    height: 0.95rem;
+    border-radius: 999px;
+    background: transparent;
+    transform: translate(-50%, -50%);
+}
+body.page-attendance-desk #native-sidebar .nav-pills .nav-link i {
+    color: #9ca3af !important;
+    transform: none !important;
+    filter: none !important;
+}
+body.page-attendance-desk #native-sidebar .nav-pills .nav-link:hover {
+    color: #6b7280 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    padding-left: 0.75rem !important;
+}
+body.page-attendance-desk #native-sidebar .nav-pills .nav-link:hover i {
+    color: #6b7280 !important;
+    transform: none !important;
+    filter: none !important;
+}
+body.page-attendance-desk #native-sidebar .nav-pills .nav-link.active {
+    color: #111827 !important;
+    font-weight: 500 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    transform: none !important;
+}
+body.page-attendance-desk #native-sidebar .nav-pills .nav-link.active::before {
+    background: #111827;
+}
+body.page-attendance-desk #native-sidebar .nav-pills .nav-link.active i {
+    color: #111827 !important;
+}
+body.page-attendance-desk #native-sidebar .sidebar-text,
+body.page-attendance-desk #native-sidebar .nav-link span {
+    font-weight: inherit !important;
+}
 body.page-attendance-desk .employee-header.employee-header--products-desk {
     background: #f8fafc !important;
     border: none !important;

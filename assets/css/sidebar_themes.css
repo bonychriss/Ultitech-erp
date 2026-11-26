@@ -151,6 +151,7 @@
 /* Enhanced Animations */
 .nav-pills .nav-link {
     color: var(--sidebar-text);
+    font-weight: 300;
     transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
     position: relative;
     overflow: hidden;
@@ -188,7 +189,7 @@
     border-left: none;
     /* Remove border, use full fill */
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-    font-weight: 700;
+    font-weight: 400;
     transform: scale(1.02);
     /* Pop out slightly */
 }

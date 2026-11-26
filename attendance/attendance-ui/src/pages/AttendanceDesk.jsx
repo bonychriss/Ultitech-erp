@@ -59,7 +59,7 @@ function formatDisplayTime(raw) {
 const DEFAULT_WEATHER_COORDS = { latitude: -6.7924, longitude: 39.2083 }; // Dar es Salaam
 
 const DEFAULT_AWAY_REASONS = [
-  { value: 'break', label: 'Break', status: 'On break', icon: 'fas fa-mug-hot' },
+  { value: 'break', label: 'Break', status: 'On break', icon: 'fas fa-pause-circle' },
   { value: 'customer_visit', label: 'Customer visit', status: 'On visit', icon: 'fas fa-handshake' },
   { value: 'delivery', label: 'Delivery', status: 'On delivery', icon: 'fas fa-truck' },
 ];
@@ -75,7 +75,7 @@ function awayReasonIcon(reason) {
   const key = String(reason || '').toLowerCase();
   if (key === 'customer_visit') return 'fas fa-handshake';
   if (key === 'delivery') return 'fas fa-truck';
-  return 'fas fa-mug-hot';
+  return 'fas fa-pause-circle';
 }
 
 function weatherFromCode(code) {

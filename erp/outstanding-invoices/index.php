@@ -763,10 +763,10 @@ $entityLabel = $activeTab === 'receivables' ? 'Customer' : 'Supplier';
         .oi-pages { display: flex; gap: 0.3rem; flex-wrap: wrap; }
         .oi-pages a, .oi-pages span { min-width: 2rem; height: 2rem; padding: 0 0.45rem; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; color: #334155; border: 1px solid #e2e8f0; background: #fff; font-weight: 700; }
         .oi-pages span { background: #1e293b; color: #fff; border-color: #1e293b; }
-
+        
         .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 0.75rem; font-weight: 500; }
         .badge-att { background: #e0f2fe; color: #0369a1; text-decoration: none; }
-
+        
         html[data-theme="dark"] .oi-table-wrap,
         html[data-theme="dark"] .oi-search input,
         html[data-theme="dark"] .oi-search button,
@@ -969,7 +969,7 @@ $entityLabel = $activeTab === 'receivables' ? 'Customer' : 'Supplier';
                     <span class="oi-new-type-copy"><strong>Payables</strong><small>Supplier bill</small></span>
                 </a>
             </section>
-        </div>
+            </div>
     ';
     include '../../includes/header_employee.php';
     ?>
@@ -1053,7 +1053,7 @@ $entityLabel = $activeTab === 'receivables' ? 'Customer' : 'Supplier';
                 <div class="oi-form-foot">
                     <button type="reset" class="oi-btn-ghost">Clear</button>
                     <button type="submit" class="oi-btn-primary">+ Add invoice</button>
-                </div>
+        </div>
             </form>
         </section>
         <?php endif; ?>
@@ -1220,7 +1220,7 @@ $entityLabel = $activeTab === 'receivables' ? 'Customer' : 'Supplier';
                                     <div class="oi-row-actions-menu">
                                     <?php if ($activeTab === 'payables') oi_due_date_form($inv); ?>
                                     <button type="button" class="oi-row-action-item oi-row-action-item--delete" onclick="confirmDelete(<?= $inv['id'] ?>)">Delete</button>
-                                    </div>
+                                </div>
                                 </details>
                             </td>
                             <?php endif; ?>
@@ -1228,12 +1228,12 @@ $entityLabel = $activeTab === 'receivables' ? 'Customer' : 'Supplier';
                         <?php endforeach; ?>
                 </tbody>
             </table>
-            </div>
+                </div>
             <?php endif; ?>
 
         </section>
-        <?php endif; ?>
-    </div>
+            <?php endif; ?>
+        </div>
     <div id="oiInvoiceDetailsModal" class="oi-details-overlay" role="presentation" style="display:none;">
         <section class="oi-details-modal" role="dialog" aria-modal="true" aria-labelledby="oiInvoiceDetailsTitle" aria-describedby="oiInvoiceDetailsEntity">
             <header class="oi-details-head">

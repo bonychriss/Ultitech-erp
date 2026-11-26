@@ -306,6 +306,7 @@ html[data-theme="dark"] .ed-card.ed-card--list {
 }
 .ed-sub--amber { color: var(--ed-amber); }
 .ed-sub--green { color: var(--ed-green); }
+.ed-sub--red { color: #b91c1c; }
 .ed-sub--blue { color: var(--ed-blue); }
 
 .ed-kpi-badge {
@@ -445,6 +446,10 @@ html[data-theme="dark"] .ed-card.ed-card--list {
 .ed-vbadge--signed { background: #e0e7ff; color: #3730a3; }
 .ed-vbadge--rejected { background: #fee2e2; color: #b91c1c; }
 .ed-vbadge--draft { background: #f1f5f9; color: #64748b; }
+.ed-vbadge--due-overdue { background: #fee2e2; color: #b91c1c; }
+.ed-vbadge--due-today { background: #fff4de; color: #b45309; }
+.ed-vbadge--due-upcoming { background: #dcfce7; color: #047857; }
+.ed-vbadge--due-missing { background: #f1f5f9; color: #64748b; }
 
 /* ---- Full desk table — fit card width, no clipping, clear Amount↔Date gap ---- */
 .ed-table--full {

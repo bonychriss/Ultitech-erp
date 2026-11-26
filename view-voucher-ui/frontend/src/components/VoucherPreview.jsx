@@ -60,7 +60,10 @@ export default function VoucherPreview({ data }) {
               <td style={cellStyle()}>Voucher NO. :</td>
               <td style={cellStyle()}>{voucher.voucher_no}</td>
               <td style={cellStyle()}>Date:</td>
-              <td style={cellStyle()}>{fmtDate(voucher.date_created)}</td>
+              <td style={cellStyle()}>
+                {fmtDate(voucher.date_created)}
+                {voucher.due_date ? ` to ${fmtDate(voucher.due_date)}` : ''}
+              </td>
             </tr>
             <tr>
               <td style={cellStyle()}>Payee Name:</td>

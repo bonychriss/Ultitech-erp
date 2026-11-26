@@ -883,11 +883,11 @@ a.cb-text-link:hover {
 }
 
 .cb-field label {
-  display: block;
+    display: block;
   font-size: 0.8rem;
   font-weight: 600;
   color: var(--cb-muted);
-  margin-bottom: 0.35rem;
+    margin-bottom: 0.35rem;
 }
 
 .cb-modal-actions {

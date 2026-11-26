@@ -71,6 +71,9 @@ if (!isset($employeeHeaderSubtitle)) {
 if (!isset($hideHeaderThemeAndNotifications)) {
     $hideHeaderThemeAndNotifications = true;
 }
+if (!isset($employeeHeaderExtraClass)) {
+    $employeeHeaderExtraClass = '';
+}
 $__adminHeaderShowHeading = ($employeeHeaderTitle !== null && $employeeHeaderTitle !== '');
 $__adminHeaderCenter = ($employeeHeaderCenterHtml !== null && $employeeHeaderCenterHtml !== '');
 $__adminHeaderHasTray = (
@@ -87,7 +90,7 @@ $__adminHeaderIsEmpty = !$__adminHeaderShowHeading && !$__adminHeaderCenter && !
     }
     ?>
     <div class="flex-grow-1 d-flex flex-column" style="min-width: 0;">
-        <header class="header admin-header<?= $__adminHeaderShowHeading ? ' admin-header--page-context' : '' ?><?= $__adminHeaderCenter ? ' admin-header--has-center-slot' : '' ?><?= $__adminHeaderIsEmpty ? ' admin-header--empty' : '' ?>" <?= $__adminHeaderShowHeading ? 'style="background: transparent; border: none; box-shadow: none; padding-bottom: 0;"' : '' ?>>
+        <header class="header admin-header<?= $__adminHeaderShowHeading ? ' admin-header--page-context' : '' ?><?= $__adminHeaderCenter ? ' admin-header--has-center-slot' : '' ?><?= $__adminHeaderIsEmpty ? ' admin-header--empty' : '' ?><?= $employeeHeaderExtraClass !== '' ? ' ' . htmlspecialchars((string) $employeeHeaderExtraClass, ENT_QUOTES, 'UTF-8') : '' ?>" <?= $__adminHeaderShowHeading ? 'style="background: transparent; border: none; box-shadow: none; padding-bottom: 0;"' : '' ?>>
     <div class="header-content">
         <div class="header-left" style="display: flex; align-items: center; gap: 16px;">
             <!-- Mobile Toggle Button -->

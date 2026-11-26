@@ -12,8 +12,8 @@ $jiHasCompany = function_exists('columnExists') && columnExists('erp_journal_ite
 $acctHasCompany = function_exists('columnExists') && columnExists('erp_accounts', 'company_id', $pdo);
 
 if ($jeHasCompany && $company_id > 0) {
-    $journalStmt = $pdo->prepare('SELECT * FROM erp_journal_entries WHERE id = ? AND company_id = ?');
-    $journalStmt->execute([$id, $company_id]);
+$journalStmt = $pdo->prepare('SELECT * FROM erp_journal_entries WHERE id = ? AND company_id = ?');
+$journalStmt->execute([$id, $company_id]);
 } else {
     $journalStmt = $pdo->prepare('SELECT * FROM erp_journal_entries WHERE id = ?');
     $journalStmt->execute([$id]);
@@ -866,20 +866,20 @@ html[data-theme="dark"] .jed-print-sheet p.sub,html[data-theme="dark"] .jed-prin
               <div class="jed-lines-count"><?= count($items) ?> line<?= count($items) === 1 ? '' : 's' ?></div>
             </div>
             <div class="jed-table-wrap">
-              <table class="jed-table">
-                <thead>
-                  <tr>
+            <table class="jed-table">
+              <thead>
+                <tr>
                     <th class="c-no">#</th>
                     <th>Account &amp; Description</th>
                     <th class="num">Debit (TZS)</th>
                     <th class="num">Credit (TZS)</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <?php if (empty($items)): ?>
+                </tr>
+              </thead>
+              <tbody>
+                <?php if (empty($items)): ?>
                     <tr><td colspan="4" class="jed-empty">No journal lines found.</td></tr>
-                  <?php else: ?>
-                    <?php foreach ($items as $idx => $item): ?>
+                <?php else: ?>
+                  <?php foreach ($items as $idx => $item): ?>
                       <?php
                         $lnDebit = (float) ($item['debit'] ?? 0);
                         $lnCredit = (float) ($item['credit'] ?? 0);
@@ -914,7 +914,7 @@ html[data-theme="dark"] .jed-print-sheet p.sub,html[data-theme="dark"] .jed-prin
                     </tr>
                   </tfoot>
                 <?php endif; ?>
-              </table>
+            </table>
             </div>
             <div class="jed-bal jed-lines-bal<?= $jeIsBalanced ? '' : ' is-off' ?>">
               <div class="jed-bal-hd"><i class="fas <?= $jeIsBalanced ? 'fa-check' : 'fa-exclamation' ?>"></i> <?= $jeIsBalanced ? 'Debits and credits are balanced' : 'Debits and credits do not balance' ?></div>
@@ -929,7 +929,7 @@ html[data-theme="dark"] .jed-print-sheet p.sub,html[data-theme="dark"] .jed-prin
           <div class="jed-pan" data-jed-panel="attachments" role="tabpanel" hidden>
             <?php if (!empty($attachments)): ?>
               <div class="jed-att-list">
-                <?php foreach ($attachments as $att): ?>
+              <?php foreach ($attachments as $att): ?>
                   <?php
                     $attExt = strtolower(pathinfo((string) $att['name'], PATHINFO_EXTENSION));
                     if ($att['kind'] === 'invoice') {
@@ -946,8 +946,8 @@ html[data-theme="dark"] .jed-print-sheet p.sub,html[data-theme="dark"] .jed-prin
                   ?>
                   <a class="jed-att-row" href="<?= htmlspecialchars((string) $att['href'], ENT_QUOTES, 'UTF-8') ?>" target="_blank" rel="noopener" style="color:var(--jed-ink)!important">
                     <div class="jed-att-ico"><i class="far <?= $attIcon ?>"></i></div>
-                    <div class="jed-att-main">
-                      <div class="jed-att-name"><?= htmlspecialchars((string) $att['name']) ?></div>
+                  <div class="jed-att-main">
+                    <div class="jed-att-name"><?= htmlspecialchars((string) $att['name']) ?></div>
                       <?php if ((string) $att['meta'] !== ''): ?><div class="jed-att-meta"><?= htmlspecialchars((string) $att['meta']) ?></div><?php endif; ?>
                     </div>
                     <i class="fas fa-arrow-up-right-from-square jed-att-open" aria-hidden="true"></i>
@@ -958,9 +958,9 @@ html[data-theme="dark"] .jed-print-sheet p.sub,html[data-theme="dark"] .jed-prin
               <div class="jed-att-empty">
                 <i class="far fa-folder-open"></i>
                 <div>No attachments for this journal entry.</div>
-              </div>
+                  </div>
             <?php endif; ?>
-          </div>
+                  </div>
 
           <div class="jed-pan" data-jed-panel="workflow" role="tabpanel" hidden>
             <div class="jed-flow">
@@ -972,11 +972,11 @@ html[data-theme="dark"] .jed-print-sheet p.sub,html[data-theme="dark"] .jed-prin
                   <div class="jed-flow-by"><?= $step['done'] ? htmlspecialchars($jeCreatedBy) : 'Pending' ?></div>
                 </div>
                 <div class="jed-flow-time"><?= $step['done'] ? htmlspecialchars($jeCreatedOnLabel) : '—' ?></div>
-              </div>
+                </div>
               <?php endforeach; ?>
             </div>
-          </div>
-        </section>
+            </div>
+          </section>
       </div>
 
       <aside class="jed-col">
@@ -1010,8 +1010,8 @@ html[data-theme="dark"] .jed-print-sheet p.sub,html[data-theme="dark"] .jed-prin
                 <div class="jed-rel-item">
                   <a href="<?= htmlspecialchars($primary['href'], ENT_QUOTES, 'UTF-8') ?>" style="color:var(--jed-link)!important"><?= htmlspecialchars($primary['label'], ENT_QUOTES, 'UTF-8') ?></a>
                   <?php if (!empty($primary['sub'])): ?><div class="jed-rel-sub"><?= htmlspecialchars($primary['sub'], ENT_QUOTES, 'UTF-8') ?></div><?php endif; ?>
-                </div>
-              </div>
+            </div>
+            </div>
               <?php if (!empty($extraDocs)): ?>
                 <div class="jed-rel-more" id="jedRelatedMore" hidden>
                   <div class="jed-rel-list">
@@ -1019,10 +1019,10 @@ html[data-theme="dark"] .jed-print-sheet p.sub,html[data-theme="dark"] .jed-prin
                       <div class="jed-rel-item">
                         <a href="<?= htmlspecialchars($doc['href'], ENT_QUOTES, 'UTF-8') ?>" style="color:var(--jed-link)!important"><?= htmlspecialchars($doc['label'], ENT_QUOTES, 'UTF-8') ?></a>
                         <?php if (!empty($doc['sub'])): ?><div class="jed-rel-sub"><?= htmlspecialchars($doc['sub'], ENT_QUOTES, 'UTF-8') ?></div><?php endif; ?>
-                      </div>
+            </div>
                     <?php endforeach; ?>
-                  </div>
-                </div>
+            </div>
+          </div>
               <?php endif; ?>
               <button
                 type="button"

@@ -471,7 +471,7 @@ html[data-theme="dark"] .je-actions-menu a:hover,html[data-theme="dark"] .je-act
   html[data-theme="dark"] .je-table td.col-debit,html[data-theme="dark"] .je-table td.col-credit{border-color:#1f2d45}
   html[data-theme="dark"] .je-table td.col-desc,html[data-theme="dark"] .je-table td.col-date{color:#94a3b8}
   html[data-theme="dark"] .je-table td.col-debit::before,html[data-theme="dark"] .je-table td.col-credit::before{color:#8b9ab3}
-}
+    }
 </style>
 
 <main class="main-content" tabindex="0">
@@ -481,7 +481,7 @@ html[data-theme="dark"] .je-actions-menu a:hover,html[data-theme="dark"] .je-act
       <div class="je-hero-actions">
         <?= $jeFilterBtnHtml ?>
         <a class="je-btn je-btn-primary" style="color:#fff!important" href="<?= htmlspecialchars($createUrl, ENT_QUOTES, 'UTF-8') ?>"><i class="fas fa-plus" style="color:#fff!important"></i> Create Entry</a>
-      </div>
+        </div>
     </div>
 
     <div class="je-kpi-grid" aria-label="Journal summary">
@@ -492,7 +492,7 @@ html[data-theme="dark"] .je-actions-menu a:hover,html[data-theme="dark"] .je-act
           <div class="je-kpi-value"><?= number_format($totalEntries) ?></div>
           <div class="je-kpi-foot"><?= number_format($postedEntries) ?> posted · <?= number_format($draftEntries) ?> draft</div>
         </div>
-      </div>
+        </div>
       <?php
         $debitLabel = je_format_money($totalDebitSum);
         $creditLabel = je_format_money($totalCreditSum);
@@ -504,7 +504,7 @@ html[data-theme="dark"] .je-actions-menu a:hover,html[data-theme="dark"] .je-act
           <div class="je-kpi-value je-kpi-value--money<?= je_money_size_class($debitLabel) ?>"><?= htmlspecialchars($debitLabel, ENT_QUOTES, 'UTF-8') ?></div>
           <div class="je-kpi-foot">Sum of line debits</div>
         </div>
-      </div>
+        </div>
       <div class="je-kpi-card" title="<?= htmlspecialchars($creditLabel, ENT_QUOTES, 'UTF-8') ?>">
         <div class="je-kpi-icon je-kpi-icon--teal" aria-hidden="true"><i class="fas fa-arrow-up"></i></div>
         <div class="je-kpi-body">
@@ -512,7 +512,7 @@ html[data-theme="dark"] .je-actions-menu a:hover,html[data-theme="dark"] .je-act
           <div class="je-kpi-value je-kpi-value--money<?= je_money_size_class($creditLabel) ?>"><?= htmlspecialchars($creditLabel, ENT_QUOTES, 'UTF-8') ?></div>
           <div class="je-kpi-foot">Sum of line credits</div>
         </div>
-      </div>
+    </div>
       <div class="je-kpi-card" title="<?= number_format($unbalancedEntries) ?> unbalanced">
         <div class="je-kpi-icon je-kpi-icon--<?= $unbalancedEntries > 0 ? 'red' : 'orange' ?>" aria-hidden="true"><i class="fas fa-triangle-exclamation"></i></div>
         <div class="je-kpi-body">
@@ -520,21 +520,21 @@ html[data-theme="dark"] .je-actions-menu a:hover,html[data-theme="dark"] .je-act
           <div class="je-kpi-value<?= $unbalancedEntries > 0 ? ' je-kpi-value--warn' : '' ?>"><?= number_format($unbalancedEntries) ?></div>
           <div class="je-kpi-foot"><?= $unbalancedEntries > 0 ? 'Requires attention' : 'All balanced' ?></div>
         </div>
-      </div>
+                </div>
       <div class="je-kpi-card" title="<?= number_format($thisMonthEntries) ?> this month">
         <div class="je-kpi-icon je-kpi-icon--purple" aria-hidden="true"><i class="far fa-calendar"></i></div>
         <div class="je-kpi-body">
           <div class="je-kpi-label">This Month</div>
           <div class="je-kpi-value"><?= number_format($thisMonthEntries) ?></div>
           <div class="je-kpi-foot"><?= htmlspecialchars(date('F Y'), ENT_QUOTES, 'UTF-8') ?></div>
+                </div>
         </div>
-      </div>
     </div>
 
     <section class="je-results">
     <div class="je-results-head">
       <div class="je-results-count" id="jeShowingLabel"><?= number_format(min(100, $totalEntries)) ?> results</div>
-    </div>
+        </div>
     <div class="je-active-filters" id="jeActiveFilters" aria-label="Active filters" hidden></div>
 
     <div class="je-table-wrap" role="region" aria-label="Journal entries" tabindex="0">
@@ -549,8 +549,8 @@ html[data-theme="dark"] .je-actions-menu a:hover,html[data-theme="dark"] .je-act
           <col class="col-status">
           <col class="col-actions">
         </colgroup>
-        <thead>
-          <tr>
+                <thead>
+                    <tr>
             <th class="col-ref">JE Number</th>
             <th class="col-date">Date</th>
             <th class="col-desc">Description</th>
@@ -559,14 +559,14 @@ html[data-theme="dark"] .je-actions-menu a:hover,html[data-theme="dark"] .je-act
             <th class="col-credit">Credit</th>
             <th class="col-status">Status</th>
             <th class="col-actions">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          <?php if (empty($journals)): ?>
+                    </tr>
+                </thead>
+                <tbody>
+                <?php if (empty($journals)): ?>
             <tr><td colspan="8"><div class="je-empty">No journal entries yet.</div></td></tr>
-          <?php else: ?>
+                <?php else: ?>
             <?php foreach ($journals as $je): ?>
-              <?php
+                        <?php
               $viewUrl = 'view-journal.php?id=' . (int) ($je['id'] ?? 0) . '&module=' . rawurlencode($jeModule);
               $status = (string) ($je['_status'] ?? 'posted');
               $statusClass = 'je-status-posted';
@@ -646,9 +646,9 @@ html[data-theme="dark"] .je-actions-menu a:hover,html[data-theme="dark"] .je-act
                       <a role="menuitem" style="color:var(--je-menu-fg,#0f172a)!important" href="<?= htmlspecialchars($viewUrl, ENT_QUOTES, 'UTF-8') ?>"><i class="fas fa-eye"></i> View</a>
                       <?php if ($canEdit): ?>
                         <a role="menuitem" style="color:var(--je-menu-fg,#0f172a)!important" href="<?= htmlspecialchars($editUrl, ENT_QUOTES, 'UTF-8') ?>"><i class="fas fa-pen"></i> Edit</a>
-                      <?php else: ?>
+                                <?php else: ?>
                         <button type="button" role="menuitem" disabled style="opacity:.5;cursor:not-allowed;" title="Locked entries cannot be edited"><i class="fas fa-pen"></i> Edit</button>
-                      <?php endif; ?>
+                                <?php endif; ?>
                       <a role="menuitem" style="color:var(--je-menu-fg,#0f172a)!important" href="<?= htmlspecialchars($csvUrl, ENT_QUOTES, 'UTF-8') ?>"><i class="fas fa-file-csv"></i> Download CSV</a>
                       <a role="menuitem" style="color:var(--je-menu-fg,#0f172a)!important" href="<?= htmlspecialchars($pdfUrl, ENT_QUOTES, 'UTF-8') ?>"><i class="fas fa-file-pdf"></i> Download PDF</a>
                       <?php if ($canReverse): ?>
@@ -663,23 +663,23 @@ html[data-theme="dark"] .je-actions-menu a:hover,html[data-theme="dark"] .je-act
                       <?php endif; ?>
                     </div>
                   </div>
-                </td>
-              </tr>
-            <?php endforeach; ?>
-          <?php endif; ?>
-        </tbody>
-      </table>
-    </div>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+                </tbody>
+            </table>
+        </div>
     <div class="je-footer">
       <div id="jeShowingFooter">Showing <?= number_format(min(100, $totalEntries)) ?> of <?= number_format($totalEntries) ?> entries</div>
       <div class="je-pager">
-        <span><i class="fas fa-angle-left"></i></span>
-        <span class="is-active">1</span>
-        <span>2</span>
-        <span>3</span>
-        <span><i class="fas fa-angle-right"></i></span>
-      </div>
-    </div>
+                <span><i class="fas fa-angle-left"></i></span>
+                <span class="is-active">1</span>
+                <span>2</span>
+                <span>3</span>
+                <span><i class="fas fa-angle-right"></i></span>
+            </div>
+        </div>
     </section>
   </div>
 
@@ -746,7 +746,7 @@ html[data-theme="dark"] .je-actions-menu a:hover,html[data-theme="dark"] .je-act
         <button type="button" class="je-fbtn je-fbtn-primary" id="jeFiltersApply" style="border-radius:10px!important">Apply filters</button>
       </div>
     </div>
-  </div>
+</div>
 </main>
 
 <script>
@@ -1048,13 +1048,13 @@ html[data-theme="dark"] .je-actions-menu a:hover,html[data-theme="dark"] .je-act
       closeOpenMenu();
       closeFilters();
     }
-    if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K')) {
+        if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K')) {
       if (!search) return;
-      e.preventDefault();
+                e.preventDefault();
       search.focus();
       search.select();
-    }
-  });
+        }
+    });
 
   window.addEventListener('scroll', function () {
     if (openMenu && openBtn) positionFixedMenu(openBtn, openMenu);

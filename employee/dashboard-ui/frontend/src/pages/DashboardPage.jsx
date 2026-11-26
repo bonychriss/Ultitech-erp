@@ -20,6 +20,7 @@ import {
   Upload,
   X,
   XCircle,
+  AlertTriangle,
 } from 'lucide-react'
 import { aiSearch, fetchDashboard, getConfig, toggleReference } from '../api/dashboard.js'
 import ExportMenu from '../components/ExportMenu.jsx'
@@ -440,7 +441,23 @@ function cap(s) {
   return s ? s.charAt(0).toUpperCase() + s.slice(1) : ''
 }
 
+function creditDueStatus(row) {
+  const raw = String(row.due_date || '').trim()
+  if (!raw) return { label: 'No due date', cls: 'ed-vbadge ed-vbadge--due-missing' }
+  const normalized = raw.includes('T') ? raw : raw.replace(' ', 'T')
+  const due = new Date(normalized)
+  if (Number.isNaN(due.getTime())) return { label: 'No due date', cls: 'ed-vbadge ed-vbadge--due-missing' }
+  const days = Math.round((startOfLocalDay(due) - startOfLocalDay(new Date())) / 86400000)
+  if (days < 0) {
+    const n = Math.abs(days)
+    return { label: `Overdue by ${n} ${n === 1 ? 'day' : 'days'}`, cls: 'ed-vbadge ed-vbadge--due-overdue' }
+  }
+  if (days === 0) return { label: 'Due today', cls: 'ed-vbadge ed-vbadge--due-today' }
+  return { label: `${days} ${days === 1 ? 'day' : 'days'} left`, cls: 'ed-vbadge ed-vbadge--due-upcoming' }
+}
+
 function statusPill(row) {
+  if (CREDIT_MODE) return creditDueStatus(row)
   if (row.is_posted) return { label: 'Posted', cls: 'ed-vbadge ed-vbadge--posted' }
   if (row.is_paid) return { label: 'Paid', cls: 'ed-vbadge ed-vbadge--paid' }
   const key = String(row.display_status_key || row.derived_status || row.status || '').toLowerCase()
@@ -454,7 +471,6 @@ function statusPill(row) {
   if (isPartial) {
     return { label: 'Partially paid', cls: 'ed-vbadge ed-vbadge--partial' }
   }
-  // Credit desk: settlement label — approved & unpaid reads as Unpaid (not Approved).
   if (CREDIT_MODE && key === 'approved') {
     return { label: 'Unpaid', cls: 'ed-vbadge ed-vbadge--unpaid' }
   }
@@ -879,13 +895,16 @@ export default function DashboardPage() {
   const allVouchers = useMemo(() => {
     const rows = data?.recent || []
     if (!CREDIT_MODE) return rows
-    // Credit desk work queue: unpaid Credit lines, or approved unpaid (pay later).
+    // Credit desk: only unpaid, unposted vouchers with credit/payable lines.
     return rows.filter((v) => {
       if (v.is_paid || v.is_posted) return false
       if (v.is_credit) return true
       const pay = String(v.payment_type || '').toLowerCase()
       if (pay.includes('credit') || pay.includes('payable')) return true
-      return String(v.status || '').toLowerCase() === 'approved'
+      return (Array.isArray(v.payment_types) ? v.payment_types : []).some((type) => {
+        const value = String(type || '').toLowerCase()
+        return value.includes('credit') || value.includes('payable')
+      })
     })
   }, [data])
   const paymentTypeOptions = useMemo(() => {
@@ -994,11 +1013,17 @@ export default function DashboardPage() {
 
   const listBase = `${URLS.myVouchers}${URLS.myVouchers.includes('?') ? '&' : '?'}`
   const creditTotal = Number(stats.credit || 0)
-  const creditUnpaid = Number(stats.credit_unpaid || 0)
+  const creditUnpaid = CREDIT_MODE ? filteredVouchers.length : Number(stats.credit_unpaid || 0)
   const creditPaid = Math.max(0, creditTotal - creditUnpaid)
   const creditHref = URLS.creditVouchers
-  const creditAmountTzs = Number(stats.credit_amount_tzs || 0)
-  const creditAmountUsd = Number(stats.credit_amount_usd || 0)
+  const creditOverdue = CREDIT_MODE ? filteredVouchers.filter((v) => creditDueStatus(v).cls === 'ed-vbadge ed-vbadge--due-overdue').length : 0
+  const creditNotOverdue = CREDIT_MODE ? filteredVouchers.filter((v) => creditDueStatus(v).cls !== 'ed-vbadge ed-vbadge--due-overdue').length : 0
+  const creditAmountTzs = CREDIT_MODE
+    ? filteredVouchers.reduce((sum, v) => sum + (String(v.currency || '').toUpperCase() === 'TZS' ? Number(v.total_amount || 0) : 0), 0)
+    : Number(stats.credit_amount_tzs || 0)
+  const creditAmountUsd = CREDIT_MODE
+    ? filteredVouchers.reduce((sum, v) => sum + (String(v.currency || '').toUpperCase() === 'USD' ? Number(v.total_amount || 0) : 0), 0)
+    : Number(stats.credit_amount_usd || 0)
   const creditValueLabel = (() => {
     const parts = []
     if (creditAmountTzs > 0 || creditAmountUsd <= 0) {
@@ -1012,9 +1037,9 @@ export default function DashboardPage() {
   const kpis = IS_ADMIN
     ? (CREDIT_MODE
       ? [
-          { key: 'credit-total', label: 'Credit Vouchers', value: formatInt(creditTotal), sub: 'All credit', subCls: '', color: 'indigo', icon: <FileText size={14} />, href: creditHref },
-          { key: 'credit-unpaid', label: 'Unpaid', value: formatInt(creditUnpaid), sub: 'Action needed', subCls: 'ed-sub--amber', color: 'amber', icon: <Clock size={14} />, href: creditHref },
-          { key: 'credit-paid', label: 'Paid', value: formatInt(creditPaid), sub: creditTotal ? `${pct(creditPaid, creditTotal)}% of credit` : '0% of credit', subCls: 'ed-sub--blue', color: 'blue', icon: <CreditCard size={14} />, href: `${URLS.myVouchers}${PREPEND_MODULE}` },
+          { key: 'credit-total', label: 'Credit Vouchers', value: formatInt(creditUnpaid), sub: 'Awaiting payment', subCls: creditUnpaid > 0 ? 'ed-sub--amber' : '', color: 'indigo', icon: <FileText size={14} />, href: creditHref },
+          { key: 'credit-overdue', label: 'Overdue PVs', value: formatInt(creditOverdue), sub: creditOverdue > 0 ? 'Past due date' : 'No overdue', subCls: creditOverdue > 0 ? 'ed-sub--red' : '', color: 'red', icon: <AlertTriangle size={14} />, href: creditHref },
+          { key: 'credit-not-overdue', label: 'Not Overdue PVs', value: formatInt(creditNotOverdue), sub: 'Due today / upcoming', subCls: creditNotOverdue > 0 ? 'ed-sub--green' : '', color: 'green', icon: <Clock size={14} />, href: creditHref },
           { key: 'credit-value', label: 'Credit Value', value: creditValueLabel, sub: 'All credit', subCls: '', color: 'green', icon: <DollarSign size={14} />, href: creditHref },
         ]
       : [
@@ -1028,8 +1053,8 @@ export default function DashboardPage() {
         {
           key: 'credit',
           label: 'Credit Vouchers',
-          value: formatInt(creditTotal),
-          sub: creditUnpaid > 0 ? `${formatInt(creditUnpaid)} unpaid` : 'All credit',
+          value: formatInt(creditUnpaid),
+          sub: creditUnpaid > 0 ? 'Awaiting payment' : 'No unpaid credit',
           subCls: creditUnpaid > 0 ? 'ed-sub--amber' : '',
           color: 'indigo',
           icon: <CreditCard size={14} />,
@@ -1336,13 +1361,13 @@ export default function DashboardPage() {
         {allVouchers.length === 0 ? (
           <div className="ed-table-wrap ed-table-wrap--empty">
             <div className="ed-empty">
-              {CREDIT_MODE ? 'No unpaid credit / approved vouchers awaiting payment.' : 'No vouchers created yet.'}
+              {CREDIT_MODE ? 'No unpaid credit vouchers awaiting payment.' : 'No vouchers created yet.'}
             </div>
           </div>
         ) : filteredVouchers.length === 0 ? (
           <div className="ed-table-wrap ed-table-wrap--empty">
             <div className="ed-empty">
-              {CREDIT_MODE ? 'No matching unpaid credit / approved vouchers.' : 'No vouchers match your search.'}
+              {CREDIT_MODE ? 'No matching unpaid credit vouchers.' : 'No vouchers match your search.'}
             </div>
           </div>
         ) : (
@@ -1408,7 +1433,7 @@ export default function DashboardPage() {
                   <th className="ed-col-prep ed-hide-mobile">Prepared By</th>
                   <th className="ed-col-desc ed-hide-mobile">Description</th>
                   <th className="ed-ta-right ed-col-amt">Amount / Date</th>
-                  <th className="ed-col-status">Status</th>
+                  <th className="ed-col-status">{CREDIT_MODE ? 'Days' : 'Status'}</th>
                   <th className="ed-col-actions">Actions</th>
                 </tr>
               </thead>

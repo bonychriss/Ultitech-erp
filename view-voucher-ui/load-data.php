@@ -461,17 +461,17 @@ function vv_load_view_payload(PDO $pdo, int $voucherId, array $opts = []): array
         $statusClass = (string) ($statusResolved['className'] ?? ('vv-status-' . preg_replace('/[^a-z0-9_-]/', '', $statusLower ?: 'pending')));
         $isDraftDerived = !empty($statusResolved['looks_draft']) || $isDraftDerived;
     } else {
-        $statusLabel = ucfirst($statusLower ?: 'pending');
-        if ($isPosted) {
-            $statusLabel = 'Posted';
-        } elseif ($isPaid) {
-            $statusLabel = 'Paid';
-        }
-        $statusClass = 'vv-status-' . preg_replace('/[^a-z0-9_-]/', '', $statusLower ?: 'pending');
-        if ($isPosted) {
-            $statusClass = 'vv-status-posted';
-        } elseif ($isPaid) {
-            $statusClass = 'vv-status-paid';
+    $statusLabel = ucfirst($statusLower ?: 'pending');
+    if ($isPosted) {
+        $statusLabel = 'Posted';
+    } elseif ($isPaid) {
+        $statusLabel = 'Paid';
+    }
+    $statusClass = 'vv-status-' . preg_replace('/[^a-z0-9_-]/', '', $statusLower ?: 'pending');
+    if ($isPosted) {
+        $statusClass = 'vv-status-posted';
+    } elseif ($isPaid) {
+        $statusClass = 'vv-status-paid';
         }
     }
 
@@ -1334,6 +1334,7 @@ function vv_load_view_payload(PDO $pdo, int $voucherId, array $opts = []): array
                     $paymentDetails
                 )),
                 'date_created' => (string) ($voucher['date_created'] ?? ''),
+                'due_date' => (string) ($voucher['due_date'] ?? ''),
                 'status' => $statusLower,
                 'applicant' => (string) ($voucher['applicant'] ?? ''),
                 'department_manager' => (string) ($voucher['department_manager'] ?? ''),

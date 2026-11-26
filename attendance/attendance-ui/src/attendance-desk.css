@@ -2372,8 +2372,8 @@
         color: #94a3b8;
     }
     .att-away-note-input:focus {
-        border-color: #fb923c;
-        box-shadow: 0 0 0 3px rgba(251, 146, 60, 0.14);
+        border-color: #94a3b8;
+        box-shadow: 0 0 0 3px rgba(148, 163, 184, 0.22);
     }
     .att-away-footer {
         display: flex;

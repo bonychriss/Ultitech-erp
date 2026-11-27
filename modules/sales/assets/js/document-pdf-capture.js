@@ -1,9 +1,40 @@
 (function (global) {
+  function a4CaptureWindowPx(el) {
+    var a4 = Math.round((210 * 96) / 25.4);
+    var scrollW = el && el.scrollWidth ? el.scrollWidth : 0;
+    return Math.max(a4 + 48, scrollW, 840);
+  }
+
   function prepareCloneForCapture(clonedDoc) {
-    clonedDoc.querySelectorAll('.sheet, .doc-terms-sheet-inner, .sheet-container').forEach(function (node) {
+    if (clonedDoc.documentElement) {
+      clonedDoc.documentElement.style.overflow = 'visible';
+    }
+    if (clonedDoc.body) {
+      clonedDoc.body.style.overflow = 'visible';
+      clonedDoc.body.style.width = '210mm';
+      clonedDoc.body.style.maxWidth = '210mm';
+    }
+
+    clonedDoc.querySelectorAll('.sheet, .doc-terms-sheet-inner, .sheet-container, .spare-sheet, .truck-sheet').forEach(function (node) {
       node.style.minHeight = 'auto';
       node.style.height = 'auto';
       node.style.marginTop = '0';
+      node.style.overflow = 'visible';
+      node.style.boxSizing = 'border-box';
+      node.style.width = '210mm';
+      node.style.maxWidth = '210mm';
+    });
+
+    clonedDoc.querySelectorAll('.o-totals-table, .totals-table').forEach(function (table) {
+      table.style.width = 'auto';
+      table.style.minWidth = '300px';
+      table.style.maxWidth = '100%';
+    });
+    clonedDoc.querySelectorAll(
+      '.o-totals-table td:last-child, .totals-table td:last-child, .o-table td.num, .o-table th.num, .o-table th:nth-last-child(-n+2), .o-table td:nth-last-child(-n+2)'
+    ).forEach(function (cell) {
+      cell.style.whiteSpace = 'nowrap';
+      cell.style.overflow = 'visible';
     });
   }
 
@@ -100,8 +131,9 @@
       backgroundColor: '#ffffff',
       scrollX: 0,
       scrollY: -window.scrollY,
-      windowWidth: el.scrollWidth,
-      windowHeight: el.scrollHeight,
+      windowWidth: a4CaptureWindowPx(el),
+      windowHeight: Math.max(el.scrollHeight || 0, el.offsetHeight || 0, 1123),
+      width: a4CaptureWindowPx(el),
       onclone: function (clonedDoc) {
         prepareCloneForCapture(clonedDoc);
         if (options.stripImages === true) {
@@ -322,5 +354,6 @@
     appendRasterCanvasToPdf: appendRasterCanvasToPdf,
     appendElementsToPdf: appendElementsToPdf,
     prepareCloneForCapture: prepareCloneForCapture,
+    a4CaptureWindowPx: a4CaptureWindowPx,
   };
 }(window));

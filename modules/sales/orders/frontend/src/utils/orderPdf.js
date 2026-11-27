@@ -59,10 +59,18 @@ export function orderPdfCaptureElements() {
 }
 
 function orderPdfPrepareCloneForCapture(clonedDoc) {
+  if (window.SalesDocumentPdfCapture && typeof window.SalesDocumentPdfCapture.prepareCloneForCapture === 'function') {
+    window.SalesDocumentPdfCapture.prepareCloneForCapture(clonedDoc);
+    return;
+  }
   clonedDoc.querySelectorAll('.sheet, .doc-terms-sheet-inner, .sheet-container').forEach((node) => {
     node.style.minHeight = 'auto';
     node.style.height = 'auto';
     node.style.marginTop = '0';
+    node.style.overflow = 'visible';
+    node.style.boxSizing = 'border-box';
+    node.style.width = '210mm';
+    node.style.maxWidth = '210mm';
   });
 }
 
@@ -329,7 +337,9 @@ async function orderPdfElementToCanvas(el, options = {}) {
     backgroundColor: '#ffffff',
     scrollX: 0,
     scrollY: -window.scrollY,
-    windowWidth: desktopCapture ? Math.max(el.scrollWidth, 1100) : el.scrollWidth,
+    windowWidth: desktopCapture
+      ? Math.max(el.scrollWidth, 1100)
+      : Math.max(el.scrollWidth, Math.round((210 * 96) / 25.4) + 48, 840),
     windowHeight: desktopCapture ? Math.max(el.scrollHeight, el.offsetHeight, 1400) : el.scrollHeight,
     onclone: (clonedDoc, clonedEl) => {
       orderPdfPrepareCloneForCapture(clonedDoc);

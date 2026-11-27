@@ -154,7 +154,7 @@ $docFontStack = function_exists('sales_document_font_family_css')
             </div>
 
             <div style="display: flex; justify-content: flex-end; margin-top: 10px;">
-                <table class="o-totals-table ov-quote-totals" style="width: 260px;">
+                <table class="o-totals-table ov-quote-totals" style="width: auto; min-width: 300px; max-width: 100%;">
                     <tr><td>Subtotal</td><td class="num"><?php echo number_format($order['subtotal'], 2); ?></td></tr>
                     <?php if (isset($order['discount_amount']) && (float)$order['discount_amount'] > 0): ?>
                     <tr><td>Discount</td><td class="num">-<?php echo number_format((float) $order['discount_amount'], 2); ?></td></tr>

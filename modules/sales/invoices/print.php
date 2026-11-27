@@ -135,7 +135,7 @@ $filename = 'Invoice_' . preg_replace('/[^\w.\-]+/', '_', $displayInvoiceNumber)
             position: relative;
             page-break-after: always;
             box-sizing: border-box;
-            overflow: hidden;
+            overflow: visible;
         }
         .sheet-container > .sheet,
         .doc-sheet > .sheet {
@@ -166,6 +166,7 @@ $filename = 'Invoice_' . preg_replace('/[^\w.\-]+/', '_', $displayInvoiceNumber)
             min-height: auto !important;
             padding-top: 5mm !important;
             padding-bottom: 5mm !important;
+            overflow: visible !important;
         }
         body.pdf-mode .no-print,
         body.pdf-mode #downloadBtn { display: none; }
@@ -200,6 +201,20 @@ $filename = 'Invoice_' . preg_replace('/[^\w.\-]+/', '_', $displayInvoiceNumber)
         }
         .o-table .num,
         .o-table th.num {
+            text-align: right;
+            white-space: nowrap;
+            overflow: visible;
+        }
+        .o-totals-table,
+        .totals-table {
+            width: auto !important;
+            min-width: 300px;
+            max-width: 100%;
+        }
+        .o-totals-table td:last-child,
+        .totals-table td:last-child {
+            white-space: nowrap;
+            overflow: visible;
             text-align: right;
         }
         .spare-table th,
@@ -329,7 +344,7 @@ $filename = 'Invoice_' . preg_replace('/[^\w.\-]+/', '_', $displayInvoiceNumber)
                 margin: [0, 0, 0, 0],
                 filename: <?php echo json_encode($filename); ?>,
                 image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { scale: 2, useCORS: true, scrollY: 0 },
+                html2canvas: { scale: 2, useCORS: true, scrollX: 0, scrollY: 0, windowWidth: 900 },
                 jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
                 pagebreak: { mode: ['css', 'legacy'] }
             };

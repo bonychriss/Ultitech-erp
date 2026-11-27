@@ -117,20 +117,28 @@ $sheetH = static function ($value): string {
 
             <div class="notebook">
                 <table class="o-table" style="width: 100%; border-collapse: collapse; table-layout: fixed;">
+                    <colgroup>
+                        <col style="width: 58px;">
+                        <col style="width: 18%;">
+                        <col>
+                        <col style="width: 52px;">
+                        <col style="width: 96px;">
+                        <col style="width: 104px;">
+                    </colgroup>
                     <thead style="display: table-header-group;">
                         <tr style="background-color: #ffd700;">
-                            <th style="width: 70px; padding: 10px; text-align: left; border-bottom: 2px solid #000; font-weight: normal; background-color: #ffd700; -webkit-print-color-adjust: exact; print-color-adjust: exact;">PHOTO</th>
-                            <th style="width: 14%; padding: 10px; text-align: left; border-bottom: 2px solid #000; font-weight: normal; background-color: #ffd700; -webkit-print-color-adjust: exact; print-color-adjust: exact;">PRODUCT</th>
-                            <th style="padding: 10px; text-align: left; border-bottom: 2px solid #000; font-weight: normal; background-color: #ffd700; -webkit-print-color-adjust: exact; print-color-adjust: exact;">DESCRIPTION</th>
-                            <th style="width: 70px; padding: 10px; text-align: center; border-bottom: 2px solid #000; font-weight: normal; background-color: #ffd700; -webkit-print-color-adjust: exact; print-color-adjust: exact;">QTY</th>
-                            <th style="width: 12%; padding: 10px; text-align: right; border-bottom: 2px solid #000; font-weight: normal; background-color: #ffd700; -webkit-print-color-adjust: exact; print-color-adjust: exact;">UNIT PRICE</th>
-                            <th style="width: 12%; padding: 10px; text-align: right; border-bottom: 2px solid #000; font-weight: normal; background-color: #ffd700; -webkit-print-color-adjust: exact; print-color-adjust: exact;">SUBTOTAL</th>
+                            <th style="padding: 6px 4px; text-align: left; border-bottom: 2px solid #000; font-weight: normal; background-color: #ffd700; -webkit-print-color-adjust: exact; print-color-adjust: exact;">PHOTO</th>
+                            <th style="padding: 6px 4px; text-align: left; border-bottom: 2px solid #000; font-weight: normal; background-color: #ffd700; -webkit-print-color-adjust: exact; print-color-adjust: exact;">PRODUCT</th>
+                            <th style="padding: 6px 4px; text-align: left; border-bottom: 2px solid #000; font-weight: normal; background-color: #ffd700; -webkit-print-color-adjust: exact; print-color-adjust: exact;">DESCRIPTION</th>
+                            <th style="padding: 6px 4px; text-align: center; border-bottom: 2px solid #000; font-weight: normal; background-color: #ffd700; -webkit-print-color-adjust: exact; print-color-adjust: exact;">QTY</th>
+                            <th class="num" style="padding: 6px 4px; text-align: right; white-space: nowrap; border-bottom: 2px solid #000; font-weight: normal; background-color: #ffd700; -webkit-print-color-adjust: exact; print-color-adjust: exact;">UNIT PRICE</th>
+                            <th class="num" style="padding: 6px 4px; text-align: right; white-space: nowrap; border-bottom: 2px solid #000; font-weight: normal; background-color: #ffd700; -webkit-print-color-adjust: exact; print-color-adjust: exact;">SUBTOTAL</th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php foreach ($items as $item): ?>
                             <tr style="page-break-inside: avoid; break-inside: avoid;">
-                                <td style="width: 70px; text-align: center; padding: 10px; border-bottom: 1px solid #eee; vertical-align: middle;">
+                                <td style="text-align: center; padding: 6px 4px; border-bottom: 1px solid #eee; vertical-align: middle;">
 
                                     <?php
                                         $pid = (int) ($item['product_id'] ?? 0);
@@ -149,10 +157,10 @@ $sheetH = static function ($value): string {
                                         <div style="width: 60px; height: 60px; background: #eee; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #aaa;">No Image</div>
                                     <?php endif; ?>
                                 </td>
-                                <td style="padding: 10px; border-bottom: 1px solid #eee; vertical-align: middle;">
+                                <td style="padding: 6px 4px; border-bottom: 1px solid #eee; vertical-align: middle;">
                                     <div style="font-weight: normal; color: #111;"><?php echo $sheetH($item['product_name'] ?? ''); ?></div>
                                 </td>
-                                <td style="padding: 10px; border-bottom: 1px solid #eee; vertical-align: middle; font-size: 0.85rem; color: #555;">
+                                <td style="padding: 6px 4px; border-bottom: 1px solid #eee; vertical-align: middle; font-size: 0.85rem; color: #555;">
                                     <?php
                                         $desc = trim((string) ($item['description'] ?? ($item['notes'] ?? '')));
                                         if ($desc !== '' && !empty($item['product_code'])) {
@@ -161,14 +169,13 @@ $sheetH = static function ($value): string {
                                         echo nl2br($sheetH($desc));
                                     ?>
                                 </td>
-                                <td style="width: 70px; text-align: center; padding: 10px; border-bottom: 1px solid #eee; vertical-align: middle;">
-
+                                <td class="num" style="text-align: center; padding: 6px 4px; border-bottom: 1px solid #eee; vertical-align: middle; white-space: nowrap;">
                                     <?php echo number_format((float) ($item['quantity'] ?? 0), 2); ?>
                                 </td>
-                                <td style="text-align: right; padding: 10px; border-bottom: 1px solid #eee; vertical-align: middle;">
+                                <td class="num" style="text-align: right; padding: 6px 4px; border-bottom: 1px solid #eee; vertical-align: middle; white-space: nowrap;">
                                     <?php echo number_format((float) ($item['unit_price'] ?? 0), 2); ?>
                                 </td>
-                                <td style="text-align: right; padding: 10px; border-bottom: 1px solid #eee; vertical-align: middle;">
+                                <td class="num" style="text-align: right; padding: 6px 4px; border-bottom: 1px solid #eee; vertical-align: middle; white-space: nowrap;">
                                     <?php echo number_format((float) ($item['line_total'] ?? ((float) ($item['quantity'] ?? 0) * (float) ($item['unit_price'] ?? 0))), 2); ?>
                                 </td>
                             </tr>
@@ -178,11 +185,11 @@ $sheetH = static function ($value): string {
 
             </div>
 
-            <div style="display: flex; justify-content: flex-end; margin-top: 20px;">
-                <table class="o-totals-table">
+            <div style="display: flex; justify-content: flex-end; margin-top: 20px; max-width: 100%;">
+                <table class="o-totals-table" style="width: auto; min-width: 300px; max-width: 100%;">
                     <tr class="o-totals-muted">
                         <td>Untaxed Amount:</td>
-                        <td><?php echo $sheetH($invoice['currency'] ?? 'TZS') . ' ' . number_format((float) ($invoice['subtotal'] ?? 0), 2); ?></td>
+                        <td style="white-space: nowrap; text-align: right;"><?php echo $sheetH($invoice['currency'] ?? 'TZS') . ' ' . number_format((float) ($invoice['subtotal'] ?? 0), 2); ?></td>
                     </tr>
                     <?php if (isset($invoice['discount_amount']) && (float) $invoice['discount_amount'] > 0): ?>
                     <tr class="o-totals-muted">
@@ -192,7 +199,7 @@ $sheetH = static function ($value): string {
                     <?php endif; ?>
                     <tr class="o-totals-muted">
                         <td>Taxes:</td>
-                        <td><?php echo $sheetH($invoice['currency'] ?? 'TZS') . ' ' . number_format((float) ($invoice['tax_amount'] ?? 0), 2); ?></td>
+                        <td style="white-space: nowrap; text-align: right;"><?php echo $sheetH($invoice['currency'] ?? 'TZS') . ' ' . number_format((float) ($invoice['tax_amount'] ?? 0), 2); ?></td>
                     </tr>
                     <?php if (isset($invoice['shipping_charges']) && (float) $invoice['shipping_charges'] > 0): ?>
                     <tr class="o-totals-muted">
@@ -202,11 +209,11 @@ $sheetH = static function ($value): string {
                     <?php endif; ?>
                     <tr class="o-totals-grand">
                         <td>Total:</td>
-                        <td><?php echo $sheetH($invoice['currency'] ?? 'TZS') . ' ' . number_format((float) ($invoice['total_amount'] ?? 0), 2); ?></td>
+                        <td style="white-space: nowrap; text-align: right;"><?php echo $sheetH($invoice['currency'] ?? 'TZS') . ' ' . number_format((float) ($invoice['total_amount'] ?? 0), 2); ?></td>
                     </tr>
                     <tr class="o-totals-due">
                         <td>Amount Due:</td>
-                        <td><?php
+                        <td style="white-space: nowrap; text-align: right;"><?php
                             $balanceDue = $invoice['balance_due'] ?? $invoice['total_amount'] ?? 0;
                             echo $sheetH($invoice['currency'] ?? 'TZS') . ' ' . number_format((float) $balanceDue, 2);
                         ?></td>

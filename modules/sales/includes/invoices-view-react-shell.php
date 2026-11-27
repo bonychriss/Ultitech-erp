@@ -74,7 +74,7 @@ main.main-content.ov-react-root {
     width: 100% !important;
     max-width: none !important;
     padding: 0 !important;
-    overflow-x: hidden !important;
+    overflow-x: auto !important;
     overflow-y: auto !important;
     box-sizing: border-box;
     background: #f8fafc !important;

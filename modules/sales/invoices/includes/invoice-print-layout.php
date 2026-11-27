@@ -157,6 +157,11 @@ function sales_invoice_print_layout_html(
     font-size: 9.25pt;
     font-weight: 400;
 }
+#<?= htmlspecialchars($wrapId, ENT_QUOTES, 'UTF-8') ?> .totals-table td:last-child {
+    white-space: nowrap;
+    overflow: visible;
+    text-align: right;
+}
 #<?= htmlspecialchars($wrapId, ENT_QUOTES, 'UTF-8') ?> .totals-table .grand-total {
     font-weight: 400 !important;
     border-top: 1px solid #ccc;

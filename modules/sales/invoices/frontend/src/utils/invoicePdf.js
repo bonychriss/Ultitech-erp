@@ -62,14 +62,32 @@ export function invoicePdfCaptureElements() {
   return elements;
 }
 
+function invoicePdfA4WindowPx(el) {
+  if (window.SalesDocumentPdfCapture && typeof window.SalesDocumentPdfCapture.a4CaptureWindowPx === 'function') {
+    return window.SalesDocumentPdfCapture.a4CaptureWindowPx(el);
+  }
+  const a4 = Math.round((210 * 96) / 25.4);
+  return Math.max(a4 + 48, el?.scrollWidth || 0, 840);
+}
+
 function invoicePdfPrepareCloneForCapture(clonedDoc) {
+  if (window.SalesDocumentPdfCapture && typeof window.SalesDocumentPdfCapture.prepareCloneForCapture === 'function') {
+    window.SalesDocumentPdfCapture.prepareCloneForCapture(clonedDoc);
+  }
   // Match print desk: one content-sized A4 sheet, no screen min-height / shadows.
+  if (clonedDoc.body) {
+    clonedDoc.body.style.overflow = 'visible';
+    clonedDoc.body.style.width = '210mm';
+    clonedDoc.body.style.maxWidth = '210mm';
+  }
   clonedDoc.querySelectorAll('.sheet, .doc-terms-sheet-inner, .sheet-container').forEach((node) => {
     node.style.minHeight = 'auto';
     node.style.height = 'auto';
     node.style.margin = '0';
-    node.style.padding = '0';
+    node.style.padding = '10mm';
     node.style.boxShadow = 'none';
+    node.style.overflow = 'visible';
+    node.style.boxSizing = 'border-box';
     node.style.width = '210mm';
     node.style.maxWidth = '210mm';
   });
@@ -85,6 +103,12 @@ function invoicePdfPrepareCloneForCapture(clonedDoc) {
   clonedDoc.querySelectorAll('.o-table th, .o-table td').forEach((cell) => {
     cell.style.paddingTop = '2px';
     cell.style.paddingBottom = '2px';
+  });
+  clonedDoc.querySelectorAll(
+    '.o-totals-table td:last-child, .totals-table td:last-child, .o-table td.num, .o-table th.num, .o-table th:nth-last-child(-n+2), .o-table td:nth-last-child(-n+2)',
+  ).forEach((cell) => {
+    cell.style.whiteSpace = 'nowrap';
+    cell.style.overflow = 'visible';
   });
 }
 
@@ -253,15 +277,27 @@ async function invoicePdfElementToCanvas(el, options = {}) {
 
   let measured = { cssHeight: 1, bands: [] };
   const marker = `pdf-cap-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const prev = {
+    width: el.style.width,
+    maxWidth: el.style.maxWidth,
+    overflow: el.style.overflow,
+    boxSizing: el.style.boxSizing,
+  };
+  el.style.width = '210mm';
+  el.style.maxWidth = '210mm';
+  el.style.overflow = 'visible';
+  el.style.boxSizing = 'border-box';
   el.setAttribute('data-pdf-capture', marker);
+  const captureW = invoicePdfA4WindowPx(el);
   const html2canvasOpts = {
     scale: options.scale || 2,
     logging: false,
     backgroundColor: '#ffffff',
     scrollX: 0,
     scrollY: -window.scrollY,
-    windowWidth: el.scrollWidth,
-    windowHeight: el.scrollHeight,
+    windowWidth: captureW,
+    windowHeight: Math.max(el.scrollHeight || 0, el.offsetHeight || 0, 1123),
+    width: captureW,
     onclone: (clonedDoc, clonedEl) => {
       invoicePdfPrepareCloneForCapture(clonedDoc);
       if (stripImages) {
@@ -286,6 +322,10 @@ async function invoicePdfElementToCanvas(el, options = {}) {
     return { canvas, bands: scaleAvoidBands(measured, canvas) };
   } finally {
     el.removeAttribute('data-pdf-capture');
+    el.style.width = prev.width;
+    el.style.maxWidth = prev.maxWidth;
+    el.style.overflow = prev.overflow;
+    el.style.boxSizing = prev.boxSizing;
   }
 }
 
